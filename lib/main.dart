@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart'; // For formatting dates
-import 'dart:convert'; // Needed for jsonDecode exception handling
-import 'data_store.dart'; // Import the data store
-import 'entry.dart'; // Import the Entry class
+import 'package:flutter_bloc/flutter_bloc.dart'; // Import Bloc packages
+import 'package:intl/intl.dart';
+// Remove direct import of shared_preferences, Cubit handles it
+// Remove import of data_store.dart
+import 'entry.dart';
+import 'cubit/entry_cubit.dart'; // Import the Cubit
 
 void main() {
   runApp(const MyApp());
@@ -15,13 +16,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Intl.defaultLocale = 'en_US';
-    return MaterialApp(
-      title: 'Categorized Input App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
+    // Provide the EntryCubit to the widget tree
+    return BlocProvider(
+      create:
+          (context) =>
+              EntryCubit()..loadEntries(), // Create and load initial data
+      child: MaterialApp(
+        title: 'Cubit Input App',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        home: const MyHomePage(title: 'Cubit Input'),
       ),
-      home: const MyHomePage(title: 'Categorized Input'),
     );
   }
 }
@@ -36,117 +43,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // Controllers for both input fields
   final TextEditingController _textController = TextEditingController();
-  final TextEditingController _categoryController =
-      TextEditingController(); // Controller for category
-
-  static const String _entriesKey = 'saved_entries_v3_categorized';
+  final TextEditingController _categoryController = TextEditingController();
   final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
 
-  @override
-  void initState() {
-    super.initState();
-    _loadEntries();
-  }
+  // Remove initState loading, Cubit handles it now
+  // Remove _loadEntries and _saveEntries methods
 
   @override
   void dispose() {
-    // Dispose both controllers
     _textController.dispose();
     _categoryController.dispose();
     super.dispose();
   }
 
-  // Load entries function (remains the same)
-  Future<void> _loadEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<Entry> loadedEntries = [];
-    bool loadSuccess = true;
-
-    try {
-      final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
-      if (savedEntriesJson.isNotEmpty) {
-        loadedEntries =
-            savedEntriesJson.map((jsonString) {
-              return Entry.fromJsonString(jsonString);
-            }).toList();
-      }
-      print('Successfully loaded ${loadedEntries.length} categorized entries.');
-    } catch (e) {
-      print(
-        'Error loading entries: $e. Clearing potentially incompatible data for key $_entriesKey.',
-      );
-      loadSuccess = false;
-      await prefs.remove(_entriesKey);
-      loadedEntries = [];
-    }
-
-    setState(() {
-      allEntries = loadedEntries;
-    });
-
-    if (!loadSuccess && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cleared incompatible data for key: $_entriesKey.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-  }
-
-  // Save entries function (remains the same)
-  Future<void> _saveEntries() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final entriesJson =
-          allEntries.map((entry) => entry.toJsonString()).toList();
-      await prefs.setStringList(_entriesKey, entriesJson);
-      print('Saved ${allEntries.length} categorized entries.');
-    } catch (e) {
-      print('Error saving entries: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  // Handle input, now including the category from its text field
+  // Handle input by calling the Cubit's addEntry method
   void _handleInput() {
     final String currentInput = _textController.text;
-    final String currentCategory =
-        _categoryController.text.trim(); // Get category and trim whitespace
+    final String currentCategory = _categoryController.text;
 
     if (currentInput.isNotEmpty) {
-      // Use entered category, default to 'General' if empty
-      final String categoryToSave =
-          currentCategory.isNotEmpty ? currentCategory : 'General';
+      // Access the Cubit and call its method
+      context.read<EntryCubit>().addEntry(currentInput, currentCategory);
 
-      final newEntry = Entry(
-        text: currentInput,
-        timestamp: DateTime.now(),
-        category: categoryToSave,
+      // Clear controllers after adding
+      _textController.clear();
+      _categoryController.clear();
+
+      // Show feedback (SnackBar is fine here, or could be handled via BlocListener)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Entry added via Cubit!'), // Simplified message
+          duration: Duration(seconds: 1),
+        ),
       );
-
-      setState(() {
-        allEntries.add(newEntry);
-        _textController.clear();
-        _categoryController.clear(); // Clear category field too
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Entry saved to $categoryToSave!'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      });
-      _saveEntries();
+      // Remove setState, BlocBuilder handles UI updates
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the main entry text.')),
@@ -166,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // Input Area
+            // Input Area (remains the same)
             TextField(
               controller: _textController,
               decoration: const InputDecoration(
@@ -174,11 +105,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 labelText: 'Enter log entry here',
                 hintText: 'What happened?...',
               ),
-              // Move focus to category field on submit
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 10),
-            // Category Input Field
             TextField(
               controller: _categoryController,
               decoration: const InputDecoration(
@@ -186,7 +115,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 labelText: 'Category (optional)',
                 hintText: 'e.g., Work, Food, Exercise (defaults to General)',
               ),
-              // Submit the form on submit
               onSubmitted: (_) => _handleInput(),
               textInputAction: TextInputAction.done,
             ),
@@ -207,29 +135,37 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
 
-            // List Display Area
+            // List Display Area - Now wrapped in BlocBuilder
             Expanded(
-              child:
-                  allEntries.isEmpty
-                      ? const Center(child: Text('No entries yet.'))
-                      : ListView.builder(
-                        itemCount: allEntries.length,
-                        itemBuilder: (context, index) {
-                          final entry =
-                              allEntries[allEntries.length - 1 - index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: ListTile(
-                              title: Text(entry.text),
-                              subtitle: Text(
-                                '${entry.category} - ${_formatter.format(entry.timestamp)}',
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                              dense: true,
-                            ),
-                          );
-                        },
-                      ),
+              // Use BlocBuilder to listen to EntryCubit state changes
+              child: BlocBuilder<EntryCubit, List<Entry>>(
+                builder: (context, entries) {
+                  // `entries` is the current state (List<Entry>)
+                  if (entries.isEmpty) {
+                    return const Center(child: Text('No entries yet.'));
+                  }
+                  // Build the ListView using the state from the Cubit
+                  return ListView.builder(
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      // Access entries directly from the state
+                      final entry =
+                          entries[entries.length - 1 - index]; // Newest first
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: ListTile(
+                          title: Text(entry.text),
+                          subtitle: Text(
+                            '${entry.category} - ${_formatter.format(entry.timestamp)}',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                          dense: true,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),

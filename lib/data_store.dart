@@ -1,5 +1,2 @@
-// This file is for temporary storage of the data.
-import 'entry.dart'; // Import the Entry class
-
-// List to hold all entries temporarily.
-List<Entry> allEntries = [];
+// This file previously held the temporary data store.
+// State is now managed by EntryCubit in lib/cubit/entry_cubit.dart
