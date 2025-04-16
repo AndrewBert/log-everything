@@ -43,9 +43,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
-
-  // State variable to hold the selected category filter
-  String? _selectedCategoryFilter; // null represents "All"
+  String? _selectedCategoryFilter;
 
   @override
   void dispose() {
@@ -73,7 +71,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _showManageCategoriesDialog() {
     final categoryInputController = TextEditingController();
-
     showDialog(
       context: context,
       builder:
@@ -146,6 +143,40 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // Function to show confirmation dialog before deleting
+  Future<bool> _showDeleteConfirmationDialog(
+    BuildContext context,
+    Entry entry,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              title: const Text('Confirm Delete'),
+              content: Text(
+                'Are you sure you want to delete this entry?\n"${entry.text}"',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false); // Return false
+                  },
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text('Delete'),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(true); // Return true
+                  },
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Return false if dialog is dismissed
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -184,30 +215,23 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 20),
             const Divider(),
-
-            // Filter Section
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
-                // Use Row for label and dropdown
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Saved Entries:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  // Use BlocBuilder here to get categories for the dropdown
                   BlocBuilder<EntryCubit, EntryState>(
                     builder: (context, state) {
-                      // Create list of items for the dropdown
                       List<DropdownMenuItem<String?>> dropdownItems = [
-                        // Add "All" option, represented by null value
                         const DropdownMenuItem<String?>(
-                          value: null, // Use null to represent "All"
+                          value: null,
                           child: Text("All Categories"),
                         ),
                       ];
-                      // Add items for each category from the state
                       dropdownItems.addAll(
                         state.categories.map((String category) {
                           return DropdownMenuItem<String?>(
@@ -216,27 +240,21 @@ class _MyHomePageState extends State<MyHomePage> {
                           );
                         }).toList(),
                       );
-
                       return DropdownButton<String?>(
-                        value: _selectedCategoryFilter, // Current value
-                        hint: const Text(
-                          "Filter by Category",
-                        ), // Hint when null
+                        value: _selectedCategoryFilter,
+                        hint: const Text("Filter by Category"),
                         onChanged: (String? newValue) {
                           setState(() {
-                            _selectedCategoryFilter =
-                                newValue; // Update state on change
+                            _selectedCategoryFilter = newValue;
                           });
                         },
-                        items: dropdownItems, // Assign the generated items
+                        items: dropdownItems,
                       );
                     },
                   ),
                 ],
               ),
             ),
-
-            // List Display Area - Modified for Filtering
             Expanded(
               child: BlocBuilder<EntryCubit, EntryState>(
                 builder: (context, state) {
@@ -244,13 +262,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  // Filter entries based on the selected category
                   final List<Entry> filteredEntries;
                   if (_selectedCategoryFilter == null) {
-                    // If filter is null (All Categories), use all entries
                     filteredEntries = state.entries;
                   } else {
-                    // Otherwise, filter the list
                     filteredEntries =
                         state.entries
                             .where(
@@ -260,7 +275,6 @@ class _MyHomePageState extends State<MyHomePage> {
                             .toList();
                   }
 
-                  // Display message if no entries match the filter
                   if (filteredEntries.isEmpty) {
                     if (_selectedCategoryFilter != null) {
                       return Center(
@@ -275,11 +289,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                   }
 
-                  // Build the list using the filtered entries
                   return ListView.builder(
                     itemCount: filteredEntries.length,
                     itemBuilder: (context, index) {
-                      // Use the filtered list
                       final entry =
                           filteredEntries[filteredEntries.length - 1 - index];
                       bool isProcessing = entry.category == 'Processing...';
@@ -296,16 +308,57 @@ class _MyHomePageState extends State<MyHomePage> {
                                       : Colors.grey[700],
                             ),
                           ),
-                          trailing:
-                              isProcessing
-                                  ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.0,
-                                    ),
-                                  )
-                                  : null,
+                          // Modify trailing to include delete button
+                          trailing: Row(
+                            // Use Row to combine processing indicator and delete button
+                            mainAxisSize:
+                                MainAxisSize
+                                    .min, // Prevent Row from taking max width
+                            children: [
+                              if (isProcessing)
+                                const SizedBox(
+                                  width: 24, // Slightly larger for tap area
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.0,
+                                  ),
+                                ),
+                              // Delete button
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                tooltip: 'Delete Entry',
+                                onPressed:
+                                    isProcessing
+                                        ? null
+                                        : () async {
+                                          // Disable delete while processing
+                                          // Show confirmation dialog
+                                          bool confirmed =
+                                              await _showDeleteConfirmationDialog(
+                                                context,
+                                                entry,
+                                              );
+                                          if (confirmed) {
+                                            // Call cubit method if confirmed
+                                            context
+                                                .read<EntryCubit>()
+                                                .deleteEntry(entry);
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Entry deleted'),
+                                                duration: Duration(seconds: 1),
+                                              ),
+                                            );
+                                          }
+                                        },
+                              ),
+                            ],
+                          ),
                           dense: true,
                         ),
                       );
