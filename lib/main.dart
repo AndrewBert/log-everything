@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
 import 'data_store.dart'; // Import the data store
 
 void main() {
@@ -11,12 +12,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Input App',
+      title: 'Persistent Input App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Input & Display'),
+      home: const MyHomePage(title: 'Persistent Input & Display'),
     );
   }
 }
@@ -32,6 +33,14 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
+  static const String _entriesKey =
+      'saved_entries'; // Key for SharedPreferences
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntries(); // Load entries when the widget initializes
+  }
 
   @override
   void dispose() {
@@ -39,15 +48,29 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
+  // Function to load entries from SharedPreferences
+  Future<void> _loadEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Try reading the list of strings. If it doesn't exist, default to an empty list.
+    final savedEntries = prefs.getStringList(_entriesKey) ?? [];
+    setState(() {
+      allEntries = savedEntries; // Update the global list in data_store
+      print('Loaded ${allEntries.length} entries.');
+    });
+  }
+
+  // Function to save entries to SharedPreferences
+  Future<void> _saveEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_entriesKey, allEntries); // Save the current list
+    print('Saved ${allEntries.length} entries.');
+  }
+
   void _handleInput() {
     final String currentInput = _textController.text;
     if (currentInput.isNotEmpty) {
       setState(() {
-        // Call setState to trigger UI rebuild
-        allEntries.add(currentInput);
-        print('Saved entry: $currentInput');
-        print('Current entries: $allEntries');
-
+        allEntries.add(currentInput); // Add to the in-memory list
         _textController.clear();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,6 +80,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         );
       });
+      _saveEntries(); // Save the updated list persistently
     } else {
       ScaffoldMessenger.of(
         context,
@@ -73,7 +97,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        // Use a Column to layout input area and list vertically
         child: Column(
           children: <Widget>[
             // Input Area
@@ -86,16 +109,13 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               onSubmitted: (_) => _handleInput(),
             ),
-            const SizedBox(height: 10), // Reduced space
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _handleInput,
               child: const Text('Save Input'),
             ),
-            const SizedBox(height: 20), // Space before the list
-            // Divider
+            const SizedBox(height: 20),
             const Divider(),
-
-            // Header for the list
             const Text(
               'Saved Entries:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -104,18 +124,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
             // List Display Area
             Expanded(
-              // Allows the ListView to take available space
-              child: ListView.builder(
-                itemCount: allEntries.length,
-                itemBuilder: (context, index) {
-                  // Get the entry in reverse order to show newest first
-                  final entry = allEntries[allEntries.length - 1 - index];
-                  return ListTile(
-                    title: Text(entry),
-                    dense: true, // Make list items a bit smaller
-                  );
-                },
-              ),
+              child:
+                  allEntries.isEmpty
+                      ? const Center(
+                        child: Text('No entries yet.'),
+                      ) // Show message if list is empty
+                      : ListView.builder(
+                        itemCount: allEntries.length,
+                        itemBuilder: (context, index) {
+                          final entry =
+                              allEntries[allEntries.length -
+                                  1 -
+                                  index]; // Show newest first
+                          return ListTile(title: Text(entry), dense: true);
+                        },
+                      ),
             ),
           ],
         ),
