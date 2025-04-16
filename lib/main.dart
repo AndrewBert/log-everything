@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // For formatting dates
+import 'dart:convert'; // Needed for jsonDecode exception handling
 import 'data_store.dart'; // Import the data store
+import 'entry.dart'; // Import the Entry class
 
 void main() {
   runApp(const MyApp());
@@ -11,13 +14,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Intl.defaultLocale = 'en_US';
     return MaterialApp(
-      title: 'Persistent Input App',
+      title: 'Timestamped Input App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightBlue),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Persistent Input & Display'),
+      home: const MyHomePage(title: 'Input with Timestamps'),
     );
   }
 }
@@ -34,12 +38,15 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   static const String _entriesKey =
-      'saved_entries'; // Key for SharedPreferences
+      'saved_entries_v2'; // Key for SharedPreferences
+  final DateFormat _formatter = DateFormat(
+    'yyyy-MM-dd HH:mm',
+  ); // Date formatter
 
   @override
   void initState() {
     super.initState();
-    _loadEntries(); // Load entries when the widget initializes
+    _loadEntries();
   }
 
   @override
@@ -48,29 +55,78 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  // Function to load entries from SharedPreferences
+  // Load entries with error handling for incompatible data
   Future<void> _loadEntries() async {
     final prefs = await SharedPreferences.getInstance();
-    // Try reading the list of strings. If it doesn't exist, default to an empty list.
-    final savedEntries = prefs.getStringList(_entriesKey) ?? [];
+    List<Entry> loadedEntries = [];
+    bool loadSuccess = true;
+
+    try {
+      final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
+      if (savedEntriesJson.isNotEmpty) {
+        loadedEntries =
+            savedEntriesJson.map((jsonString) {
+              // This is where parsing happens and might fail
+              return Entry.fromJsonString(jsonString);
+            }).toList();
+      }
+      print('Successfully loaded ${loadedEntries.length} entries.');
+    } catch (e) {
+      print(
+        'Error loading entries: $e. Clearing potentially incompatible data.',
+      );
+      loadSuccess = false;
+      // Clear the invalid data associated with the key
+      await prefs.remove(_entriesKey);
+      // Ensure the in-memory list is also empty
+      loadedEntries = [];
+    }
+
+    // Update the state outside the try-catch block
     setState(() {
-      allEntries = savedEntries; // Update the global list in data_store
-      print('Loaded ${allEntries.length} entries.');
+      allEntries = loadedEntries;
     });
+
+    // Optional: Show feedback if data was cleared
+    if (!loadSuccess && mounted) {
+      // Check if the widget is still in the tree
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Previous data format incompatible. Cleared storage.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
-  // Function to save entries to SharedPreferences
+  // Save entries: Convert Entry objects to JSON strings before saving
   Future<void> _saveEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_entriesKey, allEntries); // Save the current list
-    print('Saved ${allEntries.length} entries.');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final entriesJson =
+          allEntries.map((entry) => entry.toJsonString()).toList();
+      await prefs.setStringList(_entriesKey, entriesJson);
+      print('Saved ${allEntries.length} entries.');
+    } catch (e) {
+      print('Error saving entries: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _handleInput() {
     final String currentInput = _textController.text;
     if (currentInput.isNotEmpty) {
+      final newEntry = Entry(text: currentInput, timestamp: DateTime.now());
+
       setState(() {
-        allEntries.add(currentInput); // Add to the in-memory list
+        allEntries.add(newEntry);
         _textController.clear();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +136,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         );
       });
-      _saveEntries(); // Save the updated list persistently
+      _saveEntries(); // Save the updated list
     } else {
       ScaffoldMessenger.of(
         context,
@@ -126,17 +182,20 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child:
                   allEntries.isEmpty
-                      ? const Center(
-                        child: Text('No entries yet.'),
-                      ) // Show message if list is empty
+                      ? const Center(child: Text('No entries yet.'))
                       : ListView.builder(
                         itemCount: allEntries.length,
                         itemBuilder: (context, index) {
                           final entry =
-                              allEntries[allEntries.length -
-                                  1 -
-                                  index]; // Show newest first
-                          return ListTile(title: Text(entry), dense: true);
+                              allEntries[allEntries.length - 1 - index];
+                          return ListTile(
+                            title: Text(entry.text),
+                            subtitle: Text(
+                              _formatter.format(entry.timestamp),
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            dense: true,
+                          );
                         },
                       ),
             ),
