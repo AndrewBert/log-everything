@@ -16,12 +16,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     Intl.defaultLocale = 'en_US';
     return MaterialApp(
-      title: 'Timestamped Input App',
+      title: 'Categorized Input App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightBlue),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Input with Timestamps'),
+      home: const MyHomePage(title: 'Categorized Input'),
     );
   }
 }
@@ -36,12 +36,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // Controllers for both input fields
   final TextEditingController _textController = TextEditingController();
-  static const String _entriesKey =
-      'saved_entries_v2'; // Key for SharedPreferences
-  final DateFormat _formatter = DateFormat(
-    'yyyy-MM-dd HH:mm',
-  ); // Date formatter
+  final TextEditingController _categoryController =
+      TextEditingController(); // Controller for category
+
+  static const String _entriesKey = 'saved_entries_v3_categorized';
+  final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
 
   @override
   void initState() {
@@ -51,11 +52,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
+    // Dispose both controllers
     _textController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
-  // Load entries with error handling for incompatible data
+  // Load entries function (remains the same)
   Future<void> _loadEntries() async {
     final prefs = await SharedPreferences.getInstance();
     List<Entry> loadedEntries = [];
@@ -66,47 +69,41 @@ class _MyHomePageState extends State<MyHomePage> {
       if (savedEntriesJson.isNotEmpty) {
         loadedEntries =
             savedEntriesJson.map((jsonString) {
-              // This is where parsing happens and might fail
               return Entry.fromJsonString(jsonString);
             }).toList();
       }
-      print('Successfully loaded ${loadedEntries.length} entries.');
+      print('Successfully loaded ${loadedEntries.length} categorized entries.');
     } catch (e) {
       print(
-        'Error loading entries: $e. Clearing potentially incompatible data.',
+        'Error loading entries: $e. Clearing potentially incompatible data for key $_entriesKey.',
       );
       loadSuccess = false;
-      // Clear the invalid data associated with the key
       await prefs.remove(_entriesKey);
-      // Ensure the in-memory list is also empty
       loadedEntries = [];
     }
 
-    // Update the state outside the try-catch block
     setState(() {
       allEntries = loadedEntries;
     });
 
-    // Optional: Show feedback if data was cleared
     if (!loadSuccess && mounted) {
-      // Check if the widget is still in the tree
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Previous data format incompatible. Cleared storage.'),
+        SnackBar(
+          content: Text('Cleared incompatible data for key: $_entriesKey.'),
           backgroundColor: Colors.orange,
         ),
       );
     }
   }
 
-  // Save entries: Convert Entry objects to JSON strings before saving
+  // Save entries function (remains the same)
   Future<void> _saveEntries() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final entriesJson =
           allEntries.map((entry) => entry.toJsonString()).toList();
       await prefs.setStringList(_entriesKey, entriesJson);
-      print('Saved ${allEntries.length} entries.');
+      print('Saved ${allEntries.length} categorized entries.');
     } catch (e) {
       print('Error saving entries: $e');
       if (mounted) {
@@ -120,27 +117,40 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  // Handle input, now including the category from its text field
   void _handleInput() {
     final String currentInput = _textController.text;
+    final String currentCategory =
+        _categoryController.text.trim(); // Get category and trim whitespace
+
     if (currentInput.isNotEmpty) {
-      final newEntry = Entry(text: currentInput, timestamp: DateTime.now());
+      // Use entered category, default to 'General' if empty
+      final String categoryToSave =
+          currentCategory.isNotEmpty ? currentCategory : 'General';
+
+      final newEntry = Entry(
+        text: currentInput,
+        timestamp: DateTime.now(),
+        category: categoryToSave,
+      );
 
       setState(() {
         allEntries.add(newEntry);
         _textController.clear();
+        _categoryController.clear(); // Clear category field too
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Entry saved!'),
+          SnackBar(
+            content: Text('Entry saved to $categoryToSave!'),
             duration: Duration(seconds: 1),
           ),
         );
       });
-      _saveEntries(); // Save the updated list
+      _saveEntries();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter some text.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the main entry text.')),
+      );
     }
   }
 
@@ -154,29 +164,48 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             // Input Area
             TextField(
               controller: _textController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Enter text here',
-                hintText: 'Type anything...',
+                labelText: 'Enter log entry here',
+                hintText: 'What happened?...',
               ),
-              onSubmitted: (_) => _handleInput(),
+              // Move focus to category field on submit
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _handleInput,
-              child: const Text('Save Input'),
+            // Category Input Field
+            TextField(
+              controller: _categoryController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Category (optional)',
+                hintText: 'e.g., Work, Food, Exercise (defaults to General)',
+              ),
+              // Submit the form on submit
+              onSubmitted: (_) => _handleInput(),
+              textInputAction: TextInputAction.done,
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: _handleInput,
+                child: const Text('Save Log Entry'),
+              ),
             ),
             const SizedBox(height: 20),
             const Divider(),
-            const Text(
-              'Saved Entries:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Saved Entries:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
-            const SizedBox(height: 10),
 
             // List Display Area
             Expanded(
@@ -188,13 +217,16 @@ class _MyHomePageState extends State<MyHomePage> {
                         itemBuilder: (context, index) {
                           final entry =
                               allEntries[allEntries.length - 1 - index];
-                          return ListTile(
-                            title: Text(entry.text),
-                            subtitle: Text(
-                              _formatter.format(entry.timestamp),
-                              style: TextStyle(color: Colors.grey[600]),
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: ListTile(
+                              title: Text(entry.text),
+                              subtitle: Text(
+                                '${entry.category} - ${_formatter.format(entry.timestamp)}',
+                                style: TextStyle(color: Colors.grey[700]),
+                              ),
+                              dense: true,
                             ),
-                            dense: true,
                           );
                         },
                       ),
