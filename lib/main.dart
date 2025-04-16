@@ -44,6 +44,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
 
+  // State variable to hold the selected category filter
+  String? _selectedCategoryFilter; // null represents "All"
+
   @override
   void dispose() {
     _textController.dispose();
@@ -68,43 +71,35 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // --- UI for Category Management ---
   void _showManageCategoriesDialog() {
     final categoryInputController = TextEditingController();
 
     showDialog(
       context: context,
-      // Use BlocProvider.value to pass the existing Cubit instance to the dialog subtree
       builder:
           (_) => BlocProvider.value(
-            value: BlocProvider.of<EntryCubit>(
-              context,
-            ), // Pass the existing cubit
+            value: BlocProvider.of<EntryCubit>(context),
             child: AlertDialog(
               title: const Text('Manage Categories'),
-              // Make content scrollable in case of many categories
               content: SizedBox(
-                width: double.maxFinite, // Use available width
+                width: double.maxFinite,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Take minimum vertical space
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Listen to the Cubit state for categories
                     BlocBuilder<EntryCubit, EntryState>(
                       builder: (context, state) {
                         if (state.categories.isEmpty) {
                           return const Text('No categories found.');
                         }
-                        // Display categories in a scrollable list
                         return Expanded(
                           child: ListView.builder(
-                            shrinkWrap: true, // Important for Column layout
+                            shrinkWrap: true,
                             itemCount: state.categories.length,
                             itemBuilder: (context, index) {
                               final category = state.categories[index];
                               return ListTile(
                                 title: Text(category),
                                 dense: true,
-                                // Optional: Add delete button here later
                               );
                             },
                           ),
@@ -112,7 +107,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                     ),
                     const Divider(),
-                    // Input field to add a new category
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: TextField(
@@ -141,12 +135,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   onPressed: () {
                     final newCategory = categoryInputController.text;
                     if (newCategory.isNotEmpty) {
-                      // Call the cubit method to add
                       context.read<EntryCubit>().addCustomCategory(newCategory);
-                      categoryInputController
-                          .clear(); // Clear field after adding
-                      // Optionally, keep the dialog open or close it
-                      // Navigator.of(context).pop();
+                      categoryInputController.clear();
                     }
                   },
                 ),
@@ -194,29 +184,104 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 20),
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Text(
-                'Saved Entries:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+            // Filter Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                // Use Row for label and dropdown
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Saved Entries:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  // Use BlocBuilder here to get categories for the dropdown
+                  BlocBuilder<EntryCubit, EntryState>(
+                    builder: (context, state) {
+                      // Create list of items for the dropdown
+                      List<DropdownMenuItem<String?>> dropdownItems = [
+                        // Add "All" option, represented by null value
+                        const DropdownMenuItem<String?>(
+                          value: null, // Use null to represent "All"
+                          child: Text("All Categories"),
+                        ),
+                      ];
+                      // Add items for each category from the state
+                      dropdownItems.addAll(
+                        state.categories.map((String category) {
+                          return DropdownMenuItem<String?>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                      );
+
+                      return DropdownButton<String?>(
+                        value: _selectedCategoryFilter, // Current value
+                        hint: const Text(
+                          "Filter by Category",
+                        ), // Hint when null
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedCategoryFilter =
+                                newValue; // Update state on change
+                          });
+                        },
+                        items: dropdownItems, // Assign the generated items
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
+
+            // List Display Area - Modified for Filtering
             Expanded(
               child: BlocBuilder<EntryCubit, EntryState>(
                 builder: (context, state) {
                   if (state.isLoading && state.entries.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (state.entries.isEmpty) {
-                    return const Center(
-                      child: Text('No entries yet. Add one!'),
-                    );
+
+                  // Filter entries based on the selected category
+                  final List<Entry> filteredEntries;
+                  if (_selectedCategoryFilter == null) {
+                    // If filter is null (All Categories), use all entries
+                    filteredEntries = state.entries;
+                  } else {
+                    // Otherwise, filter the list
+                    filteredEntries =
+                        state.entries
+                            .where(
+                              (entry) =>
+                                  entry.category == _selectedCategoryFilter,
+                            )
+                            .toList();
                   }
+
+                  // Display message if no entries match the filter
+                  if (filteredEntries.isEmpty) {
+                    if (_selectedCategoryFilter != null) {
+                      return Center(
+                        child: Text(
+                          'No entries found for category: "$_selectedCategoryFilter"',
+                        ),
+                      );
+                    } else {
+                      return const Center(
+                        child: Text('No entries yet. Add one!'),
+                      );
+                    }
+                  }
+
+                  // Build the list using the filtered entries
                   return ListView.builder(
-                    itemCount: state.entries.length,
+                    itemCount: filteredEntries.length,
                     itemBuilder: (context, index) {
+                      // Use the filtered list
                       final entry =
-                          state.entries[state.entries.length - 1 - index];
+                          filteredEntries[filteredEntries.length - 1 - index];
                       bool isProcessing = entry.category == 'Processing...';
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4.0),
