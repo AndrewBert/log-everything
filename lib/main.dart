@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'entry.dart';
-import 'cubit/entry_cubit.dart'; // Import the Cubit and its State
+import 'cubit/entry_cubit.dart';
+import 'package:collection/collection.dart'; // Import for groupBy
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,12 +21,14 @@ class MyApp extends StatelessWidget {
     return BlocProvider(
       create: (context) => EntryCubit(),
       child: MaterialApp(
-        title: 'Custom Category App',
+        title: 'Grouped Log App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
           useMaterial3: true,
+          // Optional: Add a divider theme for headers
+          dividerTheme: const DividerThemeData(space: 1, thickness: 1),
         ),
-        home: const MyHomePage(title: 'Categorized Input & Management'),
+        home: const MyHomePage(title: 'Grouped Log Entries'),
       ),
     );
   }
@@ -42,7 +45,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
-  final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
+  // Keep existing formatter for entry time
+  final DateFormat _timeFormatter = DateFormat('HH:mm');
   String? _selectedCategoryFilter;
 
   @override
@@ -68,34 +72,33 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // --- UI for Category Management ---
-   Future<bool> _showDeleteCategoryConfirmationDialog(BuildContext context, String category) async {
-      // Reuse the confirmation dialog logic, adapted for category
-      return await showDialog<bool>(
-        context: context,
-        builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            title: const Text('Confirm Delete Category'),
-            content: Text('Are you sure you want to delete the category "$category"?\nEntries using this category will be moved to "Misc".'), // Added \n
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Cancel'),
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Delete'),
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-              ),
-            ],
-          );
-        },
-      ) ?? false;
-    }
+  // --- Category Management Dialog (Remains the same) ---
+  Future<bool> _showDeleteCategoryConfirmationDialog(BuildContext context, String category) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm Delete Category'),
+          content: Text('''Are you sure you want to delete the category "$category"?
+Entries using this category will be moved to "Misc".'''),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
 
   void _showManageCategoriesDialog() {
     final categoryInputController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (_) => BlocProvider.value(
@@ -135,7 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       if (confirmed) {
                                           context.read<EntryCubit>().deleteCategory(category);
                                            ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Category "$category" deleted'), duration: Duration(seconds: 1)),
+                                            SnackBar(content: Text('Category "$category" deleted'), duration: Duration(seconds: 2)),
                                           );
                                       }
                                   },
@@ -189,35 +192,22 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-   // Function to show confirmation dialog before deleting ENTRY
-  Future<bool> _showDeleteConfirmationDialog(BuildContext context, Entry entry) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Confirm Delete'),
-          // Corrected: Moved closing parenthesis to the end of the Text widget call
-          content: Text('Are you sure you want to delete this entry?\n"${entry.text}" (Category: ${entry.category})'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false); // Return false
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-              onPressed: () {
-                 Navigator.of(dialogContext).pop(true); // Return true
-              },
-            ),
-          ],
-        );
-      },
-    ) ?? false; // Return false if dialog is dismissed
-  }
+  // --- Helper to Format Date Headers ---
+  String _formatDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateOnly = DateTime(date.year, date.month, date.day);
 
+    if (dateOnly == today) {
+      return 'Today';
+    } else if (dateOnly == yesterday) {
+      return 'Yesterday';
+    } else {
+      // Use a more complete format for older dates
+      return DateFormat.yMMMd().format(date); // e.g., Oct 27, 2023
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +228,8 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            TextField(
+            // --- Input Area (Remains the same) ---
+             TextField(
               controller: _textController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
@@ -257,6 +248,8 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 20),
             const Divider(),
+
+            // --- Filter Section (Remains the same) ---
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
@@ -265,28 +258,24 @@ class _MyHomePageState extends State<MyHomePage> {
                   const Text('Saved Entries:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   BlocBuilder<EntryCubit, EntryState>(
                     builder: (context, state) {
-                      List<DropdownMenuItem<String?>> dropdownItems = [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text("All Categories"),
-                        ),
+                       // Build dropdown only if categories are loaded
+                      if (state.categories.isEmpty && !state.isLoading) {
+                         return const SizedBox.shrink(); // Hide if no categories
+                      }
+                       List<DropdownMenuItem<String?>> dropdownItems = [
+                        const DropdownMenuItem<String?>(value: null, child: Text("All Categories")),
                       ];
                       List<String> sortedCategories = List.from(state.categories)..sort();
                       dropdownItems.addAll(
                         sortedCategories.map((String category) {
-                          return DropdownMenuItem<String?>(
-                            value: category,
-                            child: Text(category),
-                          );
+                          return DropdownMenuItem<String?>(value: category, child: Text(category));
                         }).toList(),
                       );
                       return DropdownButton<String?>(
                         value: _selectedCategoryFilter,
-                        hint: const Text("Filter by Category"),
+                        hint: const Text("Filter"), // Shorter hint
                         onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCategoryFilter = newValue;
-                          });
+                          setState(() { _selectedCategoryFilter = newValue; });
                         },
                         items: dropdownItems,
                       );
@@ -295,6 +284,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
+
+            // --- List Display Area - Modified for Grouping ---
             Expanded(
               child: BlocBuilder<EntryCubit, EntryState>(
                 builder: (context, state) {
@@ -302,6 +293,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
+                  // 1. Filter entries first
                   final List<Entry> filteredEntries;
                   if (_selectedCategoryFilter == null) {
                     filteredEntries = state.entries;
@@ -311,54 +303,102 @@ class _MyHomePageState extends State<MyHomePage> {
                         .toList();
                   }
 
+                   // Ensure entries are sorted newest first before grouping
+                   // (Assuming Cubit might not always guarantee order after complex ops)
+                  filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
                   if (filteredEntries.isEmpty) {
-                     if (_selectedCategoryFilter != null) {
-                        return Center(child: Text('No entries found for category: "$_selectedCategoryFilter"'));
-                     } else {
-                        return const Center(child: Text('No entries yet. Add one!'));
-                     }
+                    return Center(
+                      child: Text(_selectedCategoryFilter != null
+                          ? 'No entries found for category: "$_selectedCategoryFilter"'
+                          : 'No entries yet. Add one!'),
+                    );
                   }
 
+                  // 2. Group filtered entries by date
+                  // Using collection package's groupBy
+                  final groupedEntries = groupBy<Entry, DateTime>(
+                    filteredEntries,
+                    (entry) => DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day),
+                  );
+
+                  // 3. Create a flat list with Headers and Entries
+                  final List<dynamic> listItems = [];
+                  groupedEntries.forEach((date, entriesOnDate) {
+                    listItems.add(date); // Add date header
+                    listItems.addAll(entriesOnDate); // Add entries for that date
+                  });
+
+
+                  // 4. Build the ListView with mixed item types
                   return ListView.builder(
-                    itemCount: filteredEntries.length,
+                    itemCount: listItems.length,
                     itemBuilder: (context, index) {
-                      final entry = filteredEntries[filteredEntries.length - 1 - index];
-                      bool isProcessing = entry.category == 'Processing...';
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: ListTile(
-                          title: Text(entry.text),
-                          subtitle: Text(
-                            '${entry.category} - ${_formatter.format(entry.timestamp)}',
-                            style: TextStyle(color: isProcessing ? Colors.orange : Colors.grey[700]),
+                      final item = listItems[index];
+
+                      // If item is a DateTime, show a header
+                      if (item is DateTime) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                          child: Text(
+                            _formatDateHeader(item),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          trailing: Row(
-                             mainAxisSize: MainAxisSize.min,
-                             children: [
-                               if (isProcessing)
-                                  const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2.0)
-                                  ),
-                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                tooltip: 'Delete Entry',
-                                onPressed: isProcessing ? null : () async {
-                                   bool confirmed = await _showDeleteConfirmationDialog(context, entry);
-                                   if (confirmed) {
-                                      context.read<EntryCubit>().deleteEntry(entry);
+                        );
+                      }
+                      // If item is an Entry, show the entry card
+                      else if (item is Entry) {
+                         final entry = item;
+                         bool isProcessing = entry.category == 'Processing...';
+                         return Card(
+                           margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 0), // Reduced margin
+                           child: ListTile(
+                             title: Text(entry.text),
+                             // Changed subtitle to show Time and Category
+                             subtitle: Text(
+                               '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
+                               style: TextStyle(color: isProcessing ? Colors.orange : Colors.grey[700]),
+                             ),
+                             trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isProcessing)
+                                    const SizedBox(
+                                      width: 24, height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2.0)
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    tooltip: 'Delete Entry',
+                                    onPressed: isProcessing ? null : () {
+                                      final entryToDelete = entry;
+                                      context.read<EntryCubit>().deleteEntry(entryToDelete);
+                                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Entry deleted'), duration: Duration(seconds: 1)),
+                                        SnackBar(
+                                          content: const Text('Entry deleted'),
+                                          duration: const Duration(seconds: 4),
+                                          action: SnackBarAction(
+                                            label: 'Undo',
+                                            onPressed: () {
+                                              context.read<EntryCubit>().addEntryObject(entryToDelete);
+                                            },
+                                          ),
+                                        ),
                                       );
-                                   }
-                                },
-                              ),
-                             ],
-                          ),
-                          dense: true,
-                        ),
-                      );
+                                    },
+                                  ),
+                                ],
+                             ),
+                             dense: true,
+                           ),
+                         );
+                      }
+                      // Should not happen, but return empty container as fallback
+                      return Container();
                     },
                   );
                 },

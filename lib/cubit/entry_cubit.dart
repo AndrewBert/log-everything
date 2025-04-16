@@ -62,8 +62,6 @@ class EntryCubit extends Cubit<EntryState> {
       List<String> currentCategories = List<String>.from(savedCategories);
       if (!currentCategories.contains('Misc')) {
           currentCategories.add('Misc');
-          // Optionally re-save if you want 'Misc' persisted even if user somehow deleted it
-          // await _saveCategories(currentCategories);
       }
       emit(state.copyWith(categories: currentCategories));
     }
@@ -103,13 +101,12 @@ class EntryCubit extends Cubit<EntryState> {
       // 2. Re-categorize existing entries that used the deleted category
       final updatedEntries = state.entries.map((entry) {
         if (entry.category == categoryToDelete) {
-          // Create a new Entry object with the updated category
           return Entry(
               text: entry.text,
               timestamp: entry.timestamp,
-              category: 'Misc'); // Re-assign to Misc
+              category: 'Misc'); 
         } else {
-          return entry; // Keep other entries as they are
+          return entry; 
         }
       }).toList();
 
@@ -293,6 +290,17 @@ class EntryCubit extends Cubit<EntryState> {
          await _saveEntries(fallbackList);
       }
     }
+  }
+
+  // Add a specific entry object back (for Undo)
+  Future<void> addEntryObject(Entry entryToAdd) async {
+    // Add the entry back to the list
+    final updatedEntries = List<Entry>.from(state.entries)..add(entryToAdd);
+    // Sort entries by timestamp descending (newest first) to maintain order
+    updatedEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    emit(state.copyWith(entries: updatedEntries));
+    await _saveEntries(updatedEntries);
+    print("Cubit: Undid delete for entry - ${entryToAdd.text}");
   }
 
   // --- Delete Entry --- 
