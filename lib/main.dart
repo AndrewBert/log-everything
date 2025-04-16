@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
 import 'entry.dart';
 import 'cubit/entry_cubit.dart';
 
-void main() {
+Future<void> main() async {
+  // Make main async
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized
+  await dotenv.load(fileName: ".env"); // Load the .env file
   runApp(const MyApp());
 }
 
@@ -15,18 +19,21 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     Intl.defaultLocale = 'en_US';
     return BlocProvider(
+      // Pass dotenv to the cubit if needed, or load within cubit
       create: (context) => EntryCubit()..loadEntries(),
       child: MaterialApp(
-        title: 'Smart Input App',
+        title: 'OpenAI Input App',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
           useMaterial3: true,
         ),
-        home: const MyHomePage(title: 'Smart Input'),
+        home: const MyHomePage(title: 'OpenAI Input'),
       ),
     );
   }
 }
+
+// --- Rest of MyHomePage and _MyHomePageState remain the same ---
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -38,32 +45,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // Only one controller needed now
   final TextEditingController _textController = TextEditingController();
   final DateFormat _formatter = DateFormat('yyyy-MM-dd HH:mm');
 
   @override
   void dispose() {
     _textController.dispose();
-    // No category controller to dispose
     super.dispose();
   }
 
-  // Handle input: only pass text to the Cubit
   void _handleInput() {
     final String currentInput = _textController.text;
 
     if (currentInput.isNotEmpty) {
-      // Call cubit method with only the text
       context.read<EntryCubit>().addEntry(currentInput);
-
       _textController.clear();
-
-      // Feedback can be more generic now
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Entry added!'),
-          duration: Duration(seconds: 1),
+          content: Text('Processing entry...'), // Indicate processing
+          duration: Duration(milliseconds: 800),
         ),
       );
     } else {
@@ -85,7 +85,6 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // Input Area - Only the main text field remains
             TextField(
               controller: _textController,
               decoration: const InputDecoration(
@@ -93,10 +92,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 labelText: 'Enter log entry here',
                 hintText: 'What happened?...',
               ),
-              onSubmitted: (_) => _handleInput(), // Submit on enter
+              onSubmitted: (_) => _handleInput(),
               textInputAction: TextInputAction.done,
             ),
-            // Removed category TextField
             const SizedBox(height: 20),
             Center(
               child: ElevatedButton(
@@ -113,13 +111,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
-
-            // List Display Area - Uses BlocBuilder (remains the same)
             Expanded(
               child: BlocBuilder<EntryCubit, List<Entry>>(
                 builder: (context, entries) {
                   if (entries.isEmpty) {
-                    return const Center(child: Text('No entries yet.'));
+                    return const Center(
+                      child: Text('No entries yet. Add one!'),
+                    );
                   }
                   return ListView.builder(
                     itemCount: entries.length,
@@ -130,7 +128,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: ListTile(
                           title: Text(entry.text),
                           subtitle: Text(
-                            // Category is now determined by the (simulated) LLM
                             '${entry.category} - ${_formatter.format(entry.timestamp)}',
                             style: TextStyle(color: Colors.grey[700]),
                           ),
