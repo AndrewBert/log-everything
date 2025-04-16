@@ -58,9 +58,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _textController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Processing entry...'),
-          duration: Duration(milliseconds: 800),
-        ),
+            content: Text('Processing entry...'),
+            duration: Duration(milliseconds: 800)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,113 +68,156 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  // --- UI for Category Management ---
+   Future<bool> _showDeleteCategoryConfirmationDialog(BuildContext context, String category) async {
+      // Reuse the confirmation dialog logic, adapted for category
+      return await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Confirm Delete Category'),
+            content: Text('Are you sure you want to delete the category "$category"?\nEntries using this category will be moved to "Misc".'), // Added \n
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
+    }
+
   void _showManageCategoriesDialog() {
     final categoryInputController = TextEditingController();
+
     showDialog(
       context: context,
-      builder:
-          (_) => BlocProvider.value(
-            value: BlocProvider.of<EntryCubit>(context),
-            child: AlertDialog(
-              title: const Text('Manage Categories'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BlocBuilder<EntryCubit, EntryState>(
-                      builder: (context, state) {
-                        if (state.categories.isEmpty) {
-                          return const Text('No categories found.');
-                        }
-                        return Expanded(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: state.categories.length,
-                            itemBuilder: (context, index) {
-                              final category = state.categories[index];
-                              return ListTile(
-                                title: Text(category),
-                                dense: true,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: TextField(
-                        controller: categoryInputController,
-                        decoration: const InputDecoration(
-                          labelText: 'New Category Name',
-                          hintText: 'Enter category to add...',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                TextButton(
-                  child: const Text('Add Category'),
-                  onPressed: () {
-                    final newCategory = categoryInputController.text;
-                    if (newCategory.isNotEmpty) {
-                      context.read<EntryCubit>().addCustomCategory(newCategory);
-                      categoryInputController.clear();
+      builder: (_) => BlocProvider.value(
+        value: BlocProvider.of<EntryCubit>(context),
+        child: AlertDialog(
+          title: const Text('Manage Categories'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BlocBuilder<EntryCubit, EntryState>(
+                  builder: (context, state) {
+                    if (state.categories.isEmpty) {
+                      return const Text('No categories found.');
                     }
+                    return Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: state.categories.length,
+                        itemBuilder: (context, index) {
+                          final category = state.categories[index];
+                          final bool isMisc = category == 'Misc';
+                          return ListTile(
+                            title: Text(
+                              category,
+                              style: TextStyle(color: isMisc ? Colors.grey : null),
+                            ),
+                            dense: true,
+                            trailing: isMisc
+                              ? null
+                              : IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Colors.redAccent[100]),
+                                  tooltip: 'Delete Category',
+                                  onPressed: () async {
+                                     bool confirmed = await _showDeleteCategoryConfirmationDialog(context, category);
+                                      if (confirmed) {
+                                          context.read<EntryCubit>().deleteCategory(category);
+                                           ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Category "$category" deleted'), duration: Duration(seconds: 1)),
+                                          );
+                                      }
+                                  },
+                                ),
+                          );
+                        },
+                      ),
+                    );
                   },
+                ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: TextField(
+                    controller: categoryInputController,
+                    decoration: const InputDecoration(
+                      labelText: 'New Category Name',
+                      hintText: 'Enter category to add...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                     onSubmitted: (value) {
+                      if (value.isNotEmpty) {
+                        context.read<EntryCubit>().addCustomCategory(value);
+                        categoryInputController.clear();
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
           ),
+          actions: [
+            TextButton(
+              child: const Text('Done'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('Add Category'),
+              onPressed: () {
+                final newCategory = categoryInputController.text;
+                if (newCategory.isNotEmpty) {
+                  context.read<EntryCubit>().addCustomCategory(newCategory);
+                  categoryInputController.clear();
+                }
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  // Function to show confirmation dialog before deleting
-  Future<bool> _showDeleteConfirmationDialog(
-    BuildContext context,
-    Entry entry,
-  ) async {
+   // Function to show confirmation dialog before deleting ENTRY
+  Future<bool> _showDeleteConfirmationDialog(BuildContext context, Entry entry) async {
     return await showDialog<bool>(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return AlertDialog(
-              title: const Text('Confirm Delete'),
-              content: Text(
-                'Are you sure you want to delete this entry?\n"${entry.text}"',
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(false); // Return false
-                  },
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(true); // Return true
-                  },
-                ),
-              ],
-            );
-          },
-        ) ??
-        false; // Return false if dialog is dismissed
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          // Corrected: Moved closing parenthesis to the end of the Text widget call
+          content: Text('Are you sure you want to delete this entry?\n"${entry.text}" (Category: ${entry.category})'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false); // Return false
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+              onPressed: () {
+                 Navigator.of(dialogContext).pop(true); // Return true
+              },
+            ),
+          ],
+        );
+      },
+    ) ?? false; // Return false if dialog is dismissed
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -220,10 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Saved Entries:',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Saved Entries:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   BlocBuilder<EntryCubit, EntryState>(
                     builder: (context, state) {
                       List<DropdownMenuItem<String?>> dropdownItems = [
@@ -232,8 +271,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: Text("All Categories"),
                         ),
                       ];
+                      List<String> sortedCategories = List.from(state.categories)..sort();
                       dropdownItems.addAll(
-                        state.categories.map((String category) {
+                        sortedCategories.map((String category) {
                           return DropdownMenuItem<String?>(
                             value: category,
                             child: Text(category),
@@ -251,7 +291,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         items: dropdownItems,
                       );
                     },
-                  ),
+                  )
                 ],
               ),
             ),
@@ -266,34 +306,23 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (_selectedCategoryFilter == null) {
                     filteredEntries = state.entries;
                   } else {
-                    filteredEntries =
-                        state.entries
-                            .where(
-                              (entry) =>
-                                  entry.category == _selectedCategoryFilter,
-                            )
-                            .toList();
+                    filteredEntries = state.entries
+                        .where((entry) => entry.category == _selectedCategoryFilter)
+                        .toList();
                   }
 
                   if (filteredEntries.isEmpty) {
-                    if (_selectedCategoryFilter != null) {
-                      return Center(
-                        child: Text(
-                          'No entries found for category: "$_selectedCategoryFilter"',
-                        ),
-                      );
-                    } else {
-                      return const Center(
-                        child: Text('No entries yet. Add one!'),
-                      );
-                    }
+                     if (_selectedCategoryFilter != null) {
+                        return Center(child: Text('No entries found for category: "$_selectedCategoryFilter"'));
+                     } else {
+                        return const Center(child: Text('No entries yet. Add one!'));
+                     }
                   }
 
                   return ListView.builder(
                     itemCount: filteredEntries.length,
                     itemBuilder: (context, index) {
-                      final entry =
-                          filteredEntries[filteredEntries.length - 1 - index];
+                      final entry = filteredEntries[filteredEntries.length - 1 - index];
                       bool isProcessing = entry.category == 'Processing...';
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -301,63 +330,31 @@ class _MyHomePageState extends State<MyHomePage> {
                           title: Text(entry.text),
                           subtitle: Text(
                             '${entry.category} - ${_formatter.format(entry.timestamp)}',
-                            style: TextStyle(
-                              color:
-                                  isProcessing
-                                      ? Colors.orange
-                                      : Colors.grey[700],
-                            ),
+                            style: TextStyle(color: isProcessing ? Colors.orange : Colors.grey[700]),
                           ),
-                          // Modify trailing to include delete button
                           trailing: Row(
-                            // Use Row to combine processing indicator and delete button
-                            mainAxisSize:
-                                MainAxisSize
-                                    .min, // Prevent Row from taking max width
-                            children: [
-                              if (isProcessing)
-                                const SizedBox(
-                                  width: 24, // Slightly larger for tap area
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.0,
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               if (isProcessing)
+                                  const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2.0)
                                   ),
-                                ),
-                              // Delete button
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
+                               IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                                 tooltip: 'Delete Entry',
-                                onPressed:
-                                    isProcessing
-                                        ? null
-                                        : () async {
-                                          // Disable delete while processing
-                                          // Show confirmation dialog
-                                          bool confirmed =
-                                              await _showDeleteConfirmationDialog(
-                                                context,
-                                                entry,
-                                              );
-                                          if (confirmed) {
-                                            // Call cubit method if confirmed
-                                            context
-                                                .read<EntryCubit>()
-                                                .deleteEntry(entry);
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Entry deleted'),
-                                                duration: Duration(seconds: 1),
-                                              ),
-                                            );
-                                          }
-                                        },
+                                onPressed: isProcessing ? null : () async {
+                                   bool confirmed = await _showDeleteConfirmationDialog(context, entry);
+                                   if (confirmed) {
+                                      context.read<EntryCubit>().deleteEntry(entry);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Entry deleted'), duration: Duration(seconds: 1)),
+                                      );
+                                   }
+                                },
                               ),
-                            ],
+                             ],
                           ),
                           dense: true,
                         ),
