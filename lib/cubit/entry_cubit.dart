@@ -5,13 +5,16 @@ import 'package:http/http.dart' as http;
 import '../entry.dart';
 import 'dart:convert';
 
+// Helper type for extracted entry data
+typedef EntryPrototype = ({String text_segment, String category});
+
 // 1. Define a state class to hold entries, categories, loading status, and errors
 class EntryState {
   final List<Entry> entries;
   final List<String> categories;
   final bool isLoading; // For general loading like initial load
   final String?
-  lastErrorMessage; // To hold the latest error message for UI feedback
+      lastErrorMessage; // To hold the latest error message for UI feedback
 
   EntryState({
     this.entries = const [],
@@ -111,16 +114,15 @@ class EntryCubit extends Cubit<EntryState> {
       emit(state.copyWith(clearLastError: true));
       final updatedCategories = List<String>.from(state.categories)
         ..remove(categoryToDelete);
-      final updatedEntries =
-          state.entries.map((entry) {
-            return entry.category == categoryToDelete
-                ? Entry(
-                  text: entry.text,
-                  timestamp: entry.timestamp,
-                  category: 'Misc', // Reassign entries to 'Misc'
-                )
-                : entry;
-          }).toList();
+      final updatedEntries = state.entries.map((entry) {
+        return entry.category == categoryToDelete
+            ? Entry(
+                text: entry.text,
+                timestamp: entry.timestamp,
+                category: 'Misc', // Reassign entries to 'Misc'
+              )
+            : entry;
+      }).toList();
 
       emit(
         state.copyWith(categories: updatedCategories, entries: updatedEntries),
@@ -139,22 +141,21 @@ class EntryCubit extends Cubit<EntryState> {
       final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
       List<Entry> loadedEntries = [];
       if (savedEntriesJson.isNotEmpty) {
-        loadedEntries =
-            savedEntriesJson.map((jsonString) {
-              try {
-                return Entry.fromJsonString(jsonString);
-              } catch (e) {
-                print("Error parsing entry JSON: $jsonString. Error: $e");
-                // Return a default or placeholder entry, or re-throw/handle differently
-                // For now, returning a dummy entry to avoid crashing the map.
-                // Consider filtering out invalid entries instead.
-                return Entry(
-                  text: "Error parsing entry",
-                  timestamp: DateTime.now(),
-                  category: "Error",
-                );
-              }
-            }).toList();
+        loadedEntries = savedEntriesJson.map((jsonString) {
+          try {
+            return Entry.fromJsonString(jsonString);
+          } catch (e) {
+            print("Error parsing entry JSON: $jsonString. Error: $e");
+            // Return a default or placeholder entry, or re-throw/handle differently
+            // For now, returning a dummy entry to avoid crashing the map.
+            // Consider filtering out invalid entries instead.
+            return Entry(
+              text: "Error parsing entry",
+              timestamp: DateTime.now(),
+              category: "Error",
+            );
+          }
+        }).toList();
         // Optionally filter out error entries if needed
         loadedEntries.removeWhere((entry) => entry.category == "Error");
       }
@@ -201,77 +202,83 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  // --- OpenAI Call (Using Structured Outputs) ---
-
-  Future<String> _getCategoryFromOpenAI(String text) async {
-    String errorCategory = 'Error'; // Default category if error occurs
-    String? errorMessage; // Specific message for UI
+  // --- OpenAI Call (Extracts Multiple Entries using Structured Outputs) ---
+  Future<List<EntryPrototype>> _extractEntriesFromOpenAI(String text) async {
+    List<EntryPrototype> extractedEntries = []; // Default to empty list
+    String? errorMessage;
 
     // 1. Pre-flight checks
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       errorMessage = 'OpenAI API Key not found.';
-      errorCategory = 'Config Error';
     } else if (state.categories.isEmpty) {
       errorMessage = 'No categories available for classification.';
-      errorCategory = 'Config Error';
-    } else if (state.categories.length == 1 &&
-        state.categories.contains('Misc')) {
-      // If only 'Misc' exists, no need to call API
-      print("Only 'Misc' category available. Skipping OpenAI call.");
-      return 'Misc';
     }
 
     if (errorMessage != null) {
       print("Cubit Error: $errorMessage");
-      // Emit state with error message BEFORE returning error category
       emit(state.copyWith(lastErrorMessage: errorMessage));
-      return errorCategory;
+      return extractedEntries; // Return empty list
     }
 
-    // 2. Prepare API Call with Structured Output
+    // 2. Prepare API Call with Structured Output for multiple entries
     emit(state.copyWith(clearLastError: true)); // Clear previous error
-    final String modelId = 'gpt-4.1-mini'; // *** USE NEW MODEL ID ***
+    final String modelId = 'gpt-4.1-mini'; // Or 'gpt-4o' if compatibility issues arise
     print(
-      "Calling OpenAI API ($modelId) for text: '$text' using Structured Output",
-    );
+        "Calling OpenAI API ($modelId) to extract multiple entries for text: '$text' using Structured Output");
     final List<String> currentCategories = state.categories;
 
-    // Define the JSON schema for the desired output
+    // Define the JSON schema for the desired output (array of entries)
     final schema = {
       "type": "object",
       "properties": {
-        "category": {
-          "type": "string",
-          "description": "The category name for the input text",
-          "enum":
-              currentCategories, // Ensure output is one of the available categories
-        },
+        "entries": {
+          "type": "array",
+          "description":
+              "An array of text segments extracted from the input, each assigned a category.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text_segment": {
+                "type": "string",
+                "description":
+                    "The specific portion of the input text relevant to this entry."
+              },
+              "category": {
+                "type": "string",
+                "description": "The category assigned to this text segment.",
+                "enum": currentCategories
+              }
+            },
+            "required": ["text_segment", "category"],
+            "additionalProperties": false
+          }
+        }
       },
-      "required": ["category"],
-      "additionalProperties": false,
+      "required": ["entries"],
+      "additionalProperties": false
     };
 
-    // Construct the request body according to the /v1/responses documentation
+    // Construct the request body
     final requestBody = {
       'model': modelId,
       'input': [
         {
           "role": "system",
           "content":
-              "Categorize the user's text using the provided JSON schema.",
+              "Analyze the user's text. Identify distinct pieces of information or tasks. For each piece, extract the relevant text segment and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments."
         },
-        {"role": "user", "content": text},
+        {"role": "user", "content": text}
       ],
       'text': {
         'format': {
           'type': 'json_schema',
-          'name': 'category_assignment',
+          'name': 'multiple_entry_extraction',
           'schema': schema,
-          'strict': true, // Enforce schema adherence
-        },
+          'strict': true // Enforce schema adherence
+        }
       },
-      'temperature': 0.1, // Keep temperature low for deterministic output
-      // 'max_output_tokens': 50 // Consider adding a token limit for the JSON output
+      'temperature': 0.2, // Slightly higher temp might help segmentation
+      // 'max_output_tokens': 500 // Consider increasing token limit for multiple entries
     };
 
     // 3. Execute API Call and Handle Response/Errors
@@ -282,7 +289,7 @@ class EntryCubit extends Cubit<EntryState> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_apiKey',
         },
-        body: jsonEncode(requestBody), // Encode the structured request body
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
@@ -293,7 +300,6 @@ class EntryCubit extends Cubit<EntryState> {
             responseBody['error'] != null) {
           errorMessage =
               'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
-          errorCategory = 'API Error';
           print(errorMessage);
           print('Full Response Body: ${response.body}');
         } else if (responseBody['output'] != null &&
@@ -310,159 +316,138 @@ class EntryCubit extends Cubit<EntryState> {
             print("Received JSON string from OpenAI: $jsonOutputString");
 
             try {
-              // Parse the JSON string contained within the 'text' field
-              final Map<String, dynamic> parsedJson = jsonDecode(
-                jsonOutputString,
-              );
+              // Parse the JSON string containing the 'entries' array
+              final Map<String, dynamic> parsedJson = jsonDecode(jsonOutputString);
 
-              if (parsedJson.containsKey('category') &&
-                  parsedJson['category'] is String) {
-                String category = parsedJson['category'];
-                // Double-check if the returned category is valid (though schema should guarantee it)
-                if (currentCategories.contains(category)) {
-                  print("OpenAI returned valid category via JSON: $category");
-                  return category; // Valid category found
-                } else {
-                  // This case should ideally not happen with strict schema adherence
-                  print(
-                    "Warning: OpenAI structured output ('$category') not in allowed list ${currentCategories}. Falling back to 'Misc'.",
-                  );
-                  return 'Misc';
+              if (parsedJson.containsKey('entries') &&
+                  parsedJson['entries'] is List) {
+                final List<dynamic> entriesListJson = parsedJson['entries'];
+
+                for (var item in entriesListJson) {
+                  if (item is Map<String, dynamic> &&
+                      item.containsKey('text_segment') &&
+                      item['text_segment'] is String &&
+                      item.containsKey('category') &&
+                      item['category'] is String) {
+                    String segment = item['text_segment'];
+                    String category = item['category'];
+
+                    // Validate category against available ones (redundant with strict schema but safe)
+                    if (currentCategories.contains(category)) {
+                      extractedEntries.add((text_segment: segment, category: category));
+                    } else {
+                      print(
+                          "Warning: OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'");
+                      extractedEntries.add((text_segment: segment, category: 'Misc'));
+                    }
+                  } else {
+                     print("Warning: Invalid item format in 'entries' array: $item");
+                     errorMessage = "Invalid item format received from OpenAI."; // Set error message for UI
+                  }
                 }
+                 print("Successfully extracted ${extractedEntries.length} entries.");
+                 // If successful, return the list
+                 if (errorMessage == null) return extractedEntries;
+
               } else {
                 errorMessage =
-                    'Parsed JSON from OpenAI does not contain a valid "category" key.';
-                errorCategory = 'Parse Error';
+                    '''Parsed JSON from OpenAI does not contain a valid "entries" key or it's not a list.''';
                 print('$errorMessage JSON: $parsedJson');
               }
             } catch (e) {
               errorMessage = 'Failed to parse JSON response from OpenAI.';
-              errorCategory = 'Parse Error';
               print('$errorMessage Raw text: $jsonOutputString. Error: $e');
             }
           } else if (contentItem['type'] == 'refusal' &&
               contentItem['refusal'] != null) {
             errorMessage =
                 'OpenAI refused the request: ${contentItem['refusal']}';
-            errorCategory = 'API Refusal';
             print(errorMessage);
           } else {
             errorMessage =
                 'Unexpected content type or format in OpenAI response.';
-            errorCategory = 'Parse Error';
             print('$errorMessage Content Item: $contentItem');
           }
         } else {
           errorMessage = 'Failed to parse overall OpenAI response structure.';
-          errorCategory = 'Parse Error';
           print('$errorMessage Body: ${response.body}');
         }
       } else {
         // Handle HTTP errors
-        // *** Potential issue: Check if the selected model supports structured output. If not, API might return 400 Bad Request ***
         if (response.statusCode == 400) {
           errorMessage =
-              'OpenAI API error (Code: 400). This might be because $modelId does not support structured outputs (json_schema). Consider using gpt-4o or removing the text.format parameter.';
-          errorCategory = 'API Config Error';
+              'OpenAI API error (Code: 400). This might be because $modelId does not support the requested structured output schema (json_schema). Consider using gpt-4o or simplifying the schema.';
         } else if (response.statusCode == 401) {
           errorMessage = 'Invalid OpenAI API Key.';
-          errorCategory = 'API Auth Error';
         } else if (response.statusCode == 429) {
           errorMessage = 'OpenAI rate limit exceeded.';
-          errorCategory = 'API Rate Limit';
         } else {
           errorMessage = 'OpenAI API HTTP error (Code: ${response.statusCode})';
-          errorCategory = 'API Network Error';
         }
-        print(
-          '$errorMessage Response Body: ${response.body}',
-        ); // Log the error response body
+        print('$errorMessage Response Body: ${response.body}');
       }
     } catch (e, stacktrace) {
       // Catch network or other exceptions during the request
-      print('Error calling OpenAI API: $e $stacktrace');
+      print('''Error calling OpenAI API: $e
+$stacktrace''');
       errorMessage = 'Network error or exception during API call.';
-      errorCategory = 'Network Exception';
     }
 
     // 4. Final Error Handling
-    // If an error occurred at any point, emit state with the message
     if (errorMessage != null) {
       emit(state.copyWith(lastErrorMessage: errorMessage));
     }
     print(
-      "Returning error category: $errorCategory due to error: $errorMessage",
+      "Returning ${extractedEntries.length} entries. Error (if any): $errorMessage",
     );
-    return errorCategory; // Return the generic error category name
+    return extractedEntries; // Return list (empty if errors occurred)
   }
 
-  // --- Entry Manipulation ---
+  // --- Entry Manipulation (Modified for Multiple Entries) ---
 
   Future<void> addEntry(String text) async {
     if (text.isNotEmpty) {
-      emit(
-        state.copyWith(clearLastError: true),
-      ); // Clear previous errors on new entry
-      String category = 'Processing...'; // Initial temporary category
+      emit(state.copyWith(
+          isLoading: true,
+          clearLastError: true)); // Set loading true, clear previous errors
 
-      final tempEntry = Entry(
-        text: text,
-        timestamp: DateTime.now(),
-        category: category,
-      );
-      // Add temporary entry to list for immediate UI update
-      final tempList = List<Entry>.from(state.entries)
-        ..insert(0, tempEntry); // Insert at top
-      // Set isLoading true while processing this entry
-      emit(state.copyWith(entries: tempList, isLoading: true));
-      final entryIndex = 0; // Index will always be 0 as we inserted at the top
+      List<EntryPrototype> extractedData = await _extractEntriesFromOpenAI(text);
 
-      // Get actual category (this function now handles emitting errors and uses structured output)
-      category = await _getCategoryFromOpenAI(text);
-
-      // Create the final entry object
-      final finalEntry = Entry(
-        text: text,
-        timestamp: tempEntry.timestamp, // Use original timestamp
-        category: category, // Use category from API (or error/fallback)
-      );
-
-      // Update the entry in the list (assuming state hasn't drastically changed)
-      // Use a fresh copy of the state entries to avoid mutation issues
-      final currentEntriesList = List<Entry>.from(state.entries);
-
-      // Check if the entry at the expected index is still the placeholder
-      if (currentEntriesList.isNotEmpty &&
-          entryIndex < currentEntriesList.length && // Ensure index is valid
-          currentEntriesList[entryIndex].timestamp ==
-              tempEntry.timestamp && // Match timestamp
-          currentEntriesList[entryIndex].category == 'Processing...') {
-        currentEntriesList[entryIndex] =
-            finalEntry; // Replace placeholder with final entry
-        // Set isLoading false after processing finishes
-        emit(state.copyWith(entries: currentEntriesList, isLoading: false));
-        await _saveEntries(currentEntriesList); // Save the updated list
-      } else {
-        // This case might happen if entries were deleted/added rapidly during processing
-        print(
-          "Warning: State changed during processing or placeholder not found at index $entryIndex. Adding final entry anew.",
-        );
-        // Attempt to remove the placeholder if it still exists somewhere else (by timestamp)
-        currentEntriesList.removeWhere(
-          (e) =>
-              e.timestamp == tempEntry.timestamp &&
-              e.category == 'Processing...',
-        );
-        // Add the final entry at the top
-        currentEntriesList.insert(0, finalEntry);
-        // Ensure sorting if needed, though adding at top usually maintains reverse chrono
-        // currentEntriesList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        emit(state.copyWith(entries: currentEntriesList, isLoading: false));
-        await _saveEntries(currentEntriesList);
+      if (extractedData.isEmpty) {
+         // If nothing was extracted (or an error occurred in extraction),
+         // potentially add the original text as 'Misc' or show error from emit()
+          if (state.lastErrorMessage == null) { // Only add Misc if no specific error was emitted
+             print("No entries extracted by AI, adding original text as Misc.");
+             final fallbackEntry = Entry(
+                 text: text, timestamp: DateTime.now(), category: 'Misc');
+             final updatedEntries = List<Entry>.from(state.entries)..insert(0, fallbackEntry);
+             emit(state.copyWith(entries: updatedEntries, isLoading: false));
+             await _saveEntries(updatedEntries);
+          } else {
+             print("Error occurred during extraction, not adding fallback entry.");
+             emit(state.copyWith(isLoading: false)); // Ensure loading is turned off
+          }
+          return; // Exit early
       }
 
-      // Ensure isLoading is false even if something went wrong above or state changed unexpectedly
-      if (state.isLoading) emit(state.copyWith(isLoading: false));
+      // Create final Entry objects from extracted data
+      final List<Entry> newEntries = [];
+      final DateTime now = DateTime.now(); // Use the same timestamp for all entries from this input
+      for (var data in extractedData) {
+        newEntries.add(Entry(
+          text: data.text_segment,
+          timestamp: now,
+          category: data.category,
+        ));
+      }
+
+      // Update the state with the new entries added to the top
+      final updatedEntries = List<Entry>.from(state.entries);
+      updatedEntries.insertAll(0, newEntries);
+
+      // Update state and save
+      emit(state.copyWith(entries: updatedEntries, isLoading: false));
+      await _saveEntries(updatedEntries);
     }
   }
 
@@ -477,14 +462,11 @@ class EntryCubit extends Cubit<EntryState> {
 
   Future<void> deleteEntry(Entry entryToDelete) async {
     emit(state.copyWith(clearLastError: true));
-    final updatedEntries =
-        state.entries
-            .where(
-              (entry) =>
-                  entry.timestamp != entryToDelete.timestamp ||
-                  entry.text != entryToDelete.text, // Check both for safety
-            )
-            .toList();
+    final updatedEntries = state.entries
+        .where((entry) =>
+            !(entry.timestamp == entryToDelete.timestamp &&
+              entry.text == entryToDelete.text)) // More precise check
+        .toList();
     if (updatedEntries.length < state.entries.length) {
       // Check if deletion happened
       emit(state.copyWith(entries: updatedEntries));
@@ -494,11 +476,9 @@ class EntryCubit extends Cubit<EntryState> {
 
   Future<void> updateEntry(Entry originalEntry, Entry updatedEntry) async {
     emit(state.copyWith(clearLastError: true));
-    final index = state.entries.indexWhere(
-      (entry) =>
-          entry.timestamp == originalEntry.timestamp &&
-          entry.text == originalEntry.text, // Check both for safety
-    );
+    final index = state.entries.indexWhere((entry) =>
+        entry.timestamp == originalEntry.timestamp &&
+        entry.text == originalEntry.text); // More precise check
     if (index != -1) {
       final updatedEntries = List<Entry>.from(state.entries);
       updatedEntries[index] = updatedEntry;
