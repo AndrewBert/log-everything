@@ -45,7 +45,6 @@ class EntryCubit extends Cubit<EntryState> {
 
   // --- Category Management ---
 
-  // Modified: Only include 'Misc' as the default category
   List<String> get _defaultCategories => [
       'Misc'
   ];
@@ -54,11 +53,9 @@ class EntryCubit extends Cubit<EntryState> {
     final prefs = await SharedPreferences.getInstance();
     final savedCategories = prefs.getStringList(_categoriesKey);
     if (savedCategories == null || savedCategories.isEmpty) {
-      // If no categories saved, use the minimal default and save it
       emit(state.copyWith(categories: _defaultCategories));
       await _saveCategories(_defaultCategories);
     } else {
-      // Ensure 'Misc' is always present if loading saved categories
       List<String> currentCategories = List<String>.from(savedCategories);
       if (!currentCategories.contains('Misc')) {
           currentCategories.add('Misc');
@@ -76,7 +73,6 @@ class EntryCubit extends Cubit<EntryState> {
 
   Future<void> addCustomCategory(String newCategory) async {
     final trimmedCategory = newCategory.trim();
-    // Prevent adding 'Misc' again if it exists
     if (trimmedCategory.isNotEmpty && trimmedCategory != 'Misc' && !state.categories.contains(trimmedCategory)) {
       final updatedCategories = List<String>.from(state.categories)..add(trimmedCategory);
       emit(state.copyWith(categories: updatedCategories));
@@ -85,7 +81,6 @@ class EntryCubit extends Cubit<EntryState> {
   }
 
   Future<void> deleteCategory(String categoryToDelete) async {
-    // Prevent deleting the essential 'Misc' category
     if (categoryToDelete == 'Misc') {
       print("Cubit: Cannot delete the default 'Misc' category.");
       return;
@@ -93,30 +88,22 @@ class EntryCubit extends Cubit<EntryState> {
 
     if (state.categories.contains(categoryToDelete)) {
       print("Cubit: Deleting category '$categoryToDelete' and re-assigning entries to 'Misc'.");
-
-      // 1. Remove the category from the list
       final updatedCategories = List<String>.from(state.categories)
         ..remove(categoryToDelete);
-
-      // 2. Re-categorize existing entries that used the deleted category
       final updatedEntries = state.entries.map((entry) {
         if (entry.category == categoryToDelete) {
           return Entry(
               text: entry.text,
               timestamp: entry.timestamp,
-              category: 'Misc'); 
+              category: 'Misc');
         } else {
-          return entry; 
+          return entry;
         }
       }).toList();
-
-      // 3. Emit the updated state with both lists changed
       emit(state.copyWith(
           categories: updatedCategories,
           entries: updatedEntries,
       ));
-
-      // 4. Save both updated lists
       await _saveCategories(updatedCategories);
       await _saveEntries(updatedEntries);
     } else {
@@ -125,12 +112,11 @@ class EntryCubit extends Cubit<EntryState> {
   }
 
 
-  // --- Entry Loading/Saving (Modified to use EntryState) ---
+  // --- Entry Loading/Saving ---
 
    Future<void> _loadEntries() async {
     final prefs = await SharedPreferences.getInstance();
     List<Entry> loadedEntries = [];
-    bool loadSuccess = true;
 
     try {
       final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
@@ -143,13 +129,11 @@ class EntryCubit extends Cubit<EntryState> {
       emit(state.copyWith(entries: loadedEntries));
     } catch (e) {
       print('Cubit Error loading entries: $e. Clearing potentially incompatible data for key $_entriesKey.');
-      loadSuccess = false;
       await prefs.remove(_entriesKey);
       emit(state.copyWith(entries: []));
     }
   }
 
-  // Combined loading function
   Future<void> _loadAllData() async {
     emit(state.copyWith(isLoading: true));
     await _loadCategories();
@@ -169,8 +153,7 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-
-  // --- OpenAI Call (Modified to use categories from state) ---
+  // --- OpenAI Call --- 
 
   Future<String> _getCategoryFromOpenAI(String text) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
@@ -250,7 +233,7 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  // --- Add Entry (Modified for EntryState) ---
+  // --- Entry Manipulation ---
 
   Future<void> addEntry(String text) async {
     if (text.isNotEmpty) {
@@ -292,19 +275,16 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  // Add a specific entry object back (for Undo)
   Future<void> addEntryObject(Entry entryToAdd) async {
-    // Add the entry back to the list
     final updatedEntries = List<Entry>.from(state.entries)..add(entryToAdd);
-    // Sort entries by timestamp descending (newest first) to maintain order
     updatedEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     emit(state.copyWith(entries: updatedEntries));
     await _saveEntries(updatedEntries);
     print("Cubit: Undid delete for entry - ${entryToAdd.text}");
   }
 
-  // --- Delete Entry --- 
   Future<void> deleteEntry(Entry entryToDelete) async {
+    // Using timestamp and text as a proxy for unique ID
     final updatedEntries = state.entries.where((entry) =>
         entry.timestamp != entryToDelete.timestamp || entry.text != entryToDelete.text
     ).toList();
@@ -315,6 +295,28 @@ class EntryCubit extends Cubit<EntryState> {
       await _saveEntries(updatedEntries);
     } else {
        print("Cubit: Delete entry - Entry not found in current state.");
+    }
+  }
+
+  // New method to update an existing entry
+  Future<void> updateEntry(Entry originalEntry, Entry updatedEntry) async {
+     // Find the index of the original entry using timestamp/text
+    final index = state.entries.indexWhere((entry) =>
+        entry.timestamp == originalEntry.timestamp && entry.text == originalEntry.text);
+
+    if (index != -1) {
+      print("Cubit: Updating entry - ${originalEntry.text} -> ${updatedEntry.text}");
+      // Create a new list with the updated entry at the found index
+      final updatedEntries = List<Entry>.from(state.entries);
+      updatedEntries[index] = updatedEntry;
+
+      // Emit the state with the updated list
+      emit(state.copyWith(entries: updatedEntries));
+      // Save the updated list
+      await _saveEntries(updatedEntries);
+    } else {
+        print("Cubit: Update entry - Original entry not found in current state.");
+        // Optional: Handle error, maybe add the updated entry as new?
     }
   }
 
