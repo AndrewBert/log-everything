@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'data_store.dart'; // Import the data store
 
 void main() {
   runApp(const MyApp());
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Basic Input'),
+      home: const MyHomePage(title: 'Input & Display'),
     );
   }
 }
@@ -30,12 +31,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // Controller to manage the text field's input
   final TextEditingController _textController = TextEditingController();
 
   @override
   void dispose() {
-    // Clean up the controller when the widget is disposed.
     _textController.dispose();
     super.dispose();
   }
@@ -43,12 +42,25 @@ class _MyHomePageState extends State<MyHomePage> {
   void _handleInput() {
     final String currentInput = _textController.text;
     if (currentInput.isNotEmpty) {
-      print('User Input: $currentInput');
-      // You can add further processing here, like calling the input_handler
-      // Or clearing the field after processing:
-      // _textController.clear();
+      setState(() {
+        // Call setState to trigger UI rebuild
+        allEntries.add(currentInput);
+        print('Saved entry: $currentInput');
+        print('Current entries: $allEntries');
+
+        _textController.clear();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Entry saved!'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      });
     } else {
-      print('Input field is empty.');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter some text.')));
     }
   }
 
@@ -60,31 +72,54 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Padding(
-        // Add padding around the content
         padding: const EdgeInsets.all(16.0),
+        // Use a Column to layout input area and list vertically
         child: Column(
-          // Arrange widgets vertically
-          mainAxisAlignment: MainAxisAlignment.center, // Center vertically
           children: <Widget>[
+            // Input Area
             TextField(
-              controller: _textController, // Link controller to the text field
+              controller: _textController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Enter text here',
                 hintText: 'Type anything...',
               ),
-              onSubmitted:
-                  (_) => _handleInput(), // Optional: handle input on submit
+              onSubmitted: (_) => _handleInput(),
             ),
-            const SizedBox(height: 20), // Add some space between widgets
+            const SizedBox(height: 10), // Reduced space
             ElevatedButton(
-              onPressed: _handleInput, // Call _handleInput when pressed
-              child: const Text('Submit Input'),
+              onPressed: _handleInput,
+              child: const Text('Save Input'),
+            ),
+            const SizedBox(height: 20), // Space before the list
+            // Divider
+            const Divider(),
+
+            // Header for the list
+            const Text(
+              'Saved Entries:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            // List Display Area
+            Expanded(
+              // Allows the ListView to take available space
+              child: ListView.builder(
+                itemCount: allEntries.length,
+                itemBuilder: (context, index) {
+                  // Get the entry in reverse order to show newest first
+                  final entry = allEntries[allEntries.length - 1 - index];
+                  return ListTile(
+                    title: Text(entry),
+                    dense: true, // Make list items a bit smaller
+                  );
+                },
+              ),
             ),
           ],
         ),
       ),
-      // Removed the FloatingActionButton
     );
   }
 }
