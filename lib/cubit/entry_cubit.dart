@@ -10,25 +10,27 @@ class EntryCubit extends Cubit<List<Entry>> {
 
   static const String _entriesKey = 'saved_entries_v3_categorized';
   final String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
-  final String _apiUrl = 'https://api.openai.com/v1/chat/completions';
+  // Updated API URL based on the provided documentation
+  final String _apiUrl = 'https://api.openai.com/v1/responses'; 
 
-  // Get category from OpenAI API
+  // Get category from OpenAI API using the /v1/responses endpoint
   Future<String> _getCategoryFromOpenAI(String text) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       print('ERROR: OpenAI API Key not found in .env file.');
-      return 'Config Error'; // Return specific error category
+      return 'Config Error';
     }
 
-    print("Calling OpenAI API for text: '$text'");
+    print("Calling OpenAI API (v1/responses) for text: '$text'");
     final List<String> possibleCategories = [
       'Food', 'Work', 'Exercise', 'Shopping', 'Idea', 'Finance',
       'Social', 'Health', 'Home', 'Commute', 'Media', 'Sleep', 'Observation', 'Misc'
     ];
 
-    final String systemPrompt = 
-        'You are a text categorization assistant. Based on the user's input, assign one of the following categories: ${possibleCategories.join(", ")}. Respond with ONLY the category name and nothing else.';
+    // Use the 'instructions' field for the system prompt
+    final String instructions = 
+        "You are a text categorization assistant. Based on the user's input, assign ONE of the following categories: ${possibleCategories.join(", ")}. Respond with ONLY the category name and nothing else.";
     
-    final String userPrompt = text;
+    final String inputText = text;
 
     try {
       final response = await http.post(
@@ -36,44 +38,65 @@ class EntryCubit extends Cubit<List<Entry>> {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_apiKey',
+          // Consider adding 'OpenAI-Beta': 'assistants=v1' or similar if required by the specific API version/features, but start without.
         },
+        // Structure the body according to the /v1/responses documentation
         body: jsonEncode({
-          'model': 'gpt-3.5-turbo', // Or use a newer/cheaper model if preferred
-          'messages': [
-            {'role': 'system', 'content': systemPrompt},
-            {'role': 'user', 'content': userPrompt},
-          ],
-          'temperature': 0.2, // Lower temperature for more deterministic category
-          'max_tokens': 10, // Limit tokens as we only need one word
+          'model': 'gpt-4o', // Using a capable model like gpt-4o is recommended 
+          'input': inputText, 
+          'instructions': instructions,
+          'temperature': 0.1, // Keep low for deterministic category
+          // max_output_tokens removed - relying on default behavior and prompt strength
+          // Removed 'messages' key
         }),
       );
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        if (responseBody['choices'] != null && responseBody['choices'].isNotEmpty) {
-          String category = responseBody['choices'][0]['message']['content'].trim();
-          
-          // Simple validation/cleanup
-          category = category.replaceAll('.', ''); // Remove trailing periods if any
-          if (possibleCategories.contains(category)) {
-             print("OpenAI response: Category '$category'");
-            return category;
+
+        // Check response status as per the documentation
+        if (responseBody['status'] == 'completed') {
+          // Navigate the new response structure
+          if (responseBody['output'] != null && 
+              responseBody['output'].isNotEmpty &&
+              responseBody['output'][0]['type'] == 'message' &&
+              responseBody['output'][0]['content'] != null &&
+              responseBody['output'][0]['content'].isNotEmpty &&
+              responseBody['output'][0]['content'][0]['type'] == 'output_text' &&
+              responseBody['output'][0]['content'][0]['text'] != null) 
+          {
+            String category = responseBody['output'][0]['content'][0]['text'].trim();
+            
+            // Simple validation/cleanup
+            category = category.replaceAll('.', ''); // Remove trailing periods if any
+            if (possibleCategories.contains(category)) {
+               print("OpenAI response (/v1/responses): Category '$category'");
+              return category;
+            } else {
+              print("OpenAI response ('$category') not in predefined list or unexpected format. Falling back.");
+              return 'Misc'; // Fallback if unexpected response format/content
+            }
           } else {
-            print("OpenAI response ('$category') not in predefined list. Falling back.");
-            return 'Misc'; // Fallback if unexpected response format
+             print('OpenAI Error: Could not find expected text in response structure.');
+             print('Response Output: ${responseBody['output']}');
+             return 'Parse Error';
           }
         } else {
-          print('OpenAI Error: No choices found in response body.');
-          return 'API Error';
+           // Handle non-completed statuses (e.g., 'failed', 'in_progress')
+           print('OpenAI Error: Response status is ${responseBody['status']}');
+           if (responseBody['error'] != null) {
+              print('Error Details: ${responseBody['error']}');
+           }
+           return 'API Status Error';
         }
       } else {
         print('OpenAI Error: Status Code ${response.statusCode}');
         print('OpenAI Error Body: ${response.body}');
-        return 'API Error'; // Return specific error category
+        return 'API Network Error';
       }
     } catch (e) {
       print('Error calling OpenAI API: $e');
-      return 'Network Error'; // Return specific error category
+      return 'Network Exception';
     }
   }
 
@@ -112,51 +135,44 @@ class EntryCubit extends Cubit<List<Entry>> {
     }
   }
 
-  // Add a new entry using OpenAI API for category
+  // Add a new entry using OpenAI API (v1/responses) for category
   Future<void> addEntry(String text) async {
     if (text.isNotEmpty) {
-      String category = 'Processing...'; // Indicate processing
+      String category = 'Processing...';
 
-      // Immediately add entry with processing category
       final tempEntry = Entry(
         text: text,
         timestamp: DateTime.now(),
         category: category,
       );
-      // Find index if needed later for update
       final tempList = List<Entry>.from(state)..add(tempEntry);
-      emit(tempList); // Emit intermediate state
-      final entryIndex = tempList.length - 1; // Index of the entry we just added
+      emit(tempList);
+      final entryIndex = tempList.length - 1;
 
       try {
-        // Get category from OpenAI
         category = await _getCategoryFromOpenAI(text);
       } catch (e) {
         print("Error getting category from OpenAI: $e");
-        category = 'Error'; // Assign error category if API call fails
+        category = 'Error'; 
       }
 
-      // Create the final entry with the determined category
       final finalEntry = Entry(
-        text: text, // Keep original text
-        timestamp: tempEntry.timestamp, // Keep original timestamp
+        text: text,
+        timestamp: tempEntry.timestamp,
         category: category, 
       );
 
-      // Update the list with the final entry
       final updatedList = List<Entry>.from(state);
-      if(entryIndex < updatedList.length){ // Sanity check index
+      if(entryIndex < updatedList.length){ 
          updatedList[entryIndex] = finalEntry;
          emit(updatedList);
-         await _saveEntries(updatedList); // Save the final list
+         await _saveEntries(updatedList);
       } else {
-        print("Error updating entry, index out of bounds");
-        // Could attempt to just add the final entry if index is wrong
-         final fallbackList = List<Entry>.from(state)..add(finalEntry); // May create duplicate on race condition
+        print("Error updating entry, index out of bounds. Adding as new.");
+         final fallbackList = List<Entry>.from(state)..add(finalEntry);
          emit(fallbackList);
          await _saveEntries(fallbackList);
       }
-
     }
   }
 }
