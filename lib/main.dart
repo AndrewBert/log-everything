@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart'; // Added
+import 'package:path_provider/path_provider.dart'; // Added
+import 'package:record/record.dart'; // Added
+import 'dart:io'; // Added for Directory
+
 import 'entry.dart';
 import 'cubit/entry_cubit.dart';
+import 'speech_service.dart'; // Added
 import 'package:collection/collection.dart'; // Import for groupBy
 
 Future<void> main() async {
@@ -47,11 +53,245 @@ class _MyHomePageState extends State<MyHomePage> {
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   String? _selectedCategoryFilter;
 
+  // --- Voice Input State ---
+  late final AudioRecorder _audioRecorder;
+  late final SpeechService _speechService;
+  bool _isRecording = false;
+  String? _audioPath;
+  // --- End Voice Input State ---
+
+  @override
+  void initState() {
+    super.initState();
+    _audioRecorder = AudioRecorder();
+    _speechService = SpeechService(); // Initialize SpeechService
+    _requestMicPermission(); // Request permission on init
+  }
+
   @override
   void dispose() {
     _textController.dispose();
+    _audioRecorder.dispose(); // Dispose recorder
     super.dispose();
   }
+
+  // --- Microphone Permission ---
+  Future<void> _requestMicPermission() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      // Handle permission denial (optional: show a message)
+      print("Microphone permission denied.");
+      if (mounted) {
+        // Check if widget is still mounted
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required for voice input.'),
+          ),
+        );
+      }
+    }
+  }
+
+  // --- Voice Recording and Transcription Logic ---
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await _stopRecording();
+    } else {
+      await _startRecording();
+    }
+  }
+
+  Future<void> _startRecording() async {
+    final hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      await _requestMicPermission(); // Request again if needed
+      // Check again after requesting
+      if (!await _audioRecorder.hasPermission()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot record without microphone permission.'),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      final Directory tempDir = await getTemporaryDirectory();
+      _audioPath =
+          '${tempDir.path}/temp_audio.m4a'; // Use m4a for wider compatibility
+
+      // Ensure directory exists (mainly for robustness)
+      final file = File(_audioPath!);
+      if (await file.exists()) {
+        await file.delete(); // Delete previous recording if exists
+      }
+
+      print("Starting recording to: $_audioPath");
+
+      // Start recording to file
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc), // Using AAC LC encoder
+        path: _audioPath!,
+      );
+
+      // Short delay to ensure the file is created before checking existence
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Check if recording actually started
+      bool isRecording = await _audioRecorder.isRecording();
+      if (isRecording) {
+        if (mounted) {
+          setState(() {
+            _isRecording = true;
+          });
+        }
+        print("Recording started successfully.");
+      } else {
+        print("Error: Recording failed to start.");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to start recording.')),
+          );
+          setState(() {
+            _isRecording = false; // Ensure state is consistent
+          });
+        }
+      }
+    } catch (e, stacktrace) {
+      print('Error starting recording: $e');
+      print('Stacktrace: $stacktrace');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error starting recording: $e')));
+        setState(() {
+          _isRecording = false; // Reset state on error
+        });
+      }
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (!_isRecording) return; // Prevent stopping if not recording
+
+    try {
+      final path = await _audioRecorder.stop();
+      print("Recording stopped. File path: $path");
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+        });
+      }
+
+      if (path != null) {
+        _audioPath = path; // Use the path returned by stop()
+        print("Audio saved to: $_audioPath");
+        _transcribeAudio(); // Start transcription
+      } else {
+        print("Error: Stop recording returned null path.");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to save recording.')),
+          );
+        }
+      }
+    } catch (e, stacktrace) {
+      print('Error stopping recording: $e');
+      print('Stacktrace: $stacktrace');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error stopping recording: $e')));
+        setState(() {
+          _isRecording = false; // Reset state on error
+        });
+      }
+    }
+  }
+
+  Future<void> _transcribeAudio() async {
+    if (_audioPath == null || _audioPath!.isEmpty) {
+      print("Transcription Error: Audio path is null or empty.");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No audio file found to transcribe.')),
+        );
+      }
+      return;
+    }
+
+    // Show visual feedback that transcription is happening
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              CircularProgressIndicator(strokeWidth: 3),
+              SizedBox(width: 15),
+              Text('Transcribing audio...'),
+            ],
+          ),
+          duration: Duration(seconds: 10), // Adjust duration as needed
+        ),
+      );
+    }
+
+    try {
+      final transcription = await _speechService.transcribeAudio(_audioPath!);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).hideCurrentSnackBar(); // Hide processing indicator
+      }
+
+      if (transcription != null && transcription.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _textController.text = transcription; // Update text field
+            _textController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _textController.text.length),
+            ); // Move cursor to end
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transcription successful!'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transcription failed or returned empty text.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).hideCurrentSnackBar(); // Hide processing indicator
+        print('Error during transcription: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Transcription error: $e')));
+      }
+    } finally {
+      // Optional: Clean up the audio file after transcription attempt
+      // final file = File(_audioPath!);
+      // if (await file.exists()) {
+      //   await file.delete();
+      //   print("Deleted temporary audio file: $_audioPath");
+      // }
+      // _audioPath = null; // Reset path
+    }
+  }
+  // --- End Voice Recording Logic ---
 
   void _handleInput() {
     final String currentInput = _textController.text;
@@ -71,7 +311,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // --- Category Management Dialog (Remains the same) ---
+  // --- Category Management Dialog ---
   Future<bool> _showDeleteCategoryConfirmationDialog(
     BuildContext context,
     String category,
@@ -151,10 +391,12 @@ Entries using this category will be moved to "Misc".''',
                                                   context,
                                                   category,
                                                 );
-                                            if (confirmed) {
+                                            if (confirmed && mounted) {
+                                              // Check mounted
                                               context
                                                   .read<EntryCubit>()
                                                   .deleteCategory(category);
+                                              // Use root context if available for SnackBar
                                               ScaffoldMessenger.of(
                                                 context,
                                               ).showSnackBar(
@@ -162,7 +404,7 @@ Entries using this category will be moved to "Misc".''',
                                                   content: Text(
                                                     'Category "$category" deleted',
                                                   ),
-                                                  duration: Duration(
+                                                  duration: const Duration(
                                                     seconds: 2,
                                                   ),
                                                 ),
@@ -299,20 +541,26 @@ Entries using this category will be moved to "Misc".''',
                         updatedEntry,
                       );
                       Navigator.of(dialogContext).pop(); // Close dialog
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Entry updated'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
+                      if (mounted) {
+                        // Check mounted
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Entry updated'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      }
                     } else {
-                      // Optional: Show validation error within dialog if text is empty
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Entry text cannot be empty.'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      if (mounted) {
+                        // Check mounted
+                        // Optional: Show validation error within dialog if text is empty
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Entry text cannot be empty.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -359,16 +607,38 @@ Entries using this category will be moved to "Misc".''',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // --- Input Area (Remains the same) ---
-            TextField(
-              controller: _textController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter log entry here',
-                hintText: 'What happened?...',
-              ),
-              onSubmitted: (_) => _handleInput(),
-              textInputAction: TextInputAction.done,
+            // --- Input Area --- Modified to include Mic button ---
+            Row(
+              // Wrap TextField and Button in a Row
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Enter log entry here',
+                      hintText: 'What happened?...',
+                    ),
+                    onSubmitted: (_) => _handleInput(),
+                    textInputAction: TextInputAction.done,
+                  ),
+                ),
+                const SizedBox(width: 8), // Spacing
+                // Microphone Button
+                IconButton(
+                  icon: Icon(
+                    _isRecording ? Icons.stop_circle_outlined : Icons.mic,
+                    color:
+                        _isRecording
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.primary,
+                  ),
+                  tooltip:
+                      _isRecording ? 'Stop Recording' : 'Start Voice Input',
+                  iconSize: 30,
+                  onPressed: _toggleRecording, // Call the toggle function
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Center(
@@ -572,31 +842,34 @@ Entries using this category will be moved to "Misc".''',
                                             context
                                                 .read<EntryCubit>()
                                                 .deleteEntry(entryToDelete);
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).removeCurrentSnackBar();
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  'Entry deleted',
+                                            if (mounted) {
+                                              // Check mounted
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).removeCurrentSnackBar();
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text(
+                                                    'Entry deleted',
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 4,
+                                                  ),
+                                                  action: SnackBarAction(
+                                                    label: 'Undo',
+                                                    onPressed: () {
+                                                      context
+                                                          .read<EntryCubit>()
+                                                          .addEntryObject(
+                                                            entryToDelete,
+                                                          );
+                                                    },
+                                                  ),
                                                 ),
-                                                duration: const Duration(
-                                                  seconds: 4,
-                                                ),
-                                                action: SnackBarAction(
-                                                  label: 'Undo',
-                                                  onPressed: () {
-                                                    context
-                                                        .read<EntryCubit>()
-                                                        .addEntryObject(
-                                                          entryToDelete,
-                                                        );
-                                                  },
-                                                ),
-                                              ),
-                                            );
+                                              );
+                                            }
                                           },
                                 ),
                               ],
@@ -605,7 +878,7 @@ Entries using this category will be moved to "Misc".''',
                           ),
                         );
                       }
-                      return Container();
+                      return Container(); // Should not happen
                     },
                   );
                 },
