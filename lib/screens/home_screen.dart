@@ -590,9 +590,7 @@ Entries using this category will be moved to "Misc".''',
       child: BlocBuilder<EntryCubit, EntryState>(
         builder: (context, state) {
           if (state.isLoading && state.entries.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           // Apply filtering
@@ -601,16 +599,12 @@ Entries using this category will be moved to "Misc".''',
                   ? state.entries
                   : state.entries
                       .where(
-                        (entry) =>
-                            entry.category ==
-                            _selectedCategoryFilter,
+                        (entry) => entry.category == _selectedCategoryFilter,
                       )
                       .toList();
 
           // Sort entries by timestamp (descending)
-          filteredEntries.sort(
-            (a, b) => b.timestamp.compareTo(a.timestamp),
-          );
+          filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
           if (filteredEntries.isEmpty) {
             return Center(
@@ -635,27 +629,21 @@ Entries using this category will be moved to "Misc".''',
 
           // Sort dates descending to show newest first
           final sortedDates =
-              groupedEntries.keys.toList()
-                ..sort((a, b) => b.compareTo(a));
+              groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
 
           for (var date in sortedDates) {
             listItems.add(date); // Add date header
             // Sort entries within the date descending
             final entriesOnDate =
-                groupedEntries[date]!..sort(
-                  (a, b) => b.timestamp.compareTo(a.timestamp),
-                );
-            listItems.addAll(
-              entriesOnDate,
-            ); // Add entries for that date
+                groupedEntries[date]!
+                  ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            listItems.addAll(entriesOnDate); // Add entries for that date
           }
 
           // Build the list with headers and entry items
           return ListView.builder(
             // Add padding at the bottom to avoid overlap with input area
-            padding: const EdgeInsets.only(
-              bottom: 80.0,
-            ), // Adjust as needed
+            padding: const EdgeInsets.only(bottom: 80.0), // Adjust as needed
             itemCount: listItems.length,
             itemBuilder: (context, index) {
               final item = listItems[index];
@@ -663,17 +651,11 @@ Entries using this category will be moved to "Misc".''',
               if (item is DateTime) {
                 // Date Header
                 return Padding(
-                  padding: const EdgeInsets.only(
-                    top: 16.0,
-                    bottom: 8.0,
-                  ),
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                   child: Text(
                     _formatDateHeader(item),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(
-                      color:
-                          Theme.of(context).colorScheme.primary,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -681,8 +663,7 @@ Entries using this category will be moved to "Misc".''',
               } else if (item is Entry) {
                 // Entry Item
                 final entry = item;
-                bool isProcessing =
-                    entry.category == 'Processing...';
+                bool isProcessing = entry.category == 'Processing...';
 
                 return Card(
                   margin: const EdgeInsets.symmetric(
@@ -714,7 +695,7 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
-   // --- Filter Section ---
+  // --- Filter Section ---
   Widget _buildFilterSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -723,10 +704,7 @@ Entries using this category will be moved to "Misc".''',
         children: [
           const Text(
             'Saved Entries:',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           BlocBuilder<EntryCubit, EntryState>(
             builder: (context, state) {
@@ -734,9 +712,8 @@ Entries using this category will be moved to "Misc".''',
                 return const SizedBox.shrink(); // Hide if no categories
               }
               // Create a mutable, sorted list for the dropdown
-              final sortedCategories = List<String>.from(
-                state.categories,
-              )..sort();
+              final sortedCategories = List<String>.from(state.categories)
+                ..sort();
 
               List<DropdownMenuItem<String?>> dropdownItems = [
                 const DropdownMenuItem<String?>(
@@ -768,19 +745,15 @@ Entries using this category will be moved to "Misc".''',
       ),
     );
   }
-  
-  
-    // --- Input Area ---
+
+  // --- Input Area ---
   Widget _buildInputArea() {
     return Positioned(
       bottom: 0,
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8.0,
-          vertical: 8.0,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor, // Use theme card color
           boxShadow: [
@@ -817,9 +790,10 @@ Entries using this category will be moved to "Misc".''',
             IconButton(
               icon: Icon(
                 _isRecording ? Icons.stop_circle_outlined : Icons.mic,
-                color: _isRecording
-                    ? Colors.red
-                    : Theme.of(context).colorScheme.primary,
+                color:
+                    _isRecording
+                        ? Colors.red
+                        : Theme.of(context).colorScheme.primary,
               ),
               tooltip: _isRecording ? 'Stop Recording' : 'Start Voice Input',
               iconSize: 30,
@@ -836,8 +810,8 @@ Entries using this category will be moved to "Misc".''',
       ),
     );
   }
-  
-    // --- Entry Item Actions ---
+
+  // --- Entry Item Actions ---
   Widget _buildEntryActions(Entry entry, bool isProcessing) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -848,22 +822,18 @@ Entries using this category will be moved to "Misc".''',
             child: SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.0,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2.0),
             ),
           ),
         // Edit Button
         IconButton(
-          icon: const Icon(
-            Icons.edit_outlined,
-            size: 20,
-          ),
+          icon: const Icon(Icons.edit_outlined, size: 20),
           tooltip: 'Edit Entry',
           visualDensity: VisualDensity.compact,
-          onPressed: isProcessing
-              ? null // Disable if processing
-              : () => _showEditEntryDialog(context, entry),
+          onPressed:
+              isProcessing
+                  ? null // Disable if processing
+                  : () => _showEditEntryDialog(context, entry),
         ),
         // Delete Button
         IconButton(
@@ -874,32 +844,38 @@ Entries using this category will be moved to "Misc".''',
           ),
           tooltip: 'Delete Entry',
           visualDensity: VisualDensity.compact,
-          onPressed: isProcessing
-              ? null // Disable if processing
-              : () {
-                  final entryToDelete = entry;
-                  context.read<EntryCubit>().deleteEntry(entryToDelete);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).removeCurrentSnackBar(); // Remove any previous snackbar
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Entry deleted'),
-                        duration: const Duration(seconds: 4),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () {
-                            // Re-add the entry if undo is pressed
-                            context.read<EntryCubit>().addEntryObject(entryToDelete);
-                          },
+          onPressed:
+              isProcessing
+                  ? null // Disable if processing
+                  : () {
+                    final entryToDelete = entry;
+                    context.read<EntryCubit>().deleteEntry(entryToDelete);
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).removeCurrentSnackBar(); // Remove any previous snackbar
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Entry deleted'),
+                          duration: const Duration(seconds: 4),
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            onPressed: () {
+                              // Re-add the entry if undo is pressed
+                              context.read<EntryCubit>().addEntryObject(
+                                entryToDelete,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                },
+                      );
+                    }
+                  },
         ),
       ],
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -928,12 +904,12 @@ Entries using this category will be moved to "Misc".''',
                   // const SizedBox(height: 20), // Removed this initial spacing
                   const Divider(),
 
-                   _buildFilterSection(),
-                   _buildEntriesList(),
-                  ],
-                ),
+                  _buildFilterSection(),
+                  _buildEntriesList(),
+                ],
+              ),
 
-              _buildInputArea()
+              _buildInputArea(),
             ],
           ),
         ),

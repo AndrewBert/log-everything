@@ -14,7 +14,7 @@ class EntryState {
   final List<String> categories;
   final bool isLoading; // For general loading like initial load
   final String?
-      lastErrorMessage; // To hold the latest error message for UI feedback
+  lastErrorMessage; // To hold the latest error message for UI feedback
 
   EntryState({
     this.entries = const [],
@@ -114,15 +114,16 @@ class EntryCubit extends Cubit<EntryState> {
       emit(state.copyWith(clearLastError: true));
       final updatedCategories = List<String>.from(state.categories)
         ..remove(categoryToDelete);
-      final updatedEntries = state.entries.map((entry) {
-        return entry.category == categoryToDelete
-            ? Entry(
-                text: entry.text,
-                timestamp: entry.timestamp,
-                category: 'Misc', // Reassign entries to 'Misc'
-              )
-            : entry;
-      }).toList();
+      final updatedEntries =
+          state.entries.map((entry) {
+            return entry.category == categoryToDelete
+                ? Entry(
+                  text: entry.text,
+                  timestamp: entry.timestamp,
+                  category: 'Misc', // Reassign entries to 'Misc'
+                )
+                : entry;
+          }).toList();
 
       emit(
         state.copyWith(categories: updatedCategories, entries: updatedEntries),
@@ -141,21 +142,22 @@ class EntryCubit extends Cubit<EntryState> {
       final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
       List<Entry> loadedEntries = [];
       if (savedEntriesJson.isNotEmpty) {
-        loadedEntries = savedEntriesJson.map((jsonString) {
-          try {
-            return Entry.fromJsonString(jsonString);
-          } catch (e) {
-            print("Error parsing entry JSON: $jsonString. Error: $e");
-            // Return a default or placeholder entry, or re-throw/handle differently
-            // For now, returning a dummy entry to avoid crashing the map.
-            // Consider filtering out invalid entries instead.
-            return Entry(
-              text: "Error parsing entry",
-              timestamp: DateTime.now(),
-              category: "Error",
-            );
-          }
-        }).toList();
+        loadedEntries =
+            savedEntriesJson.map((jsonString) {
+              try {
+                return Entry.fromJsonString(jsonString);
+              } catch (e) {
+                print("Error parsing entry JSON: $jsonString. Error: $e");
+                // Return a default or placeholder entry, or re-throw/handle differently
+                // For now, returning a dummy entry to avoid crashing the map.
+                // Consider filtering out invalid entries instead.
+                return Entry(
+                  text: "Error parsing entry",
+                  timestamp: DateTime.now(),
+                  category: "Error",
+                );
+              }
+            }).toList();
         // Optionally filter out error entries if needed
         loadedEntries.removeWhere((entry) => entry.category == "Error");
       }
@@ -222,9 +224,11 @@ class EntryCubit extends Cubit<EntryState> {
 
     // 2. Prepare API Call with Structured Output for multiple entries
     emit(state.copyWith(clearLastError: true)); // Clear previous error
-    final String modelId = 'gpt-4.1-mini'; // Or 'gpt-4o' if compatibility issues arise
+    final String modelId =
+        'gpt-4.1-mini'; // Or 'gpt-4o' if compatibility issues arise
     print(
-        "Calling OpenAI API ($modelId) to extract multiple entries for text: '$text' using Structured Output");
+      "Calling OpenAI API ($modelId) to extract multiple entries for text: '$text' using Structured Output",
+    );
     final List<String> currentCategories = state.categories;
 
     // Define the JSON schema for the desired output (array of entries)
@@ -241,21 +245,21 @@ class EntryCubit extends Cubit<EntryState> {
               "text_segment": {
                 "type": "string",
                 "description":
-                    "The specific portion of the input text relevant to this entry."
+                    "The specific portion of the input text relevant to this entry.",
               },
               "category": {
                 "type": "string",
                 "description": "The category assigned to this text segment.",
-                "enum": currentCategories
-              }
+                "enum": currentCategories,
+              },
             },
             "required": ["text_segment", "category"],
-            "additionalProperties": false
-          }
-        }
+            "additionalProperties": false,
+          },
+        },
       },
       "required": ["entries"],
-      "additionalProperties": false
+      "additionalProperties": false,
     };
 
     // Construct the request body
@@ -265,17 +269,17 @@ class EntryCubit extends Cubit<EntryState> {
         {
           "role": "system",
           "content":
-              "Analyze the user's text. Identify distinct pieces of information or tasks. For each piece, extract the relevant text segment and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments."
+              "Analyze the user's text. Identify distinct pieces of information or tasks. For each piece, extract the relevant text segment and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments.",
         },
-        {"role": "user", "content": text}
+        {"role": "user", "content": text},
       ],
       'text': {
         'format': {
           'type': 'json_schema',
           'name': 'multiple_entry_extraction',
           'schema': schema,
-          'strict': true // Enforce schema adherence
-        }
+          'strict': true, // Enforce schema adherence
+        },
       },
       'temperature': 0.2, // Slightly higher temp might help segmentation
       // 'max_output_tokens': 500 // Consider increasing token limit for multiple entries
@@ -317,7 +321,9 @@ class EntryCubit extends Cubit<EntryState> {
 
             try {
               // Parse the JSON string containing the 'entries' array
-              final Map<String, dynamic> parsedJson = jsonDecode(jsonOutputString);
+              final Map<String, dynamic> parsedJson = jsonDecode(
+                jsonOutputString,
+              );
 
               if (parsedJson.containsKey('entries') &&
                   parsedJson['entries'] is List) {
@@ -334,21 +340,32 @@ class EntryCubit extends Cubit<EntryState> {
 
                     // Validate category against available ones (redundant with strict schema but safe)
                     if (currentCategories.contains(category)) {
-                      extractedEntries.add((text_segment: segment, category: category));
+                      extractedEntries.add((
+                        text_segment: segment,
+                        category: category,
+                      ));
                     } else {
                       print(
-                          "Warning: OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'");
-                      extractedEntries.add((text_segment: segment, category: 'Misc'));
+                        "Warning: OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'",
+                      );
+                      extractedEntries.add((
+                        text_segment: segment,
+                        category: 'Misc',
+                      ));
                     }
                   } else {
-                     print("Warning: Invalid item format in 'entries' array: $item");
-                     errorMessage = "Invalid item format received from OpenAI."; // Set error message for UI
+                    print(
+                      "Warning: Invalid item format in 'entries' array: $item",
+                    );
+                    errorMessage =
+                        "Invalid item format received from OpenAI."; // Set error message for UI
                   }
                 }
-                 print("Successfully extracted ${extractedEntries.length} entries.");
-                 // If successful, return the list
-                 if (errorMessage == null) return extractedEntries;
-
+                print(
+                  "Successfully extracted ${extractedEntries.length} entries.",
+                );
+                // If successful, return the list
+                if (errorMessage == null) return extractedEntries;
               } else {
                 errorMessage =
                     '''Parsed JSON from OpenAI does not contain a valid "entries" key or it's not a list.''';
@@ -407,38 +424,50 @@ $stacktrace''');
 
   Future<void> addEntry(String text) async {
     if (text.isNotEmpty) {
-      emit(state.copyWith(
-          isLoading: true,
-          clearLastError: true)); // Set loading true, clear previous errors
+      emit(
+        state.copyWith(isLoading: true, clearLastError: true),
+      ); // Set loading true, clear previous errors
 
-      List<EntryPrototype> extractedData = await _extractEntriesFromOpenAI(text);
+      List<EntryPrototype> extractedData = await _extractEntriesFromOpenAI(
+        text,
+      );
 
       if (extractedData.isEmpty) {
-         // If nothing was extracted (or an error occurred in extraction),
-         // potentially add the original text as 'Misc' or show error from emit()
-          if (state.lastErrorMessage == null) { // Only add Misc if no specific error was emitted
-             print("No entries extracted by AI, adding original text as Misc.");
-             final fallbackEntry = Entry(
-                 text: text, timestamp: DateTime.now(), category: 'Misc');
-             final updatedEntries = List<Entry>.from(state.entries)..insert(0, fallbackEntry);
-             emit(state.copyWith(entries: updatedEntries, isLoading: false));
-             await _saveEntries(updatedEntries);
-          } else {
-             print("Error occurred during extraction, not adding fallback entry.");
-             emit(state.copyWith(isLoading: false)); // Ensure loading is turned off
-          }
-          return; // Exit early
+        // If nothing was extracted (or an error occurred in extraction),
+        // potentially add the original text as 'Misc' or show error from emit()
+        if (state.lastErrorMessage == null) {
+          // Only add Misc if no specific error was emitted
+          print("No entries extracted by AI, adding original text as Misc.");
+          final fallbackEntry = Entry(
+            text: text,
+            timestamp: DateTime.now(),
+            category: 'Misc',
+          );
+          final updatedEntries = List<Entry>.from(state.entries)
+            ..insert(0, fallbackEntry);
+          emit(state.copyWith(entries: updatedEntries, isLoading: false));
+          await _saveEntries(updatedEntries);
+        } else {
+          print("Error occurred during extraction, not adding fallback entry.");
+          emit(
+            state.copyWith(isLoading: false),
+          ); // Ensure loading is turned off
+        }
+        return; // Exit early
       }
 
       // Create final Entry objects from extracted data
       final List<Entry> newEntries = [];
-      final DateTime now = DateTime.now(); // Use the same timestamp for all entries from this input
+      final DateTime now =
+          DateTime.now(); // Use the same timestamp for all entries from this input
       for (var data in extractedData) {
-        newEntries.add(Entry(
-          text: data.text_segment,
-          timestamp: now,
-          category: data.category,
-        ));
+        newEntries.add(
+          Entry(
+            text: data.text_segment,
+            timestamp: now,
+            category: data.category,
+          ),
+        );
       }
 
       // Update the state with the new entries added to the top
@@ -462,11 +491,14 @@ $stacktrace''');
 
   Future<void> deleteEntry(Entry entryToDelete) async {
     emit(state.copyWith(clearLastError: true));
-    final updatedEntries = state.entries
-        .where((entry) =>
-            !(entry.timestamp == entryToDelete.timestamp &&
-              entry.text == entryToDelete.text)) // More precise check
-        .toList();
+    final updatedEntries =
+        state.entries
+            .where(
+              (entry) =>
+                  !(entry.timestamp == entryToDelete.timestamp &&
+                      entry.text == entryToDelete.text),
+            ) // More precise check
+            .toList();
     if (updatedEntries.length < state.entries.length) {
       // Check if deletion happened
       emit(state.copyWith(entries: updatedEntries));
@@ -476,9 +508,11 @@ $stacktrace''');
 
   Future<void> updateEntry(Entry originalEntry, Entry updatedEntry) async {
     emit(state.copyWith(clearLastError: true));
-    final index = state.entries.indexWhere((entry) =>
-        entry.timestamp == originalEntry.timestamp &&
-        entry.text == originalEntry.text); // More precise check
+    final index = state.entries.indexWhere(
+      (entry) =>
+          entry.timestamp == originalEntry.timestamp &&
+          entry.text == originalEntry.text,
+    ); // More precise check
     if (index != -1) {
       final updatedEntries = List<Entry>.from(state.entries);
       updatedEntries[index] = updatedEntry;
