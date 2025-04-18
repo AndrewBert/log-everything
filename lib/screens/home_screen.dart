@@ -388,11 +388,10 @@ Entries using this category will be moved to "Misc".''',
                                           ),
                                           tooltip: 'Delete Category',
                                           onPressed: () async {
-                                            // --- Get Cubit instance before await ---
                                             final entryCubit =
                                                 listBuilderContext
                                                     .read<EntryCubit>();
-                                            // --- Capture Navigator and ScaffoldMessenger before await ---
+
                                             final navigator = Navigator.of(
                                               dialogContext,
                                             );
@@ -400,7 +399,6 @@ Entries using this category will be moved to "Misc".''',
                                                 ScaffoldMessenger.of(
                                                   dialogContext,
                                                 );
-                                            // --- End capture ---
 
                                             bool confirmed =
                                                 await _showDeleteCategoryConfirmationDialog(
@@ -408,13 +406,11 @@ Entries using this category will be moved to "Misc".''',
                                                   category,
                                                 );
                                             if (confirmed && mounted) {
-                                              // --- Use the captured Cubit instance ---
                                               entryCubit.deleteCategory(
                                                 category,
                                               );
-                                              // --- Use captured instances ---
-                                              navigator
-                                                  .pop(); // Close the dialog
+
+                                              navigator.pop();
                                               scaffoldMessenger.showSnackBar(
                                                 SnackBar(
                                                   content: Text(
@@ -425,7 +421,6 @@ Entries using this category will be moved to "Misc".''',
                                                   ),
                                                 ),
                                               );
-                                              // --- End use captured instances ---
                                             }
                                           },
                                         ),

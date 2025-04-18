@@ -32,14 +32,12 @@ class MyApp extends StatelessWidget {
       // EntryCubit() will be created here, after dotenv has loaded
       create: (context) => EntryCubit(),
       child: MaterialApp(
-        title: 'Editable Log App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-          useMaterial3: true,
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
         ),
         // Use the new HomeScreen widget
-        home: const MyHomePage(title: 'Editable Log Entries'),
+        home: const MyHomePage(title: 'Log Everything'),
       ),
     );
   }
