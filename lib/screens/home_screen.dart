@@ -24,6 +24,10 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   String? _selectedCategoryFilter;
+  // --- Add FocusNode and state variable ---
+  final FocusNode _inputFocusNode = FocusNode();
+  bool _isInputFocused = false;
+  // --- End FocusNode ---
 
   // --- Voice Input State ---
   late final AudioRecorder _audioRecorder;
@@ -38,14 +42,32 @@ class _MyHomePageState extends State<MyHomePage> {
     _audioRecorder = AudioRecorder();
     _speechService = SpeechService(); // Initialize SpeechService
     _requestMicPermission(); // Request permission on init
+    // --- Add listener to FocusNode ---
+    _inputFocusNode.addListener(_onInputFocusChange);
+    // --- End listener ---
   }
 
   @override
   void dispose() {
     _textController.dispose();
     _audioRecorder.dispose(); // Dispose recorder
+    // --- Dispose FocusNode and remove listener ---
+    _inputFocusNode.removeListener(_onInputFocusChange);
+    _inputFocusNode.dispose();
+    // --- End dispose ---
     super.dispose();
   }
+
+  // --- Add focus change handler ---
+  void _onInputFocusChange() {
+    if (mounted) {
+      // Check if widget is still mounted
+      setState(() {
+        _isInputFocused = _inputFocusNode.hasFocus;
+      });
+    }
+  }
+  // --- End focus change handler ---
 
   // --- Microphone Permission ---
   Future<void> _requestMicPermission() async {
@@ -277,11 +299,12 @@ class _MyHomePageState extends State<MyHomePage> {
           duration: Duration(milliseconds: 800),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the main entry text.')),
-      );
     }
+    // else {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Please enter the main entry text.')),
+    //   );
+    // }
   }
 
   // --- Category Management Dialog ---
@@ -320,8 +343,7 @@ Entries using this category will be moved to "Misc".''',
     showDialog(
       context: context,
       builder:
-          (_) => BlocProvider.value(
-            // Use BlocProvider.value to pass the existing Cubit
+          (dialogContext) => BlocProvider.value(
             value: BlocProvider.of<EntryCubit>(context),
             child: AlertDialog(
               title: const Text('Manage Categories'),
@@ -330,10 +352,10 @@ Entries using this category will be moved to "Misc".''',
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Use Flexible + ListView to avoid potential overflow if many categories
                     Flexible(
                       child: BlocBuilder<EntryCubit, EntryState>(
-                        builder: (context, state) {
+                        // --- Use the BlocBuilder's context for Cubit/Navigator/Dialogs inside the list ---
+                        builder: (listBuilderContext, state) {
                           if (state.categories.isEmpty) {
                             return const Text('No categories found.');
                           }
@@ -366,23 +388,34 @@ Entries using this category will be moved to "Misc".''',
                                           ),
                                           tooltip: 'Delete Category',
                                           onPressed: () async {
+                                            // --- Get Cubit instance before await ---
+                                            final entryCubit =
+                                                listBuilderContext
+                                                    .read<EntryCubit>();
+                                            // --- Capture Navigator and ScaffoldMessenger before await ---
+                                            final navigator = Navigator.of(
+                                              dialogContext,
+                                            );
+                                            final scaffoldMessenger =
+                                                ScaffoldMessenger.of(
+                                                  dialogContext,
+                                                );
+                                            // --- End capture ---
+
                                             bool confirmed =
                                                 await _showDeleteCategoryConfirmationDialog(
-                                                  context, // Use the builder context here
+                                                  listBuilderContext,
                                                   category,
                                                 );
                                             if (confirmed && mounted) {
-                                              context // Use the builder context again
-                                                  .read<EntryCubit>()
-                                                  .deleteCategory(category);
-                                              Navigator.of(
-                                                context,
-                                              ).pop(); // Close the dialog after deletion
-                                              ScaffoldMessenger.of(
-                                                Scaffold.of(
-                                                  context,
-                                                ).context, // Use Scaffold context for SnackBar
-                                              ).showSnackBar(
+                                              // --- Use the captured Cubit instance ---
+                                              entryCubit.deleteCategory(
+                                                category,
+                                              );
+                                              // --- Use captured instances ---
+                                              navigator
+                                                  .pop(); // Close the dialog
+                                              scaffoldMessenger.showSnackBar(
                                                 SnackBar(
                                                   content: Text(
                                                     'Category "$category" deleted',
@@ -392,6 +425,7 @@ Entries using this category will be moved to "Misc".''',
                                                   ),
                                                 ),
                                               );
+                                              // --- End use captured instances ---
                                             }
                                           },
                                         ),
@@ -399,6 +433,7 @@ Entries using this category will be moved to "Misc".''',
                             },
                           );
                         },
+                        // --- End BlocBuilder context usage ---
                       ),
                     ),
                     const Divider(),
@@ -431,20 +466,18 @@ Entries using this category will be moved to "Misc".''',
               actions: [
                 TextButton(
                   child: const Text('Done'),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
                 TextButton(
                   child: const Text('Add Category'),
                   onPressed: () {
                     final newCategory = categoryInputController.text.trim();
                     if (newCategory.isNotEmpty) {
-                      // Access cubit from the builder context
-                      context.read<EntryCubit>().addCustomCategory(newCategory);
+                      BlocProvider.of<EntryCubit>(
+                        dialogContext,
+                      ).addCustomCategory(newCategory);
                       categoryInputController.clear();
-                      // Optional: Show feedback
-                      ScaffoldMessenger.of(
-                        Scaffold.of(context).context,
-                      ).showSnackBar(
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
                         SnackBar(
                           content: Text('Category "$newCategory" added'),
                         ),
@@ -753,7 +786,12 @@ Entries using this category will be moved to "Misc".''',
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor, // Use theme card color
           boxShadow: [
@@ -765,48 +803,65 @@ Entries using this category will be moved to "Misc".''',
             ),
           ],
         ),
-        child: Row(
+        // --- Change outer Row to Column ---
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // Take minimum vertical space
           children: [
-            // Use Row for horizontal layout
-            Expanded(
-              child: TextField(
-                controller: _textController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Enter log entry here',
-                  hintText: 'What happened?...',
-                  isDense: true, // Make it more compact
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ), // Adjust padding
+            // --- TextField remains largely the same ---
+            TextField(
+              focusNode: _inputFocusNode, // Assign FocusNode
+              controller: _textController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Enter log entry here',
+                hintText: 'What happened?...',
+                isDense: true, // Make it more compact
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ), // Adjust padding
+              ),
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              onSubmitted: (_) => _handleInput(),
+              minLines: 1,
+              maxLines: _isInputFocused ? 5 : 1,
+              onTapOutside: (_) {
+                FocusScope.of(context).unfocus();
+              },
+            ),
+            // --- Add padding between TextField and buttons ---
+            const SizedBox(height: 8),
+            // --- Add inner Row for buttons, aligned to end ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Microphone Button
+                IconButton(
+                  icon: Icon(
+                    _isRecording ? Icons.stop_circle_outlined : Icons.mic,
+                    color:
+                        _isRecording
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.primary,
+                  ),
+                  tooltip:
+                      _isRecording ? 'Stop Recording' : 'Start Voice Input',
+                  iconSize: 30,
+                  onPressed: _toggleRecording,
                 ),
-                onSubmitted: (_) => _handleInput(),
-                textInputAction: TextInputAction.done,
-              ),
-            ),
-            const SizedBox(width: 8), // Spacing
-            // Microphone Button
-            IconButton(
-              icon: Icon(
-                _isRecording ? Icons.stop_circle_outlined : Icons.mic,
-                color:
-                    _isRecording
-                        ? Colors.red
-                        : Theme.of(context).colorScheme.primary,
-              ),
-              tooltip: _isRecording ? 'Stop Recording' : 'Start Voice Input',
-              iconSize: 30,
-              onPressed: _toggleRecording,
-            ),
-            // Send Button
-            IconButton(
-              onPressed: _handleInput,
-              icon: const Icon(Icons.send),
-              color: Theme.of(context).colorScheme.primary, // Use theme color
+                // Send Button
+                IconButton(
+                  onPressed: _handleInput,
+                  icon: const Icon(Icons.send),
+                  color:
+                      Theme.of(context).colorScheme.primary, // Use theme color
+                ),
+              ],
             ),
           ],
         ),
+        // --- End Column ---
       ),
     );
   }
@@ -892,26 +947,19 @@ Entries using this category will be moved to "Misc".''',
       ),
       // Use SafeArea to avoid OS intrusions (notch, bottom bar)
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Stack(
-            children: [
-              // Main content column (list, filters)
-              Column(
+        child: Stack(
+          children: [
+            // Main content column (list, filters)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Add some space at the top if needed, or let AppBar handle it.
-                  // const SizedBox(height: 20), // Removed this initial spacing
-                  const Divider(),
-
-                  _buildFilterSection(),
-                  _buildEntriesList(),
-                ],
+                children: <Widget>[_buildFilterSection(), _buildEntriesList()],
               ),
+            ),
 
-              _buildInputArea(),
-            ],
-          ),
+            _buildInputArea(),
+          ],
         ),
       ),
     );
