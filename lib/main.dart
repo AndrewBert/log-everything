@@ -604,284 +604,309 @@ Entries using this category will be moved to "Misc".''',
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // --- Input Area --- Modified to include Mic button ---
-            Row(
-              // Wrap TextField and Button in a Row
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Enter log entry here',
-                      hintText: 'What happened?...',
-                    ),
-                    onSubmitted: (_) => _handleInput(),
-                    textInputAction: TextInputAction.done,
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SizedBox(height: 20),
+                const Divider(),
+
+                // --- Filter Section (Remains the same) ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Saved Entries:',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      BlocBuilder<EntryCubit, EntryState>(
+                        builder: (context, state) {
+                          if (state.categories.isEmpty && !state.isLoading) {
+                            return const SizedBox.shrink();
+                          }
+                          List<DropdownMenuItem<String?>> dropdownItems = [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text("All Categories"),
+                            ),
+                          ];
+                          List<String> sortedCategories = List.from(
+                            state.categories,
+                          )..sort();
+                          dropdownItems.addAll(
+                            sortedCategories.map((String category) {
+                              return DropdownMenuItem<String?>(
+                                value: category,
+                                child: Text(category),
+                              );
+                            }).toList(),
+                          );
+                          return DropdownButton<String?>(
+                            value: _selectedCategoryFilter,
+                            hint: const Text("Filter"),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedCategoryFilter = newValue;
+                              });
+                            },
+                            items: dropdownItems,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8), // Spacing
-                // Microphone Button
-                IconButton(
-                  icon: Icon(
-                    _isRecording ? Icons.stop_circle_outlined : Icons.mic,
-                    color:
-                        _isRecording
-                            ? Colors.red
-                            : Theme.of(context).colorScheme.primary,
+
+                // --- List Display Area - Modified for Editing ---
+                Expanded(
+                  child: BlocBuilder<EntryCubit, EntryState>(
+                    builder: (context, state) {
+                      if (state.isLoading && state.entries.isEmpty) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final List<Entry> filteredEntries;
+                      if (_selectedCategoryFilter == null) {
+                        filteredEntries = state.entries;
+                      } else {
+                        filteredEntries =
+                            state.entries
+                                .where(
+                                  (entry) =>
+                                      entry.category == _selectedCategoryFilter,
+                                )
+                                .toList();
+                      }
+
+                      filteredEntries.sort(
+                        (a, b) => b.timestamp.compareTo(a.timestamp),
+                      );
+
+                      if (filteredEntries.isEmpty) {
+                        return Center(
+                          child: Text(
+                            _selectedCategoryFilter != null
+                                ? 'No entries found for category: "$_selectedCategoryFilter"'
+                                : 'No entries yet. Add one!',
+                          ),
+                        );
+                      }
+
+                      final List<dynamic> listItems = [];
+                      final groupedEntries = groupBy<Entry, DateTime>(
+                        filteredEntries,
+                        (entry) => DateTime(
+                          entry.timestamp.year,
+                          entry.timestamp.month,
+                          entry.timestamp.day,
+                        ),
+                      );
+                      groupedEntries.forEach((date, entriesOnDate) {
+                        listItems.add(date);
+                        listItems.addAll(entriesOnDate);
+                      });
+
+                      return ListView.builder(
+                        itemCount: listItems.length,
+                        itemBuilder: (context, index) {
+                          final item = listItems[index];
+
+                          if (item is DateTime) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                top: 16.0,
+                                bottom: 8.0,
+                              ),
+                              child: Text(
+                                _formatDateHeader(item),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            );
+                          } else if (item is Entry) {
+                            final entry = item;
+                            bool isProcessing =
+                                entry.category == 'Processing...';
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                vertical: 2.0,
+                                horizontal: 0,
+                              ),
+                              child: ListTile(
+                                title: Text(entry.text),
+                                subtitle: Text(
+                                  '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
+                                  style: TextStyle(
+                                    color:
+                                        isProcessing
+                                            ? Colors.orange
+                                            : Colors.grey[700],
+                                  ),
+                                ),
+                                // Updated Trailing to include Edit button
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isProcessing)
+                                      const Padding(
+                                        padding: EdgeInsets.only(right: 8.0),
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.0,
+                                          ),
+                                        ),
+                                      ),
+                                    // Edit Button
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 20,
+                                      ),
+                                      tooltip: 'Edit Entry',
+                                      visualDensity:
+                                          VisualDensity
+                                              .compact, // Make it slightly smaller
+                                      onPressed:
+                                          isProcessing
+                                              ? null
+                                              : () {
+                                                // Disable edit while processing
+                                                _showEditEntryDialog(
+                                                  context,
+                                                  entry,
+                                                );
+                                              },
+                                    ),
+                                    // Delete Button
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.redAccent,
+                                        size: 20,
+                                      ),
+                                      tooltip: 'Delete Entry',
+                                      visualDensity:
+                                          VisualDensity
+                                              .compact, // Make it slightly smaller
+                                      onPressed:
+                                          isProcessing
+                                              ? null
+                                              : () {
+                                                final entryToDelete = entry;
+                                                context
+                                                    .read<EntryCubit>()
+                                                    .deleteEntry(entryToDelete);
+                                                if (mounted) {
+                                                  // Check mounted
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).removeCurrentSnackBar();
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: const Text(
+                                                        'Entry deleted',
+                                                      ),
+                                                      duration: const Duration(
+                                                        seconds: 4,
+                                                      ),
+                                                      action: SnackBarAction(
+                                                        label: 'Undo',
+                                                        onPressed: () {
+                                                          context
+                                                              .read<
+                                                                EntryCubit
+                                                              >()
+                                                              .addEntryObject(
+                                                                entryToDelete,
+                                                              );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                    ),
+                                  ],
+                                ),
+                                dense: true,
+                              ),
+                            );
+                          }
+                          return Container(); // Should not happen
+                        },
+                      );
+                    },
                   ),
-                  tooltip:
-                      _isRecording ? 'Stop Recording' : 'Start Voice Input',
-                  iconSize: 30,
-                  onPressed: _toggleRecording, // Call the toggle function
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: _handleInput,
-                child: const Text('Save Log Entry'),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Divider(),
-
-            // --- Filter Section (Remains the same) ---
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Saved Entries:',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  BlocBuilder<EntryCubit, EntryState>(
-                    builder: (context, state) {
-                      if (state.categories.isEmpty && !state.isLoading) {
-                        return const SizedBox.shrink();
-                      }
-                      List<DropdownMenuItem<String?>> dropdownItems = [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text("All Categories"),
-                        ),
-                      ];
-                      List<String> sortedCategories = List.from(
-                        state.categories,
-                      )..sort();
-                      dropdownItems.addAll(
-                        sortedCategories.map((String category) {
-                          return DropdownMenuItem<String?>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                      );
-                      return DropdownButton<String?>(
-                        value: _selectedCategoryFilter,
-                        hint: const Text("Filter"),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCategoryFilter = newValue;
-                          });
-                        },
-                        items: dropdownItems,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // --- List Display Area - Modified for Editing ---
-            Expanded(
-              child: BlocBuilder<EntryCubit, EntryState>(
-                builder: (context, state) {
-                  if (state.isLoading && state.entries.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final List<Entry> filteredEntries;
-                  if (_selectedCategoryFilter == null) {
-                    filteredEntries = state.entries;
-                  } else {
-                    filteredEntries =
-                        state.entries
-                            .where(
-                              (entry) =>
-                                  entry.category == _selectedCategoryFilter,
-                            )
-                            .toList();
-                  }
-
-                  filteredEntries.sort(
-                    (a, b) => b.timestamp.compareTo(a.timestamp),
-                  );
-
-                  if (filteredEntries.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _selectedCategoryFilter != null
-                            ? 'No entries found for category: "$_selectedCategoryFilter"'
-                            : 'No entries yet. Add one!',
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 8,
                       ),
-                    );
-                  }
-
-                  final List<dynamic> listItems = [];
-                  final groupedEntries = groupBy<Entry, DateTime>(
-                    filteredEntries,
-                    (entry) => DateTime(
-                      entry.timestamp.year,
-                      entry.timestamp.month,
-                      entry.timestamp.day,
-                    ),
-                  );
-                  groupedEntries.forEach((date, entriesOnDate) {
-                    listItems.add(date);
-                    listItems.addAll(entriesOnDate);
-                  });
-
-                  return ListView.builder(
-                    itemCount: listItems.length,
-                    itemBuilder: (context, index) {
-                      final item = listItems[index];
-
-                      if (item is DateTime) {
-                        return Padding(
-                          padding: const EdgeInsets.only(
-                            top: 16.0,
-                            bottom: 8.0,
-                          ),
-                          child: Text(
-                            _formatDateHeader(item),
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
+                      child: Row(children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _textController,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'Enter log entry here',
+                              hintText: 'What happened?...',
                             ),
+                            onSubmitted: (_) => _handleInput(),
+                            textInputAction: TextInputAction.done,
                           ),
-                        );
-                      } else if (item is Entry) {
-                        final entry = item;
-                        bool isProcessing = entry.category == 'Processing...';
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 2.0,
-                            horizontal: 0,
+                        ),
+                        // Microphone Button
+                        IconButton(
+                          icon: Icon(
+                            _isRecording
+                                ? Icons.stop_circle_outlined
+                                : Icons.mic,
+                            color: _isRecording
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.primary,
                           ),
-                          child: ListTile(
-                            title: Text(entry.text),
-                            subtitle: Text(
-                              '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
-                              style: TextStyle(
-                                color:
-                                    isProcessing
-                                        ? Colors.orange
-                                        : Colors.grey[700],
-                              ),
-                            ),
-                            // Updated Trailing to include Edit button
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isProcessing)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 8.0),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.0,
-                                      ),
-                                    ),
-                                  ),
-                                // Edit Button
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    size: 20,
-                                  ),
-                                  tooltip: 'Edit Entry',
-                                  visualDensity:
-                                      VisualDensity
-                                          .compact, // Make it slightly smaller
-                                  onPressed:
-                                      isProcessing
-                                          ? null
-                                          : () {
-                                            // Disable edit while processing
-                                            _showEditEntryDialog(
-                                              context,
-                                              entry,
-                                            );
-                                          },
-                                ),
-                                // Delete Button
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.redAccent,
-                                    size: 20,
-                                  ),
-                                  tooltip: 'Delete Entry',
-                                  visualDensity:
-                                      VisualDensity
-                                          .compact, // Make it slightly smaller
-                                  onPressed:
-                                      isProcessing
-                                          ? null
-                                          : () {
-                                            final entryToDelete = entry;
-                                            context
-                                                .read<EntryCubit>()
-                                                .deleteEntry(entryToDelete);
-                                            if (mounted) {
-                                              // Check mounted
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).removeCurrentSnackBar();
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: const Text(
-                                                    'Entry deleted',
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 4,
-                                                  ),
-                                                  action: SnackBarAction(
-                                                    label: 'Undo',
-                                                    onPressed: () {
-                                                      context
-                                                          .read<EntryCubit>()
-                                                          .addEntryObject(
-                                                            entryToDelete,
-                                                          );
-                                                    },
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                ),
-                              ],
-                            ),
-                            dense: true,
+                          tooltip: _isRecording
+                              ? 'Stop Recording'
+                              : 'Start Voice Input',
+                          iconSize: 30,
+                          onPressed: _toggleRecording, // Call the toggle function
+                        ),
+
+                        IconButton(
+                          onPressed: _handleInput,
+                          icon: const Icon(
+                            Icons.send,
                           ),
-                        );
-                      }
-                      return Container(); // Should not happen
-                    },
-                  );
-                },
+                        ),
+                      ]),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
