@@ -460,7 +460,12 @@ Entries using this category will be moved to "Misc".''',
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.only(bottom: 150.0, top: 8.0),
+            padding: const EdgeInsets.only(
+              bottom: 150.0,
+              top: 8.0,
+              left: 16.0,
+              right: 16.0,
+            ),
             itemCount: listItems.length,
             separatorBuilder: (context, index) {
               final currentItem = listItems[index];
@@ -476,11 +481,7 @@ Entries using this category will be moved to "Misc".''',
 
               if (item is DateTime) {
                 return Padding(
-                  padding: const EdgeInsets.only(
-                    top: 20.0,
-                    bottom: 10.0,
-                    left: 4.0,
-                  ),
+                  padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
                   child: Text(
                     _formatDateHeader(item),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -573,7 +574,12 @@ Entries using this category will be moved to "Misc".''',
 
   Widget _buildFilterSection() {
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 0.0),
+      padding: const EdgeInsets.only(
+        top: 8.0,
+        bottom: 0.0,
+        left: 16.0,
+        right: 16.0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -816,7 +822,6 @@ Entries using this category will be moved to "Misc".''',
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        surfaceTintColor: Theme.of(context).colorScheme.surface,
         title: GestureDetector(
           onTap: () {
             setState(() {
@@ -856,12 +861,9 @@ Entries using this category will be moved to "Misc".''',
         bottom: false,
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[_buildFilterSection(), _buildEntriesList()],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[_buildFilterSection(), _buildEntriesList()],
             ),
             _buildInputArea(),
           ],
