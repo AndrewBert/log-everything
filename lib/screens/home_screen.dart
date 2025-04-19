@@ -1,14 +1,11 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../cubit/entry_cubit.dart';
-import '../cubit/voice_input_cubit.dart';
-import '../cubit/voice_input_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
+import '../widgets/voice_input_section.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -22,13 +19,12 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
-  String? _selectedCategoryFilter;
   final FocusNode _inputFocusNode = FocusNode();
   bool _isInputFocused = false;
 
   // --- Easter Egg State ---
   int _titleTapCount = 0;
-  final int _targetTapCount = 7; // Number of taps required
+  final int _targetTapCount = 7;
   // --- End Easter Egg State ---
 
   @override
@@ -45,18 +41,14 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  // --- Add focus change handler ---
   void _onInputFocusChange() {
     if (mounted) {
-      // Check if widget is still mounted
       setState(() {
         _isInputFocused = _inputFocusNode.hasFocus;
       });
     }
   }
-  // --- End focus change handler ---
 
-  // --- Helper to show consistent floating SnackBars ---
   void _showFloatingSnackBar(
     BuildContext targetContext, {
     required Widget content,
@@ -73,11 +65,10 @@ class _MyHomePageState extends State<MyHomePage> {
         action: action,
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 150.0, left: 16.0, right: 16.0),
+        margin: const EdgeInsets.only(bottom: 160.0, left: 16.0, right: 16.0),
       ),
     );
   }
-  // --- End Helper ---
 
   void _handleInput() {
     final String currentInput = _textController.text;
@@ -93,7 +84,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // --- Category Management Dialog ---
   Future<bool> _showDeleteCategoryConfirmationDialog(
     BuildContext context,
     String category,
@@ -138,7 +128,6 @@ Entries using this category will be moved to "Misc".''',
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // --- Add helper text for the dialog ---
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(
@@ -147,21 +136,20 @@ Entries using this category will be moved to "Misc".''',
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    // --- End helper text ---
                     Flexible(
                       child: BlocBuilder<EntryCubit, EntryState>(
-                        // --- Use the BlocBuilder's context for Cubit/Navigator/Dialogs inside the list ---
                         builder: (listBuilderContext, state) {
                           if (state.categories.isEmpty) {
-                            return const Text('No categories found.');
+                            return const Center(
+                              child: Text('No categories found.'),
+                            );
                           }
-                          // Create a mutable copy and sort it
                           final sortedCategories = List<String>.from(
                             state.categories,
                           )..sort();
 
                           return ListView.builder(
-                            shrinkWrap: true, // Important in Flexible
+                            shrinkWrap: true,
                             itemCount: sortedCategories.length,
                             itemBuilder: (context, index) {
                               final category = sortedCategories[index];
@@ -187,35 +175,31 @@ Entries using this category will be moved to "Misc".''',
                                             final entryCubit =
                                                 listBuilderContext
                                                     .read<EntryCubit>();
-
                                             final navigator = Navigator.of(
                                               dialogContext,
                                             );
-                                            final scaffoldMessenger =
-                                                ScaffoldMessenger.of(
-                                                  dialogContext,
-                                                );
 
                                             bool confirmed =
                                                 await _showDeleteCategoryConfirmationDialog(
                                                   listBuilderContext,
                                                   category,
                                                 );
-                                            if (confirmed && mounted) {
+                                            if (confirmed) {
                                               entryCubit.deleteCategory(
                                                 category,
                                               );
-
                                               navigator.pop();
-                                              _showFloatingSnackBar(
-                                                context,
-                                                content: Text(
-                                                  'Category "$category" deleted',
-                                                ),
-                                                duration: const Duration(
-                                                  seconds: 2,
-                                                ),
-                                              );
+                                              if (mounted) {
+                                                _showFloatingSnackBar(
+                                                  context,
+                                                  content: Text(
+                                                    'Category "$category" deleted',
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 2,
+                                                  ),
+                                                );
+                                              }
                                             }
                                           },
                                         ),
@@ -223,7 +207,6 @@ Entries using this category will be moved to "Misc".''',
                             },
                           );
                         },
-                        // --- End BlocBuilder context usage ---
                       ),
                     ),
                     const Divider(),
@@ -242,9 +225,9 @@ Entries using this category will be moved to "Misc".''',
                         ),
                         onSubmitted: (value) {
                           if (value.trim().isNotEmpty) {
-                            context.read<EntryCubit>().addCustomCategory(
-                              value.trim(),
-                            );
+                            BlocProvider.of<EntryCubit>(
+                              dialogContext,
+                            ).addCustomCategory(value.trim());
                             categoryInputController.clear();
                           }
                         },
@@ -267,10 +250,12 @@ Entries using this category will be moved to "Misc".''',
                         dialogContext,
                       ).addCustomCategory(newCategory);
                       categoryInputController.clear();
-                      _showFloatingSnackBar(
-                        context,
-                        content: Text('Category "$newCategory" added'),
-                      );
+                      if (mounted) {
+                        _showFloatingSnackBar(
+                          context,
+                          content: Text('Category "$newCategory" added'),
+                        );
+                      }
                     }
                   },
                 ),
@@ -280,19 +265,14 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
-  // --- UI for Entry Editing ---
   void _showEditEntryDialog(BuildContext context, Entry originalEntry) {
     final editController = TextEditingController(text: originalEntry.text);
-    String selectedCategory =
-        originalEntry.category; // Initialize with current category
+    String selectedCategory = originalEntry.category;
 
-    // Access the Cubit state directly here, as we need the categories for the dropdown
-    // No need for BlocProvider.value here since we get it from the main context
     final currentState = context.read<EntryCubit>().state;
     final availableCategories = List<String>.from(currentState.categories)
-      ..sort(); // Get sorted list
+      ..sort();
 
-    // Ensure the original entry's category is valid, default to Misc if not
     if (!availableCategories.contains(selectedCategory)) {
       selectedCategory = 'Misc';
     }
@@ -300,8 +280,6 @@ Entries using this category will be moved to "Misc".''',
     showDialog(
       context: context,
       builder: (dialogContext) {
-        // This context is specific to the dialog
-        // Use a StatefulWidget for the dialog content to manage the dropdown state locally
         return StatefulBuilder(
           builder: (stfContext, stfSetState) {
             return AlertDialog(
@@ -313,10 +291,9 @@ Entries using this category will be moved to "Misc".''',
                     controller: editController,
                     autofocus: true,
                     decoration: const InputDecoration(labelText: 'Entry Text'),
-                    maxLines: null, // Allow multiple lines
+                    maxLines: null,
                   ),
                   const SizedBox(height: 16),
-                  // Dropdown to select category
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
                     decoration: const InputDecoration(labelText: 'Category'),
@@ -329,7 +306,6 @@ Entries using this category will be moved to "Misc".''',
                         }).toList(),
                     onChanged: (String? newValue) {
                       if (newValue != null) {
-                        // Use the StatefulWidget's setState to update the dropdown selection
                         stfSetState(() {
                           selectedCategory = newValue;
                         });
@@ -348,29 +324,26 @@ Entries using this category will be moved to "Misc".''',
                   onPressed: () {
                     final updatedText = editController.text.trim();
                     if (updatedText.isNotEmpty) {
-                      // Create the updated entry object, keeping original timestamp
                       final updatedEntry = Entry(
                         text: updatedText,
                         category: selectedCategory,
                         timestamp: originalEntry.timestamp,
                       );
-                      // Call cubit method using the main context
                       context.read<EntryCubit>().updateEntry(
                         originalEntry,
                         updatedEntry,
                       );
-                      Navigator.of(dialogContext).pop(); // Close dialog
+                      Navigator.of(dialogContext).pop();
                       if (mounted) {
                         _showFloatingSnackBar(
-                          context, // Use the main screen context
+                          context,
                           content: const Text('Entry updated'),
                           duration: const Duration(seconds: 1),
                         );
                       }
                     } else {
-                      // Show error SnackBar using the helper
                       _showFloatingSnackBar(
-                        dialogContext, // Show within the dialog context here
+                        dialogContext,
                         content: const Text('Entry text cannot be empty.'),
                         backgroundColor: Colors.red,
                       );
@@ -385,7 +358,6 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
-  // --- Helper to Format Date Headers (Remains the same) ---
   String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -401,81 +373,39 @@ Entries using this category will be moved to "Misc".''',
     }
   }
 
-  // --- Helper to get category color ---
   Color _getCategoryColor(String category) {
     return CategoryColors.getColorForCategory(category);
   }
 
-  // --- List Display Area ---
   Widget _buildEntriesList() {
     return Expanded(
       child: BlocBuilder<EntryCubit, EntryState>(
         builder: (context, state) {
-          if (state.isLoading && state.entries.isEmpty) {
+          final List<dynamic> listItems = state.displayListItems;
+
+          if (state.isLoading && listItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Apply filtering
-          final List<Entry> filteredEntries =
-              _selectedCategoryFilter == null
-                  ? state.entries
-                  : state.entries
-                      .where(
-                        (entry) => entry.category == _selectedCategoryFilter,
-                      )
-                      .toList();
-
-          // Sort entries by timestamp (descending)
-          filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-          if (filteredEntries.isEmpty) {
+          if (listItems.isEmpty) {
             return Center(
               child: Text(
-                _selectedCategoryFilter != null
-                    ? 'No entries found for category: "$_selectedCategoryFilter"'
-                    : 'No entries yet. Type or use the mic to add your first log!',
+                state.filterCategory != null
+                    ? 'No entries found for category: "${state.filterCategory}"'
+                    : 'No entries yet. Type or use the mic!',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
             );
           }
 
-          // Group entries by date for section headers
-          final List<dynamic> listItems = [];
-          final groupedEntries = groupBy<Entry, DateTime>(
-            filteredEntries,
-            (entry) => DateTime(
-              entry.timestamp.year,
-              entry.timestamp.month,
-              entry.timestamp.day,
-            ),
-          );
-
-          // Sort dates descending to show newest first
-          final sortedDates =
-              groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
-
-          for (var date in sortedDates) {
-            listItems.add(date); // Add date header
-            // Sort entries within the date descending
-            final entriesOnDate =
-                groupedEntries[date]!
-                  ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-            listItems.addAll(entriesOnDate); // Add entries for that date
-          }
-
-          // Build the list with headers and entry items
           return ListView.builder(
-            // Add padding at the bottom to avoid overlap with input area
-            padding: const EdgeInsets.only(
-              bottom: 130.0,
-            ), // Adjust value as needed
+            padding: const EdgeInsets.only(bottom: 130.0),
             itemCount: listItems.length,
             itemBuilder: (context, index) {
               final item = listItems[index];
 
               if (item is DateTime) {
-                // Date Header
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                   child: Text(
@@ -487,12 +417,9 @@ Entries using this category will be moved to "Misc".''',
                   ),
                 );
               } else if (item is Entry) {
-                // Entry Item
                 final entry = item;
                 bool isProcessing = entry.category == 'Processing...';
                 bool isNew = entry.isNew;
-
-                // Define category chip color based on category name
                 Color categoryColor = _getCategoryColor(entry.category);
 
                 return Card(
@@ -500,7 +427,6 @@ Entries using this category will be moved to "Misc".''',
                     vertical: 4.0,
                     horizontal: 0,
                   ),
-                  // Simple background color change for new items - light tint
                   color:
                       isNew
                           ? Theme.of(
@@ -514,7 +440,6 @@ Entries using this category will be moved to "Misc".''',
                         title: Row(
                           children: [
                             Expanded(child: Text(entry.text)),
-                            // Simple "NEW" tag that's clearly visible
                             if (isNew)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -548,7 +473,6 @@ Entries using this category will be moved to "Misc".''',
                         trailing: _buildEntryActions(entry, isProcessing),
                         dense: true,
                       ),
-                      // Category chip - with improved readability
                       Padding(
                         padding: const EdgeInsets.only(
                           left: 16.0,
@@ -584,7 +508,7 @@ Entries using this category will be moved to "Misc".''',
                   ),
                 );
               }
-              return Container(); // Should not happen
+              return Container();
             },
           );
         },
@@ -592,13 +516,11 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
-  // --- Filter Section ---
   Widget _buildFilterSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
-        // Wrap in Column to add text below the Row
-        crossAxisAlignment: CrossAxisAlignment.start, // Align text left
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -608,64 +530,69 @@ Entries using this category will be moved to "Misc".''',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               BlocBuilder<EntryCubit, EntryState>(
+                buildWhen:
+                    (prev, current) =>
+                        prev.categories != current.categories ||
+                        prev.filterCategory != current.filterCategory,
                 builder: (context, state) {
-                  if (state.categories.isEmpty && !state.isLoading) {
-                    return const SizedBox.shrink(); // Hide if no categories
+                  final dropdownCategories = ['All Categories']..addAll(
+                    List<String>.from(state.categories)
+                      ..remove('Misc')
+                      ..sort(),
+                  );
+
+                  String? dropdownValue = state.filterCategory;
+                  if (dropdownValue == null) {
+                    dropdownValue = 'All Categories';
+                  } else if (!dropdownCategories.contains(dropdownValue)) {
+                    dropdownValue = 'All Categories';
                   }
-                  // Create a mutable, sorted list for the dropdown
-                  final sortedCategories = List<String>.from(state.categories)
-                    ..sort();
 
-                  List<DropdownMenuItem<String?>> dropdownItems = [
-                    const DropdownMenuItem<String?>(
-                      value: null, // Represent "All Categories"
-                      child: Text("All Categories"),
-                    ),
-                    ...sortedCategories.map((String category) {
-                      // Use spread operator
-                      return DropdownMenuItem<String?>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }),
-                  ];
-
-                  return Tooltip(
-                    // Keep the tooltip for the dropdown
-                    message: 'Filter entries by category',
-                    child: DropdownButton<String?>(
-                      value: _selectedCategoryFilter,
-                      hint: const Text("Filter"),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedCategoryFilter = newValue;
-                        });
-                      },
-                      items: dropdownItems,
-                    ),
+                  return DropdownButton<String>(
+                    value: dropdownValue,
+                    hint: const Text('Filter by Category'),
+                    underline: Container(),
+                    items:
+                        dropdownCategories.map((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                fontWeight:
+                                    category == 'All Categories'
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue == 'All Categories') {
+                        context.read<EntryCubit>().setFilter(null);
+                      } else {
+                        context.read<EntryCubit>().setFilter(newValue);
+                      }
+                    },
                   );
                 },
               ),
             ],
           ),
-          // --- Add explanatory text ---
           Padding(
-            padding: const EdgeInsets.only(top: 4.0), // Add some space
+            padding: const EdgeInsets.only(top: 4.0),
             child: Text(
-              // Updated text
               'Entries grouped by date. Auto-categorized, or assign manually via edit.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600], // Subtle color
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
             ),
           ),
-          // --- End explanatory text ---
         ],
       ),
     );
   }
 
-  // --- Input Area ---
   Widget _buildInputArea() {
     return Positioned(
       bottom: 0,
@@ -679,33 +606,31 @@ Entries using this category will be moved to "Misc".''',
           bottom: 16,
         ),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor, // Use theme card color
+          color: Theme.of(context).cardColor,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               spreadRadius: 0,
               blurRadius: 4,
-              offset: const Offset(0, -2), // Shadow upwards
+              offset: const Offset(0, -2),
             ),
           ],
         ),
-        // --- Change outer Row to Column ---
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Take minimum vertical space
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // --- TextField remains largely the same ---
             TextField(
-              focusNode: _inputFocusNode, // Assign FocusNode
+              focusNode: _inputFocusNode,
               controller: _textController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Enter log entry here',
                 hintText: 'What happened?...',
-                isDense: true, // Make it more compact
+                isDense: true,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,
-                ), // Adjust padding
+                ),
               ),
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
@@ -713,137 +638,34 @@ Entries using this category will be moved to "Misc".''',
               minLines: 1,
               maxLines: _isInputFocused ? 5 : 1,
               onTapOutside: (_) {
-                FocusScope.of(context).unfocus();
+                if (_inputFocusNode.hasFocus) {
+                  FocusScope.of(context).unfocus();
+                }
               },
             ),
-            // --- Add padding between TextField and buttons ---
             const SizedBox(height: 8),
-            // --- Add inner Row for buttons, aligned to end ---
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Microphone Button - Now using BlocBuilder for state
-                BlocBuilder<VoiceInputCubit, VoiceInputState>(
-                  builder: (context, state) {
-                    // Handle transcribed text when available
-                    if (state.transcriptionStatus ==
-                            TranscriptionStatus.success &&
-                        state.transcribedText != null) {
-                      // Set text in controller and clear transcribed text
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _textController.text = state.transcribedText!;
-                        _textController.selection = TextSelection.fromPosition(
-                          TextPosition(offset: _textController.text.length),
-                        );
-                        context.read<VoiceInputCubit>().clearTranscribedText();
-                      });
-                    }
-
-                    // Format recording duration for display
-                    String recordingTimeDisplay = '';
-                    if (state.isRecording) {
-                      final duration = state.recordingDuration;
-                      // Format mm:ss
-                      final minutes = duration.inMinutes.toString().padLeft(
-                        2,
-                        '0',
-                      );
-                      final seconds = (duration.inSeconds % 60)
-                          .toString()
-                          .padLeft(2, '0');
-                      recordingTimeDisplay = '$minutes:$seconds';
-
-                      // Show red when approaching limit (> 4:30)
-                      final bool approachingLimit =
-                          duration.inSeconds > 270; // 4:30
-                    }
-
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Show timer when recording
-                        if (state.isRecording)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                              vertical: 2.0,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  state.recordingDuration.inSeconds > 270
-                                      ? Colors.red.withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              recordingTimeDisplay,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    state.recordingDuration.inSeconds > 270
-                                        ? Colors.red
-                                        : Colors.black87,
-                              ),
-                            ),
-                          ),
-                        IconButton(
-                          icon: Icon(
-                            state.isRecording
-                                ? Icons.stop_circle_outlined
-                                : Icons.mic,
-                            color:
-                                state.isRecording
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.primary,
-                          ),
-                          tooltip:
-                              state.isRecording
-                                  ? 'Stop Recording (${state.recordingDuration.inSeconds > 270 ? "Auto-stops at 5:00" : ""})'
-                                  : 'Start Voice Input',
-                          iconSize: 30,
-                          onPressed: () {
-                            // First, check if currently recording (to decide if we're starting or stopping)
-                            final isCurrentlyRecording = state.isRecording;
-
-                            // Toggle recording without unfocusing the keyboard
-                            context.read<VoiceInputCubit>().toggleRecording();
-
-                            // If we're starting recording AND the keyboard is already showing,
-                            // make sure it stays visible by re-requesting focus
-                            if (!isCurrentlyRecording && _isInputFocused) {
-                              // Wait a tiny bit for the system to process the tap before re-focusing
-                              Future.delayed(
-                                const Duration(milliseconds: 50),
-                                () {
-                                  if (mounted) {
-                                    _inputFocusNode.requestFocus();
-                                  }
-                                },
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  },
+                VoiceInputSection(
+                  textController: _textController,
+                  inputFocusNode: _inputFocusNode,
+                  isInputFocused: _isInputFocused,
+                  showSnackBar: _showFloatingSnackBar,
                 ),
-                // Send Button
                 IconButton(
                   onPressed: _handleInput,
                   icon: const Icon(Icons.send),
-                  color:
-                      Theme.of(context).colorScheme.primary, // Use theme color
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ],
             ),
           ],
         ),
-        // --- End Column ---
       ),
     );
   }
 
-  // --- Entry Item Actions ---
   Widget _buildEntryActions(Entry entry, bool isProcessing) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -857,17 +679,13 @@ Entries using this category will be moved to "Misc".''',
               child: CircularProgressIndicator(strokeWidth: 2.0),
             ),
           ),
-        // Edit Button
         IconButton(
           icon: const Icon(Icons.edit_outlined, size: 20),
           tooltip: 'Edit Entry',
           visualDensity: VisualDensity.compact,
           onPressed:
-              isProcessing
-                  ? null // Disable if processing
-                  : () => _showEditEntryDialog(context, entry),
+              isProcessing ? null : () => _showEditEntryDialog(context, entry),
         ),
-        // Delete Button
         IconButton(
           icon: const Icon(
             Icons.delete_outline,
@@ -878,14 +696,13 @@ Entries using this category will be moved to "Misc".''',
           visualDensity: VisualDensity.compact,
           onPressed:
               isProcessing
-                  ? null // Disable if processing
+                  ? null
                   : () {
                     final entryToDelete = entry;
                     context.read<EntryCubit>().deleteEntry(entryToDelete);
                     if (mounted) {
-                      // Remove previous snackbar is handled by the helper now
                       _showFloatingSnackBar(
-                        context, // Use the main screen context
+                        context,
                         content: const Text('Entry deleted'),
                         duration: const Duration(seconds: 4),
                         action: SnackBarAction(
@@ -919,9 +736,8 @@ Entries using this category will be moved to "Misc".''',
                   content: const Text('✨ You found the magic tap! ✨'),
                   duration: const Duration(seconds: 3),
                 );
-                _titleTapCount = 0; // Reset counter
+                _titleTapCount = 0;
               } else if (_titleTapCount > _targetTapCount) {
-                // Reset if over-tapped without hitting exactly
                 _titleTapCount = 0;
               }
             });
@@ -930,19 +746,15 @@ Entries using this category will be moved to "Misc".''',
         ),
         actions: [
           IconButton(
-            // Change the icon
             icon: const Icon(Icons.playlist_add),
-            // Update the tooltip
             tooltip: 'Add/Manage Categories',
             onPressed: _showManageCategoriesDialog,
           ),
         ],
       ),
-      // Use SafeArea to avoid OS intrusions (notch, bottom bar)
       body: SafeArea(
         child: Stack(
           children: [
-            // Main content column (list, filters)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
@@ -950,82 +762,7 @@ Entries using this category will be moved to "Misc".''',
                 children: <Widget>[_buildFilterSection(), _buildEntriesList()],
               ),
             ),
-
             _buildInputArea(),
-
-            // TODO: Consider refactoring the VoiceInputCubit listener.
-            // It's currently placed directly in the main screen build method.
-            // Options:
-            // 1. Extract the microphone button and this listener into a dedicated
-            //    `VoiceInputWidget` to encapsulate voice-related logic and UI.
-            // 2. Re-evaluate if a Cubit is necessary or if state management for
-            //    voice input can be handled differently (e.g., local StatefulWidget state
-            //    if complexity remains low).
-            // Add BlocListener to show messages based on VoiceInputState
-            BlocListener<VoiceInputCubit, VoiceInputState>(
-              listenWhen: (previous, current) {
-                // Only trigger for changes in status or new errors
-                bool permissionChanged =
-                    previous.micPermissionStatus != current.micPermissionStatus;
-                bool errorChanged =
-                    previous.errorMessage != current.errorMessage &&
-                    current.errorMessage != null;
-                bool transcriptionStatusChanged =
-                    previous.transcriptionStatus != current.transcriptionStatus;
-
-                return permissionChanged ||
-                    errorChanged ||
-                    transcriptionStatusChanged;
-              },
-              listener: (context, state) {
-                // Permission Denied
-                if ((state.micPermissionStatus == PermissionStatus.denied ||
-                        state.micPermissionStatus ==
-                            PermissionStatus.permanentlyDenied) &&
-                    state.isRecording) {
-                  _showFloatingSnackBar(
-                    context,
-                    content: const Text(
-                      'Microphone permission is required for voice input.',
-                    ),
-                  );
-                }
-
-                // Handle errors
-                if (state.errorMessage != null) {
-                  _showFloatingSnackBar(
-                    context,
-                    content: Text(state.errorMessage!),
-                    backgroundColor: Colors.red, // Optional: Indicate error
-                  );
-                }
-
-                // Handle transcription status
-                if (state.transcriptionStatus ==
-                    TranscriptionStatus.transcribing) {
-                  _showFloatingSnackBar(
-                    context,
-                    content: const Row(
-                      children: [
-                        CircularProgressIndicator(strokeWidth: 3),
-                        SizedBox(width: 15),
-                        Text('Transcribing audio...'),
-                      ],
-                    ),
-                    duration: const Duration(seconds: 10),
-                  );
-                } else if (state.transcriptionStatus ==
-                    TranscriptionStatus.success) {
-                  // Hide transcribing snackbar is handled by the helper
-                  _showFloatingSnackBar(
-                    context,
-                    content: const Text('Transcription successful!'),
-                    duration: const Duration(seconds: 2),
-                  );
-                }
-              },
-              child: const SizedBox.shrink(), // Provide an empty child
-            ),
           ],
         ),
       ),

@@ -1,30 +1,28 @@
-import 'dart:convert';
-import 'dart:async';
+import 'dart:async'; // Keep dart:async for Timer
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart';
 
 import '../entry.dart';
 import '../utils/logger.dart';
+import '../services/ai_categorization_service.dart'; // Import the service
 
-// Helper type for extracted entry data
-typedef EntryPrototype = ({String text_segment, String category});
-
-// 1. Define a state class to hold entries, categories, loading status, and errors
 class EntryState {
   final List<Entry> entries;
   final List<String> categories;
-  final bool isLoading; // For general loading like initial load
-  final String?
-  lastErrorMessage; // To hold the latest error message for UI feedback
+  final bool isLoading;
+  final String? lastErrorMessage;
+  final String? filterCategory; // Add filter category
+  final List<dynamic> displayListItems; // Add processed list for UI
 
   EntryState({
     this.entries = const [],
     this.categories = const [],
     this.isLoading = false,
     this.lastErrorMessage,
+    this.filterCategory, // Initialize filter
+    this.displayListItems = const [], // Initialize display list
   });
 
   // Helper method to create a copy with updated values
@@ -33,52 +31,53 @@ class EntryState {
     List<String>? categories,
     bool? isLoading,
     String? lastErrorMessage,
-    bool clearLastError = false, // Flag to explicitly clear the error message
+    String? filterCategory, // Add filter to copyWith
+    List<dynamic>? displayListItems, // Add displayListItems to copyWith
+    bool clearLastError = false,
+    bool clearFilter = false, // Add flag to clear filter
   }) {
     return EntryState(
       entries: entries ?? this.entries,
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
-      // If clearLastError is true, set to null, otherwise use provided or existing
       lastErrorMessage:
           clearLastError ? null : (lastErrorMessage ?? this.lastErrorMessage),
+      filterCategory:
+          clearFilter
+              ? null
+              : (filterCategory ??
+                  this.filterCategory), // Handle filter update/clear
+      displayListItems: displayListItems ?? this.displayListItems,
     );
   }
 }
 
 class EntryCubit extends Cubit<EntryState> {
-  // Initialize with an empty EntryState
-  EntryCubit() : super(EntryState()) {
-    // Load initial data when cubit is created
+  // Inject the service
+  final AiCategorizationService _aiService;
+
+  EntryCubit({required AiCategorizationService aiService})
+    : _aiService = aiService, // Initialize the service
+      super(EntryState()) {
     _loadAllData();
   }
 
   static const String _entriesKey = 'saved_entries_v3_categorized';
   static const String _categoriesKey = 'custom_categories_v1';
-  final String _apiKey =
-      dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
-  final String _apiUrl = 'https://api.openai.com/v1/responses';
 
-  // Timer for clearing the "new" status of entries
   final Map<DateTime, Timer> _newEntryTimers = {};
-  // Duration to show entries as "new" before automatically clearing the status
   static const Duration _newEntryHighlightDuration = Duration(seconds: 5);
 
-  // Cancel all timers when cubit is closed
   @override
   Future<void> close() async {
-    // Cancel all timers to prevent memory leaks
     _newEntryTimers.forEach((_, timer) => timer.cancel());
     _newEntryTimers.clear();
     super.close();
   }
 
-  // Helper method to mark an entry as no longer new after a delay
   void _markEntryAsNotNewAfterDelay(Entry entry) {
-    // Create a timer to clear the "new" flag after delay
     _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
       if (!isClosed) {
-        // Check if cubit is still active
         final index = state.entries.indexWhere(
           (e) => e.timestamp == entry.timestamp && e.text == entry.text,
         );
@@ -86,20 +85,25 @@ class EntryCubit extends Cubit<EntryState> {
           final updatedEntries = List<Entry>.from(state.entries);
           updatedEntries[index] = entry.copyWith(isNew: false);
 
-          emit(state.copyWith(entries: updatedEntries));
-          // Save to preferences without the isNew flag
-          _saveEntries(updatedEntries);
+          // Recalculate display list when 'isNew' changes
+          final newDisplayList = _buildDisplayList(
+            updatedEntries,
+            state.filterCategory,
+          );
+          emit(
+            state.copyWith(
+              entries: updatedEntries,
+              displayListItems: newDisplayList,
+            ),
+          );
+          _saveEntries(updatedEntries); // Save updated entries
         }
-
-        // Remove the timer from the map
         _newEntryTimers.remove(entry.timestamp);
       }
     });
   }
 
   // --- Category Management ---
-
-  // Update the default categories list with the brainstormed ones
   List<String> get _defaultCategories => [
     'Misc',
     'Work',
@@ -114,18 +118,15 @@ class EntryCubit extends Cubit<EntryState> {
   ];
 
   Future<void> _loadCategories() async {
-    // Clear previous error on load attempt
     emit(state.copyWith(clearLastError: true));
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedCategories = prefs.getStringList(_categoriesKey);
       if (savedCategories == null || savedCategories.isEmpty) {
-        // Use the getter here
         emit(state.copyWith(categories: _defaultCategories));
         await _saveCategories(_defaultCategories);
       } else {
         List<String> currentCategories = List<String>.from(savedCategories);
-        // Ensure 'Misc' is always present
         if (!currentCategories.contains('Misc')) {
           currentCategories.add('Misc');
         }
@@ -157,9 +158,8 @@ class EntryCubit extends Cubit<EntryState> {
         !state.categories.contains(trimmedCategory)) {
       final updatedCategories = List<String>.from(state.categories)
         ..add(trimmedCategory);
-      // Emit state first for immediate UI update
       emit(state.copyWith(categories: updatedCategories, clearLastError: true));
-      await _saveCategories(updatedCategories); // Persist
+      await _saveCategories(updatedCategories);
     }
   }
 
@@ -173,16 +173,24 @@ class EntryCubit extends Cubit<EntryState> {
       final updatedEntries =
           state.entries.map((entry) {
             return entry.category == categoryToDelete
-                ? Entry(
-                  text: entry.text,
-                  timestamp: entry.timestamp,
-                  category: 'Misc', // Reassign entries to 'Misc'
-                )
+                ? entry.copyWith(category: 'Misc') // Use copyWith
                 : entry;
           }).toList();
 
+      // Recalculate display list after updating entries
+      final newDisplayList = _buildDisplayList(
+        updatedEntries,
+        state.filterCategory, // Use current filter
+      );
+
       emit(
-        state.copyWith(categories: updatedCategories, entries: updatedEntries),
+        state.copyWith(
+          categories: updatedCategories,
+          entries: updatedEntries,
+          displayListItems: newDisplayList,
+          // Clear filter if the deleted category was the selected filter
+          clearFilter: state.filterCategory == categoryToDelete,
+        ),
       );
       await _saveCategories(updatedCategories);
       await _saveEntries(updatedEntries);
@@ -190,26 +198,19 @@ class EntryCubit extends Cubit<EntryState> {
   }
 
   // --- Entry Loading/Saving ---
-
   Future<void> _loadEntries() async {
     emit(state.copyWith(clearLastError: true));
+    List<Entry> loadedEntries = [];
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
-      List<Entry> loadedEntries = [];
       if (savedEntriesJson.isNotEmpty) {
         loadedEntries =
             savedEntriesJson.map((jsonString) {
               try {
                 return Entry.fromJsonString(jsonString);
               } catch (e) {
-                AppLogger.error(
-                  "Error parsing entry JSON",
-                  error: e,
-                  stackTrace: StackTrace.current,
-                );
-                // For now, returning a dummy entry to avoid crashing the map.
-                // Consider filtering out invalid entries instead.
+                AppLogger.error("Error parsing entry JSON", error: e);
                 return Entry(
                   text: "Error parsing entry",
                   timestamp: DateTime.now(),
@@ -217,24 +218,33 @@ class EntryCubit extends Cubit<EntryState> {
                 );
               }
             }).toList();
-        // Optionally filter out error entries if needed
         loadedEntries.removeWhere((entry) => entry.category == "Error");
       }
       AppLogger.info(
         'Successfully loaded ${loadedEntries.length} categorized entries.',
       );
-      emit(state.copyWith(entries: loadedEntries));
+      // Calculate display list after loading
+      final newDisplayList = _buildDisplayList(
+        loadedEntries,
+        null,
+      ); // No filter initially
+      emit(
+        state.copyWith(
+          entries: loadedEntries,
+          displayListItems: newDisplayList,
+        ),
+      );
     } catch (e) {
       AppLogger.error(
         'Error loading entries. Clearing potentially incompatible data.',
         error: e,
       );
-      final prefs =
-          await SharedPreferences.getInstance(); // Re-get prefs instance
+      final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_entriesKey);
       emit(
         state.copyWith(
           entries: [],
+          displayListItems: [], // Clear display list on error
           lastErrorMessage: "Failed to load entries, data cleared.",
         ),
       );
@@ -244,18 +254,21 @@ class EntryCubit extends Cubit<EntryState> {
   Future<void> _loadAllData() async {
     emit(state.copyWith(isLoading: true, clearLastError: true));
     await _loadCategories();
-    // Only proceed if category load didn't set an error
     if (state.lastErrorMessage == null) {
-      await _loadEntries();
+      await _loadEntries(); // This now calculates and emits displayListItems
     }
+    // Loading is finished, ensure isLoading is false, keep loaded data
     emit(state.copyWith(isLoading: false));
   }
 
   Future<void> _saveEntries(List<Entry> entries) async {
-    emit(state.copyWith(clearLastError: true));
     try {
       final prefs = await SharedPreferences.getInstance();
-      final entriesJson = entries.map((entry) => entry.toJsonString()).toList();
+      // Ensure 'isNew' is false before saving
+      final entriesToSave =
+          entries.map((e) => e.copyWith(isNew: false)).toList();
+      final entriesJson =
+          entriesToSave.map((entry) => entry.toJsonString()).toList();
       await prefs.setStringList(_entriesKey, entriesJson);
       AppLogger.info('Saved ${entries.length} categorized entries.');
     } catch (e) {
@@ -264,301 +277,151 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  // --- OpenAI Call (Extracts Multiple Entries using Structured Outputs) ---
-  Future<List<EntryPrototype>> _extractEntriesFromOpenAI(String text) async {
-    List<EntryPrototype> extractedEntries = []; // Default to empty list
-    String? errorMessage;
+  // --- Helper to build the display list ---
+  List<dynamic> _buildDisplayList(List<Entry> entries, String? filterCategory) {
+    // Apply filtering
+    final List<Entry> filteredEntries =
+        filterCategory == null
+            ? entries
+            : entries
+                .where((entry) => entry.category == filterCategory)
+                .toList();
 
-    // 1. Pre-flight checks
-    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
-      errorMessage = 'OpenAI API Key not found.';
-    } else if (state.categories.isEmpty) {
-      errorMessage = 'No categories available for classification.';
+    // Sort entries by timestamp (descending) - applied before grouping
+    filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    if (filteredEntries.isEmpty) {
+      return []; // Return empty list if no entries match
     }
 
-    if (errorMessage != null) {
-      AppLogger.error(errorMessage);
-      emit(state.copyWith(lastErrorMessage: errorMessage));
-      return extractedEntries; // Return empty list
-    }
-
-    // 2. Prepare API Call with Structured Output for multiple entries
-    emit(state.copyWith(clearLastError: true)); // Clear previous error
-    final String modelId =
-        'gpt-4.1-mini'; // Or 'gpt-4o' if compatibility issues arise
-    AppLogger.info(
-      "Calling OpenAI API ($modelId) to extract multiple entries for text: '$text' using Structured Output",
+    // Group entries by date
+    final groupedEntries = groupBy<Entry, DateTime>(
+      filteredEntries,
+      (entry) => DateTime(
+        entry.timestamp.year,
+        entry.timestamp.month,
+        entry.timestamp.day,
+      ),
     );
-    final List<String> currentCategories = state.categories;
 
-    // Define the JSON schema for the desired output (array of entries)
-    final schema = {
-      "type": "object",
-      "properties": {
-        "entries": {
-          "type": "array",
-          "description":
-              "An array of text segments extracted from the input, each assigned a category.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "text_segment": {
-                "type": "string",
-                "description":
-                    "The specific portion of the input text relevant to this entry.",
-              },
-              "category": {
-                "type": "string",
-                "description": "The category assigned to this text segment.",
-                "enum": currentCategories,
-              },
-            },
-            "required": ["text_segment", "category"],
-            "additionalProperties": false,
-          },
-        },
-      },
-      "required": ["entries"],
-      "additionalProperties": false,
-    };
+    // Sort dates descending
+    final sortedDates =
+        groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
 
-    // Construct the request body
-    final requestBody = {
-      'model': modelId,
-      'input': [
-        {
-          "role": "system",
-          "content":
-              "Analyze the user's text. Identify distinct pieces of information or tasks. For each piece, extract the relevant text segment and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments.",
-        },
-        {"role": "user", "content": text},
-      ],
-      'text': {
-        'format': {
-          'type': 'json_schema',
-          'name': 'multiple_entry_extraction',
-          'schema': schema,
-          'strict': true, // Enforce schema adherence
-        },
-      },
-      'temperature': 0.2, // Slightly higher temp might help segmentation
-      // 'max_output_tokens': 500 // Consider increasing token limit for multiple entries
-    };
+    // Create the final list with headers and entries
+    final List<dynamic> listItems = [];
+    for (var date in sortedDates) {
+      listItems.add(date); // Add date header
+      // Entries within the date are already sorted by timestamp descending
+      listItems.addAll(groupedEntries[date]!); // Add entries for that date
+    }
 
-    // 3. Execute API Call and Handle Response/Errors
+    return listItems;
+  }
+
+  // --- Method to set the filter ---
+  void setFilter(String? category) {
+    final newDisplayList = _buildDisplayList(state.entries, category);
+    emit(
+      state.copyWith(
+        filterCategory: category,
+        displayListItems: newDisplayList,
+        clearLastError: true, // Clear any previous errors when filter changes
+      ),
+    );
+  }
+
+  // --- Entry Manipulation ---
+  Future<void> addEntry(String text) async {
+    if (text.isEmpty) return;
+
+    emit(state.copyWith(isLoading: true, clearLastError: true));
+    List<EntryPrototype> extractedData = [];
+    String? serviceError;
+
     try {
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        final responseBody = jsonDecode(response.body);
-
-        // Check for API-level errors or non-completed status
-        if (responseBody['status'] != 'completed' ||
-            responseBody['error'] != null) {
-          errorMessage =
-              'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
-          AppLogger.error(errorMessage);
-          AppLogger.error('Full Response Body: ${response.body}');
-        } else if (responseBody['output'] != null &&
-            responseBody['output'] is List &&
-            responseBody['output'].isNotEmpty &&
-            responseBody['output'][0]['content'] != null &&
-            responseBody['output'][0]['content'] is List &&
-            responseBody['output'][0]['content'].isNotEmpty) {
-          final contentItem = responseBody['output'][0]['content'][0];
-
-          if (contentItem['type'] == 'output_text' &&
-              contentItem['text'] != null) {
-            final jsonOutputString = contentItem['text'];
-            AppLogger.info(
-              "Received JSON string from OpenAI: $jsonOutputString",
-            );
-
-            try {
-              // Parse the JSON string containing the 'entries' array
-              final Map<String, dynamic> parsedJson = jsonDecode(
-                jsonOutputString,
-              );
-
-              if (parsedJson.containsKey('entries') &&
-                  parsedJson['entries'] is List) {
-                final List<dynamic> entriesListJson = parsedJson['entries'];
-
-                for (var item in entriesListJson) {
-                  if (item is Map<String, dynamic> &&
-                      item.containsKey('text_segment') &&
-                      item['text_segment'] is String &&
-                      item.containsKey('category') &&
-                      item['category'] is String) {
-                    String segment = item['text_segment'];
-                    String category = item['category'];
-
-                    // Validate category against available ones (redundant with strict schema but safe)
-                    if (currentCategories.contains(category)) {
-                      extractedEntries.add((
-                        text_segment: segment,
-                        category: category,
-                      ));
-                    } else {
-                      AppLogger.warning(
-                        "OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'",
-                      );
-                      extractedEntries.add((
-                        text_segment: segment,
-                        category: 'Misc',
-                      ));
-                    }
-                  } else {
-                    AppLogger.warning(
-                      "Invalid item format in 'entries' array: $item",
-                    );
-                    errorMessage =
-                        "Invalid item format received from OpenAI."; // Set error message for UI
-                  }
-                }
-                AppLogger.info(
-                  "Successfully extracted ${extractedEntries.length} entries.",
-                );
-                // If successful, return the list
-                if (errorMessage == null) return extractedEntries;
-              } else {
-                errorMessage =
-                    '''Parsed JSON from OpenAI does not contain a valid "entries" key or it's not a list.''';
-                AppLogger.error('$errorMessage JSON: $parsedJson');
-              }
-            } catch (e) {
-              errorMessage = 'Failed to parse JSON response from OpenAI.';
-              AppLogger.error(errorMessage, error: e);
-            }
-          } else if (contentItem['type'] == 'refusal' &&
-              contentItem['refusal'] != null) {
-            errorMessage =
-                'OpenAI refused the request: ${contentItem['refusal']}';
-            AppLogger.error(errorMessage);
-          } else {
-            errorMessage =
-                'Unexpected content type or format in OpenAI response.';
-            AppLogger.error('$errorMessage Content Item: $contentItem');
-          }
-        } else {
-          errorMessage = 'Failed to parse overall OpenAI response structure.';
-          AppLogger.error('$errorMessage Body: ${response.body}');
-        }
-      } else {
-        // Handle HTTP errors
-        if (response.statusCode == 400) {
-          errorMessage =
-              'OpenAI API error (Code: 400). This might be because $modelId does not support the requested structured output schema (json_schema). Consider using gpt-4o or simplifying the schema.';
-        } else if (response.statusCode == 401) {
-          errorMessage = 'Invalid OpenAI API Key.';
-        } else if (response.statusCode == 429) {
-          errorMessage = 'OpenAI rate limit exceeded.';
-        } else {
-          errorMessage = 'OpenAI API HTTP error (Code: ${response.statusCode})';
-        }
-        AppLogger.error('$errorMessage Response Body: ${response.body}');
-      }
-    } catch (e, stacktrace) {
-      // Catch network or other exceptions during the request
+      // Use the injected service
+      extractedData = await _aiService.extractEntries(text, state.categories);
+    } on AiCategorizationException catch (e) {
       AppLogger.error(
-        'Error calling OpenAI API',
+        "AI Service failed: ${e.message}",
+        error: e.underlyingError,
+      );
+      serviceError = e.message; // Store user-friendly error message
+    } catch (e, stacktrace) {
+      // Catch any other unexpected errors from the service call
+      AppLogger.error(
+        "Unexpected error calling AI Service",
         error: e,
         stackTrace: stacktrace,
       );
-      errorMessage = 'Network error or exception during API call.';
+      serviceError = "An unexpected error occurred during categorization.";
     }
 
-    // 4. Final Error Handling
-    emit(state.copyWith(lastErrorMessage: errorMessage));
-    AppLogger.info(
-      "Returning ${extractedEntries.length} entries. Error (if any): $errorMessage",
-    );
-    return extractedEntries; // Return list (empty if errors occurred)
-  }
+    // Emit error state if service failed
+    if (serviceError != null) {
+      emit(state.copyWith(isLoading: false, lastErrorMessage: serviceError));
+      return; // Stop processing if AI failed
+    }
 
-  // --- Entry Manipulation (Modified for Multiple Entries) ---
-
-  Future<void> addEntry(String text) async {
-    if (text.isNotEmpty) {
-      emit(
-        state.copyWith(isLoading: true, clearLastError: true),
-      ); // Set loading true, clear previous errors
-
-      List<EntryPrototype> extractedData = await _extractEntriesFromOpenAI(
-        text,
+    // --- Process results (same logic as before) ---
+    List<Entry> updatedEntries;
+    if (extractedData.isEmpty) {
+      AppLogger.info(
+        "No entries extracted by AI, adding original text as Misc.",
       );
-
-      if (extractedData.isEmpty) {
-        // If nothing was extracted (or an error occurred in extraction),
-        // potentially add the original text as 'Misc' or show error from emit()
-        if (state.lastErrorMessage == null) {
-          // Only add Misc if no specific error was emitted
-          AppLogger.info(
-            "No entries extracted by AI, adding original text as Misc.",
-          );
-          final fallbackEntry = Entry(
-            text: text,
-            timestamp: DateTime.now(),
-            category: 'Misc',
-            isNew: true, // Set isNew to true for fallback entry
-          );
-          final updatedEntries = List<Entry>.from(state.entries)
-            ..insert(0, fallbackEntry);
-          emit(state.copyWith(entries: updatedEntries, isLoading: false));
-          await _saveEntries(updatedEntries);
-
-          // Set timer to clear the "new" flag
-          _markEntryAsNotNewAfterDelay(fallbackEntry);
-        } else {
-          AppLogger.warning(
-            "Error occurred during extraction, not adding fallback entry.",
-          );
-          emit(
-            state.copyWith(isLoading: false),
-          ); // Ensure loading is turned off
-        }
-        return; // Exit early
-      }
-
-      // Create final Entry objects from extracted data with isNew set to true
+      final fallbackEntry = Entry(
+        text: text,
+        timestamp: DateTime.now(),
+        category: 'Misc',
+        isNew: true,
+      );
+      updatedEntries = List<Entry>.from(state.entries)
+        ..insert(0, fallbackEntry);
+      _markEntryAsNotNewAfterDelay(fallbackEntry);
+    } else {
       final List<Entry> newEntries = [];
-      final DateTime now =
-          DateTime.now(); // Use the same timestamp for all entries from this input
+      final DateTime now = DateTime.now();
       for (var data in extractedData) {
         final newEntry = Entry(
           text: data.text_segment,
           timestamp: now,
           category: data.category,
-          isNew: true, // Set isNew to true for all new entries
+          isNew: true,
         );
         newEntries.add(newEntry);
-
-        // Set timer to clear the "new" flag for each entry
         _markEntryAsNotNewAfterDelay(newEntry);
       }
-
-      // Update the state with the new entries added to the top
-      final updatedEntries = List<Entry>.from(state.entries);
-      updatedEntries.insertAll(0, newEntries);
-
-      // Update state and save
-      emit(state.copyWith(entries: updatedEntries, isLoading: false));
-      await _saveEntries(updatedEntries);
+      updatedEntries = List<Entry>.from(state.entries)
+        ..insertAll(0, newEntries);
     }
+
+    // Recalculate display list and emit final state
+    final newDisplayList = _buildDisplayList(
+      updatedEntries,
+      state.filterCategory,
+    );
+    emit(
+      state.copyWith(
+        entries: updatedEntries,
+        displayListItems: newDisplayList,
+        isLoading: false, // Ensure loading is set to false
+      ),
+    );
+    await _saveEntries(updatedEntries);
   }
 
   Future<void> addEntryObject(Entry entryToAdd) async {
     emit(state.copyWith(clearLastError: true));
     final updatedEntries = List<Entry>.from(state.entries)..add(entryToAdd);
-    updatedEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    emit(state.copyWith(entries: updatedEntries));
+    // No need to sort here, _buildDisplayList handles sorting
+    final newDisplayList = _buildDisplayList(
+      updatedEntries,
+      state.filterCategory,
+    );
+    emit(
+      state.copyWith(entries: updatedEntries, displayListItems: newDisplayList),
+    );
     await _saveEntries(updatedEntries);
     AppLogger.info("Undid delete for entry - ${entryToAdd.text}");
   }
@@ -571,11 +434,20 @@ class EntryCubit extends Cubit<EntryState> {
               (entry) =>
                   !(entry.timestamp == entryToDelete.timestamp &&
                       entry.text == entryToDelete.text),
-            ) // More precise check
+            )
             .toList();
+
     if (updatedEntries.length < state.entries.length) {
-      // Check if deletion happened
-      emit(state.copyWith(entries: updatedEntries));
+      final newDisplayList = _buildDisplayList(
+        updatedEntries,
+        state.filterCategory,
+      );
+      emit(
+        state.copyWith(
+          entries: updatedEntries,
+          displayListItems: newDisplayList,
+        ),
+      );
       await _saveEntries(updatedEntries);
     }
   }
@@ -586,17 +458,28 @@ class EntryCubit extends Cubit<EntryState> {
       (entry) =>
           entry.timestamp == originalEntry.timestamp &&
           entry.text == originalEntry.text,
-    ); // More precise check
+    );
     if (index != -1) {
       final updatedEntries = List<Entry>.from(state.entries);
-      updatedEntries[index] = updatedEntry;
-      // No sorting needed here as we are updating in place
-      emit(state.copyWith(entries: updatedEntries));
+      // Ensure isNew is preserved or reset correctly if needed
+      updatedEntries[index] = updatedEntry.copyWith(
+        isNew: state.entries[index].isNew,
+      );
+
+      final newDisplayList = _buildDisplayList(
+        updatedEntries,
+        state.filterCategory,
+      );
+      emit(
+        state.copyWith(
+          entries: updatedEntries,
+          displayListItems: newDisplayList,
+        ),
+      );
       await _saveEntries(updatedEntries);
     }
   }
 
-  // Method to clear the last error message (e.g., after SnackBar dismissal)
   void clearLastError() {
     if (state.lastErrorMessage != null) {
       emit(state.copyWith(clearLastError: true));
