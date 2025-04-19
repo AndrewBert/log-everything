@@ -8,6 +8,7 @@ import '../cubit/entry_cubit.dart';
 import '../cubit/voice_input_cubit.dart';
 import '../cubit/voice_input_state.dart';
 import '../entry.dart';
+import '../utils/category_colors.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -400,6 +401,11 @@ Entries using this category will be moved to "Misc".''',
     }
   }
 
+  // --- Helper to get category color ---
+  Color _getCategoryColor(String category) {
+    return CategoryColors.getColorForCategory(category);
+  }
+
   // --- List Display Area ---
   Widget _buildEntriesList() {
     return Expanded(
@@ -484,26 +490,139 @@ Entries using this category will be moved to "Misc".''',
                 // Entry Item
                 final entry = item;
                 bool isProcessing = entry.category == 'Processing...';
+                bool isNew = entry.isNew;
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4.0, // Add some vertical space
-                    horizontal: 0,
-                  ),
-                  child: ListTile(
-                    title: Text(entry.text),
-                    subtitle: Text(
-                      '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
-                      style: TextStyle(
-                        color:
-                            isProcessing
-                                ? Colors
-                                    .orange // Indicate processing
-                                : Colors.grey[700],
-                      ),
+                // Define category chip color based on category name
+                Color categoryColor = _getCategoryColor(entry.category);
+
+                return AnimatedContainer(
+                  duration: const Duration(seconds: 1),
+                  decoration:
+                      isNew
+                          ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.5),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          )
+                          : null,
+                  child: Card(
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 4.0,
+                      horizontal: 0,
                     ),
-                    trailing: _buildEntryActions(entry, isProcessing),
-                    dense: true,
+                    color:
+                        isNew
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : null,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          title: Text(
+                            entry.text,
+                            style:
+                                isNew
+                                    ? TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimaryContainer,
+                                    )
+                                    : null,
+                          ),
+                          subtitle: Row(
+                            children: [
+                              Text(
+                                _timeFormatter.format(entry.timestamp),
+                                style: TextStyle(
+                                  color:
+                                      isProcessing
+                                          ? Colors.orange
+                                          : isNew
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimaryContainer
+                                              .withOpacity(0.7)
+                                          : Colors.grey[700],
+                                ),
+                              ),
+                              if (isNew)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: _buildEntryActions(entry, isProcessing),
+                          dense: true,
+                        ),
+                        // Category chip - more prominently displayed with improved readability
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 16.0,
+                            right: 16.0,
+                            bottom: 8.0,
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 4.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withOpacity(
+                                0.15,
+                              ), // Reduced opacity for better readability
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: categoryColor.withOpacity(
+                                  0.3,
+                                ), // Lighter border
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              entry.category,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: CategoryColors.getTextColorForCategory(
+                                  entry.category,
+                                ), // Use the darker text color
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -662,24 +781,91 @@ Entries using this category will be moved to "Misc".''',
                       });
                     }
 
-                    return IconButton(
-                      icon: Icon(
-                        state.isRecording
-                            ? Icons.stop_circle_outlined
-                            : Icons.mic,
-                        color:
+                    // Format recording duration for display
+                    String recordingTimeDisplay = '';
+                    if (state.isRecording) {
+                      final duration = state.recordingDuration;
+                      // Format mm:ss
+                      final minutes = duration.inMinutes.toString().padLeft(
+                        2,
+                        '0',
+                      );
+                      final seconds = (duration.inSeconds % 60)
+                          .toString()
+                          .padLeft(2, '0');
+                      recordingTimeDisplay = '$minutes:$seconds';
+
+                      // Show red when approaching limit (> 4:30)
+                      final bool approachingLimit =
+                          duration.inSeconds > 270; // 4:30
+                    }
+
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Show timer when recording
+                        if (state.isRecording)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 2.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  state.recordingDuration.inSeconds > 270
+                                      ? Colors.red.withOpacity(0.2)
+                                      : Colors.grey.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              recordingTimeDisplay,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    state.recordingDuration.inSeconds > 270
+                                        ? Colors.red
+                                        : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        IconButton(
+                          icon: Icon(
                             state.isRecording
-                                ? Colors.red
-                                : Theme.of(context).colorScheme.primary,
-                      ),
-                      tooltip:
-                          state.isRecording
-                              ? 'Stop Recording'
-                              : 'Start Voice Input',
-                      iconSize: 30,
-                      onPressed:
-                          () =>
-                              context.read<VoiceInputCubit>().toggleRecording(),
+                                ? Icons.stop_circle_outlined
+                                : Icons.mic,
+                            color:
+                                state.isRecording
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.primary,
+                          ),
+                          tooltip:
+                              state.isRecording
+                                  ? 'Stop Recording (${state.recordingDuration.inSeconds > 270 ? "Auto-stops at 5:00" : ""})'
+                                  : 'Start Voice Input',
+                          iconSize: 30,
+                          onPressed: () {
+                            // First, check if currently recording (to decide if we're starting or stopping)
+                            final isCurrentlyRecording = state.isRecording;
+
+                            // Toggle recording without unfocusing the keyboard
+                            context.read<VoiceInputCubit>().toggleRecording();
+
+                            // If we're starting recording AND the keyboard is already showing,
+                            // make sure it stays visible by re-requesting focus
+                            if (!isCurrentlyRecording && _isInputFocused) {
+                              // Wait a tiny bit for the system to process the tap before re-focusing
+                              Future.delayed(
+                                const Duration(milliseconds: 50),
+                                () {
+                                  if (mounted) {
+                                    _inputFocusNode.requestFocus();
+                                  }
+                                },
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     );
                   },
                 ),

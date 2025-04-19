@@ -8,6 +8,7 @@ import 'cubit/entry_cubit.dart';
 import 'cubit/voice_input_cubit.dart';
 import 'screens/home_screen.dart'; // Import the new home screen
 import 'speech_service.dart';
+import 'utils/category_colors.dart'; // Import the category colors utility
 
 Future<void> main() async {
   // Ensure Flutter bindings are initialized first
@@ -16,6 +17,9 @@ Future<void> main() async {
   // Load environment variables before the app starts
   // This is necessary because EntryCubit reads from dotenv.env on creation
   await dotenv.load(fileName: ".env");
+
+  // Initialize the category colors system
+  await CategoryColors.initialize();
 
   // Set the default locale for the entire app
   Intl.defaultLocale = 'en_US';

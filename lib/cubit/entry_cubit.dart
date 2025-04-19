@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -57,6 +58,44 @@ class EntryCubit extends Cubit<EntryState> {
   final String _apiKey =
       dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/responses';
+
+  // Timer for clearing the "new" status of entries
+  final Map<DateTime, Timer> _newEntryTimers = {};
+  // Duration to show entries as "new" before automatically clearing the status
+  static const Duration _newEntryHighlightDuration = Duration(seconds: 5);
+
+  // Cancel all timers when cubit is closed
+  @override
+  Future<void> close() async {
+    // Cancel all timers to prevent memory leaks
+    _newEntryTimers.forEach((_, timer) => timer.cancel());
+    _newEntryTimers.clear();
+    super.close();
+  }
+
+  // Helper method to mark an entry as no longer new after a delay
+  void _markEntryAsNotNewAfterDelay(Entry entry) {
+    // Create a timer to clear the "new" flag after delay
+    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
+      if (!isClosed) {
+        // Check if cubit is still active
+        final index = state.entries.indexWhere(
+          (e) => e.timestamp == entry.timestamp && e.text == entry.text,
+        );
+        if (index != -1) {
+          final updatedEntries = List<Entry>.from(state.entries);
+          updatedEntries[index] = entry.copyWith(isNew: false);
+
+          emit(state.copyWith(entries: updatedEntries));
+          // Save to preferences without the isNew flag
+          _saveEntries(updatedEntries);
+        }
+
+        // Remove the timer from the map
+        _newEntryTimers.remove(entry.timestamp);
+      }
+    });
+  }
 
   // --- Category Management ---
 
@@ -501,6 +540,12 @@ class EntryCubit extends Cubit<EntryState> {
       // Update the state with the new entries added to the top
       final updatedEntries = List<Entry>.from(state.entries);
       updatedEntries.insertAll(0, newEntries);
+
+      // Mark new entries as "new" and set timers to clear the status
+      for (var entry in newEntries) {
+        entry = entry.copyWith(isNew: true);
+        _markEntryAsNotNewAfterDelay(entry);
+      }
 
       // Update state and save
       emit(state.copyWith(entries: updatedEntries, isLoading: false));

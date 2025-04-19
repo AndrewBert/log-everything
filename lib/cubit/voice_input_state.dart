@@ -9,6 +9,8 @@ class VoiceInputState {
   final TranscriptionStatus transcriptionStatus;
   final String? errorMessage;
   final String? transcribedText;
+  final DateTime? recordingStartTime;
+  final Duration recordingDuration;
 
   const VoiceInputState({
     this.isRecording = false,
@@ -17,6 +19,8 @@ class VoiceInputState {
     this.transcriptionStatus = TranscriptionStatus.idle,
     this.errorMessage,
     this.transcribedText,
+    this.recordingStartTime,
+    this.recordingDuration = Duration.zero,
   });
 
   VoiceInputState copyWith({
@@ -26,6 +30,8 @@ class VoiceInputState {
     TranscriptionStatus? transcriptionStatus,
     String? errorMessage,
     String? transcribedText,
+    DateTime? recordingStartTime,
+    Duration? recordingDuration,
   }) {
     return VoiceInputState(
       isRecording: isRecording ?? this.isRecording,
@@ -34,6 +40,8 @@ class VoiceInputState {
       transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
       errorMessage: errorMessage ?? this.errorMessage,
       transcribedText: transcribedText ?? this.transcribedText,
+      recordingStartTime: recordingStartTime ?? this.recordingStartTime,
+      recordingDuration: recordingDuration ?? this.recordingDuration,
     );
   }
 }

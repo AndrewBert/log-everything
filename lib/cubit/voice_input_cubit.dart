@@ -1,3 +1,4 @@
+import 'dart:async'; // Added for Timer
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -11,6 +12,11 @@ import 'voice_input_state.dart';
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;
   final SpeechService _speechService;
+
+  // Timer-related fields
+  Timer? _recordingTimer;
+  static const Duration _maxRecordingDuration = Duration(minutes: 5);
+  static const Duration _minRecordingDuration = Duration(seconds: 1);
 
   VoiceInputCubit({
     required AudioRecorder audioRecorder,
@@ -105,6 +111,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       bool isRecording = await _audioRecorder.isRecording();
       AppLogger.info("Recording started: $isRecording");
       if (isRecording) {
+        final now = DateTime.now();
         emit(
           state.copyWith(
             isRecording: true,
@@ -112,8 +119,13 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             errorMessage: null,
             // Update permission status to granted since recording started successfully
             micPermissionStatus: PermissionStatus.granted,
+            recordingStartTime: now,
+            recordingDuration: Duration.zero,
           ),
         );
+
+        // Start the timer to track recording duration
+        _startRecordingTimer();
       } else {
         AppLogger.error("Failed to start recording");
         emit(state.copyWith(errorMessage: 'Failed to start recording.'));
@@ -134,15 +146,41 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     AppLogger.info("Stopping recording");
     if (!state.isRecording) return;
 
+    _cancelRecordingTimer();
+
+    // Check recording duration
+    final now = DateTime.now();
+    final recordingDuration =
+        state.recordingStartTime != null
+            ? now.difference(state.recordingStartTime!)
+            : Duration.zero;
+    final bool isTooShort =
+        recordingDuration.inMilliseconds < 1000; // Less than 1 second
+
     try {
       final path = await _audioRecorder.stop();
       AppLogger.info("Recording stopped, audio path: $path");
 
-      emit(state.copyWith(isRecording: false, audioPath: path));
+      emit(
+        state.copyWith(
+          isRecording: false,
+          audioPath: path,
+          recordingStartTime: null,
+          recordingDuration: Duration.zero,
+          // Set a message for recordings that are too short
+          errorMessage:
+              isTooShort ? 'Recording too short (less than 1 second)' : null,
+        ),
+      );
 
-      if (path != null) {
+      // Only transcribe if recording is long enough and path exists
+      if (!isTooShort && path != null) {
         await transcribeAudio();
-      } else {
+      } else if (isTooShort) {
+        AppLogger.info(
+          "Skipping transcription for recording less than 1 second",
+        );
+      } else if (path == null) {
         AppLogger.error("Failed to save recording");
         emit(state.copyWith(errorMessage: 'Failed to save recording.'));
       }
@@ -152,8 +190,48 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',
           isRecording: false,
+          recordingStartTime: null,
+          recordingDuration: Duration.zero,
         ),
       );
+    }
+  }
+
+  // Start timer to track recording duration
+  void _startRecordingTimer() {
+    _cancelRecordingTimer(); // Cancel any existing timer
+
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!state.isRecording || state.recordingStartTime == null) {
+        _cancelRecordingTimer();
+        return;
+      }
+
+      final now = DateTime.now();
+      final duration = now.difference(state.recordingStartTime!);
+
+      // Update the recording duration
+      emit(state.copyWith(recordingDuration: duration));
+
+      // Track if minimum duration has passed
+      if (duration >= _minRecordingDuration) {}
+
+      // Auto-stop recording if maximum duration is reached
+      if (duration >= _maxRecordingDuration) {
+        AppLogger.info(
+          "Maximum recording duration reached (5 minutes). Auto-stopping.",
+        );
+        timer.cancel();
+        stopRecording();
+      }
+    });
+  }
+
+  // Cancel the recording timer
+  void _cancelRecordingTimer() {
+    if (_recordingTimer != null && _recordingTimer!.isActive) {
+      _recordingTimer!.cancel();
+      _recordingTimer = null;
     }
   }
 
@@ -219,6 +297,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   @override
   Future<void> close() async {
+    _cancelRecordingTimer();
     await _audioRecorder.dispose();
     super.close();
   }
