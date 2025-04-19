@@ -411,9 +411,7 @@ $stacktrace''');
     }
 
     // 4. Final Error Handling
-    if (errorMessage != null) {
-      emit(state.copyWith(lastErrorMessage: errorMessage));
-    }
+    emit(state.copyWith(lastErrorMessage: errorMessage));
     print(
       "Returning ${extractedEntries.length} entries. Error (if any): $errorMessage",
     );

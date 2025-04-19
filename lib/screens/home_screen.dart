@@ -1,15 +1,13 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart'; // Added
-import 'package:path_provider/path_provider.dart'; // Added
-import 'package:record/record.dart'; // Added
-import 'dart:io'; // Added for Directory
-import 'package:collection/collection.dart'; // Import for groupBy
+import 'package:permission_handler/permission_handler.dart';
 
-import '../entry.dart';
 import '../cubit/entry_cubit.dart';
-import '../speech_service.dart'; // Added
+import '../cubit/voice_input_cubit.dart';
+import '../cubit/voice_input_state.dart';
+import '../entry.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -29,32 +27,17 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _isInputFocused = false;
   // --- End FocusNode ---
 
-  // --- Voice Input State ---
-  late final AudioRecorder _audioRecorder;
-  late final SpeechService _speechService;
-  bool _isRecording = false;
-  String? _audioPath;
-  // --- End Voice Input State ---
-
   @override
   void initState() {
     super.initState();
-    _audioRecorder = AudioRecorder();
-    _speechService = SpeechService(); // Initialize SpeechService
-    _requestMicPermission(); // Request permission on init
-    // --- Add listener to FocusNode ---
     _inputFocusNode.addListener(_onInputFocusChange);
-    // --- End listener ---
   }
 
   @override
   void dispose() {
     _textController.dispose();
-    _audioRecorder.dispose(); // Dispose recorder
-    // --- Dispose FocusNode and remove listener ---
     _inputFocusNode.removeListener(_onInputFocusChange);
     _inputFocusNode.dispose();
-    // --- End dispose ---
     super.dispose();
   }
 
@@ -69,224 +52,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   // --- End focus change handler ---
 
-  // --- Microphone Permission ---
-  Future<void> _requestMicPermission() async {
-    final status = await Permission.microphone.request();
-    if (status != PermissionStatus.granted) {
-      // Handle permission denial (optional: show a message)
-      print("Microphone permission denied.");
-      if (mounted) {
-        // Check if widget is still mounted
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Microphone permission is required for voice input.'),
-          ),
-        );
-      }
-    }
-  }
-
-  // --- Voice Recording and Transcription Logic ---
-  Future<void> _toggleRecording() async {
-    if (_isRecording) {
-      await _stopRecording();
-    } else {
-      await _startRecording();
-    }
-  }
-
-  Future<void> _startRecording() async {
-    final hasPermission = await _audioRecorder.hasPermission();
-    if (!hasPermission) {
-      await _requestMicPermission(); // Request again if needed
-      // Check again after requesting
-      if (!await _audioRecorder.hasPermission()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cannot record without microphone permission.'),
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    try {
-      final Directory tempDir = await getTemporaryDirectory();
-      _audioPath =
-          '${tempDir.path}/temp_audio.m4a'; // Use m4a for wider compatibility
-
-      // Ensure directory exists (mainly for robustness)
-      final file = File(_audioPath!);
-      if (await file.exists()) {
-        await file.delete(); // Delete previous recording if exists
-      }
-
-      print("Starting recording to: $_audioPath");
-
-      // Start recording to file
-      await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc), // Using AAC LC encoder
-        path: _audioPath!,
-      );
-
-      // Short delay to ensure the file is created before checking existence
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Check if recording actually started
-      bool isRecording = await _audioRecorder.isRecording();
-      if (isRecording) {
-        if (mounted) {
-          setState(() {
-            _isRecording = true;
-          });
-        }
-        print("Recording started successfully.");
-      } else {
-        print("Error: Recording failed to start.");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to start recording.')),
-          );
-          setState(() {
-            _isRecording = false; // Ensure state is consistent
-          });
-        }
-      }
-    } catch (e, stacktrace) {
-      print('Error starting recording: $e');
-      print('Stacktrace: $stacktrace');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error starting recording: $e')));
-        setState(() {
-          _isRecording = false; // Reset state on error
-        });
-      }
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    if (!_isRecording) return; // Prevent stopping if not recording
-
-    try {
-      final path = await _audioRecorder.stop();
-      print("Recording stopped. File path: $path");
-      if (mounted) {
-        setState(() {
-          _isRecording = false;
-        });
-      }
-
-      if (path != null) {
-        _audioPath = path; // Use the path returned by stop()
-        print("Audio saved to: $_audioPath");
-        _transcribeAudio(); // Start transcription
-      } else {
-        print("Error: Stop recording returned null path.");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to save recording.')),
-          );
-        }
-      }
-    } catch (e, stacktrace) {
-      print('Error stopping recording: $e');
-      print('Stacktrace: $stacktrace');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error stopping recording: $e')));
-        setState(() {
-          _isRecording = false; // Reset state on error
-        });
-      }
-    }
-  }
-
-  Future<void> _transcribeAudio() async {
-    if (_audioPath == null || _audioPath!.isEmpty) {
-      print("Transcription Error: Audio path is null or empty.");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No audio file found to transcribe.')),
-        );
-      }
-      return;
-    }
-
-    // Show visual feedback that transcription is happening
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              CircularProgressIndicator(strokeWidth: 3),
-              SizedBox(width: 15),
-              Text('Transcribing audio...'),
-            ],
-          ),
-          duration: Duration(seconds: 10), // Adjust duration as needed
-        ),
-      );
-    }
-
-    try {
-      final transcription = await _speechService.transcribeAudio(_audioPath!);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).hideCurrentSnackBar(); // Hide processing indicator
-      }
-
-      if (transcription != null && transcription.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _textController.text = transcription; // Update text field
-            _textController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _textController.text.length),
-            ); // Move cursor to end
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transcription successful!'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transcription failed or returned empty text.'),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).hideCurrentSnackBar(); // Hide processing indicator
-        print('Error during transcription: $e');
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Transcription error: $e')));
-      }
-    } finally {
-      // Optional: Clean up the audio file after transcription attempt
-      // final file = File(_audioPath!);
-      // if (await file.exists()) {
-      //   await file.delete();
-      //   print("Deleted temporary audio file: $_audioPath");
-      // }
-      // _audioPath = null; // Reset path
-    }
-  }
-  // --- End Voice Recording Logic ---
-
   void _handleInput() {
     final String currentInput = _textController.text;
     if (currentInput.isNotEmpty) {
@@ -300,11 +65,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       );
     }
-    // else {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('Please enter the main entry text.')),
-    //   );
-    // }
   }
 
   // --- Category Management Dialog ---
@@ -754,7 +514,7 @@ Entries using this category will be moved to "Misc".''',
                     value: category,
                     child: Text(category),
                   );
-                }).toList(),
+                }),
               ];
 
               return DropdownButton<String?>(
@@ -831,19 +591,43 @@ Entries using this category will be moved to "Misc".''',
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Microphone Button
-                IconButton(
-                  icon: Icon(
-                    _isRecording ? Icons.stop_circle_outlined : Icons.mic,
-                    color:
-                        _isRecording
-                            ? Colors.red
-                            : Theme.of(context).colorScheme.primary,
-                  ),
-                  tooltip:
-                      _isRecording ? 'Stop Recording' : 'Start Voice Input',
-                  iconSize: 30,
-                  onPressed: _toggleRecording,
+                // Microphone Button - Now using BlocBuilder for state
+                BlocBuilder<VoiceInputCubit, VoiceInputState>(
+                  builder: (context, state) {
+                    // Handle transcribed text when available
+                    if (state.transcriptionStatus ==
+                            TranscriptionStatus.success &&
+                        state.transcribedText != null) {
+                      // Set text in controller and clear transcribed text
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _textController.text = state.transcribedText!;
+                        _textController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _textController.text.length),
+                        );
+                        context.read<VoiceInputCubit>().clearTranscribedText();
+                      });
+                    }
+
+                    return IconButton(
+                      icon: Icon(
+                        state.isRecording
+                            ? Icons.stop_circle_outlined
+                            : Icons.mic,
+                        color:
+                            state.isRecording
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.primary,
+                      ),
+                      tooltip:
+                          state.isRecording
+                              ? 'Stop Recording'
+                              : 'Start Voice Input',
+                      iconSize: 30,
+                      onPressed:
+                          () =>
+                              context.read<VoiceInputCubit>().toggleRecording(),
+                    );
+                  },
                 ),
                 // Send Button
                 IconButton(
@@ -954,6 +738,75 @@ Entries using this category will be moved to "Misc".''',
             ),
 
             _buildInputArea(),
+
+            // Add BlocListener to show messages based on VoiceInputState
+            BlocListener<VoiceInputCubit, VoiceInputState>(
+              listenWhen: (previous, current) {
+                // Only trigger for changes in status or new errors
+                bool permissionChanged =
+                    previous.micPermissionStatus != current.micPermissionStatus;
+                bool errorChanged =
+                    previous.errorMessage != current.errorMessage &&
+                    current.errorMessage != null;
+                bool transcriptionStatusChanged =
+                    previous.transcriptionStatus != current.transcriptionStatus;
+
+                return permissionChanged ||
+                    errorChanged ||
+                    transcriptionStatusChanged;
+              },
+              listener: (context, state) {
+                // Only show permission snackbar if we NEED to request permission
+                // AND we're actively trying to use the mic (don't show on app start)
+                if ((state.micPermissionStatus == PermissionStatus.denied ||
+                        state.micPermissionStatus ==
+                            PermissionStatus.permanentlyDenied) &&
+                    state.isRecording) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Microphone permission is required for voice input.',
+                      ),
+                    ),
+                  );
+                }
+
+                // Handle errors
+                if (state.errorMessage != null) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+                }
+
+                // Handle transcription status
+                if (state.transcriptionStatus ==
+                    TranscriptionStatus.transcribing) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(
+                        children: [
+                          CircularProgressIndicator(strokeWidth: 3),
+                          SizedBox(width: 15),
+                          Text('Transcribing audio...'),
+                        ],
+                      ),
+                      duration: Duration(seconds: 10),
+                    ),
+                  );
+                } else if (state.transcriptionStatus ==
+                    TranscriptionStatus.success) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Transcription successful!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child:
+                  const SizedBox.shrink(), // Listener doesn't need to render anything
+            ),
           ],
         ),
       ),

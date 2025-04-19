@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart'; // Import Intl
+import 'package:record/record.dart';
 
 import 'cubit/entry_cubit.dart';
+import 'cubit/voice_input_cubit.dart';
 import 'screens/home_screen.dart'; // Import the new home screen
+import 'speech_service.dart';
 
 Future<void> main() async {
   // Ensure Flutter bindings are initialized first
@@ -26,11 +29,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialization logic moved to main()
-
-    return BlocProvider(
-      // EntryCubit() will be created here, after dotenv has loaded
-      create: (context) => EntryCubit(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (context) => EntryCubit()),
+        BlocProvider(
+          create:
+              (context) => VoiceInputCubit(
+                audioRecorder: AudioRecorder(),
+                speechService: SpeechService(),
+              ),
+        ),
+      ],
       child: MaterialApp(
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
