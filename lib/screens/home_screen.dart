@@ -52,17 +52,39 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   // --- End focus change handler ---
 
+  // --- Helper to show consistent floating SnackBars ---
+  void _showFloatingSnackBar(
+    BuildContext targetContext, {
+    required Widget content,
+    Duration duration = const Duration(seconds: 4),
+    SnackBarAction? action,
+    Color? backgroundColor,
+  }) {
+    final messenger = ScaffoldMessenger.of(targetContext);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: content,
+        duration: duration,
+        action: action,
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 150.0, left: 16.0, right: 16.0),
+      ),
+    );
+  }
+  // --- End Helper ---
+
   void _handleInput() {
     final String currentInput = _textController.text;
     if (currentInput.isNotEmpty) {
       context.read<EntryCubit>().addEntry(currentInput);
       _textController.clear();
       FocusScope.of(context).unfocus(); // Hide keyboard
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Processing entry...'),
-          duration: Duration(milliseconds: 800),
-        ),
+      _showFloatingSnackBar(
+        context, // Use the main screen context
+        content: const Text('Processing entry...'),
+        duration: const Duration(milliseconds: 800),
       );
     }
   }
@@ -171,14 +193,13 @@ Entries using this category will be moved to "Misc".''',
                                               );
 
                                               navigator.pop();
-                                              scaffoldMessenger.showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Category "$category" deleted',
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
+                                              _showFloatingSnackBar(
+                                                context,
+                                                content: Text(
+                                                  'Category "$category" deleted',
+                                                ),
+                                                duration: const Duration(
+                                                  seconds: 2,
                                                 ),
                                               );
                                             }
@@ -232,10 +253,9 @@ Entries using this category will be moved to "Misc".''',
                         dialogContext,
                       ).addCustomCategory(newCategory);
                       categoryInputController.clear();
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        SnackBar(
-                          content: Text('Category "$newCategory" added'),
-                        ),
+                      _showFloatingSnackBar(
+                        context,
+                        content: Text('Category "$newCategory" added'),
                       );
                     }
                   },
@@ -327,23 +347,18 @@ Entries using this category will be moved to "Misc".''',
                       );
                       Navigator.of(dialogContext).pop(); // Close dialog
                       if (mounted) {
-                        // Check if the main screen state is still mounted
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Entry updated'),
-                            duration: Duration(seconds: 1),
-                          ),
+                        _showFloatingSnackBar(
+                          context, // Use the main screen context
+                          content: const Text('Entry updated'),
+                          duration: const Duration(seconds: 1),
                         );
                       }
                     } else {
-                      // Optional: Show validation error within dialog if text is empty
-                      // Consider showing this error within the dialog itself
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        // Use dialog context
-                        const SnackBar(
-                          content: Text('Entry text cannot be empty.'),
-                          backgroundColor: Colors.red,
-                        ),
+                      // Show error SnackBar using the helper
+                      _showFloatingSnackBar(
+                        dialogContext, // Show within the dialog context here
+                        content: const Text('Entry text cannot be empty.'),
+                        backgroundColor: Colors.red,
                       );
                     }
                   },
@@ -685,22 +700,18 @@ Entries using this category will be moved to "Misc".''',
                     final entryToDelete = entry;
                     context.read<EntryCubit>().deleteEntry(entryToDelete);
                     if (mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).removeCurrentSnackBar(); // Remove any previous snackbar
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Entry deleted'),
-                          duration: const Duration(seconds: 4),
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () {
-                              // Re-add the entry if undo is pressed
-                              context.read<EntryCubit>().addEntryObject(
-                                entryToDelete,
-                              );
-                            },
-                          ),
+                      // Remove previous snackbar is handled by the helper now
+                      _showFloatingSnackBar(
+                        context, // Use the main screen context
+                        content: const Text('Entry deleted'),
+                        duration: const Duration(seconds: 4),
+                        action: SnackBarAction(
+                          label: 'Undo',
+                          onPressed: () {
+                            context.read<EntryCubit>().addEntryObject(
+                              entryToDelete,
+                            );
+                          },
                         ),
                       );
                     }
@@ -756,56 +767,55 @@ Entries using this category will be moved to "Misc".''',
                     transcriptionStatusChanged;
               },
               listener: (context, state) {
-                // Only show permission snackbar if we NEED to request permission
-                // AND we're actively trying to use the mic (don't show on app start)
+                // Permission Denied
                 if ((state.micPermissionStatus == PermissionStatus.denied ||
                         state.micPermissionStatus ==
                             PermissionStatus.permanentlyDenied) &&
                     state.isRecording) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Microphone permission is required for voice input.',
-                      ),
+                  _showFloatingSnackBar(
+                    context,
+                    content: const Text(
+                      'Microphone permission is required for voice input.',
                     ),
                   );
                 }
 
                 // Handle errors
                 if (state.errorMessage != null) {
-                  ScaffoldMessenger.of(
+                  _showFloatingSnackBar(
                     context,
-                  ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+                    content: Text(state.errorMessage!),
+                    backgroundColor: Colors.red, // Optional: Indicate error
+                  );
                 }
 
                 // Handle transcription status
                 if (state.transcriptionStatus ==
                     TranscriptionStatus.transcribing) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          CircularProgressIndicator(strokeWidth: 3),
-                          SizedBox(width: 15),
-                          Text('Transcribing audio...'),
-                        ],
-                      ),
-                      duration: Duration(seconds: 10),
+                  _showFloatingSnackBar(
+                    context,
+                    content: const Row(
+                      children: [
+                        CircularProgressIndicator(strokeWidth: 3),
+                        SizedBox(width: 15),
+                        Text('Transcribing audio...'),
+                      ],
                     ),
+                    duration: const Duration(seconds: 10),
                   );
                 } else if (state.transcriptionStatus ==
                     TranscriptionStatus.success) {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Transcription successful!'),
-                      duration: Duration(seconds: 2),
-                    ),
+                  // Hide transcribing snackbar is handled by the helper
+                  _showFloatingSnackBar(
+                    context,
+                    content: const Text('Transcription successful!'),
+                    duration: const Duration(seconds: 2),
                   );
                 }
               },
-              child:
-                  const SizedBox.shrink(), // Listener doesn't need to render anything
+              // --- Add this child ---
+              child: const SizedBox.shrink(), // Provide an empty child
+              // --- End addition ---
             ),
           ],
         ),
