@@ -21,7 +21,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   final FocusNode _inputFocusNode = FocusNode();
   bool _isInputFocused = false;
-  // Add this GlobalKey
   final GlobalKey _inputAreaKey = GlobalKey();
 
   // --- Easter Egg State ---
@@ -61,13 +60,11 @@ class _MyHomePageState extends State<MyHomePage> {
     final messenger = ScaffoldMessenger.of(targetContext);
     messenger.hideCurrentSnackBar();
 
-    // Calculate bottom margin based on input area height
-    double bottomMargin = 8.0; // Default gap if key fails
+    double bottomMargin = 8.0;
     final RenderBox? inputAreaRenderBox =
         _inputAreaKey.currentContext?.findRenderObject() as RenderBox?;
     if (inputAreaRenderBox != null) {
       final inputAreaHeight = inputAreaRenderBox.size.height;
-      // Add a small gap (e.g., 8.0) above the input area
       bottomMargin = inputAreaHeight + 8.0;
     }
 
@@ -78,8 +75,10 @@ class _MyHomePageState extends State<MyHomePage> {
         action: action,
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        // Use the dynamically calculated bottom margin
         margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
       ),
     );
   }
@@ -89,10 +88,20 @@ class _MyHomePageState extends State<MyHomePage> {
     if (currentInput.isNotEmpty) {
       context.read<EntryCubit>().addEntry(currentInput);
       _textController.clear();
-      FocusScope.of(context).unfocus(); // Hide keyboard
+      FocusScope.of(context).unfocus();
       _showFloatingSnackBar(
-        context, // Use the main screen context
-        content: const Text('Processing entry...'),
+        context,
+        content: const Row(
+          children: [
+            Icon(
+              Icons.pending_actions_outlined,
+              size: 18,
+              color: Colors.white70,
+            ),
+            SizedBox(width: 8),
+            Text('Processing entry...'),
+          ],
+        ),
         duration: const Duration(milliseconds: 800),
       );
     }
@@ -106,6 +115,9 @@ class _MyHomePageState extends State<MyHomePage> {
           context: context,
           builder: (BuildContext dialogContext) {
             return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: const Text('Confirm Delete Category'),
               content: Text(
                 '''Are you sure you want to delete the category "$category"?
@@ -136,6 +148,9 @@ Entries using this category will be moved to "Misc".''',
           (dialogContext) => BlocProvider.value(
             value: BlocProvider.of<EntryCubit>(context),
             child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: const Text('Manage Categories'),
               content: SizedBox(
                 width: double.maxFinite,
@@ -143,7 +158,7 @@ Entries using this category will be moved to "Misc".''',
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.only(bottom: 12.0),
                       child: Text(
                         'Add custom categories or delete unused ones (except "Misc").',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -155,7 +170,10 @@ Entries using this category will be moved to "Misc".''',
                         builder: (listBuilderContext, state) {
                           if (state.categories.isEmpty) {
                             return const Center(
-                              child: Text('No categories found.'),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16.0),
+                                child: Text('No categories found.'),
+                              ),
                             );
                           }
                           final sortedCategories = List<String>.from(
@@ -223,18 +241,20 @@ Entries using this category will be moved to "Misc".''',
                         },
                       ),
                     ),
-                    const Divider(),
+                    const Divider(height: 24),
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: TextField(
                         controller: categoryInputController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'New Category Name',
                           hintText: 'Enter category to add...',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
                         ),
                         onSubmitted: (value) {
@@ -255,7 +275,7 @@ Entries using this category will be moved to "Misc".''',
                   child: const Text('Done'),
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
-                TextButton(
+                FilledButton(
                   child: const Text('Add Category'),
                   onPressed: () {
                     final newCategory = categoryInputController.text.trim();
@@ -297,6 +317,9 @@ Entries using this category will be moved to "Misc".''',
         return StatefulBuilder(
           builder: (stfContext, stfSetState) {
             return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: const Text('Edit Entry'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -304,13 +327,31 @@ Entries using this category will be moved to "Misc".''',
                   TextField(
                     controller: editController,
                     autofocus: true,
-                    decoration: const InputDecoration(labelText: 'Entry Text'),
+                    decoration: InputDecoration(
+                      labelText: 'Entry Text',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
                     maxLines: null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
-                    decoration: const InputDecoration(labelText: 'Category'),
+                    decoration: InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                     items:
                         availableCategories.map((String category) {
                           return DropdownMenuItem<String>(
@@ -333,7 +374,7 @@ Entries using this category will be moved to "Misc".''',
                   child: const Text('Cancel'),
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
-                TextButton(
+                FilledButton(
                   child: const Text('Update'),
                   onPressed: () {
                     final updatedText = editController.text.trim();
@@ -357,9 +398,9 @@ Entries using this category will be moved to "Misc".''',
                       }
                     } else {
                       _showFloatingSnackBar(
-                        dialogContext,
+                        stfContext,
                         content: const Text('Entry text cannot be empty.'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.redAccent,
                       );
                     }
                   },
@@ -403,30 +444,49 @@ Entries using this category will be moved to "Misc".''',
 
           if (listItems.isEmpty) {
             return Center(
-              child: Text(
-                state.filterCategory != null
-                    ? 'No entries found for category: "${state.filterCategory}"'
-                    : 'No entries yet. Type or use the mic!',
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  state.filterCategory != null
+                      ? 'No entries found for category: "${state.filterCategory}"'
+                      : 'No entries yet.\nType or use the mic below!',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 130.0),
+          return ListView.separated(
+            padding: const EdgeInsets.only(bottom: 150.0, top: 8.0),
             itemCount: listItems.length,
+            separatorBuilder: (context, index) {
+              final currentItem = listItems[index];
+              final nextItem =
+                  (index + 1 < listItems.length) ? listItems[index + 1] : null;
+              if (currentItem is Entry && nextItem is Entry) {
+                return const SizedBox(height: 8.0);
+              }
+              return const SizedBox.shrink();
+            },
             itemBuilder: (context, index) {
               final item = listItems[index];
 
               if (item is DateTime) {
                 return Padding(
-                  padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                  padding: const EdgeInsets.only(
+                    top: 20.0,
+                    bottom: 10.0,
+                    left: 4.0,
+                  ),
                   child: Text(
                     _formatDateHeader(item),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 );
@@ -437,88 +497,69 @@ Entries using this category will be moved to "Misc".''',
                 Color categoryColor = _getCategoryColor(entry.category);
 
                 return Card(
+                  elevation: isNew ? 4.0 : 1.0,
                   margin: const EdgeInsets.symmetric(
                     vertical: 4.0,
                     horizontal: 0,
                   ),
-                  color:
-                      isNew
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer.withOpacity(0.2)
-                          : null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        title: Row(
-                          children: [
-                            Expanded(child: Text(entry.text)),
-                            if (isNew)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                margin: const EdgeInsets.only(left: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'NEW',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
-                          style: TextStyle(
-                            color:
-                                isProcessing ? Colors.orange : Colors.grey[700],
-                          ),
-                        ),
-                        trailing: _buildEntryActions(entry, isProcessing),
-                        dense: true,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    side:
+                        isNew
+                            ? BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 1.5,
+                            )
+                            : BorderSide.none,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                    child: ListTile(
+                      title: Padding(
+                        padding: const EdgeInsets.only(bottom: 6.0),
+                        child: Text(entry.text),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16.0,
-                          right: 16.0,
-                          bottom: 8.0,
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8.0,
-                            vertical: 4.0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: categoryColor.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            entry.category,
+                      subtitle: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _timeFormatter.format(entry.timestamp),
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: CategoryColors.getTextColorForCategory(
-                                entry.category,
-                              ),
+                              color: Colors.grey[600],
                               fontSize: 12,
                             ),
                           ),
-                        ),
+                          Chip(
+                            label: Text(
+                              entry.category,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color:
+                                    isProcessing
+                                        ? Colors.orange[900]
+                                        : CategoryColors.getTextColorForCategory(
+                                          entry.category,
+                                        ),
+                              ),
+                            ),
+                            backgroundColor:
+                                isProcessing
+                                    ? Colors.orange.shade100.withOpacity(0.8)
+                                    : categoryColor.withOpacity(0.2),
+                            side: BorderSide.none,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6.0,
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
                       ),
-                    ],
+                      trailing: _buildEntryActions(entry, isProcessing),
+                      dense: true,
+                    ),
                   ),
                 );
               }
@@ -532,75 +573,66 @@ Entries using this category will be moved to "Misc".''',
 
   Widget _buildFilterSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(top: 8.0, bottom: 0.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                'Saved Entries:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              BlocBuilder<EntryCubit, EntryState>(
-                buildWhen:
-                    (prev, current) =>
-                        prev.categories != current.categories ||
-                        prev.filterCategory != current.filterCategory,
-                builder: (context, state) {
-                  // Create sorted list for dropdown, add "All" option
-                  final dropdownCategories = ['All Categories']..addAll(
-                    List<String>.from(state.categories)..sort(), // Keep sorting
-                  );
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: BlocBuilder<EntryCubit, EntryState>(
+                    buildWhen:
+                        (prev, current) =>
+                            prev.categories != current.categories ||
+                            prev.filterCategory != current.filterCategory,
+                    builder: (context, state) {
+                      final dropdownCategories = ['All Categories']
+                        ..addAll(List<String>.from(state.categories)..sort());
 
-                  // Determine the value for the dropdown
-                  String? dropdownValue = state.filterCategory;
-                  if (dropdownValue == null) {
-                    dropdownValue = 'All Categories';
-                  } else if (!dropdownCategories.contains(dropdownValue)) {
-                    dropdownValue = 'All Categories';
-                  }
-
-                  return DropdownButton<String>(
-                    value: dropdownValue,
-                    hint: const Text('Filter by Category'),
-                    underline: Container(),
-                    items:
-                        dropdownCategories.map((String category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                fontWeight:
-                                    category == 'All Categories'
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue == 'All Categories') {
-                        context.read<EntryCubit>().setFilter(null);
-                      } else {
-                        context.read<EntryCubit>().setFilter(newValue);
+                      String? dropdownValue =
+                          state.filterCategory ?? 'All Categories';
+                      if (!dropdownCategories.contains(dropdownValue)) {
+                        dropdownValue = 'All Categories';
                       }
+
+                      return DropdownButton<String>(
+                        value: dropdownValue,
+                        underline: Container(),
+                        icon: const Icon(Icons.filter_list_alt),
+                        items:
+                            dropdownCategories.map((String category) {
+                              return DropdownMenuItem<String>(
+                                value: category,
+                                child: Text(
+                                  category,
+                                  style: TextStyle(
+                                    fontWeight:
+                                        category == dropdownValue
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue == 'All Categories') {
+                            context.read<EntryCubit>().setFilter(null);
+                          } else {
+                            context.read<EntryCubit>().setFilter(newValue);
+                          }
+                        },
+                      );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
             ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text(
-              'Entries grouped by date. Auto-categorized, or assign manually via edit.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-            ),
           ),
         ],
       ),
@@ -612,72 +644,91 @@ Entries using this category will be moved to "Misc".''',
       bottom: 0,
       left: 0,
       right: 0,
-      child: Container(
-        key: _inputAreaKey, // Assign the key here
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 16,
+      child: Material(
+        elevation: 8.0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20.0),
+            topRight: Radius.circular(20.0),
+          ),
         ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 0,
-              blurRadius: 4,
-              offset: const Offset(0, -2),
+        child: Container(
+          key: _inputAreaKey,
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 8, // Adjusted padding for integrated icons
+            top: 12,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20.0),
+              topRight: Radius.circular(20.0),
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              focusNode: _inputFocusNode,
-              controller: _textController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter log entry here',
-                hintText: 'What happened?...',
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+          ),
+          // Use only the TextField here, buttons go into decoration
+          child: TextField(
+            focusNode: _inputFocusNode,
+            controller: _textController,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(25.0),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Theme.of(
+                context,
+              ).colorScheme.surfaceVariant.withOpacity(0.6),
+              labelText: _isInputFocused ? 'Enter log entry' : null,
+              hintText: 'What happened?...',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              // Integrate buttons into suffixIcon
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(
+                  right: 4.0,
+                ), // Add padding to align icons
+                child: Row(
+                  mainAxisSize: MainAxisSize.min, // Prevent row from expanding
+                  mainAxisAlignment:
+                      MainAxisAlignment.end, // Align icons to the end
+                  children: [
+                    // Voice Input Button
+                    VoiceInputSection(
+                      textController: _textController,
+                      inputFocusNode: _inputFocusNode,
+                      isInputFocused: _isInputFocused,
+                      showSnackBar: _showFloatingSnackBar,
+                    ),
+                    // Send Button
+                    IconButton(
+                      onPressed: _handleInput,
+                      icon: const Icon(Icons.send_rounded),
+                      color: Theme.of(context).colorScheme.primary,
+                      iconSize: 28,
+                      tooltip: 'Add Entry',
+                      // Reduce splash radius if needed for tighter space
+                      // splashRadius: 24,
+                    ),
+                  ],
                 ),
               ),
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              onSubmitted: (_) => _handleInput(),
-              minLines: 1,
-              maxLines: _isInputFocused ? 5 : 1,
-              onTapOutside: (_) {
-                if (_inputFocusNode.hasFocus) {
-                  FocusScope.of(context).unfocus();
-                }
-              },
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextFieldTapRegion(
-                  child: VoiceInputSection(
-                    textController: _textController,
-                    inputFocusNode: _inputFocusNode,
-                    isInputFocused: _isInputFocused,
-                    showSnackBar: _showFloatingSnackBar,
-                  ),
-                ),
-                IconButton(
-                  onPressed: _handleInput,
-                  icon: const Icon(Icons.send),
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ],
-            ),
-          ],
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            onSubmitted: (_) => _handleInput(),
+            minLines: 1,
+            maxLines: 5,
+            onTapOutside: (_) {
+              if (_inputFocusNode.hasFocus) {
+                FocusScope.of(context).unfocus();
+              }
+            },
+          ),
         ),
       ),
     );
@@ -689,28 +740,30 @@ Entries using this category will be moved to "Misc".''',
       children: [
         if (isProcessing)
           const Padding(
-            padding: EdgeInsets.only(right: 8.0),
+            padding: EdgeInsets.only(right: 4.0),
             child: SizedBox(
-              width: 20,
-              height: 20,
+              width: 18,
+              height: 18,
               child: CircularProgressIndicator(strokeWidth: 2.0),
             ),
           ),
         IconButton(
-          icon: const Icon(Icons.edit_outlined, size: 20),
+          icon: const Icon(Icons.edit_outlined, size: 18),
           tooltip: 'Edit Entry',
           visualDensity: VisualDensity.compact,
+          splashRadius: 20,
           onPressed:
               isProcessing ? null : () => _showEditEntryDialog(context, entry),
         ),
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.delete_outline,
-            color: Colors.redAccent,
-            size: 20,
+            color: Colors.redAccent.shade100,
+            size: 18,
           ),
           tooltip: 'Delete Entry',
           visualDensity: VisualDensity.compact,
+          splashRadius: 20,
           onPressed:
               isProcessing
                   ? null
@@ -742,7 +795,7 @@ Entries using this category will be moved to "Misc".''',
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        surfaceTintColor: Theme.of(context).colorScheme.surface,
         title: GestureDetector(
           onTap: () {
             setState(() {
@@ -754,6 +807,14 @@ Entries using this category will be moved to "Misc".''',
                   duration: const Duration(seconds: 3),
                 );
                 _titleTapCount = 0;
+              } else if (_titleTapCount > _targetTapCount / 2) {
+                _showFloatingSnackBar(
+                  context,
+                  content: Text(
+                    '${_targetTapCount - _titleTapCount} taps remaining...',
+                  ),
+                  duration: const Duration(milliseconds: 500),
+                );
               } else if (_titleTapCount > _targetTapCount) {
                 _titleTapCount = 0;
               }
@@ -763,13 +824,15 @@ Entries using this category will be moved to "Misc".''',
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.playlist_add),
-            tooltip: 'Add/Manage Categories',
+            icon: const Icon(Icons.category_outlined),
+            tooltip: 'Manage Categories',
             onPressed: _showManageCategoriesDialog,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: Stack(
           children: [
             Padding(

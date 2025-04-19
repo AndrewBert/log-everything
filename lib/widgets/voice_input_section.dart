@@ -46,11 +46,24 @@ class VoiceInputSection extends StatelessWidget {
         return permissionChanged || errorChanged || transcriptionStatusChanged;
       },
       listener: (context, state) {
+        final messenger = ScaffoldMessenger.of(
+          context,
+        ); // Get messenger instance
+
+        // --- Hide Snackbars on Status Change ---
+        // Hide any existing snackbar if we are no longer transcribing
+        if (state.transcriptionStatus != TranscriptionStatus.transcribing) {
+          messenger.hideCurrentSnackBar();
+        }
+        // --- End Hide Snackbars ---
+
         // Permission Denied while trying to record
         if ((state.micPermissionStatus == PermissionStatus.denied ||
                 state.micPermissionStatus ==
                     PermissionStatus.permanentlyDenied) &&
             state.isRecording) {
+          // Ensure previous snackbars are hidden before showing a new one
+          messenger.hideCurrentSnackBar();
           showSnackBar(
             context,
             content: const Text(
@@ -61,6 +74,8 @@ class VoiceInputSection extends StatelessWidget {
 
         // Handle errors (from recording, transcription, etc.)
         if (state.errorMessage != null) {
+          // Ensure previous snackbars are hidden before showing a new one
+          messenger.hideCurrentSnackBar();
           showSnackBar(
             context,
             content: Text(state.errorMessage!),
@@ -72,6 +87,8 @@ class VoiceInputSection extends StatelessWidget {
 
         // Handle transcription status updates
         if (state.transcriptionStatus == TranscriptionStatus.transcribing) {
+          // Ensure previous snackbars are hidden before showing a new one
+          messenger.hideCurrentSnackBar();
           showSnackBar(
             context,
             content: const Row(
@@ -86,13 +103,6 @@ class VoiceInputSection extends StatelessWidget {
               ],
             ),
             duration: const Duration(seconds: 10), // Show longer
-          );
-        } else if (state.transcriptionStatus == TranscriptionStatus.success) {
-          // Show success message (will replace the 'transcribing' one)
-          showSnackBar(
-            context,
-            content: const Text('Transcription successful!'),
-            duration: const Duration(seconds: 2),
           );
         }
       },
