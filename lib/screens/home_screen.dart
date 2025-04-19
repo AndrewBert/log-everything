@@ -574,7 +574,12 @@ Entries using this category will be moved to "Misc".''',
 
   Widget _buildFilterSection() {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+      padding: const EdgeInsets.only(
+        top: 4.0,
+        bottom: 4.0, // Added a little bottom padding
+        left: 16.0,
+        right: 16.0,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end, // Align content to the right
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -601,45 +606,68 @@ Entries using this category will be moved to "Misc".''',
                 currentDisplayValue = 'All Categories';
               }
 
-              return DropdownButton<String>(
-                value: currentDisplayValue,
-                underline: Container(), // Hides the default underline
-                icon: const Icon(Icons.filter_list_alt),
-                items:
-                    dropdownCategories.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(
-                          category,
-                          style: TextStyle(
-                            fontWeight:
-                                category == currentDisplayValue
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue == null) {
-                    return;
-                  }
+              // Wrap DropdownButton in a styled Container
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 0,
+                ), // Adjust padding inside the container
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant
+                      .withOpacity(0.4), // Subtle background
+                  borderRadius: BorderRadius.circular(20.0), // Rounded corners
+                ),
+                child: DropdownButtonHideUnderline(
+                  // Hide default underline here
+                  child: DropdownButton<String>(
+                    value: currentDisplayValue,
+                    icon: const Icon(
+                      Icons.filter_list_alt,
+                      size: 20,
+                    ), // Slightly smaller icon
+                    style: TextStyle(
+                      // Base style for dropdown text
+                      fontSize: 14,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                    items:
+                        dropdownCategories.map((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                // Style applied within item
+                                fontWeight:
+                                    category == currentDisplayValue
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue == null) {
+                        return;
+                      }
 
-                  final cubit = context.read<EntryCubit>();
-                  final currentFilter = state.filterCategory;
+                      final cubit = context.read<EntryCubit>();
+                      final currentFilter = state.filterCategory;
 
-                  if (newValue == 'All Categories') {
-                    if (currentFilter != null) {
-                      cubit.setFilter(null);
-                    }
-                  } else {
-                    if (currentFilter != newValue) {
-                      cubit.setFilter(newValue);
-                    }
-                  }
-                },
+                      if (newValue == 'All Categories') {
+                        if (currentFilter != null) {
+                          cubit.setFilter(null);
+                        }
+                      } else {
+                        if (currentFilter != newValue) {
+                          cubit.setFilter(newValue);
+                        }
+                      }
+                    },
+                    isDense: true,
+                  ),
+                ),
               );
             },
           ),
