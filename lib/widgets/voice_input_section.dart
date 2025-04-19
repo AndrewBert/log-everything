@@ -170,19 +170,7 @@ class VoiceInputSection extends StatelessWidget {
                         : 'Start Voice Input',
                 iconSize: 30,
                 onPressed: () {
-                  final isCurrentlyRecording = state.isRecording;
                   context.read<VoiceInputCubit>().toggleRecording();
-
-                  // Refocus logic
-                  if (!isCurrentlyRecording && isInputFocused) {
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      // Check if mounted check might not be needed here as the parent manages it
-                      inputFocusNode.requestFocus();
-                    });
-                  } else if (isCurrentlyRecording) {
-                    // If stopping recording, unfocus the text field
-                    // FocusScope.of(context).unfocus();
-                  }
                 },
               ),
             ],

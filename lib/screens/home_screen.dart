@@ -535,12 +535,12 @@ Entries using this category will be moved to "Misc".''',
                         prev.categories != current.categories ||
                         prev.filterCategory != current.filterCategory,
                 builder: (context, state) {
+                  // Create sorted list for dropdown, add "All" option
                   final dropdownCategories = ['All Categories']..addAll(
-                    List<String>.from(state.categories)
-                      ..remove('Misc')
-                      ..sort(),
+                    List<String>.from(state.categories)..sort(), // Keep sorting
                   );
 
+                  // Determine the value for the dropdown
                   String? dropdownValue = state.filterCategory;
                   if (dropdownValue == null) {
                     dropdownValue = 'All Categories';
@@ -647,11 +647,13 @@ Entries using this category will be moved to "Misc".''',
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                VoiceInputSection(
-                  textController: _textController,
-                  inputFocusNode: _inputFocusNode,
-                  isInputFocused: _isInputFocused,
-                  showSnackBar: _showFloatingSnackBar,
+                TextFieldTapRegion(
+                  child: VoiceInputSection(
+                    textController: _textController,
+                    inputFocusNode: _inputFocusNode,
+                    isInputFocused: _isInputFocused,
+                    showSnackBar: _showFloatingSnackBar,
+                  ),
                 ),
                 IconButton(
                   onPressed: _handleInput,
