@@ -462,7 +462,6 @@ Entries using this category will be moved to "Misc".''',
           return ListView.separated(
             padding: const EdgeInsets.only(
               bottom: 150.0,
-              top: 8.0,
               left: 16.0,
               right: 16.0,
             ),
@@ -481,7 +480,8 @@ Entries using this category will be moved to "Misc".''',
 
               if (item is DateTime) {
                 return Padding(
-                  padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
+                  // Reduced top padding for the date header
+                  padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
                   child: Text(
                     _formatDateHeader(item),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -574,92 +574,74 @@ Entries using this category will be moved to "Misc".''',
 
   Widget _buildFilterSection() {
     return Padding(
-      padding: const EdgeInsets.only(
-        top: 8.0,
-        bottom: 0.0,
-        left: 16.0,
-        right: 16.0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end, // Align content to the right
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: BlocBuilder<EntryCubit, EntryState>(
-                    buildWhen: (prev, current) {
-                      // Check if categories or filter changed
-                      bool shouldBuild =
-                          prev.categories != current.categories ||
-                          prev.filterCategory != current.filterCategory;
-                      return shouldBuild;
-                    },
-                    builder: (context, state) {
-                      final dropdownCategories = [
-                        'All Categories',
-                        ...List<String>.from(state.categories)..sort(),
-                      ];
+          BlocBuilder<EntryCubit, EntryState>(
+            buildWhen: (prev, current) {
+              // Check if categories or filter changed
+              bool shouldBuild =
+                  prev.categories != current.categories ||
+                  prev.filterCategory != current.filterCategory;
+              return shouldBuild;
+            },
+            builder: (context, state) {
+              final dropdownCategories = [
+                'All Categories',
+                ...List<String>.from(state.categories)..sort(),
+              ];
 
-                      // Calculate the value to display
-                      String currentDisplayValue =
-                          state.filterCategory ?? 'All Categories';
-                      if (!dropdownCategories.contains(currentDisplayValue)) {
-                        // Fallback if state is inconsistent, though unlikely now
-                        currentDisplayValue = 'All Categories';
-                      }
+              // Calculate the value to display
+              String currentDisplayValue =
+                  state.filterCategory ?? 'All Categories';
+              if (!dropdownCategories.contains(currentDisplayValue)) {
+                // Fallback if state is inconsistent
+                currentDisplayValue = 'All Categories';
+              }
 
-                      return DropdownButton<String>(
-                        value: currentDisplayValue, // Use the calculated value
-                        underline: Container(),
-                        icon: const Icon(Icons.filter_list_alt),
-                        items:
-                            dropdownCategories.map((String category) {
-                              return DropdownMenuItem<String>(
-                                value: category,
-                                child: Text(
-                                  category,
-                                  style: TextStyle(
-                                    fontWeight:
-                                        category ==
-                                                currentDisplayValue // Compare with display value
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              );
-                            }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue == null) {
-                            return; // Should not happen
-                          }
-
-                          final cubit = context.read<EntryCubit>();
-                          final currentFilter = state.filterCategory;
-
-                          if (newValue == 'All Categories') {
-                            if (currentFilter != null) {
-                              // Optimization
-                              cubit.setFilter(null);
-                            }
-                          } else {
-                            if (currentFilter != newValue) {
-                              // Optimization
-                              cubit.setFilter(newValue);
-                            }
-                          }
-                        },
+              return DropdownButton<String>(
+                value: currentDisplayValue,
+                underline: Container(), // Hides the default underline
+                icon: const Icon(Icons.filter_list_alt),
+                items:
+                    dropdownCategories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(
+                          category,
+                          style: TextStyle(
+                            fontWeight:
+                                category == currentDisplayValue
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
-                    },
-                  ),
-                ),
-              ),
-            ],
+                    }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue == null) {
+                    return;
+                  }
+
+                  final cubit = context.read<EntryCubit>();
+                  final currentFilter = state.filterCategory;
+
+                  if (newValue == 'All Categories') {
+                    if (currentFilter != null) {
+                      cubit.setFilter(null);
+                    }
+                  } else {
+                    if (currentFilter != newValue) {
+                      cubit.setFilter(newValue);
+                    }
+                  }
+                },
+              );
+            },
           ),
         ],
       ),
