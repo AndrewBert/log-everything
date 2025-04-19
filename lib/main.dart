@@ -46,11 +46,11 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
         ),
         // Use the new HomeScreen widget
-        home: const MyHomePage(title: 'Log Everything'),
+        home: const MyHomePage(title: 'Log Splitter'),
       ),
     );
   }
