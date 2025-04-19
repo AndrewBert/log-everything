@@ -21,6 +21,8 @@ class _MyHomePageState extends State<MyHomePage> {
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   final FocusNode _inputFocusNode = FocusNode();
   bool _isInputFocused = false;
+  // Add this GlobalKey
+  final GlobalKey _inputAreaKey = GlobalKey();
 
   // --- Easter Egg State ---
   int _titleTapCount = 0;
@@ -58,6 +60,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }) {
     final messenger = ScaffoldMessenger.of(targetContext);
     messenger.hideCurrentSnackBar();
+
+    // Calculate bottom margin based on input area height
+    double bottomMargin = 8.0; // Default gap if key fails
+    final RenderBox? inputAreaRenderBox =
+        _inputAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (inputAreaRenderBox != null) {
+      final inputAreaHeight = inputAreaRenderBox.size.height;
+      // Add a small gap (e.g., 8.0) above the input area
+      bottomMargin = inputAreaHeight + 8.0;
+    }
+
     messenger.showSnackBar(
       SnackBar(
         content: content,
@@ -65,7 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
         action: action,
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 160.0, left: 16.0, right: 16.0),
+        // Use the dynamically calculated bottom margin
+        margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
       ),
     );
   }
@@ -599,6 +613,7 @@ Entries using this category will be moved to "Misc".''',
       left: 0,
       right: 0,
       child: Container(
+        key: _inputAreaKey, // Assign the key here
         padding: const EdgeInsets.only(
           left: 16,
           right: 16,

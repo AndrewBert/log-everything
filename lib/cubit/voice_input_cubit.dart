@@ -247,8 +247,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
 
     try {
+      // Pass the language code (e.g., 'en' for English)
       final transcription = await _speechService.transcribeAudio(
         state.audioPath!,
+        language: 'en', // Specify English
       );
 
       if (transcription != null && transcription.isNotEmpty) {

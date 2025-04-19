@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 /// AppLogger.log('This is a regular message');
 /// AppLogger.error('Something went wrong', error: exception, stackTrace: stackTrace);
 /// AppLogger.info('Operation completed successfully');
+/// AppLogger.warning('This might be an issue.');
 /// ```
 class AppLogger {
   /// Log a general message (only in debug mode)
@@ -37,9 +38,14 @@ class AppLogger {
   }
 
   /// Log a warning message (only in debug mode)
-  static void warning(String message) {
+  static void warning(String message, {Object? error}) {
+    // Added optional error parameter for consistency
     if (kDebugMode) {
       debugPrint('⚠️ WARNING: $message');
+      if (error != null) {
+        // Log error details if provided
+        debugPrint('Warning details: $error');
+      }
     }
   }
 }
