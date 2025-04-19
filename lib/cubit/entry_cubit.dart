@@ -507,11 +507,15 @@ class EntryCubit extends Cubit<EntryState> {
             text: text,
             timestamp: DateTime.now(),
             category: 'Misc',
+            isNew: true, // Set isNew to true for fallback entry
           );
           final updatedEntries = List<Entry>.from(state.entries)
             ..insert(0, fallbackEntry);
           emit(state.copyWith(entries: updatedEntries, isLoading: false));
           await _saveEntries(updatedEntries);
+
+          // Set timer to clear the "new" flag
+          _markEntryAsNotNewAfterDelay(fallbackEntry);
         } else {
           AppLogger.warning(
             "Error occurred during extraction, not adding fallback entry.",
@@ -523,29 +527,26 @@ class EntryCubit extends Cubit<EntryState> {
         return; // Exit early
       }
 
-      // Create final Entry objects from extracted data
+      // Create final Entry objects from extracted data with isNew set to true
       final List<Entry> newEntries = [];
       final DateTime now =
           DateTime.now(); // Use the same timestamp for all entries from this input
       for (var data in extractedData) {
-        newEntries.add(
-          Entry(
-            text: data.text_segment,
-            timestamp: now,
-            category: data.category,
-          ),
+        final newEntry = Entry(
+          text: data.text_segment,
+          timestamp: now,
+          category: data.category,
+          isNew: true, // Set isNew to true for all new entries
         );
+        newEntries.add(newEntry);
+
+        // Set timer to clear the "new" flag for each entry
+        _markEntryAsNotNewAfterDelay(newEntry);
       }
 
       // Update the state with the new entries added to the top
       final updatedEntries = List<Entry>.from(state.entries);
       updatedEntries.insertAll(0, newEntries);
-
-      // Mark new entries as "new" and set timers to clear the status
-      for (var entry in newEntries) {
-        entry = entry.copyWith(isNew: true);
-        _markEntryAsNotNewAfterDelay(entry);
-      }
 
       // Update state and save
       emit(state.copyWith(entries: updatedEntries, isLoading: false));
