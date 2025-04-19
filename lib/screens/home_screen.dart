@@ -22,10 +22,13 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   String? _selectedCategoryFilter;
-  // --- Add FocusNode and state variable ---
   final FocusNode _inputFocusNode = FocusNode();
   bool _isInputFocused = false;
-  // --- End FocusNode ---
+
+  // --- Easter Egg State ---
+  int _titleTapCount = 0;
+  final int _targetTapCount = 7; // Number of taps required
+  // --- End Easter Egg State ---
 
   @override
   void initState() {
@@ -762,7 +765,25 @@ Entries using this category will be moved to "Misc".''',
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: GestureDetector(
+          onTap: () {
+            setState(() {
+              _titleTapCount++;
+              if (_titleTapCount == _targetTapCount) {
+                _showFloatingSnackBar(
+                  context,
+                  content: const Text('✨ You found the magic tap! ✨'),
+                  duration: const Duration(seconds: 3),
+                );
+                _titleTapCount = 0; // Reset counter
+              } else if (_titleTapCount > _targetTapCount) {
+                // Reset if over-tapped without hitting exactly
+                _titleTapCount = 0;
+              }
+            });
+          },
+          child: Text(widget.title),
+        ),
         actions: [
           IconButton(
             // Change the icon
