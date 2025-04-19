@@ -585,22 +585,29 @@ Entries using this category will be moved to "Misc".''',
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: BlocBuilder<EntryCubit, EntryState>(
-                    buildWhen:
-                        (prev, current) =>
-                            prev.categories != current.categories ||
-                            prev.filterCategory != current.filterCategory,
+                    buildWhen: (prev, current) {
+                      // Check if categories or filter changed
+                      bool shouldBuild =
+                          prev.categories != current.categories ||
+                          prev.filterCategory != current.filterCategory;
+                      return shouldBuild;
+                    },
                     builder: (context, state) {
-                      final dropdownCategories = ['All Categories']
-                        ..addAll(List<String>.from(state.categories)..sort());
+                      final dropdownCategories = [
+                        'All Categories',
+                        ...List<String>.from(state.categories)..sort(),
+                      ];
 
-                      String? dropdownValue =
+                      // Calculate the value to display
+                      String currentDisplayValue =
                           state.filterCategory ?? 'All Categories';
-                      if (!dropdownCategories.contains(dropdownValue)) {
-                        dropdownValue = 'All Categories';
+                      if (!dropdownCategories.contains(currentDisplayValue)) {
+                        // Fallback if state is inconsistent, though unlikely now
+                        currentDisplayValue = 'All Categories';
                       }
 
                       return DropdownButton<String>(
-                        value: dropdownValue,
+                        value: currentDisplayValue, // Use the calculated value
                         underline: Container(),
                         icon: const Icon(Icons.filter_list_alt),
                         items:
@@ -611,7 +618,8 @@ Entries using this category will be moved to "Misc".''',
                                   category,
                                   style: TextStyle(
                                     fontWeight:
-                                        category == dropdownValue
+                                        category ==
+                                                currentDisplayValue // Compare with display value
                                             ? FontWeight.bold
                                             : FontWeight.normal,
                                     fontSize: 14,
@@ -621,10 +629,23 @@ Entries using this category will be moved to "Misc".''',
                               );
                             }).toList(),
                         onChanged: (String? newValue) {
+                          if (newValue == null) {
+                            return; // Should not happen
+                          }
+
+                          final cubit = context.read<EntryCubit>();
+                          final currentFilter = state.filterCategory;
+
                           if (newValue == 'All Categories') {
-                            context.read<EntryCubit>().setFilter(null);
+                            if (currentFilter != null) {
+                              // Optimization
+                              cubit.setFilter(null);
+                            }
                           } else {
-                            context.read<EntryCubit>().setFilter(newValue);
+                            if (currentFilter != newValue) {
+                              // Optimization
+                              cubit.setFilter(newValue);
+                            }
                           }
                         },
                       );

@@ -321,10 +321,16 @@ class EntryCubit extends Cubit<EntryState> {
 
   // --- Method to set the filter ---
   void setFilter(String? category) {
+    AppLogger.info(
+      "Setting filter to: ${category ?? 'null'}",
+    ); // Log the attempt
     final newDisplayList = _buildDisplayList(state.entries, category);
     emit(
       state.copyWith(
+        // Pass the category value. It's used if non-null and clearFilter is false.
         filterCategory: category,
+        // Explicitly set clearFilter to true when the desired category is null.
+        clearFilter: category == null,
         displayListItems: newDisplayList,
         clearLastError: true, // Clear any previous errors when filter changes
       ),
