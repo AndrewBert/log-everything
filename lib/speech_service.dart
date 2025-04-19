@@ -3,22 +3,26 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'utils/logger.dart';
+
 class SpeechService {
-  final String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
+  final String _apiKey =
+      dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/audio/transcriptions';
 
   Future<String?> transcribeAudio(String filePath) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
-      print("SpeechService Error: OpenAI API Key not found.");
+      AppLogger.error("OpenAI API Key not found.");
       return null; // Or throw an exception
     }
     if (!await File(filePath).exists()) {
-       print("SpeechService Error: Audio file not found at path: $filePath");
-       return null;
+      AppLogger.error("Audio file not found at path: $filePath");
+      return null;
     }
 
-
-    print("SpeechService: Attempting to transcribe audio file: $filePath using gpt-4o-transcribe");
+    AppLogger.info(
+      "Attempting to transcribe audio file: $filePath using gpt-4o-transcribe",
+    );
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
@@ -44,26 +48,37 @@ class SpeechService {
       if (response.statusCode == 200) {
         var responseBody = jsonDecode(response.body);
         if (responseBody['text'] != null) {
-          print("SpeechService: Transcription successful.");
+          AppLogger.info("Transcription successful.");
           return responseBody['text'];
         } else {
-          print("SpeechService Error: 'text' field not found in response body.");
-          print("Response Body: ${response.body}");
+          AppLogger.error(
+            "'text' field not found in response body.",
+            error: "Response Body: ${response.body}",
+          );
           return null;
         }
       } else {
-        print("SpeechService Error: Transcription API request failed.");
-        print("Status Code: ${response.statusCode}");
-        print("Response Body: ${response.body}");
+        AppLogger.error(
+          "Transcription API request failed.",
+          error:
+              "Status Code: ${response.statusCode}, Response Body: ${response.body}",
+        );
+
         // Add specific check for model incompatibility if needed
-        if (response.statusCode == 400 && response.body.contains('model_not_found')) {
-             print("Hint: Ensure the model 'gpt-4o-transcribe' is available for your API key.");
+        if (response.statusCode == 400 &&
+            response.body.contains('model_not_found')) {
+          AppLogger.warning(
+            "Ensure the model 'gpt-4o-transcribe' is available for your API key.",
+          );
         }
         return null; // Indicate error
       }
-    } catch (e, stacktrace) {
-      print("SpeechService Error: Exception during transcription request: $e");
-      print("Stacktrace: $stacktrace");
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        "Exception during transcription request",
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null; // Indicate error
     }
   }

@@ -1,9 +1,12 @@
-import 'package:bloc/bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../entry.dart';
-import 'dart:convert';
+import '../utils/logger.dart';
 
 // Helper type for extracted entry data
 typedef EntryPrototype = ({String text_segment, String category});
@@ -75,9 +78,9 @@ class EntryCubit extends Cubit<EntryState> {
         }
         emit(state.copyWith(categories: currentCategories));
       }
-      print("Cubit: Loaded Categories: ${state.categories}");
+      AppLogger.info("Loaded Categories: ${state.categories}");
     } catch (e) {
-      print("Cubit Error loading categories: $e");
+      AppLogger.error("Error loading categories", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to load categories."));
     }
   }
@@ -87,9 +90,9 @@ class EntryCubit extends Cubit<EntryState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_categoriesKey, categories);
-      print("Cubit: Saved Categories: $categories");
+      AppLogger.info("Saved Categories: $categories");
     } catch (e) {
-      print("Cubit Error saving categories: $e");
+      AppLogger.error("Error saving categories", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to save categories."));
     }
   }
@@ -147,8 +150,11 @@ class EntryCubit extends Cubit<EntryState> {
               try {
                 return Entry.fromJsonString(jsonString);
               } catch (e) {
-                print("Error parsing entry JSON: $jsonString. Error: $e");
-                // Return a default or placeholder entry, or re-throw/handle differently
+                AppLogger.error(
+                  "Error parsing entry JSON",
+                  error: e,
+                  stackTrace: StackTrace.current,
+                );
                 // For now, returning a dummy entry to avoid crashing the map.
                 // Consider filtering out invalid entries instead.
                 return Entry(
@@ -161,13 +167,14 @@ class EntryCubit extends Cubit<EntryState> {
         // Optionally filter out error entries if needed
         loadedEntries.removeWhere((entry) => entry.category == "Error");
       }
-      print(
-        'Cubit: Successfully loaded ${loadedEntries.length} categorized entries.',
+      AppLogger.info(
+        'Successfully loaded ${loadedEntries.length} categorized entries.',
       );
       emit(state.copyWith(entries: loadedEntries));
     } catch (e) {
-      print(
-        'Cubit Error loading entries: $e. Clearing potentially incompatible data.',
+      AppLogger.error(
+        'Error loading entries. Clearing potentially incompatible data.',
+        error: e,
       );
       final prefs =
           await SharedPreferences.getInstance(); // Re-get prefs instance
@@ -197,9 +204,9 @@ class EntryCubit extends Cubit<EntryState> {
       final prefs = await SharedPreferences.getInstance();
       final entriesJson = entries.map((entry) => entry.toJsonString()).toList();
       await prefs.setStringList(_entriesKey, entriesJson);
-      print('Cubit: Saved ${entries.length} categorized entries.');
+      AppLogger.info('Saved ${entries.length} categorized entries.');
     } catch (e) {
-      print('Cubit Error saving entries: $e');
+      AppLogger.error('Error saving entries', error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to save entries."));
     }
   }
@@ -217,7 +224,7 @@ class EntryCubit extends Cubit<EntryState> {
     }
 
     if (errorMessage != null) {
-      print("Cubit Error: $errorMessage");
+      AppLogger.error(errorMessage);
       emit(state.copyWith(lastErrorMessage: errorMessage));
       return extractedEntries; // Return empty list
     }
@@ -226,7 +233,7 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true)); // Clear previous error
     final String modelId =
         'gpt-4.1-mini'; // Or 'gpt-4o' if compatibility issues arise
-    print(
+    AppLogger.info(
       "Calling OpenAI API ($modelId) to extract multiple entries for text: '$text' using Structured Output",
     );
     final List<String> currentCategories = state.categories;
@@ -304,8 +311,8 @@ class EntryCubit extends Cubit<EntryState> {
             responseBody['error'] != null) {
           errorMessage =
               'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
-          print(errorMessage);
-          print('Full Response Body: ${response.body}');
+          AppLogger.error(errorMessage);
+          AppLogger.error('Full Response Body: ${response.body}');
         } else if (responseBody['output'] != null &&
             responseBody['output'] is List &&
             responseBody['output'].isNotEmpty &&
@@ -317,7 +324,9 @@ class EntryCubit extends Cubit<EntryState> {
           if (contentItem['type'] == 'output_text' &&
               contentItem['text'] != null) {
             final jsonOutputString = contentItem['text'];
-            print("Received JSON string from OpenAI: $jsonOutputString");
+            AppLogger.info(
+              "Received JSON string from OpenAI: $jsonOutputString",
+            );
 
             try {
               // Parse the JSON string containing the 'entries' array
@@ -345,8 +354,8 @@ class EntryCubit extends Cubit<EntryState> {
                         category: category,
                       ));
                     } else {
-                      print(
-                        "Warning: OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'",
+                      AppLogger.warning(
+                        "OpenAI structured output category ('$category') not in allowed list. Using 'Misc' for segment: '$segment'",
                       );
                       extractedEntries.add((
                         text_segment: segment,
@@ -354,14 +363,14 @@ class EntryCubit extends Cubit<EntryState> {
                       ));
                     }
                   } else {
-                    print(
-                      "Warning: Invalid item format in 'entries' array: $item",
+                    AppLogger.warning(
+                      "Invalid item format in 'entries' array: $item",
                     );
                     errorMessage =
                         "Invalid item format received from OpenAI."; // Set error message for UI
                   }
                 }
-                print(
+                AppLogger.info(
                   "Successfully extracted ${extractedEntries.length} entries.",
                 );
                 // If successful, return the list
@@ -369,25 +378,25 @@ class EntryCubit extends Cubit<EntryState> {
               } else {
                 errorMessage =
                     '''Parsed JSON from OpenAI does not contain a valid "entries" key or it's not a list.''';
-                print('$errorMessage JSON: $parsedJson');
+                AppLogger.error('$errorMessage JSON: $parsedJson');
               }
             } catch (e) {
               errorMessage = 'Failed to parse JSON response from OpenAI.';
-              print('$errorMessage Raw text: $jsonOutputString. Error: $e');
+              AppLogger.error(errorMessage, error: e);
             }
           } else if (contentItem['type'] == 'refusal' &&
               contentItem['refusal'] != null) {
             errorMessage =
                 'OpenAI refused the request: ${contentItem['refusal']}';
-            print(errorMessage);
+            AppLogger.error(errorMessage);
           } else {
             errorMessage =
                 'Unexpected content type or format in OpenAI response.';
-            print('$errorMessage Content Item: $contentItem');
+            AppLogger.error('$errorMessage Content Item: $contentItem');
           }
         } else {
           errorMessage = 'Failed to parse overall OpenAI response structure.';
-          print('$errorMessage Body: ${response.body}');
+          AppLogger.error('$errorMessage Body: ${response.body}');
         }
       } else {
         // Handle HTTP errors
@@ -401,18 +410,21 @@ class EntryCubit extends Cubit<EntryState> {
         } else {
           errorMessage = 'OpenAI API HTTP error (Code: ${response.statusCode})';
         }
-        print('$errorMessage Response Body: ${response.body}');
+        AppLogger.error('$errorMessage Response Body: ${response.body}');
       }
     } catch (e, stacktrace) {
       // Catch network or other exceptions during the request
-      print('''Error calling OpenAI API: $e
-$stacktrace''');
+      AppLogger.error(
+        'Error calling OpenAI API',
+        error: e,
+        stackTrace: stacktrace,
+      );
       errorMessage = 'Network error or exception during API call.';
     }
 
     // 4. Final Error Handling
     emit(state.copyWith(lastErrorMessage: errorMessage));
-    print(
+    AppLogger.info(
       "Returning ${extractedEntries.length} entries. Error (if any): $errorMessage",
     );
     return extractedEntries; // Return list (empty if errors occurred)
@@ -435,7 +447,9 @@ $stacktrace''');
         // potentially add the original text as 'Misc' or show error from emit()
         if (state.lastErrorMessage == null) {
           // Only add Misc if no specific error was emitted
-          print("No entries extracted by AI, adding original text as Misc.");
+          AppLogger.info(
+            "No entries extracted by AI, adding original text as Misc.",
+          );
           final fallbackEntry = Entry(
             text: text,
             timestamp: DateTime.now(),
@@ -446,7 +460,9 @@ $stacktrace''');
           emit(state.copyWith(entries: updatedEntries, isLoading: false));
           await _saveEntries(updatedEntries);
         } else {
-          print("Error occurred during extraction, not adding fallback entry.");
+          AppLogger.warning(
+            "Error occurred during extraction, not adding fallback entry.",
+          );
           emit(
             state.copyWith(isLoading: false),
           ); // Ensure loading is turned off
@@ -484,7 +500,7 @@ $stacktrace''');
     updatedEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     emit(state.copyWith(entries: updatedEntries));
     await _saveEntries(updatedEntries);
-    print("Cubit: Undid delete for entry - ${entryToAdd.text}");
+    AppLogger.info("Undid delete for entry - ${entryToAdd.text}");
   }
 
   Future<void> deleteEntry(Entry entryToDelete) async {

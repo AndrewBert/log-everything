@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../speech_service.dart';
+import '../utils/logger.dart';
 import 'voice_input_state.dart';
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
@@ -26,17 +27,23 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
     // If AudioRecorder says we have permission, use that instead of Permission plugin
     if (recorderHasPermission) {
+      AppLogger.info(
+        "Microphone permission granted according to AudioRecorder",
+      );
       emit(state.copyWith(micPermissionStatus: PermissionStatus.granted));
     } else {
       // Fallback to checking with the permission plugin
       final permissionStatus = await Permission.microphone.status;
+      AppLogger.info("Initial microphone permission status: $permissionStatus");
       emit(state.copyWith(micPermissionStatus: permissionStatus));
     }
   }
 
   // Request microphone permission
   Future<void> requestMicrophonePermission() async {
+    AppLogger.info("Requesting microphone permission");
     final status = await Permission.microphone.request();
+    AppLogger.info("Microphone permission request result: $status");
     emit(state.copyWith(micPermissionStatus: status));
   }
 
@@ -51,12 +58,15 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   // Start recording audio
   Future<void> startRecording() async {
+    AppLogger.info("Starting recording process");
     final hasPermission = await _audioRecorder.hasPermission();
+    AppLogger.info("AudioRecorder hasPermission: $hasPermission");
 
     if (!hasPermission) {
       await requestMicrophonePermission();
       // Check again after requesting
       if (!await _audioRecorder.hasPermission()) {
+        AppLogger.error("Microphone permission still denied after request");
         emit(
           state.copyWith(
             errorMessage: 'Cannot record without microphone permission.',
@@ -66,6 +76,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       }
     } else if (state.micPermissionStatus != PermissionStatus.granted) {
       // Update the permission status if AudioRecorder says we have permission but state doesn't show it
+      AppLogger.info(
+        "Updating permission status to granted based on AudioRecorder",
+      );
       emit(state.copyWith(micPermissionStatus: PermissionStatus.granted));
     }
 
@@ -90,6 +103,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
       // Check if recording actually started
       bool isRecording = await _audioRecorder.isRecording();
+      AppLogger.info("Recording started: $isRecording");
       if (isRecording) {
         emit(
           state.copyWith(
@@ -101,9 +115,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           ),
         );
       } else {
+        AppLogger.error("Failed to start recording");
         emit(state.copyWith(errorMessage: 'Failed to start recording.'));
       }
     } catch (e) {
+      AppLogger.error("Error starting recording", error: e);
       emit(
         state.copyWith(
           errorMessage: 'Error starting recording: $e',
@@ -115,19 +131,23 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   // Stop recording audio
   Future<void> stopRecording() async {
+    AppLogger.info("Stopping recording");
     if (!state.isRecording) return;
 
     try {
       final path = await _audioRecorder.stop();
+      AppLogger.info("Recording stopped, audio path: $path");
 
       emit(state.copyWith(isRecording: false, audioPath: path));
 
       if (path != null) {
         await transcribeAudio();
       } else {
+        AppLogger.error("Failed to save recording");
         emit(state.copyWith(errorMessage: 'Failed to save recording.'));
       }
     } catch (e) {
+      AppLogger.error("Error stopping recording", error: e);
       emit(
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',
@@ -139,7 +159,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   // Transcribe recorded audio
   Future<void> transcribeAudio() async {
+    AppLogger.info("Starting transcription");
     if (state.audioPath == null || state.audioPath!.isEmpty) {
+      AppLogger.error("No audio file found to transcribe");
       emit(state.copyWith(errorMessage: 'No audio file found to transcribe.'));
       return;
     }
@@ -152,6 +174,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       );
 
       if (transcription != null && transcription.isNotEmpty) {
+        final previewText =
+            transcription.length > 30
+                ? "${transcription.substring(0, 30)}..."
+                : transcription;
+        AppLogger.info("Transcription successful: \"$previewText\"");
         emit(
           state.copyWith(
             transcribedText: transcription,
@@ -159,6 +186,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           ),
         );
       } else {
+        AppLogger.error("Transcription failed or returned empty text");
         emit(
           state.copyWith(
             transcriptionStatus: TranscriptionStatus.error,
@@ -167,6 +195,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         );
       }
     } catch (e) {
+      AppLogger.error("Transcription error", error: e);
       emit(
         state.copyWith(
           transcriptionStatus: TranscriptionStatus.error,
@@ -178,6 +207,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   // Clear the transcribed text and errors
   void clearTranscribedText() {
+    AppLogger.info("Clearing transcribed text");
     emit(
       state.copyWith(
         transcribedText: null,
