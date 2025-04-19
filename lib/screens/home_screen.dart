@@ -134,6 +134,16 @@ Entries using this category will be moved to "Misc".''',
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // --- Add helper text for the dialog ---
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        'Add custom categories or delete unused ones (except "Misc").',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    // --- End helper text ---
                     Flexible(
                       child: BlocBuilder<EntryCubit, EntryState>(
                         // --- Use the BlocBuilder's context for Cubit/Navigator/Dialogs inside the list ---
@@ -414,7 +424,9 @@ Entries using this category will be moved to "Misc".''',
               child: Text(
                 _selectedCategoryFilter != null
                     ? 'No entries found for category: "$_selectedCategoryFilter"'
-                    : 'No entries yet. Add one!',
+                    : 'No entries yet. Type or use the mic to add your first log!',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
               ),
             );
           }
@@ -446,7 +458,9 @@ Entries using this category will be moved to "Misc".''',
           // Build the list with headers and entry items
           return ListView.builder(
             // Add padding at the bottom to avoid overlap with input area
-            padding: const EdgeInsets.only(bottom: 80.0), // Adjust as needed
+            padding: const EdgeInsets.only(
+              bottom: 130.0,
+            ), // Adjust value as needed
             itemCount: listItems.length,
             itemBuilder: (context, index) {
               final item = listItems[index];
@@ -502,48 +516,70 @@ Entries using this category will be moved to "Misc".''',
   Widget _buildFilterSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        // Wrap in Column to add text below the Row
+        crossAxisAlignment: CrossAxisAlignment.start, // Align text left
         children: [
-          const Text(
-            'Saved Entries:',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          BlocBuilder<EntryCubit, EntryState>(
-            builder: (context, state) {
-              if (state.categories.isEmpty && !state.isLoading) {
-                return const SizedBox.shrink(); // Hide if no categories
-              }
-              // Create a mutable, sorted list for the dropdown
-              final sortedCategories = List<String>.from(state.categories)
-                ..sort();
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Saved Entries:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              BlocBuilder<EntryCubit, EntryState>(
+                builder: (context, state) {
+                  if (state.categories.isEmpty && !state.isLoading) {
+                    return const SizedBox.shrink(); // Hide if no categories
+                  }
+                  // Create a mutable, sorted list for the dropdown
+                  final sortedCategories = List<String>.from(state.categories)
+                    ..sort();
 
-              List<DropdownMenuItem<String?>> dropdownItems = [
-                const DropdownMenuItem<String?>(
-                  value: null, // Represent "All Categories"
-                  child: Text("All Categories"),
-                ),
-                ...sortedCategories.map((String category) {
-                  // Use spread operator
-                  return DropdownMenuItem<String?>(
-                    value: category,
-                    child: Text(category),
+                  List<DropdownMenuItem<String?>> dropdownItems = [
+                    const DropdownMenuItem<String?>(
+                      value: null, // Represent "All Categories"
+                      child: Text("All Categories"),
+                    ),
+                    ...sortedCategories.map((String category) {
+                      // Use spread operator
+                      return DropdownMenuItem<String?>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }),
+                  ];
+
+                  return Tooltip(
+                    // Keep the tooltip for the dropdown
+                    message: 'Filter entries by category',
+                    child: DropdownButton<String?>(
+                      value: _selectedCategoryFilter,
+                      hint: const Text("Filter"),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedCategoryFilter = newValue;
+                        });
+                      },
+                      items: dropdownItems,
+                    ),
                   );
-                }),
-              ];
-
-              return DropdownButton<String?>(
-                value: _selectedCategoryFilter,
-                hint: const Text("Filter"),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategoryFilter = newValue;
-                  });
                 },
-                items: dropdownItems,
-              );
-            },
+              ),
+            ],
           ),
+          // --- Add explanatory text ---
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0), // Add some space
+            child: Text(
+              // Updated text
+              'Entries grouped by date. Auto-categorized, or assign manually via edit.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600], // Subtle color
+              ),
+            ),
+          ),
+          // --- End explanatory text ---
         ],
       ),
     );
@@ -729,8 +765,10 @@ Entries using this category will be moved to "Misc".''',
         title: Text(widget.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.category),
-            tooltip: 'Manage Categories',
+            // Change the icon
+            icon: const Icon(Icons.playlist_add),
+            // Update the tooltip
+            tooltip: 'Add/Manage Categories',
             onPressed: _showManageCategoriesDialog,
           ),
         ],
@@ -750,6 +788,14 @@ Entries using this category will be moved to "Misc".''',
 
             _buildInputArea(),
 
+            // TODO: Consider refactoring the VoiceInputCubit listener.
+            // It's currently placed directly in the main screen build method.
+            // Options:
+            // 1. Extract the microphone button and this listener into a dedicated
+            //    `VoiceInputWidget` to encapsulate voice-related logic and UI.
+            // 2. Re-evaluate if a Cubit is necessary or if state management for
+            //    voice input can be handled differently (e.g., local StatefulWidget state
+            //    if complexity remains low).
             // Add BlocListener to show messages based on VoiceInputState
             BlocListener<VoiceInputCubit, VoiceInputState>(
               listenWhen: (previous, current) {
@@ -813,9 +859,7 @@ Entries using this category will be moved to "Misc".''',
                   );
                 }
               },
-              // --- Add this child ---
               child: const SizedBox.shrink(), // Provide an empty child
-              // --- End addition ---
             ),
           ],
         ),

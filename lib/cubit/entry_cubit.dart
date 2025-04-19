@@ -60,7 +60,19 @@ class EntryCubit extends Cubit<EntryState> {
 
   // --- Category Management ---
 
-  List<String> get _defaultCategories => ['Misc'];
+  // Update the default categories list with the brainstormed ones
+  List<String> get _defaultCategories => [
+    'Misc',
+    'Work',
+    'Personal',
+    'Ideas',
+    'To-Do',
+    'Journal',
+    'Learning',
+    'Health',
+    'Finance',
+    'Goals',
+  ];
 
   Future<void> _loadCategories() async {
     // Clear previous error on load attempt
@@ -69,10 +81,12 @@ class EntryCubit extends Cubit<EntryState> {
       final prefs = await SharedPreferences.getInstance();
       final savedCategories = prefs.getStringList(_categoriesKey);
       if (savedCategories == null || savedCategories.isEmpty) {
+        // Use the getter here
         emit(state.copyWith(categories: _defaultCategories));
         await _saveCategories(_defaultCategories);
       } else {
         List<String> currentCategories = List<String>.from(savedCategories);
+        // Ensure 'Misc' is always present
         if (!currentCategories.contains('Misc')) {
           currentCategories.add('Misc');
         }
