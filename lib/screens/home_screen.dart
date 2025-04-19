@@ -495,134 +495,92 @@ Entries using this category will be moved to "Misc".''',
                 // Define category chip color based on category name
                 Color categoryColor = _getCategoryColor(entry.category);
 
-                return AnimatedContainer(
-                  duration: const Duration(seconds: 1),
-                  decoration:
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 4.0,
+                    horizontal: 0,
+                  ),
+                  // Simple background color change for new items - light tint
+                  color:
                       isNew
-                          ? BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.5),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          )
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer.withOpacity(0.2)
                           : null,
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 4.0,
-                      horizontal: 0,
-                    ),
-                    color:
-                        isNew
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : null,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          title: Text(
-                            entry.text,
-                            style:
-                                isNew
-                                    ? TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimaryContainer,
-                                    )
-                                    : null,
-                          ),
-                          subtitle: Row(
-                            children: [
-                              Text(
-                                _timeFormatter.format(entry.timestamp),
-                                style: TextStyle(
-                                  color:
-                                      isProcessing
-                                          ? Colors.orange
-                                          : isNew
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onPrimaryContainer
-                                              .withOpacity(0.7)
-                                          : Colors.grey[700],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(entry.text)),
+                            // Simple "NEW" tag that's clearly visible
+                            if (isNew)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
                                 ),
-                              ),
-                              if (isNew)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      'NEW',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.onPrimary,
-                                      ),
-                                    ),
+                                margin: const EdgeInsets.only(left: 8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'NEW',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 ),
-                            ],
-                          ),
-                          trailing: _buildEntryActions(entry, isProcessing),
-                          dense: true,
+                              ),
+                          ],
                         ),
-                        // Category chip - more prominently displayed with improved readability
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            left: 16.0,
-                            right: 16.0,
-                            bottom: 8.0,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                              vertical: 4.0,
-                            ),
-                            decoration: BoxDecoration(
-                              color: categoryColor.withOpacity(
-                                0.15,
-                              ), // Reduced opacity for better readability
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: categoryColor.withOpacity(
-                                  0.3,
-                                ), // Lighter border
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              entry.category,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: CategoryColors.getTextColorForCategory(
-                                  entry.category,
-                                ), // Use the darker text color
-                                fontSize: 12,
-                              ),
-                            ),
+                        subtitle: Text(
+                          '${_timeFormatter.format(entry.timestamp)} - ${entry.category}',
+                          style: TextStyle(
+                            color:
+                                isProcessing ? Colors.orange : Colors.grey[700],
                           ),
                         ),
-                      ],
-                    ),
+                        trailing: _buildEntryActions(entry, isProcessing),
+                        dense: true,
+                      ),
+                      // Category chip - with improved readability
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 16.0,
+                          right: 16.0,
+                          bottom: 8.0,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: categoryColor.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            entry.category,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: CategoryColors.getTextColorForCategory(
+                                entry.category,
+                              ),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
