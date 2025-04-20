@@ -8,12 +8,14 @@ import 'package:record/record.dart';
 import '../speech_service.dart';
 import '../utils/logger.dart';
 import 'voice_input_state.dart';
+// Import EntryCubit to add entry directly
+import 'entry_cubit.dart';
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;
   final SpeechService _speechService;
+  final EntryCubit _entryCubit; // Add EntryCubit dependency
 
-  // Timer-related fields
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
@@ -21,115 +23,78 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   VoiceInputCubit({
     required AudioRecorder audioRecorder,
     required SpeechService speechService,
+    required EntryCubit entryCubit, // Inject EntryCubit
   }) : _audioRecorder = audioRecorder,
        _speechService = speechService,
+       _entryCubit = entryCubit, // Store EntryCubit
        super(const VoiceInputState()) {
     _initialize();
   }
 
   Future<void> _initialize() async {
-    // First check permission using AudioRecorder as it's more accurate
-    final recorderHasPermission = await _audioRecorder.hasPermission();
+    final status = await Permission.microphone.status;
+    emit(state.copyWith(micPermissionStatus: status));
+    _audioRecorder.onStateChanged().listen((recordState) {
+      AppLogger.debug('AudioRecorder state changed: $recordState');
+      // Optionally update state based on recorder state if needed
+    });
+  }
 
-    // If AudioRecorder says we have permission, use that instead of Permission plugin
-    if (recorderHasPermission) {
-      AppLogger.info(
-        "Microphone permission granted according to AudioRecorder",
-      );
-      emit(state.copyWith(micPermissionStatus: PermissionStatus.granted));
-    } else {
-      // Fallback to checking with the permission plugin
-      final permissionStatus = await Permission.microphone.status;
-      AppLogger.info("Initial microphone permission status: $permissionStatus");
-      emit(state.copyWith(micPermissionStatus: permissionStatus));
+  Future<void> requestMicrophonePermission() async {
+    final status = await Permission.microphone.request();
+    emit(state.copyWith(micPermissionStatus: status));
+    if (status.isPermanentlyDenied) {
+      AppLogger.warning('Microphone permission permanently denied.');
+      // Optionally guide user to settings
     }
   }
 
-  // Request microphone permission
-  Future<void> requestMicrophonePermission() async {
-    AppLogger.info("Requesting microphone permission");
-    final status = await Permission.microphone.request();
-    AppLogger.info("Microphone permission request result: $status");
-    emit(state.copyWith(micPermissionStatus: status));
-  }
-
-  // Toggle recording state
   Future<void> toggleRecording() async {
     if (state.isRecording) {
-      await stopRecording();
+      await stopRecording(); // Normal stop triggers foreground transcription
     } else {
       await startRecording();
     }
   }
 
-  // Start recording audio
   Future<void> startRecording() async {
-    AppLogger.info("Starting recording process");
-    final hasPermission = await _audioRecorder.hasPermission();
-    AppLogger.info("AudioRecorder hasPermission: $hasPermission");
-
-    if (!hasPermission) {
+    AppLogger.info("Attempting to start recording...");
+    if (state.micPermissionStatus != PermissionStatus.granted) {
       await requestMicrophonePermission();
-      // Check again after requesting
-      if (!await _audioRecorder.hasPermission()) {
-        AppLogger.error("Microphone permission still denied after request");
+      if (state.micPermissionStatus != PermissionStatus.granted) {
+        AppLogger.warning(
+          "Microphone permission not granted. Cannot start recording.",
+        );
         emit(
           state.copyWith(
-            errorMessage: 'Cannot record without microphone permission.',
+            isRecording: false,
+            errorMessage: 'Microphone permission required.',
           ),
         );
         return;
       }
-    } else if (state.micPermissionStatus != PermissionStatus.granted) {
-      // Update the permission status if AudioRecorder says we have permission but state doesn't show it
-      AppLogger.info(
-        "Updating permission status to granted based on AudioRecorder",
-      );
-      emit(state.copyWith(micPermissionStatus: PermissionStatus.granted));
     }
 
     try {
-      final Directory tempDir = await getTemporaryDirectory();
-      final audioPath = '${tempDir.path}/temp_audio.m4a';
+      final directory = await getApplicationDocumentsDirectory();
+      final path =
+          '${directory.path}/recording-${DateTime.now().millisecondsSinceEpoch}.m4a';
+      const config = RecordConfig(encoder: AudioEncoder.aacLc);
 
-      // Ensure directory exists (mainly for robustness)
-      final file = File(audioPath);
-      if (await file.exists()) {
-        await file.delete(); // Delete previous recording if exists
-      }
-
-      // Start recording to file
-      await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: audioPath,
+      await _audioRecorder.start(config, path: path);
+      AppLogger.info("Recording started, path: $path");
+      emit(
+        state.copyWith(
+          isRecording: true,
+          recordingStartTime: DateTime.now(),
+          recordingDuration: Duration.zero,
+          clearErrorMessage: true,
+          transcriptionStatus: TranscriptionStatus.idle, // Reset status
+          clearTranscribedText: true, // Clear previous text
+          clearAudioPath: true, // Clear previous path
+        ),
       );
-
-      // Short delay to ensure the file is created before checking existence
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Check if recording actually started
-      bool isRecording = await _audioRecorder.isRecording();
-      AppLogger.info("Recording started: $isRecording");
-      if (isRecording) {
-        final now = DateTime.now();
-        emit(
-          state.copyWith(
-            isRecording: true,
-            audioPath: audioPath,
-            errorMessage: null,
-            // Update permission status to granted since recording started successfully
-            micPermissionStatus: PermissionStatus.granted,
-            recordingStartTime: now,
-            recordingDuration: Duration.zero,
-          ),
-        );
-
-        // Start the timer to track recording duration
-        _startRecordingTimer();
-      } else {
-        AppLogger.error("Failed to start recording");
-        emit(state.copyWith(errorMessage: 'Failed to start recording.'));
-      }
+      _startRecordingTimer();
     } catch (e) {
       AppLogger.error("Error starting recording", error: e);
       emit(
@@ -141,21 +106,14 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  // Stop recording audio
+  // Stop recording and transcribe in FOREGROUND (updates text field via state)
   Future<void> stopRecording() async {
-    AppLogger.info("Stopping recording");
+    AppLogger.info("Stopping recording (foreground transcription)");
     if (!state.isRecording) return;
 
     _cancelRecordingTimer();
-
-    // Check recording duration
-    final now = DateTime.now();
-    final recordingDuration =
-        state.recordingStartTime != null
-            ? now.difference(state.recordingStartTime!)
-            : Duration.zero;
-    final bool isTooShort =
-        recordingDuration.inMilliseconds < 1000; // Less than 1 second
+    final recordingDuration = _calculateRecordingDuration();
+    final bool isTooShort = recordingDuration < _minRecordingDuration;
 
     try {
       final path = await _audioRecorder.stop();
@@ -165,24 +123,30 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         state.copyWith(
           isRecording: false,
           audioPath: path,
-          recordingStartTime: null,
-          recordingDuration: Duration.zero,
-          // Set a message for recordings that are too short
+          clearRecordingTime: true,
           errorMessage:
               isTooShort ? 'Recording too short (less than 1 second)' : null,
+          clearErrorMessage: !isTooShort, // Clear error if not too short
         ),
       );
 
-      // Only transcribe if recording is long enough and path exists
       if (!isTooShort && path != null) {
-        await transcribeAudio();
-      } else if (isTooShort) {
-        AppLogger.info(
-          "Skipping transcription for recording less than 1 second",
+        await transcribeAudio(); // Triggers foreground flow
+      } else {
+        // Handle too short or null path
+        if (isTooShort) {
+          AppLogger.info("Skipping transcription: recording too short.");
+        } else {
+          AppLogger.error("Failed to save recording, path is null.");
+          emit(state.copyWith(errorMessage: 'Failed to save recording.'));
+        }
+        // Clean up state if transcription is skipped
+        emit(
+          state.copyWith(
+            clearAudioPath: true,
+            transcriptionStatus: TranscriptionStatus.idle,
+          ),
         );
-      } else if (path == null) {
-        AppLogger.error("Failed to save recording");
-        emit(state.copyWith(errorMessage: 'Failed to save recording.'));
       }
     } catch (e) {
       AppLogger.error("Error stopping recording", error: e);
@@ -190,117 +154,258 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',
           isRecording: false,
-          recordingStartTime: null,
-          recordingDuration: Duration.zero,
+          clearRecordingTime: true,
+          clearAudioPath: true,
+          transcriptionStatus: TranscriptionStatus.idle,
         ),
       );
     }
   }
 
-  // Start timer to track recording duration
-  void _startRecordingTimer() {
-    _cancelRecordingTimer(); // Cancel any existing timer
+  // NEW: Stop recording, transcribe, combine with initial text, and add entry
+  Future<void> stopRecordingAndCombine(String initialText) async {
+    AppLogger.info(
+      "Stopping recording to combine with initial text: '$initialText'",
+    );
+    if (!state.isRecording) return;
 
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!state.isRecording || state.recordingStartTime == null) {
-        _cancelRecordingTimer();
-        return;
-      }
-
-      final now = DateTime.now();
-      final duration = now.difference(state.recordingStartTime!);
-
-      // Update the recording duration
-      emit(state.copyWith(recordingDuration: duration));
-
-      // Track if minimum duration has passed
-      if (duration >= _minRecordingDuration) {}
-
-      // Auto-stop recording if maximum duration is reached
-      if (duration >= _maxRecordingDuration) {
-        AppLogger.info(
-          "Maximum recording duration reached (5 minutes). Auto-stopping.",
-        );
-        timer.cancel();
-        stopRecording();
-      }
-    });
-  }
-
-  // Cancel the recording timer
-  void _cancelRecordingTimer() {
-    if (_recordingTimer != null && _recordingTimer!.isActive) {
-      _recordingTimer!.cancel();
-      _recordingTimer = null;
-    }
-  }
-
-  // Transcribe recorded audio
-  Future<void> transcribeAudio() async {
-    AppLogger.info("Starting transcription");
-    if (state.audioPath == null || state.audioPath!.isEmpty) {
-      AppLogger.error("No audio file found to transcribe");
-      emit(state.copyWith(errorMessage: 'No audio file found to transcribe.'));
-      return;
-    }
-
-    emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
+    _cancelRecordingTimer();
+    final recordingDuration = _calculateRecordingDuration();
+    final bool isTooShort = recordingDuration < _minRecordingDuration;
+    String? audioPath;
 
     try {
-      // Pass the language code (e.g., 'en' for English)
-      final transcription = await _speechService.transcribeAudio(
-        state.audioPath!,
-        language: 'en', // Specify English
+      audioPath = await _audioRecorder.stop();
+      AppLogger.info("Recording stopped for combine, audio path: $audioPath");
+
+      // Update state immediately to reflect recording stopped
+      // Set status to transcribing temporarily for UI feedback (optional)
+      emit(
+        state.copyWith(
+          isRecording: false,
+          clearRecordingTime: true,
+          audioPath: audioPath, // Keep path temporarily
+          clearErrorMessage: true,
+          transcriptionStatus:
+              (!isTooShort && audioPath != null)
+                  ? TranscriptionStatus
+                      .transcribing // Show transcribing indicator
+                  : TranscriptionStatus.idle,
+        ),
       );
 
-      if (transcription != null && transcription.isNotEmpty) {
-        final previewText =
-            transcription.length > 30
-                ? "${transcription.substring(0, 30)}..."
-                : transcription;
-        AppLogger.info("Transcription successful: \"$previewText\"");
-        emit(
-          state.copyWith(
-            transcribedText: transcription,
-            transcriptionStatus: TranscriptionStatus.success,
-          ),
-        );
+      if (!isTooShort && audioPath != null) {
+        // Perform transcription
+        try {
+          final transcription = await _speechService.transcribeAudio(
+            audioPath,
+            language: 'en',
+          );
+
+          String combinedText =
+              initialText; // Start with the text from the field
+          if (transcription != null && transcription.isNotEmpty) {
+            AppLogger.info('Transcription successful: "$transcription"');
+            // Combine with initial text, adding a space if needed
+            if (combinedText.isNotEmpty &&
+                !combinedText.endsWith(' ') &&
+                !combinedText.endsWith('\n')) {
+              combinedText += ' ';
+            }
+            combinedText += transcription;
+          } else {
+            AppLogger.warning(
+              'Transcription failed or returned empty text. Using only initial text.',
+            );
+            // Optionally show an error or just proceed with initial text
+          }
+
+          if (combinedText.isNotEmpty) {
+            AppLogger.info('Adding combined entry: "$combinedText"');
+            _entryCubit.addEntry(combinedText);
+            // Reset state after successful processing
+            emit(
+              state.copyWith(
+                transcriptionStatus: TranscriptionStatus.idle,
+                clearAudioPath: true,
+              ),
+            );
+          } else {
+            AppLogger.warning('Combined text is empty, not adding entry.');
+            emit(
+              state.copyWith(
+                transcriptionStatus: TranscriptionStatus.idle,
+                clearAudioPath: true,
+              ),
+            );
+          }
+        } catch (e) {
+          AppLogger.error("Transcription error during combine", error: e);
+          // Add entry with only the initial text if transcription failed?
+          if (initialText.isNotEmpty) {
+            AppLogger.warning(
+              'Adding entry with only initial text due to transcription error.',
+            );
+            _entryCubit.addEntry(initialText);
+          }
+          emit(
+            state.copyWith(
+              transcriptionStatus: TranscriptionStatus.error,
+              errorMessage: 'Transcription error: $e',
+              clearAudioPath: true,
+            ),
+          );
+        }
       } else {
-        AppLogger.error("Transcription failed or returned empty text");
+        // Handle too short or null path for combine
+        if (isTooShort) {
+          AppLogger.info(
+            "Skipping transcription for combine: recording too short.",
+          );
+          // Add entry with only the initial text if it exists
+          if (initialText.isNotEmpty) {
+            AppLogger.info(
+              'Adding entry with only initial text (recording too short).',
+            );
+            _entryCubit.addEntry(initialText);
+          }
+        } else {
+          AppLogger.error(
+            "Failed to save recording for combine, path is null.",
+          );
+          if (initialText.isNotEmpty) {
+            AppLogger.warning(
+              'Adding entry with only initial text (failed to save recording).',
+            );
+            _entryCubit.addEntry(initialText);
+          }
+          // Optionally emit an error state
+          emit(state.copyWith(errorMessage: 'Failed to save recording.'));
+        }
+        // Ensure state is cleaned up
         emit(
           state.copyWith(
-            transcriptionStatus: TranscriptionStatus.error,
-            errorMessage: 'Transcription failed or returned empty text.',
+            clearAudioPath: true,
+            transcriptionStatus: TranscriptionStatus.idle,
           ),
         );
       }
     } catch (e) {
-      AppLogger.error("Transcription error", error: e);
+      AppLogger.error("Error stopping recording for combine", error: e);
+      if (initialText.isNotEmpty) {
+        AppLogger.warning(
+          'Adding entry with only initial text due to stop error.',
+        );
+        _entryCubit.addEntry(initialText);
+      }
       emit(
         state.copyWith(
-          transcriptionStatus: TranscriptionStatus.error,
-          errorMessage: 'Transcription error: $e',
+          errorMessage: 'Error stopping recording: $e',
+          isRecording: false,
+          clearRecordingTime: true,
+          clearAudioPath: true,
+          transcriptionStatus: TranscriptionStatus.idle,
         ),
       );
     }
   }
 
-  // Clear the transcribed text and errors
+  // Transcribe for FOREGROUND (updates text field)
+  Future<void> transcribeAudio() async {
+    AppLogger.info("Starting foreground transcription");
+    if (state.audioPath == null || state.audioPath!.isEmpty) {
+      AppLogger.error("Cannot transcribe: audio path is null or empty.");
+      emit(
+        state.copyWith(
+          transcriptionStatus: TranscriptionStatus.error,
+          errorMessage: 'No audio file found to transcribe.',
+        ),
+      );
+      return;
+    }
+
+    // Ensure status is just 'transcribing' for foreground
+    emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
+
+    try {
+      final transcription = await _speechService.transcribeAudio(
+        state.audioPath!,
+        language: 'en',
+      );
+
+      if (transcription != null && transcription.isNotEmpty) {
+        AppLogger.info('Foreground transcription successful: "$transcription"');
+        emit(
+          state.copyWith(
+            transcribedText: transcription,
+            transcriptionStatus: TranscriptionStatus.success,
+            clearAudioPath: true, // Clear path after successful transcription
+          ),
+        );
+      } else {
+        AppLogger.error(
+          'Foreground transcription failed or returned empty text.',
+        );
+        emit(
+          state.copyWith(
+            transcriptionStatus: TranscriptionStatus.error,
+            errorMessage: 'Transcription failed or returned empty text.',
+            clearAudioPath: true,
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error("Foreground transcription error", error: e);
+      emit(
+        state.copyWith(
+          transcriptionStatus: TranscriptionStatus.error,
+          errorMessage: 'Transcription error: $e',
+          clearAudioPath: true,
+        ),
+      );
+    }
+  }
+
+  // Helper to calculate duration
+  Duration _calculateRecordingDuration() {
+    if (state.recordingStartTime == null) return Duration.zero;
+    return DateTime.now().difference(state.recordingStartTime!);
+  }
+
+  void _startRecordingTimer() {
+    _cancelRecordingTimer(); // Ensure no duplicate timers
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final duration = _calculateRecordingDuration();
+      emit(state.copyWith(recordingDuration: duration));
+
+      if (duration >= _maxRecordingDuration) {
+        AppLogger.info(
+          "Max recording duration reached. Stopping automatically.",
+        );
+        stopRecording(); // Normal stop for foreground transcription
+      }
+    });
+  }
+
+  void _cancelRecordingTimer() {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+  }
+
+  // Call this from UI listener after using the transcribed text
   void clearTranscribedText() {
-    AppLogger.info("Clearing transcribed text");
-    emit(
-      state.copyWith(
-        transcribedText: null,
-        errorMessage: null,
-        transcriptionStatus: TranscriptionStatus.idle,
-      ),
-    );
+    emit(state.copyWith(clearTranscribedText: true));
+  }
+
+  // Call this from UI listener after showing an error message
+  void clearErrorState() {
+    emit(state.copyWith(clearErrorMessage: true));
   }
 
   @override
-  Future<void> close() async {
+  Future<void> close() {
     _cancelRecordingTimer();
-    await _audioRecorder.dispose();
-    super.close();
+    _audioRecorder.dispose();
+    return super.close();
   }
 }

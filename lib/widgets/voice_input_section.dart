@@ -15,16 +15,11 @@ typedef ShowSnackBarCallback =
       Color? backgroundColor,
     });
 
-// Define a type for the transcription completion callback
-typedef TranscriptionCompleteCallback = void Function(String transcribedText);
-
 class VoiceInputSection extends StatelessWidget {
   final TextEditingController textController;
   final FocusNode inputFocusNode;
   final bool isInputFocused;
   final ShowSnackBarCallback showSnackBar;
-  final TranscriptionCompleteCallback
-  onTranscriptionComplete; // Add the definition
 
   const VoiceInputSection({
     super.key,
@@ -32,7 +27,6 @@ class VoiceInputSection extends StatelessWidget {
     required this.inputFocusNode,
     required this.isInputFocused,
     required this.showSnackBar,
-    required this.onTranscriptionComplete, // Add to constructor
   });
 
   @override
@@ -40,7 +34,7 @@ class VoiceInputSection extends StatelessWidget {
     // Listener for handling state changes like errors, permissions, status
     return BlocListener<VoiceInputCubit, VoiceInputState>(
       listenWhen: (previous, current) {
-        // Only trigger for changes in status or new errors
+        // Listen for status changes, errors
         bool permissionChanged =
             previous.micPermissionStatus != current.micPermissionStatus;
         bool errorChanged =
@@ -48,29 +42,16 @@ class VoiceInputSection extends StatelessWidget {
             current.errorMessage != null;
         bool transcriptionStatusChanged =
             previous.transcriptionStatus != current.transcriptionStatus;
-        // Also listen for successful transcription to trigger auto-submit
-        bool transcriptionSucceeded =
-            previous.transcriptionStatus != TranscriptionStatus.success &&
-            current.transcriptionStatus == TranscriptionStatus.success &&
-            current.transcribedText != null &&
-            current.transcribedText!.isNotEmpty;
 
-        return permissionChanged ||
-            errorChanged ||
-            transcriptionStatusChanged ||
-            transcriptionSucceeded;
+        return permissionChanged || errorChanged || transcriptionStatusChanged;
       },
       listener: (context, state) {
-        final messenger = ScaffoldMessenger.of(
-          context,
-        ); // Get messenger instance
+        final messenger = ScaffoldMessenger.of(context);
 
-        // --- Hide Snackbars on Status Change ---
-        // Hide any existing snackbar if we are no longer transcribing or if successful
+        // Hide snackbars on status change (unless transcribing)
         if (state.transcriptionStatus != TranscriptionStatus.transcribing) {
           messenger.hideCurrentSnackBar();
         }
-        // --- End Hide Snackbars ---
 
         // Permission Denied while trying to record
         if ((state.micPermissionStatus == PermissionStatus.denied ||
@@ -87,22 +68,24 @@ class VoiceInputSection extends StatelessWidget {
           );
         }
 
-        // Handle errors (from recording, transcription, etc.)
+        // Handle errors
         if (state.errorMessage != null) {
-          // Ensure previous snackbars are hidden before showing a new one
           messenger.hideCurrentSnackBar();
           showSnackBar(
             context,
             content: Text(state.errorMessage!),
             backgroundColor: Colors.red,
           );
-          // Clear the error in the cubit after showing it
-          context.read<VoiceInputCubit>().clearTranscribedText();
+          // Clear the error state in the cubit after showing it
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              context.read<VoiceInputCubit>().clearErrorState();
+            }
+          });
         }
 
         // Handle transcription status updates
         if (state.transcriptionStatus == TranscriptionStatus.transcribing) {
-          // Ensure previous snackbars are hidden before showing a new one
           messenger.hideCurrentSnackBar();
           showSnackBar(
             context,
@@ -117,29 +100,35 @@ class VoiceInputSection extends StatelessWidget {
                 Text('Transcribing audio...'),
               ],
             ),
-            duration: const Duration(seconds: 10), // Show longer
+            duration: const Duration(seconds: 10),
           );
         }
 
-        // Handle successful transcription (Auto-submit)
+        // Handle successful FOREGROUND transcription (Append text ONLY)
         if (state.transcriptionStatus == TranscriptionStatus.success &&
             state.transcribedText != null &&
             state.transcribedText!.isNotEmpty) {
-          // Use WidgetsBinding to ensure this runs after the build phase
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
             final currentText = textController.text;
             final newText = state.transcribedText!;
             String combinedText;
+            // Append logic
             if (currentText.isEmpty) {
               combinedText = newText;
-            } else if (currentText.endsWith(' ')) {
+            } else if (currentText.endsWith(' ') ||
+                currentText.endsWith('\n')) {
               combinedText = currentText + newText;
             } else {
               combinedText = '$currentText $newText';
             }
-            // Call the callback with the combined text
-            onTranscriptionComplete(combinedText);
-            // Clear the text from the cubit state after using it
+            // Directly update the text controller
+            textController.text = combinedText;
+            // Move cursor to the end
+            textController.selection = TextSelection.fromPosition(
+              TextPosition(offset: textController.text.length),
+            );
+            // Clear the transcribed text from the cubit state after using it
             context.read<VoiceInputCubit>().clearTranscribedText();
           });
         }
@@ -147,9 +136,6 @@ class VoiceInputSection extends StatelessWidget {
       // Builder for the actual UI (button, timer)
       child: BlocBuilder<VoiceInputCubit, VoiceInputState>(
         builder: (context, state) {
-          // REMOVED: Handling setting transcribed text into the TextField here
-          // It's now handled in the BlocListener for auto-submission
-
           // Format recording duration for display
           String recordingTimeDisplay = '';
           bool approachingLimit = false;
@@ -163,6 +149,10 @@ class VoiceInputSection extends StatelessWidget {
             recordingTimeDisplay = '$minutes:$seconds';
             approachingLimit = duration.inSeconds > 270; // 4:30
           }
+
+          // Show hourglass if transcribing (foreground only now)
+          bool isTranscribing =
+              state.transcriptionStatus == TranscriptionStatus.transcribing;
 
           return Row(
             mainAxisSize: MainAxisSize.min, // Take minimum horizontal space
@@ -193,20 +183,30 @@ class VoiceInputSection extends StatelessWidget {
               // Microphone Button
               IconButton(
                 icon: Icon(
-                  state.isRecording ? Icons.stop_circle_outlined : Icons.mic,
+                  state.isRecording
+                      ? Icons.stop_circle_outlined
+                      : (isTranscribing ? Icons.hourglass_bottom : Icons.mic),
                   color:
                       state.isRecording
                           ? Colors.red
-                          : Theme.of(context).colorScheme.primary,
+                          : (isTranscribing
+                              ? Colors.orange.shade700
+                              : Theme.of(context).colorScheme.primary),
                 ),
                 tooltip:
                     state.isRecording
-                        ? 'Stop Recording (${approachingLimit ? "Auto-stops at 5:00" : ""})'
-                        : 'Start Voice Input',
+                        ? 'Stop Recording'
+                        : (isTranscribing
+                            ? 'Processing recording...'
+                            : 'Start Voice Input'),
                 iconSize: 30,
-                onPressed: () {
-                  context.read<VoiceInputCubit>().toggleRecording();
-                },
+                // Disable button while transcribing
+                onPressed:
+                    isTranscribing
+                        ? null
+                        : () {
+                          context.read<VoiceInputCubit>().toggleRecording();
+                        },
               ),
             ],
           );

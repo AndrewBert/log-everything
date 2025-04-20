@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:myapp/cubit/voice_input_cubit.dart';
+import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 
 import '../cubit/entry_cubit.dart';
@@ -88,31 +90,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _handleInput({String? textToSubmit}) {
-    final String currentInput = textToSubmit ?? _textController.text;
-    if (currentInput.isNotEmpty) {
-      context.read<EntryCubit>().addEntry(currentInput);
-      _textController.clear();
-      // Only unfocus if not triggered by auto-submit
-      if (textToSubmit == null) {
-        FocusScope.of(context).unfocus();
-      }
-      _showFloatingSnackBar(
-        context,
-        content: const Row(
-          children: [
-            Icon(
-              Icons.pending_actions_outlined,
-              size: 18,
-              color: Colors.white70,
-            ),
-            SizedBox(width: 8),
-            Text('Processing entry...'),
-          ],
-        ),
-        duration: const Duration(milliseconds: 800),
+  void _handleInput() {
+    final voiceCubit = context.read<VoiceInputCubit>();
+    final entryCubit = context.read<EntryCubit>();
+    final currentText = _textController.text.trim();
+
+    // Handle manual send during recording
+    if (voiceCubit.state.isRecording) {
+      AppLogger.info(
+        'Send tapped during recording. Stopping and combining text with transcription.',
       );
+      // Pass current text to the cubit for background processing
+      voiceCubit.stopRecordingAndCombine(currentText);
+
+      _textController.clear();
+      FocusScope.of(context).unfocus();
+      _showProcessingSnackbar(
+        'Processing voice entry...',
+      ); // Show generic processing
+      return; // Stop further processing here; cubit handles adding entry
     }
+
+    // Handle manual send when NOT recording
+    if (currentText.isNotEmpty) {
+      entryCubit.addEntry(currentText);
+      _showProcessingSnackbar('Processing text entry...');
+      _textController.clear();
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+  // Helper to show consistent processing snackbar
+  void _showProcessingSnackbar(String message) {
+    _showFloatingSnackBar(
+      context,
+      content: Row(
+        children: [
+          const Icon(
+            Icons.pending_actions_outlined,
+            size: 18,
+            color: Colors.white70,
+          ),
+          const SizedBox(width: 8),
+          Text(message),
+        ],
+      ),
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   Future<bool> _showDeleteCategoryConfirmationDialog(
@@ -1045,9 +1069,6 @@ Entries using this category will be moved to "Misc".''',
                           inputFocusNode: _inputFocusNode,
                           isInputFocused: isInputFocused,
                           showSnackBar: _showFloatingSnackBar,
-                          onTranscriptionComplete: (transcribedText) {
-                            _handleInput(textToSubmit: transcribedText);
-                          },
                         ),
                         IconButton(
                           onPressed:

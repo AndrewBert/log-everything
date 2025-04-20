@@ -48,4 +48,10 @@ class AppLogger {
       }
     }
   }
+
+  static void debug(String s) {
+    if (kDebugMode) {
+      debugPrint('DEBUG: $s');
+    }
+  }
 }

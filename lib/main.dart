@@ -32,38 +32,50 @@ Future<void> main() async {
   // Set the default locale for the entire app
   Intl.defaultLocale = 'en_US';
 
-  // Create the AI service instance
+  // Initialize services
   final aiService = OpenAiCategorizationService();
+  final audioRecorder = AudioRecorder();
+  final speechService = SpeechService();
+
+  // Create Cubit instances
+  final entryCubit = EntryCubit(aiService: aiService);
+  final homeScreenCubit = HomeScreenCubit();
+  // Inject EntryCubit into VoiceInputCubit
+  final voiceInputCubit = VoiceInputCubit(
+    audioRecorder: audioRecorder,
+    speechService: speechService,
+    entryCubit: entryCubit,
+  );
 
   // Run the app
-  runApp(MyApp(aiService: aiService)); // Pass service to MyApp
+  runApp(
+    MyApp(
+      entryCubit: entryCubit,
+      homeScreenCubit: homeScreenCubit,
+      voiceInputCubit: voiceInputCubit,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  final AiCategorizationService aiService; // Accept the service
+  final EntryCubit entryCubit;
+  final HomeScreenCubit homeScreenCubit;
+  final VoiceInputCubit voiceInputCubit;
 
-  const MyApp({super.key, required this.aiService}); // Update constructor
+  const MyApp({
+    super.key,
+    required this.entryCubit,
+    required this.homeScreenCubit,
+    required this.voiceInputCubit,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<EntryCubit>(
-          // Pass the service instance to the Cubit
-          create: (context) => EntryCubit(aiService: aiService),
-        ),
-        BlocProvider<VoiceInputCubit>(
-          create:
-              (context) => VoiceInputCubit(
-                audioRecorder: AudioRecorder(),
-                speechService: SpeechService(),
-              ),
-        ),
-        // Add HomeScreenCubit provider here
-        BlocProvider<HomeScreenCubit>(
-          // Create the cubit and immediately load version info
-          create: (context) => HomeScreenCubit()..loadVersionInfo(),
-        ),
+        BlocProvider.value(value: entryCubit),
+        BlocProvider.value(value: homeScreenCubit),
+        BlocProvider.value(value: voiceInputCubit),
       ],
       child: MaterialApp(
         title: 'Log Splitter', // Consider updating title if needed
