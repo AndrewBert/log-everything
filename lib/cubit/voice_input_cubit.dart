@@ -61,7 +61,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> startRecording() async {
     AppLogger.info("[startRecording] Attempting to start recording...");
-    HapticFeedback.lightImpact(); // Add haptic feedback on start
+    // Add a small delay before haptic feedback
+    await Future.delayed(const Duration(milliseconds: 100));
+    HapticFeedback.mediumImpact(); // Keep mediumImpact for now
 
     PermissionStatus currentStatus = await Permission.microphone.status;
     if (currentStatus != state.micPermissionStatus) {
