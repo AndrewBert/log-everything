@@ -1,9 +1,12 @@
-going t# Flutter specific ignores
+# Flutter specific ignores
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 .dart_tool/
 build/
+
+# Android build artifacts
+android/app/.cxx/
 
 # IDE specific ignores
 .idea/
