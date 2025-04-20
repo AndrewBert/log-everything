@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:myapp/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
+import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
+import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
 
 import '../cubit/entry_cubit.dart';
 import '../cubit/home_screen_cubit.dart';
@@ -12,6 +14,7 @@ import '../cubit/home_screen_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
 import '../widgets/voice_input_section.dart';
+import '../widgets/whats_new_dialog.dart'; // Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,12 +29,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   final FocusNode _inputFocusNode = FocusNode();
   final GlobalKey _inputAreaKey = GlobalKey();
+  static const String _lastShownVersionKey = 'last_shown_whats_new_version';
 
   @override
   void initState() {
     super.initState();
     _inputFocusNode.addListener(_onInputFocusChange);
     context.read<HomeScreenCubit>().loadVersionInfo();
+    // Check if What's New should be shown automatically after the first frame
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkAndShowWhatsNewAutomatically(),
+    );
   }
 
   @override
@@ -87,6 +95,75 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(12.0),
         ),
       ),
+    );
+  }
+
+  Future<void> _checkAndShowWhatsNewAutomatically() async {
+    if (!mounted) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+      final lastShownVersion = prefs.getString(_lastShownVersionKey);
+
+      AppLogger.debug(
+        'Checking What\'s New: Current=$currentVersion, LastShown=$lastShownVersion',
+      );
+
+      if (lastShownVersion != currentVersion) {
+        // Show the dialog automatically
+        await _showWhatsNewDialog(currentVersion); // Await the dialog showing
+        // Save the version *after* the dialog is shown and dismissed
+        await prefs.setString(_lastShownVersionKey, currentVersion);
+        AppLogger.info(
+          'Shown What\'s New automatically for version $currentVersion and updated preference.',
+        );
+      } else {
+        AppLogger.debug(
+          'What\'s New dialog already shown automatically for version $currentVersion.',
+        );
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error checking/showing What\'s New dialog automatically: $e',
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _showWhatsNewDialog([String? version]) async {
+    if (!mounted) return;
+
+    String currentVersion = version ?? '';
+    if (currentVersion.isEmpty) {
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        currentVersion = packageInfo.version;
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Error getting package info for What\'s New dialog: $e',
+          stackTrace: stackTrace,
+        );
+        if (mounted) {
+          _showFloatingSnackBar(
+            context,
+            content: const Text('Could not load version info.'),
+            backgroundColor: Colors.redAccent,
+          );
+        }
+        return; // Don't show dialog if version fetch fails
+      }
+    }
+
+    // Check mounted again before showing dialog
+    if (!mounted) return;
+    // Use rootNavigator: true if showing from within another dialog like Help
+    await showDialog(
+      context: context,
+      // barrierDismissible: false, // Allow dismissing manually
+      builder:
+          (dialogContext) => WhatsNewDialog(currentVersion: currentVersion),
     );
   }
 
@@ -692,7 +769,7 @@ Entries using this category will be moved to "Misc".''',
             children: [
               Icon(Icons.info_outline),
               SizedBox(width: 8),
-              Text('About Log Everything'),
+              Text('About Log Splitter'), // Updated title
             ],
           ),
           content: const SingleChildScrollView(
@@ -738,6 +815,15 @@ Entries using this category will be moved to "Misc".''',
             ),
           ),
           actions: <Widget>[
+            // Add button to show What's New
+            TextButton(
+              child: const Text("What's New"),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close help dialog first
+                _showWhatsNewDialog(); // Show the What's New dialog
+              },
+            ),
+            const Spacer(), // Push close button to the right
             TextButton(
               child: const Text('Close'),
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -1243,15 +1329,14 @@ Entries using this category will be moved to "Misc".''',
           IconButton(
             icon: const Icon(Icons.help_outline),
             tooltip: 'Help / About',
-            onPressed: _showHelpDialog, // Feedback is inside this method
+            onPressed:
+                _showHelpDialog, // This now includes the What's New option
           ),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
-            onPressed:
-                _showManageCategoriesDialog, // Feedback is inside this method
+            onPressed: _showManageCategoriesDialog,
           ),
-
           const SizedBox(width: 8),
         ],
       ),
