@@ -1,4 +1,5 @@
 import 'dart:async'; // Keep dart:async for Timer
+import 'package:flutter/services.dart'; // Import for HapticFeedback
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -508,6 +509,8 @@ class EntryCubit extends Cubit<EntryState> {
       finalEntries,
       state.filterCategory,
     );
+    // Add haptic feedback after processing is complete
+    HapticFeedback.mediumImpact();
     emit(
       state.copyWith(
         entries: finalEntries,
