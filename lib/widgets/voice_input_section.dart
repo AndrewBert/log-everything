@@ -15,11 +15,16 @@ typedef ShowSnackBarCallback =
       Color? backgroundColor,
     });
 
+// Define a type for the transcription completion callback
+typedef TranscriptionCompleteCallback = void Function(String transcribedText);
+
 class VoiceInputSection extends StatelessWidget {
   final TextEditingController textController;
   final FocusNode inputFocusNode;
   final bool isInputFocused;
   final ShowSnackBarCallback showSnackBar;
+  final TranscriptionCompleteCallback
+  onTranscriptionComplete; // Add the definition
 
   const VoiceInputSection({
     super.key,
@@ -27,6 +32,7 @@ class VoiceInputSection extends StatelessWidget {
     required this.inputFocusNode,
     required this.isInputFocused,
     required this.showSnackBar,
+    required this.onTranscriptionComplete, // Add to constructor
   });
 
   @override
@@ -42,8 +48,17 @@ class VoiceInputSection extends StatelessWidget {
             current.errorMessage != null;
         bool transcriptionStatusChanged =
             previous.transcriptionStatus != current.transcriptionStatus;
+        // Also listen for successful transcription to trigger auto-submit
+        bool transcriptionSucceeded =
+            previous.transcriptionStatus != TranscriptionStatus.success &&
+            current.transcriptionStatus == TranscriptionStatus.success &&
+            current.transcribedText != null &&
+            current.transcribedText!.isNotEmpty;
 
-        return permissionChanged || errorChanged || transcriptionStatusChanged;
+        return permissionChanged ||
+            errorChanged ||
+            transcriptionStatusChanged ||
+            transcriptionSucceeded;
       },
       listener: (context, state) {
         final messenger = ScaffoldMessenger.of(
@@ -51,7 +66,7 @@ class VoiceInputSection extends StatelessWidget {
         ); // Get messenger instance
 
         // --- Hide Snackbars on Status Change ---
-        // Hide any existing snackbar if we are no longer transcribing
+        // Hide any existing snackbar if we are no longer transcribing or if successful
         if (state.transcriptionStatus != TranscriptionStatus.transcribing) {
           messenger.hideCurrentSnackBar();
         }
@@ -105,25 +120,35 @@ class VoiceInputSection extends StatelessWidget {
             duration: const Duration(seconds: 10), // Show longer
           );
         }
+
+        // Handle successful transcription (Auto-submit)
+        if (state.transcriptionStatus == TranscriptionStatus.success &&
+            state.transcribedText != null &&
+            state.transcribedText!.isNotEmpty) {
+          // Use WidgetsBinding to ensure this runs after the build phase
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final currentText = textController.text;
+            final newText = state.transcribedText!;
+            String combinedText;
+            if (currentText.isEmpty) {
+              combinedText = newText;
+            } else if (currentText.endsWith(' ')) {
+              combinedText = currentText + newText;
+            } else {
+              combinedText = '$currentText $newText';
+            }
+            // Call the callback with the combined text
+            onTranscriptionComplete(combinedText);
+            // Clear the text from the cubit state after using it
+            context.read<VoiceInputCubit>().clearTranscribedText();
+          });
+        }
       },
       // Builder for the actual UI (button, timer)
       child: BlocBuilder<VoiceInputCubit, VoiceInputState>(
         builder: (context, state) {
-          // Handle setting transcribed text into the TextField
-          if (state.transcriptionStatus == TranscriptionStatus.success &&
-              state.transcribedText != null &&
-              state.transcribedText!.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              textController.text = state.transcribedText!;
-              textController.selection = TextSelection.fromPosition(
-                TextPosition(offset: textController.text.length),
-              );
-              // Clear the text from the cubit state after using it
-              context.read<VoiceInputCubit>().clearTranscribedText();
-              // Optionally request focus back to the input field
-              // inputFocusNode.requestFocus();
-            });
-          }
+          // REMOVED: Handling setting transcribed text into the TextField here
+          // It's now handled in the BlocListener for auto-submission
 
           // Format recording duration for display
           String recordingTimeDisplay = '';

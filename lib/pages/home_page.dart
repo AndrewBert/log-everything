@@ -88,12 +88,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _handleInput() {
-    final String currentInput = _textController.text;
+  void _handleInput({String? textToSubmit}) {
+    final String currentInput = textToSubmit ?? _textController.text;
     if (currentInput.isNotEmpty) {
       context.read<EntryCubit>().addEntry(currentInput);
       _textController.clear();
-      FocusScope.of(context).unfocus();
+      // Only unfocus if not triggered by auto-submit
+      if (textToSubmit == null) {
+        FocusScope.of(context).unfocus();
+      }
       _showFloatingSnackBar(
         context,
         content: const Row(
@@ -203,7 +206,7 @@ Entries using this category will be moved to "Misc".''',
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: Text(
-                            'Add custom categories or delete unused ones (except "Misc").',
+                            'Add custom categories or delete unused ones.',
                             style: Theme.of(stfContext).textTheme.bodySmall,
                             textAlign: TextAlign.center,
                           ),
@@ -222,10 +225,17 @@ Entries using this category will be moved to "Misc".''',
                                 );
                               }
                               // Sort categories: Most recent first, Misc last
-                              final List<String> displayCategories = List<String>.from(state.categories);
-                              displayCategories.remove('Misc'); // Remove Misc temporarily
-                              final sortedCategories = displayCategories.reversed.toList(); // Reverse for most recent first
-                              sortedCategories.add('Misc'); // Add Misc back at the end
+                              final List<String> displayCategories =
+                                  List<String>.from(state.categories);
+                              displayCategories.remove(
+                                'Misc',
+                              ); // Remove Misc temporarily
+                              final sortedCategories =
+                                  displayCategories.reversed
+                                      .toList(); // Reverse for most recent first
+                              sortedCategories.add(
+                                'Misc',
+                              ); // Add Misc back at the end
 
                               return ListView.builder(
                                 shrinkWrap: true,
@@ -257,16 +267,14 @@ Entries using this category will be moved to "Misc".''',
                                                       VisualDensity.compact,
                                                   splashRadius: 20,
                                                   onPressed: () async {
-                                                    // Call the new edit dialog
                                                     final String? newName =
                                                         await _showEditCategoryDialog(
-                                                          stfContext, // Use StatefulBuilder context
+                                                          stfContext,
                                                           category,
                                                         );
                                                     if (newName != null &&
                                                         newName.isNotEmpty &&
                                                         newName != category) {
-                                                      // Show feedback after successful rename
                                                       showFeedback(
                                                         'Category renamed to "$newName"',
                                                       );
@@ -278,8 +286,7 @@ Entries using this category will be moved to "Misc".''',
                                                     Icons.delete_outline,
                                                     color:
                                                         Colors.redAccent[100],
-                                                    size:
-                                                        20, // Match edit icon size
+                                                    size: 20,
                                                   ),
                                                   tooltip: 'Delete Category',
                                                   visualDensity:
@@ -581,6 +588,66 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
+  Future<void> _showChangeCategoryDialog(
+    BuildContext context,
+    Entry entry,
+  ) async {
+    final entryCubit = context.read<EntryCubit>();
+    final availableCategories = List<String>.from(entryCubit.state.categories)
+      ..sort();
+    String? selectedCategory = entry.category;
+
+    // Ensure the current category is valid, default to Misc if not
+    if (!availableCategories.contains(selectedCategory)) {
+      selectedCategory = 'Misc';
+    }
+
+    final String? newCategory = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return SimpleDialog(
+          title: const Text('Change Category'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          children:
+              availableCategories.map((category) {
+                return SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(dialogContext, category);
+                  },
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      fontWeight:
+                          category == selectedCategory
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                      color:
+                          category == selectedCategory
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+        );
+      },
+    );
+
+    if (newCategory != null && newCategory != entry.category) {
+      final updatedEntry = entry.copyWith(category: newCategory);
+      entryCubit.updateEntry(entry, updatedEntry);
+      if (mounted) {
+        _showFloatingSnackBar(
+          context,
+          content: Text('Category changed to "$newCategory"'),
+          duration: const Duration(seconds: 2),
+        );
+      }
+    }
+  }
+
   void _showHelpDialog() {
     showDialog(
       context: context,
@@ -765,7 +832,8 @@ Entries using this category will be moved to "Misc".''',
                               fontSize: 12,
                             ),
                           ),
-                          Chip(
+                          // Use ActionChip for tappable behavior
+                          ActionChip(
                             label: Text(
                               entry.category,
                               style: TextStyle(
@@ -790,6 +858,15 @@ Entries using this category will be moved to "Misc".''',
                             ),
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
+                            // Use onPressed for ActionChip
+                            onPressed:
+                                isProcessing
+                                    ? null
+                                    : () => _showChangeCategoryDialog(
+                                      context,
+                                      entry,
+                                    ),
+                            tooltip: isProcessing ? null : 'Change Category',
                           ),
                         ],
                       ),
@@ -866,7 +943,8 @@ Entries using this category will be moved to "Misc".''',
                               style: TextStyle(
                                 fontWeight:
                                     category == currentDisplayValue
-                                        ? FontWeight.bold
+                                        ? FontWeight
+                                            .bold // Make selected bold
                                         : FontWeight.normal,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -874,6 +952,7 @@ Entries using this category will be moved to "Misc".''',
                           );
                         }).toList(),
                     onChanged: (String? newValue) {
+                      // Add the onChanged callback
                       if (newValue == null) {
                         return;
                       }
@@ -966,9 +1045,14 @@ Entries using this category will be moved to "Misc".''',
                           inputFocusNode: _inputFocusNode,
                           isInputFocused: isInputFocused,
                           showSnackBar: _showFloatingSnackBar,
+                          onTranscriptionComplete: (transcribedText) {
+                            _handleInput(textToSubmit: transcribedText);
+                          },
                         ),
                         IconButton(
-                          onPressed: _handleInput,
+                          onPressed:
+                              () =>
+                                  _handleInput(), // Call without args for manual send
                           icon: const Icon(Icons.send_rounded),
                           color: Theme.of(context).colorScheme.primary,
                           iconSize: 28,
