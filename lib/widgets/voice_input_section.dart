@@ -221,28 +221,9 @@ class VoiceInputSection extends StatelessWidget {
   }
 
   void _startRecording(BuildContext context) {
-    final state = context.read<VoiceInputCubit>().state;
-    if (state.micPermissionStatus == PermissionStatus.denied ||
-        state.micPermissionStatus == PermissionStatus.permanentlyDenied) {
-      // Show snackbar for permission denied
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Microphone permission is required for voice input.',
-          ),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: () {
-              openAppSettings();
-            },
-          ),
-        ),
-      );
-    } else {
-      // Start recording
-      HapticFeedback.lightImpact(); // Add haptic feedback
-      context.read<VoiceInputCubit>().startRecording();
-    }
+    // Always attempt to start recording via the Cubit
+    HapticFeedback.lightImpact(); // Add haptic feedback
+    context.read<VoiceInputCubit>().startRecording();
   }
 
   void _stopRecording(BuildContext context) {
