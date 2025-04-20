@@ -5,6 +5,7 @@ import 'package:intl/intl.dart'; // Import Intl
 import 'package:record/record.dart';
 
 import 'cubit/entry_cubit.dart';
+import 'cubit/home_screen_cubit.dart'; // Import HomeScreenCubit
 import 'cubit/voice_input_cubit.dart';
 import 'screens/home_screen.dart'; // Import the new home screen
 import 'services/ai_categorization_service.dart'; // Import the AI service
@@ -57,6 +58,11 @@ class MyApp extends StatelessWidget {
                 audioRecorder: AudioRecorder(),
                 speechService: SpeechService(),
               ),
+        ),
+        // Add HomeScreenCubit provider here
+        BlocProvider<HomeScreenCubit>(
+          // Create the cubit and immediately load version info
+          create: (context) => HomeScreenCubit()..loadVersionInfo(),
         ),
       ],
       child: MaterialApp(

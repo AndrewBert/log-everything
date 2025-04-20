@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
 
 import '../cubit/entry_cubit.dart';
+import '../cubit/home_screen_cubit.dart';
+import '../cubit/home_screen_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
 import '../widgets/voice_input_section.dart';
@@ -21,31 +22,12 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   final FocusNode _inputFocusNode = FocusNode();
-  bool _isInputFocused = false;
   final GlobalKey _inputAreaKey = GlobalKey();
-
-  // --- Easter Egg State ---
-  int _titleTapCount = 0;
-  final int _targetTapCount = 7;
-  // --- End Easter Egg State ---
-
-  String _appVersion = ''; // State variable for version
 
   @override
   void initState() {
     super.initState();
     _inputFocusNode.addListener(_onInputFocusChange);
-    _loadVersionInfo(); // Load version on init
-  }
-
-  // Function to load version info
-  Future<void> _loadVersionInfo() async {
-    final PackageInfo info = await PackageInfo.fromPlatform();
-    if (mounted) {
-      setState(() {
-        _appVersion = 'v${info.version} (${info.buildNumber})';
-      });
-    }
   }
 
   @override
@@ -57,10 +39,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onInputFocusChange() {
-    if (mounted) {
-      setState(() {
-        _isInputFocused = _inputFocusNode.hasFocus;
-      });
+    if (mounted && context.mounted) {
+      context.read<HomeScreenCubit>().setInputFocus(_inputFocusNode.hasFocus);
     }
   }
 
@@ -494,7 +474,6 @@ Entries using this category will be moved to "Misc".''',
 
               if (item is DateTime) {
                 return Padding(
-                  // Reduced top padding for the date header
                   padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
                   child: Text(
                     _formatDateHeader(item),
@@ -590,17 +569,16 @@ Entries using this category will be moved to "Misc".''',
     return Padding(
       padding: const EdgeInsets.only(
         top: 4.0,
-        bottom: 4.0, // Added a little bottom padding
+        bottom: 4.0,
         left: 16.0,
         right: 16.0,
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end, // Align content to the right
+        mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           BlocBuilder<EntryCubit, EntryState>(
             buildWhen: (prev, current) {
-              // Check if categories or filter changed
               bool shouldBuild =
                   prev.categories != current.categories ||
                   prev.filterCategory != current.filterCategory;
@@ -612,35 +590,28 @@ Entries using this category will be moved to "Misc".''',
                 ...List<String>.from(state.categories)..sort(),
               ];
 
-              // Calculate the value to display
               String currentDisplayValue =
                   state.filterCategory ?? 'All Categories';
               if (!dropdownCategories.contains(currentDisplayValue)) {
-                // Fallback if state is inconsistent
                 currentDisplayValue = 'All Categories';
               }
 
-              // Wrap DropdownButton in a styled Container
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12.0,
                   vertical: 0,
-                ), // Adjust padding inside the container
+                ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant
-                      .withOpacity(0.4), // Subtle background
-                  borderRadius: BorderRadius.circular(20.0), // Rounded corners
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceVariant.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(20.0),
                 ),
                 child: DropdownButtonHideUnderline(
-                  // Hide default underline here
                   child: DropdownButton<String>(
                     value: currentDisplayValue,
-                    icon: const Icon(
-                      Icons.filter_list_alt,
-                      size: 20,
-                    ), // Slightly smaller icon
+                    icon: const Icon(Icons.filter_list_alt, size: 20),
                     style: TextStyle(
-                      // Base style for dropdown text
                       fontSize: 14,
                       color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
@@ -651,7 +622,6 @@ Entries using this category will be moved to "Misc".''',
                             child: Text(
                               category,
                               style: TextStyle(
-                                // Style applied within item
                                 fontWeight:
                                     category == currentDisplayValue
                                         ? FontWeight.bold
@@ -691,97 +661,96 @@ Entries using this category will be moved to "Misc".''',
   }
 
   Widget _buildInputArea() {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Material(
-        elevation: 8.0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.0),
-            topRight: Radius.circular(20.0),
-          ),
-        ),
-        child: Container(
-          key: _inputAreaKey,
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 8, // Adjusted padding for integrated icons
-            top: 12,
-            bottom: MediaQuery.of(context).padding.bottom + 12,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20.0),
-              topRight: Radius.circular(20.0),
+    return BlocBuilder<HomeScreenCubit, HomeScreenState>(
+      buildWhen:
+          (prev, current) => prev.isInputFocused != current.isInputFocused,
+      builder: (context, state) {
+        final isInputFocused = state.isInputFocused;
+
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Material(
+            elevation: 8.0,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20.0),
+                topRight: Radius.circular(20.0),
+              ),
             ),
-          ),
-          // Use only the TextField here, buttons go into decoration
-          child: TextField(
-            focusNode: _inputFocusNode,
-            controller: _textController,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25.0),
-                borderSide: BorderSide.none,
+            child: Container(
+              key: _inputAreaKey,
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 8,
+                top: 12,
+                bottom: MediaQuery.of(context).padding.bottom + 12,
               ),
-              filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surfaceVariant.withOpacity(0.6),
-              labelText: _isInputFocused ? 'Enter log entry' : null,
-              hintText: 'What happened?...',
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-              // Integrate buttons into suffixIcon
-              suffixIcon: Padding(
-                padding: const EdgeInsets.only(
-                  right: 4.0,
-                ), // Add padding to align icons
-                child: Row(
-                  mainAxisSize: MainAxisSize.min, // Prevent row from expanding
-                  mainAxisAlignment:
-                      MainAxisAlignment.end, // Align icons to the end
-                  children: [
-                    // Voice Input Button
-                    VoiceInputSection(
-                      textController: _textController,
-                      inputFocusNode: _inputFocusNode,
-                      isInputFocused: _isInputFocused,
-                      showSnackBar: _showFloatingSnackBar,
-                    ),
-                    // Send Button
-                    IconButton(
-                      onPressed: _handleInput,
-                      icon: const Icon(Icons.send_rounded),
-                      color: Theme.of(context).colorScheme.primary,
-                      iconSize: 28,
-                      tooltip: 'Add Entry',
-                      // Reduce splash radius if needed for tighter space
-                      // splashRadius: 24,
-                    ),
-                  ],
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20.0),
+                  topRight: Radius.circular(20.0),
                 ),
               ),
+              child: TextField(
+                focusNode: _inputFocusNode,
+                controller: _textController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceVariant.withOpacity(0.6),
+                  labelText: isInputFocused ? 'Enter log entry' : null,
+                  hintText: 'What happened?...',
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 4.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        VoiceInputSection(
+                          textController: _textController,
+                          inputFocusNode: _inputFocusNode,
+                          isInputFocused: isInputFocused,
+                          showSnackBar: _showFloatingSnackBar,
+                        ),
+                        IconButton(
+                          onPressed: _handleInput,
+                          icon: const Icon(Icons.send_rounded),
+                          color: Theme.of(context).colorScheme.primary,
+                          iconSize: 28,
+                          tooltip: 'Add Entry',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                onSubmitted: (_) => _handleInput(),
+                minLines: 1,
+                maxLines: 5,
+                onTapOutside: (_) {
+                  if (_inputFocusNode.hasFocus) {
+                    FocusScope.of(context).unfocus();
+                  }
+                },
+              ),
             ),
-            keyboardType: TextInputType.multiline,
-            textInputAction: TextInputAction.newline,
-            onSubmitted: (_) => _handleInput(),
-            minLines: 1,
-            maxLines: 5,
-            onTapOutside: (_) {
-              if (_inputFocusNode.hasFocus) {
-                FocusScope.of(context).unfocus();
-              }
-            },
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -848,47 +817,34 @@ Entries using this category will be moved to "Misc".''',
       appBar: AppBar(
         title: GestureDetector(
           onTap: () {
-            setState(() {
-              _titleTapCount++;
-              if (_titleTapCount == _targetTapCount) {
-                _showFloatingSnackBar(
-                  context,
-                  content: const Text('✨ You found the magic tap! ✨'),
-                  duration: const Duration(seconds: 3),
-                );
-                _titleTapCount = 0;
-              } else if (_titleTapCount > _targetTapCount / 2) {
-                _showFloatingSnackBar(
-                  context,
-                  content: Text(
-                    '${_targetTapCount - _titleTapCount} taps remaining...',
-                  ),
-                  duration: const Duration(milliseconds: 500),
-                );
-              } else if (_titleTapCount > _targetTapCount) {
-                _titleTapCount = 0;
-              }
-            });
+            context.read<HomeScreenCubit>().incrementTitleTap();
           },
           child: Text(widget.title),
         ),
         actions: [
-          // Display version number if available
-          if (_appVersion.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Center(
-                child: Text(
-                  _appVersion,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).appBarTheme.foregroundColor?.withOpacity(0.7),
+          BlocBuilder<HomeScreenCubit, HomeScreenState>(
+            buildWhen: (prev, current) => prev.appVersion != current.appVersion,
+            builder: (context, state) {
+              if (state.appVersion.isNotEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Center(
+                    child: Text(
+                      state.appVersion,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).appBarTheme.foregroundColor?.withOpacity(0.7),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
@@ -897,16 +853,37 @@ Entries using this category will be moved to "Misc".''',
           const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[_buildFilterSection(), _buildEntriesList()],
-            ),
-            _buildInputArea(),
-          ],
+      body: BlocListener<HomeScreenCubit, HomeScreenState>(
+        listenWhen:
+            (prev, current) =>
+                prev.snackBarMessage != current.snackBarMessage &&
+                current.snackBarMessage != null,
+        listener: (context, state) {
+          _showFloatingSnackBar(
+            context,
+            content: Text(state.snackBarMessage!),
+            duration:
+                state.snackBarMessage!.contains('magic tap')
+                    ? const Duration(seconds: 3)
+                    : const Duration(milliseconds: 800),
+          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              context.read<HomeScreenCubit>().clearSnackBarMessage();
+            }
+          });
+        },
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[_buildFilterSection(), _buildEntriesList()],
+              ),
+              _buildInputArea(),
+            ],
+          ),
         ),
       ),
     );
