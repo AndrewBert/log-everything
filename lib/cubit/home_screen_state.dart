@@ -6,6 +6,8 @@ class HomeScreenState extends Equatable {
   final String appVersion;
   final bool isVersionLoading;
   final String? snackBarMessage; // Optional: For showing snackbars via state
+  final bool showWhatsNewDialog; // Flag to trigger the dialog
+  final String? lastSeenVersion; // Store the version seen by the user
 
   const HomeScreenState({
     this.isInputFocused = false,
@@ -13,6 +15,8 @@ class HomeScreenState extends Equatable {
     this.appVersion = '',
     this.isVersionLoading = false,
     this.snackBarMessage,
+    this.showWhatsNewDialog = false, // Default to false
+    this.lastSeenVersion, // Initially null
   });
 
   HomeScreenState copyWith({
@@ -22,6 +26,9 @@ class HomeScreenState extends Equatable {
     bool? isVersionLoading,
     String? snackBarMessage,
     bool clearSnackBar = false, // Helper to clear snackbar message
+    bool? showWhatsNewDialog,
+    String? lastSeenVersion,
+    bool clearLastSeenVersion = false, // Helper if needed
   }) {
     return HomeScreenState(
       isInputFocused: isInputFocused ?? this.isInputFocused,
@@ -30,6 +37,9 @@ class HomeScreenState extends Equatable {
       isVersionLoading: isVersionLoading ?? this.isVersionLoading,
       snackBarMessage:
           clearSnackBar ? null : snackBarMessage ?? this.snackBarMessage,
+      showWhatsNewDialog: showWhatsNewDialog ?? this.showWhatsNewDialog,
+      lastSeenVersion:
+          clearLastSeenVersion ? null : lastSeenVersion ?? this.lastSeenVersion,
     );
   }
 
@@ -40,5 +50,7 @@ class HomeScreenState extends Equatable {
     appVersion,
     isVersionLoading,
     snackBarMessage,
+    showWhatsNewDialog,
+    lastSeenVersion,
   ];
 }
