@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/utils/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'home_screen_state.dart';
@@ -17,8 +18,7 @@ class HomeScreenCubit extends Cubit<HomeScreenState> {
       final versionString = 'v${info.version} (${info.buildNumber})';
       emit(state.copyWith(appVersion: versionString, isVersionLoading: false));
     } catch (e) {
-      // Handle error appropriately, maybe log it
-      print('Error loading package info: $e');
+      AppLogger.error('Failed to load version info', error: e);
       emit(state.copyWith(isVersionLoading: false)); // Ensure loading stops
     }
   }
