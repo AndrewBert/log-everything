@@ -16,7 +16,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
       _buildChangeItem(
         '✨ Feature: Edit Entries & Categories',
-        'You can now edit the text of existing entries and rename your custom categories via the "Manage Categories" screen.',
+        'You can now rename your categories via the "Manage Categories" screen.',
       ),
       _buildChangeItem(
         '✨ Feature: Help & About Section',
