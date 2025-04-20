@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:flutter/services.dart'; // Import for HapticFeedback
 
 import '../speech_service.dart';
 import '../utils/logger.dart';
@@ -60,6 +61,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> startRecording() async {
     AppLogger.info("[startRecording] Attempting to start recording...");
+    HapticFeedback.lightImpact(); // Add haptic feedback on start
 
     PermissionStatus currentStatus = await Permission.microphone.status;
     if (currentStatus != state.micPermissionStatus) {
@@ -122,6 +124,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   Future<void> stopRecording() async {
     AppLogger.info("Stopping recording (foreground transcription)");
     if (!state.isRecording) return;
+    HapticFeedback.lightImpact(); // Add haptic feedback on stop
 
     _cancelRecordingTimer();
     final recordingDuration = _calculateRecordingDuration();
@@ -177,6 +180,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       "Stopping recording to combine with initial text: '$initialText'",
     );
     if (!state.isRecording) return;
+    HapticFeedback.lightImpact(); // Add haptic feedback on stop (for combine)
 
     _cancelRecordingTimer();
     final recordingDuration = _calculateRecordingDuration();
@@ -329,6 +333,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
       if (transcription != null && transcription.isNotEmpty) {
         AppLogger.info('Foreground transcription successful: "$transcription"');
+        HapticFeedback.lightImpact(); // Haptic feedback on successful transcription
         emit(
           state.copyWith(
             transcribedText: transcription,
