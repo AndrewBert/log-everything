@@ -7,7 +7,7 @@ import 'package:record/record.dart';
 import 'cubit/entry_cubit.dart';
 import 'cubit/home_screen_cubit.dart'; // Import HomeScreenCubit
 import 'cubit/voice_input_cubit.dart';
-import 'screens/home_screen.dart'; // Import the new home screen
+import 'pages/home_page.dart'; // Import the new home screen
 import 'services/ai_categorization_service.dart'; // Import the AI service
 import 'speech_service.dart';
 import 'utils/category_colors.dart'; // Import the category colors utility
@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
           useMaterial3: true, // Keep Material 3 enabled
         ),
         // Use the new HomeScreen widget
-        home: const MyHomePage(title: 'Log Splitter'), // Keep title consistent
+        home: const HomePage(title: 'Log Splitter'), // Keep title consistent
       ),
     );
   }
