@@ -222,12 +222,10 @@ class VoiceInputSection extends StatelessWidget {
 
   void _startRecording(BuildContext context) {
     // Always attempt to start recording via the Cubit
-    HapticFeedback.lightImpact(); // Add haptic feedback
     context.read<VoiceInputCubit>().startRecording();
   }
 
   void _stopRecording(BuildContext context) {
-    HapticFeedback.mediumImpact(); // Add haptic feedback
     context.read<VoiceInputCubit>().stopRecording();
   }
 }
