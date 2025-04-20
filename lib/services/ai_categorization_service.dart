@@ -99,7 +99,7 @@ class OpenAiCategorizationService implements AiCategorizationService {
         {
           "role": "system",
           "content":
-              "Analyze the user's text. Identify distinct pieces of information or tasks. For each piece, extract the relevant text segment and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments.",
+              "Analyze the user's text. Identify distinct pieces of information or tasks. **Group related sentences or ideas into a single entry whenever possible.** Avoid splitting closely related concepts into separate entries. For each logical entry, extract the relevant text segment (which might span multiple sentences) and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments.",
         },
         {"role": "user", "content": text},
       ],
