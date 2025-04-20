@@ -32,6 +32,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> _initialize() async {
     final status = await Permission.microphone.status;
+    AppLogger.info(
+      '[_initialize] Initial microphone permission status: $status',
+    ); // Log initial status
     emit(state.copyWith(micPermissionStatus: status));
     _audioRecorder.onStateChanged().listen((recordState) {
       AppLogger.debug('AudioRecorder state changed: $recordState');
@@ -40,10 +43,18 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Future<void> requestMicrophonePermission() async {
+    AppLogger.info(
+      '[requestMicrophonePermission] Requesting microphone permission...',
+    );
     final status = await Permission.microphone.request();
+    AppLogger.info(
+      '[requestMicrophonePermission] Status after request: $status',
+    ); // Log status after request
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
-      AppLogger.warning('Microphone permission permanently denied.');
+      AppLogger.warning(
+        '[requestMicrophonePermission] Microphone permission permanently denied.',
+      );
       // Optionally guide user to settings
     }
   }
@@ -57,23 +68,40 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Future<void> startRecording() async {
-    AppLogger.info("Attempting to start recording...");
+    AppLogger.info("[startRecording] Attempting to start recording...");
 
     PermissionStatus currentStatus = await Permission.microphone.status;
+    AppLogger.info(
+      '[startRecording] Checked status before starting: $currentStatus',
+    ); // Log status before starting
     if (currentStatus != state.micPermissionStatus) {
+      AppLogger.info(
+        '[startRecording] Status changed since last check, updating state.',
+      );
       emit(state.copyWith(micPermissionStatus: currentStatus));
     }
 
     if (currentStatus != PermissionStatus.granted) {
-      await requestMicrophonePermission();
+      AppLogger.info(
+        '[startRecording] Permission not granted ($currentStatus), requesting...',
+      );
+      await requestMicrophonePermission(); // This logs the result internally
+      // Re-check status *immediately* after requesting
       currentStatus = await Permission.microphone.status;
+      AppLogger.info(
+        '[startRecording] Checked status after requesting: $currentStatus',
+      );
       if (currentStatus != state.micPermissionStatus) {
+        // State might have been updated by requestMicrophonePermission, but check again
+        AppLogger.info(
+          '[startRecording] Status changed after request, updating state again.',
+        );
         emit(state.copyWith(micPermissionStatus: currentStatus));
       }
 
       if (currentStatus != PermissionStatus.granted) {
         AppLogger.warning(
-          "Microphone permission not granted. Cannot start recording.",
+          "[startRecording] Microphone permission still not granted ($currentStatus). Cannot start recording.",
         );
         emit(
           state.copyWith(
@@ -85,6 +113,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       }
     }
 
+    AppLogger.info(
+      '[startRecording] Permission granted ($currentStatus). Proceeding to start recorder.',
+    );
     try {
       final directory = await getApplicationDocumentsDirectory();
       final path =
