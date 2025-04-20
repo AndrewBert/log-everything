@@ -61,6 +61,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> startRecording() async {
     AppLogger.info("[startRecording] Attempting to start recording...");
+    HapticFeedback.mediumImpact(); // Trigger haptic feedback immediately
+    // Add a significant delay to test timing theory
+    await Future.delayed(const Duration(seconds: 2));
 
     PermissionStatus currentStatus = await Permission.microphone.status;
     if (currentStatus != state.micPermissionStatus) {
@@ -96,7 +99,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       const config = RecordConfig(encoder: AudioEncoder.aacLc);
 
       await _audioRecorder.start(config, path: path);
-      HapticFeedback.mediumImpact(); // Trigger haptic feedback AFTER recording starts
       AppLogger.info("Recording started, path: $path");
       emit(
         state.copyWith(
