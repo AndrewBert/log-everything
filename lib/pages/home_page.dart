@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'dart:async'; // Import async for Timer
 
 import '../cubit/entry_cubit.dart';
 import '../cubit/home_screen_cubit.dart';
@@ -18,7 +19,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+// Add TickerProviderStateMixin for AnimationController
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
   final FocusNode _inputFocusNode = FocusNode();
@@ -54,12 +56,21 @@ class _HomePageState extends State<HomePage> {
     final messenger = ScaffoldMessenger.of(targetContext);
     messenger.hideCurrentSnackBar();
 
-    double bottomMargin = 8.0;
+    EdgeInsetsGeometry? margin = EdgeInsets.only(
+      bottom: 8.0, // Default bottom margin if input area not found
+      left: 16.0,
+      right: 16.0,
+    );
+
     final RenderBox? inputAreaRenderBox =
         _inputAreaKey.currentContext?.findRenderObject() as RenderBox?;
     if (inputAreaRenderBox != null) {
       final inputAreaHeight = inputAreaRenderBox.size.height;
-      bottomMargin = inputAreaHeight + 8.0;
+      margin = EdgeInsets.only(
+        bottom: inputAreaHeight + 8.0,
+        left: 16.0,
+        right: 16.0,
+      );
     }
 
     messenger.showSnackBar(
@@ -69,7 +80,7 @@ class _HomePageState extends State<HomePage> {
         action: action,
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
+        margin: margin, // Use calculated or default margin
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
@@ -136,160 +147,323 @@ Entries using this category will be moved to "Misc".''',
 
   void _showManageCategoriesDialog() {
     final categoryInputController = TextEditingController();
+    String feedbackMessage = '';
+    Timer? feedbackTimer;
+    // Animation controller for feedback text
+    late AnimationController feedbackAnimationController;
+    late Animation<double> feedbackScaleAnimation;
+
+    feedbackAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this, // Use the TickerProviderStateMixin
+    );
+    feedbackScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: feedbackAnimationController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
     showDialog(
       context: context,
       builder:
-          (dialogContext) => BlocProvider.value(
-            value: BlocProvider.of<EntryCubit>(context),
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text('Manage Categories'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Text(
-                        'Add custom categories or delete unused ones (except "Misc").',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    Flexible(
-                      child: BlocBuilder<EntryCubit, EntryState>(
-                        builder: (listBuilderContext, state) {
-                          if (state.categories.isEmpty) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16.0),
-                                child: Text('No categories found.'),
-                              ),
-                            );
-                          }
-                          final sortedCategories = List<String>.from(
-                            state.categories,
-                          )..sort();
+          (dialogContext) => StatefulBuilder(
+            builder: (stfContext, stfSetState) {
+              void showFeedback(String message) {
+                feedbackTimer?.cancel();
+                stfSetState(() {
+                  feedbackMessage = message;
+                });
+                // Trigger animation
+                feedbackAnimationController.forward(from: 0.0);
+                feedbackTimer = Timer(
+                  const Duration(seconds: 2, milliseconds: 500),
+                  () {
+                    if (mounted) {
+                      stfSetState(() {
+                        feedbackMessage = '';
+                      });
+                    }
+                  },
+                );
+              }
 
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: sortedCategories.length,
-                            itemBuilder: (context, index) {
-                              final category = sortedCategories[index];
-                              final bool isMisc = category == 'Misc';
-                              return ListTile(
-                                title: Text(
-                                  category,
-                                  style: TextStyle(
-                                    color: isMisc ? Colors.grey : null,
-                                  ),
-                                ),
-                                dense: true,
-                                trailing:
-                                    isMisc
-                                        ? null
-                                        : IconButton(
-                                          icon: Icon(
-                                            Icons.delete_outline,
-                                            color: Colors.redAccent[100],
-                                          ),
-                                          tooltip: 'Delete Category',
-                                          onPressed: () async {
-                                            final entryCubit =
-                                                listBuilderContext
-                                                    .read<EntryCubit>();
-                                            final navigator = Navigator.of(
-                                              dialogContext,
-                                            );
-
-                                            bool confirmed =
-                                                await _showDeleteCategoryConfirmationDialog(
-                                                  listBuilderContext,
-                                                  category,
-                                                );
-                                            if (confirmed) {
-                                              entryCubit.deleteCategory(
-                                                category,
-                                              );
-                                              navigator.pop();
-                                              if (mounted) {
-                                                _showFloatingSnackBar(
-                                                  context,
-                                                  content: Text(
-                                                    'Category "$category" deleted',
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          },
-                                        ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: TextField(
-                        controller: categoryInputController,
-                        decoration: InputDecoration(
-                          labelText: 'New Category Name',
-                          hintText: 'Enter category to add...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+              return BlocProvider.value(
+                value: BlocProvider.of<EntryCubit>(context),
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: const Text('Manage Categories'),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Text(
+                            'Add custom categories or delete unused ones (except "Misc").',
+                            style: Theme.of(stfContext).textTheme.bodySmall,
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        onSubmitted: (value) {
-                          if (value.trim().isNotEmpty) {
-                            BlocProvider.of<EntryCubit>(
-                              dialogContext,
-                            ).addCustomCategory(value.trim());
-                            categoryInputController.clear();
-                          }
-                        },
-                      ),
+                        Flexible(
+                          child: BlocBuilder<EntryCubit, EntryState>(
+                            builder: (listBuilderContext, state) {
+                              if (state.categories.isEmpty) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 16.0,
+                                    ),
+                                    child: Text('No categories found.'),
+                                  ),
+                                );
+                              }
+                              // Sort categories: Most recent first, Misc last
+                              final List<String> displayCategories = List<String>.from(state.categories);
+                              displayCategories.remove('Misc'); // Remove Misc temporarily
+                              final sortedCategories = displayCategories.reversed.toList(); // Reverse for most recent first
+                              sortedCategories.add('Misc'); // Add Misc back at the end
+
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: sortedCategories.length,
+                                itemBuilder: (context, index) {
+                                  final category = sortedCategories[index];
+                                  final bool isMisc = category == 'Misc';
+                                  return ListTile(
+                                    title: Text(
+                                      category,
+                                      style: TextStyle(
+                                        color: isMisc ? Colors.grey : null,
+                                      ),
+                                    ),
+                                    dense: true,
+                                    trailing:
+                                        isMisc
+                                            ? null
+                                            : Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.edit_outlined,
+                                                    size: 20,
+                                                  ),
+                                                  tooltip: 'Rename Category',
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  splashRadius: 20,
+                                                  onPressed: () async {
+                                                    // Call the new edit dialog
+                                                    final String? newName =
+                                                        await _showEditCategoryDialog(
+                                                          stfContext, // Use StatefulBuilder context
+                                                          category,
+                                                        );
+                                                    if (newName != null &&
+                                                        newName.isNotEmpty &&
+                                                        newName != category) {
+                                                      // Show feedback after successful rename
+                                                      showFeedback(
+                                                        'Category renamed to "$newName"',
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(
+                                                    Icons.delete_outline,
+                                                    color:
+                                                        Colors.redAccent[100],
+                                                    size:
+                                                        20, // Match edit icon size
+                                                  ),
+                                                  tooltip: 'Delete Category',
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  splashRadius: 20,
+                                                  onPressed: () async {
+                                                    final entryCubit =
+                                                        listBuilderContext
+                                                            .read<EntryCubit>();
+
+                                                    bool confirmed =
+                                                        await _showDeleteCategoryConfirmationDialog(
+                                                          listBuilderContext,
+                                                          category,
+                                                        );
+                                                    if (confirmed) {
+                                                      entryCubit.deleteCategory(
+                                                        category,
+                                                      );
+                                                      showFeedback(
+                                                        'Category "$category" deleted',
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        const Divider(height: 24),
+                        if (feedbackMessage.isNotEmpty)
+                          ScaleTransition(
+                            scale: feedbackScaleAnimation,
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: 10.0,
+                                top: 4.0,
+                              ),
+                              child: Text(
+                                feedbackMessage,
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(stfContext).colorScheme.primary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: TextField(
+                            controller: categoryInputController,
+                            decoration: InputDecoration(
+                              labelText: 'New Category Name',
+                              hintText: 'Enter category to add...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onSubmitted: (value) {
+                              if (value.trim().isNotEmpty) {
+                                final newCategory = value.trim();
+                                BlocProvider.of<EntryCubit>(
+                                  dialogContext,
+                                ).addCustomCategory(newCategory);
+                                categoryInputController.clear();
+                                showFeedback('Category "$newCategory" added');
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      child: const Text('Done'),
+                      onPressed: () {
+                        feedbackTimer?.cancel();
+                        Navigator.of(dialogContext).pop();
+                      },
+                    ),
+                    FilledButton(
+                      child: const Text('Add Category'),
+                      onPressed: () {
+                        final newCategory = categoryInputController.text.trim();
+                        if (newCategory.isNotEmpty) {
+                          BlocProvider.of<EntryCubit>(
+                            dialogContext,
+                          ).addCustomCategory(newCategory);
+                          categoryInputController.clear();
+                          showFeedback('Category "$newCategory" added');
+                        }
+                      },
                     ),
                   ],
                 ),
+              );
+            },
+          ),
+    ).whenComplete(() {
+      feedbackTimer?.cancel();
+      feedbackAnimationController.dispose(); // Dispose controller on dismiss
+    });
+  }
+
+  Future<String?> _showEditCategoryDialog(
+    BuildContext context, // Use the context passed from the manage dialog
+    String oldCategoryName,
+  ) async {
+    final editCategoryController = TextEditingController(text: oldCategoryName);
+    final formKey = GlobalKey<FormState>();
+
+    return await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Rename Category'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: editCategoryController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'New Category Name',
+                hintText: 'Enter new name...',
               ),
-              actions: [
-                TextButton(
-                  child: const Text('Done'),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-                FilledButton(
-                  child: const Text('Add Category'),
-                  onPressed: () {
-                    final newCategory = categoryInputController.text.trim();
-                    if (newCategory.isNotEmpty) {
-                      BlocProvider.of<EntryCubit>(
-                        dialogContext,
-                      ).addCustomCategory(newCategory);
-                      categoryInputController.clear();
-                      if (mounted) {
-                        _showFloatingSnackBar(
-                          context,
-                          content: Text('Category "$newCategory" added'),
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
+              validator: (value) {
+                final newName = value?.trim() ?? '';
+                if (newName.isEmpty) {
+                  return 'Category name cannot be empty.';
+                }
+                if (newName == oldCategoryName) {
+                  return 'Please enter a different name.';
+                }
+                // Check if the name already exists (case-insensitive)
+                final existingCategories =
+                    context.read<EntryCubit>().state.categories;
+                if (existingCategories.any(
+                  (cat) => cat.toLowerCase() == newName.toLowerCase(),
+                )) {
+                  return 'Category "$newName" already exists.';
+                }
+                return null;
+              },
             ),
           ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(), // Return null
+            ),
+            FilledButton(
+              child: const Text('Save'),
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  final newName = editCategoryController.text.trim();
+                  // Call the cubit method (to be implemented)
+                  context.read<EntryCubit>().renameCategory(
+                    oldCategoryName,
+                    newName,
+                  );
+                  Navigator.of(
+                    dialogContext,
+                  ).pop(newName); // Return the new name
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

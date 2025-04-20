@@ -197,6 +197,58 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
+  // Method to rename a category
+  Future<void> renameCategory(String oldName, String newName) async {
+    final trimmedNewName = newName.trim();
+    if (oldName == 'Misc' ||
+        trimmedNewName.isEmpty ||
+        oldName == trimmedNewName) {
+      return; // Cannot rename Misc, empty name, or same name
+    }
+
+    // Check if new name already exists (case-insensitive)
+    if (state.categories.any(
+      (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
+    )) {
+      AppLogger.warning(
+        'Rename failed: Category "$trimmedNewName" already exists.',
+      );
+      return; // Avoid renaming if the new name conflicts
+    }
+
+    final updatedCategories =
+        state.categories.map((c) => c == oldName ? trimmedNewName : c).toList();
+    final updatedEntries =
+        state.entries.map((entry) {
+          return entry.category == oldName
+              ? entry.copyWith(category: trimmedNewName)
+              : entry;
+        }).toList();
+
+    // Recalculate display list after updating entries
+    final newDisplayList = _buildDisplayList(
+      updatedEntries,
+      state.filterCategory == oldName
+          ? trimmedNewName
+          : state.filterCategory, // Update filter if it was the old name
+    );
+
+    emit(
+      state.copyWith(
+        entries: updatedEntries,
+        categories: updatedCategories,
+        displayListItems: newDisplayList, // Update the display list
+        // Update filter category in state if it was the one being renamed
+        filterCategory:
+            state.filterCategory == oldName
+                ? trimmedNewName
+                : state.filterCategory,
+      ),
+    );
+    await _saveEntries(updatedEntries);
+    await _saveCategories(updatedCategories);
+  }
+
   // --- Entry Loading/Saving ---
   Future<void> _loadEntries() async {
     emit(state.copyWith(clearLastError: true));
