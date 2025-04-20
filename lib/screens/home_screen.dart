@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
 
 import '../cubit/entry_cubit.dart';
 import '../entry.dart';
@@ -28,10 +29,23 @@ class _MyHomePageState extends State<MyHomePage> {
   final int _targetTapCount = 7;
   // --- End Easter Egg State ---
 
+  String _appVersion = ''; // State variable for version
+
   @override
   void initState() {
     super.initState();
     _inputFocusNode.addListener(_onInputFocusChange);
+    _loadVersionInfo(); // Load version on init
+  }
+
+  // Function to load version info
+  Future<void> _loadVersionInfo() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = 'v${info.version} (${info.buildNumber})';
+      });
+    }
   }
 
   @override
@@ -859,6 +873,22 @@ Entries using this category will be moved to "Misc".''',
           child: Text(widget.title),
         ),
         actions: [
+          // Display version number if available
+          if (_appVersion.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Center(
+                child: Text(
+                  _appVersion,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).appBarTheme.foregroundColor?.withOpacity(0.7),
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
