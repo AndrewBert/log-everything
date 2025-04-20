@@ -17,7 +17,6 @@ class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  @override
   State<HomePage> createState() => _HomePageState();
 }
 
@@ -115,7 +114,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Handle manual send when NOT recording
     if (currentText.isNotEmpty) {
-      HapticFeedback.mediumImpact(); // Add haptic feedback
       entryCubit.addEntry(currentText);
       _showProcessingSnackbar('Processing text entry...');
       _textController.clear();
