@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -205,7 +206,11 @@ class VoiceInputSection extends StatelessWidget {
                     isTranscribing
                         ? null
                         : () {
-                          context.read<VoiceInputCubit>().toggleRecording();
+                          if (state.isRecording) {
+                            _stopRecording(context);
+                          } else {
+                            _startRecording(context);
+                          }
                         },
               ),
             ],
@@ -213,5 +218,35 @@ class VoiceInputSection extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _startRecording(BuildContext context) {
+    final state = context.read<VoiceInputCubit>().state;
+    if (state.micPermissionStatus == PermissionStatus.denied ||
+        state.micPermissionStatus == PermissionStatus.permanentlyDenied) {
+      // Show snackbar for permission denied
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Microphone permission is required for voice input.',
+          ),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () {
+              openAppSettings();
+            },
+          ),
+        ),
+      );
+    } else {
+      // Start recording
+      HapticFeedback.lightImpact(); // Add haptic feedback
+      context.read<VoiceInputCubit>().startRecording();
+    }
+  }
+
+  void _stopRecording(BuildContext context) {
+    HapticFeedback.mediumImpact(); // Add haptic feedback
+    context.read<VoiceInputCubit>().stopRecording();
   }
 }

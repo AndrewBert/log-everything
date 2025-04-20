@@ -78,14 +78,13 @@ class MyApp extends StatelessWidget {
         BlocProvider.value(value: voiceInputCubit),
       ],
       child: MaterialApp(
-        title: 'Log Splitter', // Consider updating title if needed
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
           useMaterial3: true, // Keep Material 3 enabled
         ),
         // Use the new HomeScreen widget
-        home: const HomePage(title: 'Log Splitter'), // Keep title consistent
+        home: const HomePage(), // Keep title consistent
       ),
     );
   }

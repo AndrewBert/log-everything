@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/cubit/voice_input_cubit.dart';
@@ -13,10 +14,9 @@ import '../utils/category_colors.dart';
 import '../widgets/voice_input_section.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title});
+  const HomePage({super.key});
 
-  final String title;
-
+  @override
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -100,6 +100,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       AppLogger.info(
         'Send tapped during recording. Stopping and combining text with transcription.',
       );
+      HapticFeedback.mediumImpact(); // Add haptic feedback
       // Pass current text to the cubit for background processing
       voiceCubit.stopRecordingAndCombine(currentText);
 
@@ -113,6 +114,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Handle manual send when NOT recording
     if (currentText.isNotEmpty) {
+      HapticFeedback.mediumImpact(); // Add haptic feedback
       entryCubit.addEntry(currentText);
       _showProcessingSnackbar('Processing text entry...');
       _textController.clear();
@@ -173,6 +175,7 @@ Entries using this category will be moved to "Misc".''',
   }
 
   void _showManageCategoriesDialog() {
+    HapticFeedback.lightImpact(); // Add haptic feedback
     final categoryInputController = TextEditingController();
     String feedbackMessage = '';
     Timer? feedbackTimer;
@@ -299,6 +302,7 @@ Entries using this category will be moved to "Misc".''',
                                                     if (newName != null &&
                                                         newName.isNotEmpty &&
                                                         newName != category) {
+                                                      HapticFeedback.mediumImpact(); // Add haptic feedback
                                                       showFeedback(
                                                         'Category renamed to "$newName"',
                                                       );
@@ -327,6 +331,7 @@ Entries using this category will be moved to "Misc".''',
                                                           category,
                                                         );
                                                     if (confirmed) {
+                                                      HapticFeedback.mediumImpact(); // Add haptic feedback
                                                       entryCubit.deleteCategory(
                                                         category,
                                                       );
@@ -383,6 +388,7 @@ Entries using this category will be moved to "Misc".''',
                             onSubmitted: (value) {
                               if (value.trim().isNotEmpty) {
                                 final newCategory = value.trim();
+                                HapticFeedback.mediumImpact(); // Add haptic feedback
                                 BlocProvider.of<EntryCubit>(
                                   dialogContext,
                                 ).addCustomCategory(newCategory);
@@ -408,6 +414,7 @@ Entries using this category will be moved to "Misc".''',
                       onPressed: () {
                         final newCategory = categoryInputController.text.trim();
                         if (newCategory.isNotEmpty) {
+                          HapticFeedback.mediumImpact(); // Add haptic feedback
                           BlocProvider.of<EntryCubit>(
                             dialogContext,
                           ).addCustomCategory(newCategory);
@@ -638,6 +645,7 @@ Entries using this category will be moved to "Misc".''',
               availableCategories.map((category) {
                 return SimpleDialogOption(
                   onPressed: () {
+                    HapticFeedback.selectionClick(); // Add haptic feedback
                     Navigator.pop(dialogContext, category);
                   },
                   child: Text(
@@ -673,6 +681,7 @@ Entries using this category will be moved to "Misc".''',
   }
 
   void _showHelpDialog() {
+    HapticFeedback.lightImpact(); // Add haptic feedback
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -899,10 +908,10 @@ Entries using this category will be moved to "Misc".''',
                             onPressed:
                                 isProcessing
                                     ? null
-                                    : () => _showChangeCategoryDialog(
-                                      context,
-                                      entry,
-                                    ),
+                                    : () {
+                                      HapticFeedback.lightImpact(); // Add haptic feedback
+                                      _showChangeCategoryDialog(context, entry);
+                                    },
                             tooltip: isProcessing ? null : 'Change Category',
                           ),
                         ],
@@ -1173,13 +1182,41 @@ Entries using this category will be moved to "Misc".''',
 
   @override
   Widget build(BuildContext context) {
+    // Get the theme colors
+    final Color primaryColor = Theme.of(context).colorScheme.primary;
+    final Color? defaultTitleColor =
+        Theme.of(context).appBarTheme.titleTextStyle?.color;
+
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
           onTap: () {
             context.read<HomeScreenCubit>().incrementTitleTap();
           },
-          child: Text(widget.title),
+          // Replace Text with RichText for multi-colored title
+          child: RichText(
+            text: TextSpan(
+              // Default style for the title (taken from AppBar theme or default)
+              style:
+                  Theme.of(context).appBarTheme.titleTextStyle ??
+                  Theme.of(context).textTheme.titleLarge,
+              children: <TextSpan>[
+                TextSpan(
+                  text: 'Log',
+                  style: TextStyle(
+                    color: primaryColor, // Color for "Log"
+                    fontWeight: FontWeight.bold, // Optional: make it bold
+                  ),
+                ),
+                TextSpan(
+                  text: ' Splitter', // Note the leading space
+                  style: TextStyle(
+                    color: defaultTitleColor, // Color for "Splitter" (default)
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           BlocBuilder<HomeScreenCubit, HomeScreenState>(
@@ -1208,12 +1245,13 @@ Entries using this category will be moved to "Misc".''',
           IconButton(
             icon: const Icon(Icons.help_outline),
             tooltip: 'Help / About',
-            onPressed: _showHelpDialog,
+            onPressed: _showHelpDialog, // Feedback is inside this method
           ),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
-            onPressed: _showManageCategoriesDialog,
+            onPressed:
+                _showManageCategoriesDialog, // Feedback is inside this method
           ),
 
           const SizedBox(width: 8),
