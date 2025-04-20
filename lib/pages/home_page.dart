@@ -764,11 +764,11 @@ Entries using this category will be moved to "Misc".''',
       child: BlocBuilder<EntryCubit, EntryState>(
         builder: (context, state) {
           final List<dynamic> listItems = state.displayListItems;
-
           if (state.isLoading && listItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Return the Expanded ListView directly
           if (listItems.isEmpty) {
             return Center(
               child: Padding(
@@ -787,18 +787,26 @@ Entries using this category will be moved to "Misc".''',
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.only(
+            padding: EdgeInsets.only(
               bottom: 150.0,
               left: 16.0,
               right: 16.0,
+              // Adjust top padding based on whether the filter section is visible
+              // or if processing indicator *was* showing (keeping similar spacing)
+              top: 8.0, // Simplified top padding
             ),
             itemCount: listItems.length,
             separatorBuilder: (context, index) {
+              // ...existing separator logic...
               final currentItem = listItems[index];
               final nextItem =
                   (index + 1 < listItems.length) ? listItems[index + 1] : null;
               if (currentItem is Entry && nextItem is Entry) {
                 return const SizedBox(height: 8.0);
+              }
+              // Add space after date header if needed, or keep minimal
+              if (currentItem is DateTime && nextItem is Entry) {
+                return const SizedBox(height: 4.0);
               }
               return const SizedBox.shrink();
             },
@@ -806,8 +814,12 @@ Entries using this category will be moved to "Misc".''',
               final item = listItems[index];
 
               if (item is DateTime) {
+                // ... existing date header builder ...
                 return Padding(
-                  padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
+                  padding: const EdgeInsets.only(
+                    top: 12.0,
+                    bottom: 4.0, // Reduced bottom padding
+                  ),
                   child: Text(
                     _formatDateHeader(item),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -818,6 +830,7 @@ Entries using this category will be moved to "Misc".''',
                   ),
                 );
               } else if (item is Entry) {
+                // ... existing entry card builder ...
                 final entry = item;
                 bool isProcessing = entry.category == 'Processing...';
                 bool isNew = entry.isNew;
@@ -900,7 +913,7 @@ Entries using this category will be moved to "Misc".''',
                   ),
                 );
               }
-              return Container();
+              return Container(); // Should not happen
             },
           );
         },

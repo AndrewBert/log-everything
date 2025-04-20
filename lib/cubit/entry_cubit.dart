@@ -393,21 +393,44 @@ class EntryCubit extends Cubit<EntryState> {
   Future<void> addEntry(String text) async {
     if (text.isEmpty) return;
 
-    emit(state.copyWith(isLoading: true, clearLastError: true));
+    // 1. Create a temporary processing entry
+    final DateTime processingTimestamp = DateTime.now();
+    final tempEntry = Entry(
+      text: text, // Use original text for temporary display
+      timestamp: processingTimestamp,
+      category: 'Processing...', // Temporary category
+      isNew: true,
+    );
+
+    // 2. Add temporary entry and emit state immediately
+    List<Entry> currentEntries = List<Entry>.from(state.entries);
+    currentEntries.insert(0, tempEntry);
+    final tempDisplayList = _buildDisplayList(
+      currentEntries,
+      state.filterCategory,
+    );
+    emit(
+      state.copyWith(
+        entries: currentEntries,
+        displayListItems: tempDisplayList,
+        isLoading: true, // Indicate background processing
+        clearLastError: true,
+      ),
+    );
+    // Don't save the temporary entry yet
+
+    // 3. Perform AI categorization in the background
     List<EntryPrototype> extractedData = [];
     String? serviceError;
-
     try {
-      // Use the injected service
       extractedData = await _aiService.extractEntries(text, state.categories);
     } on AiCategorizationException catch (e) {
       AppLogger.error(
         "AI Service failed: ${e.message}",
         error: e.underlyingError,
       );
-      serviceError = e.message; // Store user-friendly error message
+      serviceError = e.message;
     } catch (e, stacktrace) {
-      // Catch any other unexpected errors from the service call
       AppLogger.error(
         "Unexpected error calling AI Service",
         error: e,
@@ -416,57 +439,85 @@ class EntryCubit extends Cubit<EntryState> {
       serviceError = "An unexpected error occurred during categorization.";
     }
 
-    // Emit error state if service failed
-    if (serviceError != null) {
-      emit(state.copyWith(isLoading: false, lastErrorMessage: serviceError));
-      return; // Stop processing if AI failed
-    }
+    // 4. Process results and update/replace the temporary entry
+    List<Entry> finalEntries = List<Entry>.from(state.entries);
+    // Find the index of the temporary entry (match by timestamp and initial text)
+    final tempIndex = finalEntries.indexWhere(
+      (e) =>
+          e.timestamp == processingTimestamp &&
+          e.text == text &&
+          e.category == 'Processing...',
+    );
 
-    // --- Process results (same logic as before) ---
-    List<Entry> updatedEntries;
-    if (extractedData.isEmpty) {
-      AppLogger.info(
-        "No entries extracted by AI, adding original text as Misc.",
-      );
-      final fallbackEntry = Entry(
-        text: text,
-        timestamp: DateTime.now(),
-        category: 'Misc',
-        isNew: true,
-      );
-      updatedEntries = List<Entry>.from(state.entries)
-        ..insert(0, fallbackEntry);
-      _markEntryAsNotNewAfterDelay(fallbackEntry);
-    } else {
-      final List<Entry> newEntries = [];
-      final DateTime now = DateTime.now();
-      for (var data in extractedData) {
-        final newEntry = Entry(
-          text: data.text_segment,
-          timestamp: now,
-          category: data.category,
+    if (tempIndex != -1) {
+      // Remove the temporary entry
+      finalEntries.removeAt(tempIndex);
+
+      if (serviceError != null) {
+        // AI failed, update the temp entry to Misc with error indication (optional)
+        // Or just revert to a standard 'Misc' entry
+        final fallbackEntry = Entry(
+          text: text,
+          timestamp: processingTimestamp, // Keep original timestamp
+          category: 'Misc', // Fallback category
           isNew: true,
         );
-        newEntries.add(newEntry);
-        _markEntryAsNotNewAfterDelay(newEntry);
+        finalEntries.insert(tempIndex, fallbackEntry);
+        _markEntryAsNotNewAfterDelay(fallbackEntry);
+        emit(
+          state.copyWith(isLoading: false, lastErrorMessage: serviceError),
+        ); // Emit error
+      } else if (extractedData.isEmpty) {
+        // AI returned no specific entries, update temp entry to Misc
+        final fallbackEntry = Entry(
+          text: text,
+          timestamp: processingTimestamp,
+          category: 'Misc',
+          isNew: true,
+        );
+        finalEntries.insert(tempIndex, fallbackEntry);
+        _markEntryAsNotNewAfterDelay(fallbackEntry);
+      } else {
+        // AI succeeded, insert the new categorized entries
+        final List<Entry> newEntries = [];
+        for (var data in extractedData) {
+          final newEntry = Entry(
+            text: data.text_segment,
+            timestamp:
+                processingTimestamp, // Use consistent timestamp for related entries
+            category: data.category,
+            isNew: true,
+          );
+          newEntries.add(newEntry);
+          _markEntryAsNotNewAfterDelay(newEntry);
+        }
+        // Insert new entries at the original temporary entry position
+        finalEntries.insertAll(tempIndex, newEntries);
       }
-      updatedEntries = List<Entry>.from(state.entries)
-        ..insertAll(0, newEntries);
+    } else {
+      // Should not happen if state management is correct, but log if it does
+      AppLogger.warning("Temporary processing entry not found for update.");
+      // If temp entry wasn't found, handle error/fallback appropriately
+      if (serviceError != null) {
+        emit(state.copyWith(isLoading: false, lastErrorMessage: serviceError));
+      }
     }
 
-    // Recalculate display list and emit final state
-    final newDisplayList = _buildDisplayList(
-      updatedEntries,
+    // 5. Recalculate display list and emit final state
+    final finalDisplayList = _buildDisplayList(
+      finalEntries,
       state.filterCategory,
     );
     emit(
       state.copyWith(
-        entries: updatedEntries,
-        displayListItems: newDisplayList,
-        isLoading: false, // Ensure loading is set to false
+        entries: finalEntries,
+        displayListItems: finalDisplayList,
+        isLoading: false, // Processing finished
+        // Keep error message if it occurred, otherwise clear it implicitly by not setting it
+        lastErrorMessage: serviceError,
       ),
     );
-    await _saveEntries(updatedEntries);
+    await _saveEntries(finalEntries);
   }
 
   Future<void> addEntryObject(Entry entryToAdd) async {
