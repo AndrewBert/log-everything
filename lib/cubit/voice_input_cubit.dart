@@ -1,5 +1,4 @@
 import 'dart:async'; // Added for Timer
-import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
@@ -44,7 +43,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     final status = await Permission.microphone.request();
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
-      AppLogger.warning('Microphone permission permanently denied.');
+      AppLogger.warning(
+        '[requestMicrophonePermission] Microphone permission permanently denied.',
+      );
       // Optionally guide user to settings
     }
   }
@@ -58,12 +59,24 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Future<void> startRecording() async {
-    AppLogger.info("Attempting to start recording...");
-    if (state.micPermissionStatus != PermissionStatus.granted) {
-      await requestMicrophonePermission();
-      if (state.micPermissionStatus != PermissionStatus.granted) {
+    AppLogger.info("[startRecording] Attempting to start recording...");
+
+    PermissionStatus currentStatus = await Permission.microphone.status;
+    if (currentStatus != state.micPermissionStatus) {
+      emit(state.copyWith(micPermissionStatus: currentStatus));
+    }
+
+    if (currentStatus != PermissionStatus.granted) {
+      await requestMicrophonePermission(); // This logs the result internally
+      // Re-check status *immediately* after requesting
+      currentStatus = await Permission.microphone.status;
+      if (currentStatus != state.micPermissionStatus) {
+        emit(state.copyWith(micPermissionStatus: currentStatus));
+      }
+
+      if (currentStatus != PermissionStatus.granted) {
         AppLogger.warning(
-          "Microphone permission not granted. Cannot start recording.",
+          "[startRecording] Microphone permission still not granted ($currentStatus). Cannot start recording.",
         );
         emit(
           state.copyWith(
@@ -106,7 +119,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  // Stop recording and transcribe in FOREGROUND (updates text field via state)
   Future<void> stopRecording() async {
     AppLogger.info("Stopping recording (foreground transcription)");
     if (!state.isRecording) return;
@@ -133,14 +145,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       if (!isTooShort && path != null) {
         await transcribeAudio(); // Triggers foreground flow
       } else {
-        // Handle too short or null path
         if (isTooShort) {
           AppLogger.info("Skipping transcription: recording too short.");
         } else {
           AppLogger.error("Failed to save recording, path is null.");
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
-        // Clean up state if transcription is skipped
         emit(
           state.copyWith(
             clearAudioPath: true,
@@ -162,7 +172,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  // NEW: Stop recording, transcribe, combine with initial text, and add entry
   Future<void> stopRecordingAndCombine(String initialText) async {
     AppLogger.info(
       "Stopping recording to combine with initial text: '$initialText'",
@@ -178,35 +187,29 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       audioPath = await _audioRecorder.stop();
       AppLogger.info("Recording stopped for combine, audio path: $audioPath");
 
-      // Update state immediately to reflect recording stopped
-      // Set status to transcribing temporarily for UI feedback (optional)
       emit(
         state.copyWith(
           isRecording: false,
           clearRecordingTime: true,
-          audioPath: audioPath, // Keep path temporarily
+          audioPath: audioPath,
           clearErrorMessage: true,
           transcriptionStatus:
               (!isTooShort && audioPath != null)
-                  ? TranscriptionStatus
-                      .transcribing // Show transcribing indicator
+                  ? TranscriptionStatus.transcribing
                   : TranscriptionStatus.idle,
         ),
       );
 
       if (!isTooShort && audioPath != null) {
-        // Perform transcription
         try {
           final transcription = await _speechService.transcribeAudio(
             audioPath,
             language: 'en',
           );
 
-          String combinedText =
-              initialText; // Start with the text from the field
+          String combinedText = initialText;
           if (transcription != null && transcription.isNotEmpty) {
             AppLogger.info('Transcription successful: "$transcription"');
-            // Combine with initial text, adding a space if needed
             if (combinedText.isNotEmpty &&
                 !combinedText.endsWith(' ') &&
                 !combinedText.endsWith('\n')) {
@@ -217,13 +220,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             AppLogger.warning(
               'Transcription failed or returned empty text. Using only initial text.',
             );
-            // Optionally show an error or just proceed with initial text
           }
 
           if (combinedText.isNotEmpty) {
             AppLogger.info('Adding combined entry: "$combinedText"');
             _entryCubit.addEntry(combinedText);
-            // Reset state after successful processing
             emit(
               state.copyWith(
                 transcriptionStatus: TranscriptionStatus.idle,
@@ -241,7 +242,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           }
         } catch (e) {
           AppLogger.error("Transcription error during combine", error: e);
-          // Add entry with only the initial text if transcription failed?
           if (initialText.isNotEmpty) {
             AppLogger.warning(
               'Adding entry with only initial text due to transcription error.',
@@ -257,12 +257,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           );
         }
       } else {
-        // Handle too short or null path for combine
         if (isTooShort) {
           AppLogger.info(
             "Skipping transcription for combine: recording too short.",
           );
-          // Add entry with only the initial text if it exists
           if (initialText.isNotEmpty) {
             AppLogger.info(
               'Adding entry with only initial text (recording too short).',
@@ -279,10 +277,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             );
             _entryCubit.addEntry(initialText);
           }
-          // Optionally emit an error state
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
-        // Ensure state is cleaned up
         emit(
           state.copyWith(
             clearAudioPath: true,
@@ -310,7 +306,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  // Transcribe for FOREGROUND (updates text field)
   Future<void> transcribeAudio() async {
     AppLogger.info("Starting foreground transcription");
     if (state.audioPath == null || state.audioPath!.isEmpty) {
@@ -324,7 +319,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       return;
     }
 
-    // Ensure status is just 'transcribing' for foreground
     emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
 
     try {
@@ -339,7 +333,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           state.copyWith(
             transcribedText: transcription,
             transcriptionStatus: TranscriptionStatus.success,
-            clearAudioPath: true, // Clear path after successful transcription
+            clearAudioPath: true,
           ),
         );
       } else {
@@ -366,14 +360,13 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  // Helper to calculate duration
   Duration _calculateRecordingDuration() {
     if (state.recordingStartTime == null) return Duration.zero;
     return DateTime.now().difference(state.recordingStartTime!);
   }
 
   void _startRecordingTimer() {
-    _cancelRecordingTimer(); // Ensure no duplicate timers
+    _cancelRecordingTimer();
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final duration = _calculateRecordingDuration();
       emit(state.copyWith(recordingDuration: duration));
@@ -382,7 +375,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         AppLogger.info(
           "Max recording duration reached. Stopping automatically.",
         );
-        stopRecording(); // Normal stop for foreground transcription
+        stopRecording();
       }
     });
   }
@@ -392,12 +385,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     _recordingTimer = null;
   }
 
-  // Call this from UI listener after using the transcribed text
   void clearTranscribedText() {
     emit(state.copyWith(clearTranscribedText: true));
   }
 
-  // Call this from UI listener after showing an error message
   void clearErrorState() {
     emit(state.copyWith(clearErrorMessage: true));
   }

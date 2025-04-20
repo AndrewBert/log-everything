@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _inputFocusNode.addListener(_onInputFocusChange);
+    context.read<HomeScreenCubit>().loadVersionInfo();
   }
 
   @override
@@ -1226,13 +1227,12 @@ Entries using this category will be moved to "Misc".''',
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: Center(
+                    // Add Text widget to display the version
                     child: Text(
                       state.appVersion,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).appBarTheme.foregroundColor?.withOpacity(0.7),
+                        color: Colors.black87, // Changed to a dark color
                       ),
                     ),
                   ),
