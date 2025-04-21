@@ -114,30 +114,45 @@ class CategoryColors {
 
   /// Load saved category colors from SharedPreferences
   static Future<void> _loadCategoryColors() async {
+    Map<String, Color> loadedColors = {}; // Load into a temporary map
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedColors = prefs.getString(_prefs_key);
 
       if (savedColors != null) {
-        final Map<String, dynamic> decodedMap = jsonDecode(savedColors);
+        try {
+          final Map<String, dynamic> decodedMap = jsonDecode(savedColors);
 
-        _categoryColors = Map.fromEntries(
-          decodedMap.entries.map(
-            (entry) =>
-                MapEntry(entry.key, _colorFromHex(entry.value as String)),
-          ),
-        );
-
-        AppLogger.info(
-          'Loaded ${_categoryColors.length} category colors from preferences',
-        );
+          for (var entry in decodedMap.entries) {
+            try {
+              // Attempt to parse each entry individually
+              final color = _colorFromHex(entry.value as String);
+              loadedColors[entry.key] = color;
+            } catch (e) {
+              // Log error for the specific entry but continue with others
+              AppLogger.warning(
+                'Error parsing color for category "${entry.key}" (value: ${entry.value}). Skipping.',
+                error: e,
+              );
+            }
+          }
+          AppLogger.info(
+            'Successfully loaded ${loadedColors.length} category colors from preferences.',
+          );
+        } catch (e) {
+          // Error decoding the main JSON string
+          AppLogger.error('Error decoding category colors JSON', error: e);
+          // Keep whatever was loaded successfully before the JSON error, or empty if JSON was invalid from start
+        }
       } else {
         AppLogger.info('No saved category colors found in preferences');
       }
     } catch (e) {
-      AppLogger.error('Error loading category colors', error: e);
-      _categoryColors = {};
+      // Catch errors related to SharedPreferences access itself
+      AppLogger.error('Error accessing SharedPreferences for category colors', error: e);
     }
+    // Assign the successfully loaded colors (or empty map) to the static variable
+    _categoryColors = loadedColors;
   }
 
   /// Save category colors to SharedPreferences
@@ -153,9 +168,6 @@ class CategoryColors {
       );
 
       await prefs.setString(_prefs_key, jsonEncode(colorHexMap));
-      AppLogger.info(
-        'Saved ${_categoryColors.length} category colors to preferences',
-      );
     } catch (e) {
       AppLogger.error('Error saving category colors', error: e);
     }
