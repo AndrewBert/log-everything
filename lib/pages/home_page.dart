@@ -794,7 +794,6 @@ Entries using this category will be moved to "Misc".''',
                 _showWhatsNewDialog(); // Show the What's New dialog
               },
             ),
-            const Spacer(), // Push close button to the right
             TextButton(
               child: const Text('Close'),
               onPressed: () => Navigator.of(dialogContext).pop(),
