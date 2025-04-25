@@ -21,6 +21,7 @@ import '../dialogs/change_category_dialog.dart';
 import '../dialogs/help_dialog.dart';
 import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/edit_category_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -201,73 +202,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // Update _showEditCategoryDialog to use the new widget
   Future<String?> _showEditCategoryDialog(
-    BuildContext context, // Use the context passed from the manage dialog
+    BuildContext context, // Context is still needed to show the dialog
     String oldCategoryName,
   ) async {
-    final editCategoryController = TextEditingController(text: oldCategoryName);
-    final formKey = GlobalKey<FormState>();
-
-    return await showDialog<String>(
+    // Use the new EditCategoryDialog widget
+    return await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Rename Category'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: editCategoryController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'New Category Name',
-                hintText: 'Enter new name...',
-              ),
-              validator: (value) {
-                final newName = value?.trim() ?? '';
-                if (newName.isEmpty) {
-                  return 'Category name cannot be empty.';
-                }
-                if (newName == oldCategoryName) {
-                  return 'Please enter a different name.';
-                }
-                // Check if the name already exists (case-insensitive)
-                final existingCategories =
-                    context.read<EntryCubit>().state.categories;
-                if (existingCategories.any(
-                  (cat) => cat.toLowerCase() == newName.toLowerCase(),
-                )) {
-                  return 'Category "$newName" already exists.';
-                }
-                return null;
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(), // Return null
-            ),
-            FilledButton(
-              child: const Text('Save'),
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  final newName = editCategoryController.text.trim();
-                  // Call the cubit method (to be implemented)
-                  context.read<EntryCubit>().renameCategory(
-                    oldCategoryName,
-                    newName,
-                  );
-                  Navigator.of(
-                    dialogContext,
-                  ).pop(newName); // Return the new name
-                }
-              },
-            ),
-          ],
-        );
+        // Provide the EntryCubit to the dialog subtree if needed for validation
+        // (Assuming EntryCubit is already provided above this context)
+        return EditCategoryDialog(oldCategoryName: oldCategoryName);
       },
     );
   }
