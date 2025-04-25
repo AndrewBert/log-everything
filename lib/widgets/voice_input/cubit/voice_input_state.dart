@@ -1,57 +1,59 @@
-import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart'; // <-- Import Equatable
 import 'package:permission_handler/permission_handler.dart';
 
-enum TranscriptionStatus {
-  idle,
-  transcribing, // Foreground transcription (updates text field)
-  success, // Foreground transcription completed
-  error,
-}
+enum TranscriptionStatus { idle, transcribing, success, error }
 
+// Extend Equatable
 class VoiceInputState extends Equatable {
   final bool isRecording;
+  final DateTime? recordingStartTime;
+  final Duration recordingDuration;
   final String? audioPath;
-  final String? transcribedText; // Only used for foreground transcription
+  final String? transcribedText;
   final String? errorMessage;
   final PermissionStatus micPermissionStatus;
   final TranscriptionStatus transcriptionStatus;
-  final DateTime? recordingStartTime;
-  final Duration recordingDuration;
 
   const VoiceInputState({
     this.isRecording = false,
+    this.recordingStartTime,
+    this.recordingDuration = Duration.zero,
     this.audioPath,
     this.transcribedText,
     this.errorMessage,
     this.micPermissionStatus = PermissionStatus.denied,
     this.transcriptionStatus = TranscriptionStatus.idle,
-    this.recordingStartTime,
-    this.recordingDuration = Duration.zero,
   });
+
+  // Implement props getter
+  @override
+  List<Object?> get props => [
+    isRecording,
+    recordingStartTime,
+    recordingDuration,
+    audioPath,
+    transcribedText,
+    errorMessage,
+    micPermissionStatus,
+    transcriptionStatus,
+  ];
 
   VoiceInputState copyWith({
     bool? isRecording,
+    DateTime? recordingStartTime,
+    Duration? recordingDuration,
     String? audioPath,
     String? transcribedText,
     String? errorMessage,
     PermissionStatus? micPermissionStatus,
     TranscriptionStatus? transcriptionStatus,
-    DateTime? recordingStartTime,
-    Duration? recordingDuration,
+    bool clearRecordingTime = false,
     bool clearAudioPath = false,
     bool clearTranscribedText = false,
     bool clearErrorMessage = false,
-    bool clearRecordingTime = false,
   }) {
     return VoiceInputState(
       isRecording: isRecording ?? this.isRecording,
-      audioPath: clearAudioPath ? null : audioPath ?? this.audioPath,
-      transcribedText:
-          clearTranscribedText ? null : transcribedText ?? this.transcribedText,
-      errorMessage:
-          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
-      micPermissionStatus: micPermissionStatus ?? this.micPermissionStatus,
-      transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
       recordingStartTime:
           clearRecordingTime
               ? null
@@ -60,18 +62,13 @@ class VoiceInputState extends Equatable {
           clearRecordingTime
               ? Duration.zero
               : recordingDuration ?? this.recordingDuration,
+      audioPath: clearAudioPath ? null : audioPath ?? this.audioPath,
+      transcribedText:
+          clearTranscribedText ? null : transcribedText ?? this.transcribedText,
+      errorMessage:
+          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
+      micPermissionStatus: micPermissionStatus ?? this.micPermissionStatus,
+      transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
     );
   }
-
-  @override
-  List<Object?> get props => [
-    isRecording,
-    audioPath,
-    transcribedText,
-    errorMessage,
-    micPermissionStatus,
-    transcriptionStatus,
-    recordingStartTime,
-    recordingDuration,
-  ];
 }

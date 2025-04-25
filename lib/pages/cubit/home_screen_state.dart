@@ -1,56 +1,46 @@
-import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart'; // <-- Import Equatable
 
+// Extend Equatable
 class HomeScreenState extends Equatable {
   final bool isInputFocused;
-  final int titleTapCount;
   final String appVersion;
-  final bool isVersionLoading;
-  final String? snackBarMessage; // Optional: For showing snackbars via state
-  final bool showWhatsNewDialog; // Flag to trigger the dialog
-  final String? lastSeenVersion; // Store the version seen by the user
+  final bool showWhatsNewDialog;
+  final String? snackBarMessage; // Nullable
+  final int titleTapCount; // Added based on file content
 
   const HomeScreenState({
     this.isInputFocused = false,
-    this.titleTapCount = 0,
     this.appVersion = '',
-    this.isVersionLoading = false,
+    this.showWhatsNewDialog = false,
     this.snackBarMessage,
-    this.showWhatsNewDialog = false, // Default to false
-    this.lastSeenVersion, // Initially null
+    this.titleTapCount = 0,
   });
 
-  HomeScreenState copyWith({
-    bool? isInputFocused,
-    int? titleTapCount,
-    String? appVersion,
-    bool? isVersionLoading,
-    String? snackBarMessage,
-    bool clearSnackBar = false, // Helper to clear snackbar message
-    bool? showWhatsNewDialog,
-    String? lastSeenVersion,
-    bool clearLastSeenVersion = false, // Helper if needed
-  }) {
-    return HomeScreenState(
-      isInputFocused: isInputFocused ?? this.isInputFocused,
-      titleTapCount: titleTapCount ?? this.titleTapCount,
-      appVersion: appVersion ?? this.appVersion,
-      isVersionLoading: isVersionLoading ?? this.isVersionLoading,
-      snackBarMessage:
-          clearSnackBar ? null : snackBarMessage ?? this.snackBarMessage,
-      showWhatsNewDialog: showWhatsNewDialog ?? this.showWhatsNewDialog,
-      lastSeenVersion:
-          clearLastSeenVersion ? null : lastSeenVersion ?? this.lastSeenVersion,
-    );
-  }
-
+  // Implement props getter
   @override
   List<Object?> get props => [
     isInputFocused,
-    titleTapCount,
     appVersion,
-    isVersionLoading,
-    snackBarMessage,
     showWhatsNewDialog,
-    lastSeenVersion,
+    snackBarMessage,
+    titleTapCount,
   ];
+
+  HomeScreenState copyWith({
+    bool? isInputFocused,
+    String? appVersion,
+    bool? showWhatsNewDialog,
+    String? snackBarMessage,
+    bool clearSnackBarMessage = false,
+    int? titleTapCount,
+  }) {
+    return HomeScreenState(
+      isInputFocused: isInputFocused ?? this.isInputFocused,
+      appVersion: appVersion ?? this.appVersion,
+      showWhatsNewDialog: showWhatsNewDialog ?? this.showWhatsNewDialog,
+      snackBarMessage:
+          clearSnackBarMessage ? null : snackBarMessage ?? this.snackBarMessage,
+      titleTapCount: titleTapCount ?? this.titleTapCount,
+    );
+  }
 }
