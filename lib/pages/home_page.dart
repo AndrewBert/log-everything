@@ -15,7 +15,8 @@ import '../utils/category_colors.dart';
 import '../widgets/whats_new_dialog.dart'; // Import the new dialog
 import '../widgets/entries_list.dart'; // Import the new EntriesList widget
 import '../widgets/filter_section.dart'; // Import the new FilterSection widget
-import '../widgets/input_area.dart'; // <-- Import the new InputArea widget
+import '../widgets/input_area.dart';
+import '../dialogs/edit_entry_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -528,118 +529,30 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
-  void _showEditEntryDialog(BuildContext context, Entry originalEntry) {
-    final editController = TextEditingController(text: originalEntry.text);
-    String selectedCategory = originalEntry.category;
-
-    final currentState = context.read<EntryCubit>().state;
-    final availableCategories = List<String>.from(currentState.categories)
-      ..sort();
-
-    if (!availableCategories.contains(selectedCategory)) {
-      selectedCategory = 'Misc';
-    }
-
-    showDialog(
+  Future<void> _showEditEntryDialog(
+    BuildContext context,
+    Entry originalEntry,
+  ) async {
+    // Show the new dialog and wait for the result (updated entry or null)
+    final Entry? updatedEntry = await showDialog<Entry?>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (stfContext, stfSetState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text('Edit Entry'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: editController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: 'Entry Text',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
-                    maxLines: null,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items:
-                        availableCategories.map((String category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        stfSetState(() {
-                          selectedCategory = newValue;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-                FilledButton(
-                  child: const Text('Update'),
-                  onPressed: () {
-                    final updatedText = editController.text.trim();
-                    if (updatedText.isNotEmpty) {
-                      final updatedEntry = Entry(
-                        text: updatedText,
-                        category: selectedCategory,
-                        timestamp: originalEntry.timestamp,
-                      );
-                      context.read<EntryCubit>().updateEntry(
-                        originalEntry,
-                        updatedEntry,
-                      );
-                      Navigator.of(dialogContext).pop();
-                      if (mounted) {
-                        _showFloatingSnackBar(
-                          context,
-                          content: const Text('Entry updated'),
-                          duration: const Duration(seconds: 1),
-                        );
-                      }
-                    } else {
-                      _showFloatingSnackBar(
-                        stfContext,
-                        content: const Text('Entry text cannot be empty.'),
-                        backgroundColor: Colors.redAccent,
-                      );
-                    }
-                  },
-                ),
-              ],
-            );
-          },
+        // Provide the necessary cubit to the dialog subtree
+        return BlocProvider.value(
+          value: BlocProvider.of<EntryCubit>(context),
+          child: EditEntryDialog(originalEntry: originalEntry),
         );
       },
     );
+
+    // If an entry was returned (meaning update was successful)
+    if (updatedEntry != null && mounted) {
+      _showFloatingSnackBar(
+        context,
+        content: const Text('Entry updated'),
+        duration: const Duration(seconds: 1),
+      );
+    }
   }
 
   Future<void> _showChangeCategoryDialog(

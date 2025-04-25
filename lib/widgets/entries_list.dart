@@ -92,7 +92,7 @@ class EntriesList extends StatelessWidget {
                 bool isProcessing = entry.category == 'Processing...';
                 bool isNew = entry.isNew;
                 Color categoryColor = getCategoryColor(entry.category);
-
+                // todo pull out into private widget
                 return Card(
                   elevation: isNew ? 4.0 : 1.0,
                   margin: const EdgeInsets.symmetric(
