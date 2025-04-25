@@ -1,32 +1,31 @@
-import 'dart:async'; // Added for Timer
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:flutter/services.dart'; // Import for HapticFeedback
+import 'package:flutter/services.dart';
 
 import '../../../speech_service.dart';
 import '../../../utils/logger.dart';
 import 'voice_input_state.dart';
-import '../../../entry/cubit/entry_cubit.dart'; // <-- New import location
+import '../../../entry/cubit/entry_cubit.dart';
+import '../../../locator.dart'; // <-- Import locator
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;
   final SpeechService _speechService;
-  final EntryCubit _entryCubit; // Add EntryCubit dependency
+  final EntryCubit _entryCubit;
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
-  VoiceInputCubit({
-    required AudioRecorder audioRecorder,
-    required SpeechService speechService,
-    required EntryCubit entryCubit, // Inject EntryCubit
-  }) : _audioRecorder = audioRecorder,
-       _speechService = speechService,
-       _entryCubit = entryCubit, // Store EntryCubit
-       super(const VoiceInputState()) {
+  // Modify constructor to use locator
+  VoiceInputCubit()
+    : _audioRecorder = locator<AudioRecorder>(), // <-- Get from locator
+      _speechService = locator<SpeechService>(), // <-- Get from locator
+      _entryCubit = locator<EntryCubit>(), // <-- Get from locator
+      super(const VoiceInputState()) {
     _initialize();
   }
 

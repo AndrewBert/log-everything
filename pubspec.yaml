@@ -45,6 +45,7 @@ dependencies:
   collection: ^1.19.1
   package_info_plus: ^8.0.0 # Added for version info
   equatable: ^2.0.7
+  get_it: ^8.0.3
 
 dev_dependencies:
   flutter_test:

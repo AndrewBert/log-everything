@@ -7,20 +7,20 @@ import '../entry.dart';
 import '../../utils/logger.dart';
 import '../../services/ai_categorization_service.dart';
 import '../../services/entry_persistence_service.dart';
+import '../../locator.dart'; // <-- Import locator
 
 part 'entry_state.dart';
 
 class EntryCubit extends Cubit<EntryState> {
-  // Inject the service
   final AiCategorizationService _aiService;
   final EntryPersistenceService _persistenceService;
 
-  EntryCubit({
-    required AiCategorizationService aiService,
-    required EntryPersistenceService persistenceService,
-  }) : _aiService = aiService,
-       _persistenceService = persistenceService,
-       super(EntryState()) {
+  // Modify constructor to use locator
+  EntryCubit()
+    : _aiService = locator<AiCategorizationService>(), // <-- Get from locator
+      _persistenceService =
+          locator<EntryPersistenceService>(), // <-- Get from locator
+      super(EntryState()) {
     _loadAllData();
   }
 
