@@ -14,3 +14,8 @@ This project uses **Flutter** and **Dart**.
       double? green,
       double? blue,
       ColorSpace? colorSpace})
+-  **When using `copyWith`, passing `null` as a parameter does _not_ update the field to `null` if your implementation uses nullable parameters with default values. If you need to explicitly set a field to `null`, add a dedicated `bool` parameter (e.g., `clearController`) to your `copyWith` method to clear that specific field.**
+- When asked to refactor code, avoid causing a regression in functionality. If it does happen, call it out loudly.
+- When creating a new cubit and state, use "part 'test_state.dart';" and "part of 'test_cubit.dart';" to link them instead of imports
+- Organize private methods below the build method in widgets
+
