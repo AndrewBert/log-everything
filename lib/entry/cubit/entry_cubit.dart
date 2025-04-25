@@ -100,7 +100,9 @@ class EntryCubit extends Cubit<EntryState> {
     return listItems;
   }
 
-  // Update _updateStateFromRepository to log category changes
+  // --- UI State Update Helpers ---
+
+  // Update _updateStateFromRepository to remove logging
   void _updateStateFromRepository({
     required List<Entry> updatedEntries,
     List<String>? updatedCategories,
@@ -113,103 +115,92 @@ class EntryCubit extends Cubit<EntryState> {
             : (newFilterCategory ?? state.filterCategory);
     final newDisplayList = _buildDisplayList(updatedEntries, filterToUse);
 
-    // Log category changes before emitting
-    if (updatedCategories != null &&
-        !const DeepCollectionEquality().equals(
-          state.categories,
-          updatedCategories,
-        )) {
-      AppLogger.debug(
-        '[Cubit._updateStateFromRepository] Categories changed. Emitting: $updatedCategories',
-      );
-    } else if (updatedCategories != null) {
-      AppLogger.debug(
-        '[Cubit._updateStateFromRepository] Categories provided but unchanged.',
-      );
-    }
+    emit(state.copyWith(
+      categories: updatedCategories ?? state.categories,
+      displayListItems: newDisplayList,
+      filterCategory: filterToUse,
+      clearFilter: clearFilter ?? false,
+      clearLastError: true,
+    ));
+  }
 
+  // Re-add: Method to show a temporary entry immediately
+  void showTemporaryEntry(Entry tempEntry) {
+    AppLogger.debug(
+      '[Cubit.showTemporaryEntry] Showing temp entry: ${tempEntry.text}',
+    );
+    final currentEntries = _entryRepository.currentEntries;
+    // Create a temporary list for display purposes only
+    final tempEntriesList = [tempEntry, ...currentEntries];
+    final tempDisplayList = _buildDisplayList(
+      tempEntriesList,
+      state.filterCategory,
+    );
     emit(
       state.copyWith(
-        categories: updatedCategories ?? state.categories,
-        displayListItems: newDisplayList,
-        filterCategory: filterToUse,
-        clearFilter: clearFilter ?? false,
+        isLoading: true, // Indicate processing
+        displayListItems: tempDisplayList,
         clearLastError: true,
       ),
     );
   }
 
+  // Re-add: Method to finalize state after background processing
+  void finalizeProcessing(List<Entry> finalEntries) {
+    AppLogger.debug(
+      '[Cubit.finalizeProcessing] Finalizing with ${finalEntries.length} entries.',
+    );
+    final finalCategories =
+        _entryRepository.currentCategories; // Get latest categories
+    final finalDisplayList = _buildDisplayList(
+      finalEntries,
+      state.filterCategory,
+    );
+    emit(
+      state.copyWith(
+        isLoading: false, // Processing finished
+        displayListItems: finalDisplayList,
+        categories: finalCategories,
+        clearLastError: true, // Assume success if this is called
+      ),
+    );
+    // Start timers for any new entries added during processing
+    finalEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
+  }
+
   // --- Public Methods (delegating to repository) ---
 
+  // Ensure addEntry uses the helper methods
   Future<void> addEntry(String text) async {
     if (text.isEmpty) return;
 
-    // 1. Create temporary entry
     final DateTime processingTimestamp = DateTime.now();
     final tempEntry = Entry(
-      text: text, // Show original text while processing
+      text: text,
       timestamp: processingTimestamp,
       category: 'Processing...',
       isNew: true,
     );
 
-    // 2. Get current state from repository and create temporary list
-    final currentEntries = _entryRepository.currentEntries;
-    final tempEntriesList = [
-      tempEntry,
-      ...currentEntries,
-    ]; // Prepend temp entry
-    final tempDisplayList = _buildDisplayList(
-      tempEntriesList,
-      state.filterCategory,
-    );
+    // Use the helper to show temporary state
+    showTemporaryEntry(tempEntry);
 
-    // 3. Emit intermediate loading state with temporary entry visible
-    emit(
-      state.copyWith(
-        isLoading: true,
-        displayListItems: tempDisplayList,
-        // Keep current categories, don't clear them here
-        // categories: state.categories,
-        clearLastError: true,
-      ),
-    );
-
-    // 4. Call repository to process and save (this updates repo's internal list)
     List<Entry> finalEntries = [];
     try {
-      // Repository now handles AI call and saving
       finalEntries = await _entryRepository.addEntry(text);
-      // Get latest categories in case they changed (unlikely here, but good practice)
-      final finalCategories = _entryRepository.currentCategories;
-      // Build final display list from repository's current state
-      final finalDisplayList = _buildDisplayList(
-        finalEntries,
-        state.filterCategory,
-      );
 
-      // 5. Emit final state
-      emit(
-        state.copyWith(
-          isLoading: false,
-          displayListItems: finalDisplayList,
-          categories: finalCategories,
-          // Error message is handled by the repository call result if needed
-        ),
-      );
+      finalizeProcessing(finalEntries);
 
-      // 6. Start timers for the *actual* new entries added by the repository
-      finalEntries
-          .where(
-            (e) => e.isNew && e.timestamp == processingTimestamp,
-          ) // Find entries from this operation
-          .forEach(_markEntryAsNotNewAfterDelay);
-      HapticFeedback.mediumImpact(); // Feedback after successful processing
+      final entriesToStartTimerFor = finalEntries
+          .where((e) => e.isNew && e.timestamp == processingTimestamp)
+          .toList();
+
+      entriesToStartTimerFor.forEach(_markEntryAsNotNewAfterDelay);
+      HapticFeedback.mediumImpact();
     } catch (e) {
       AppLogger.error("Cubit: Error adding entry via repository", error: e);
-      // If repo call failed, revert UI to state before temp entry was added?
-      // Or just show error and leave temp entry (which might be confusing)
-      // Let's revert for now:
+      // Revert UI state
+      final currentEntries = _entryRepository.currentEntries;
       final revertedDisplayList = _buildDisplayList(
         currentEntries,
         state.filterCategory,
@@ -218,11 +209,10 @@ class EntryCubit extends Cubit<EntryState> {
         state.copyWith(
           isLoading: false,
           lastErrorMessage: "Failed to add entry.",
-          displayListItems: revertedDisplayList, // Show list without temp entry
+          displayListItems: revertedDisplayList,
         ),
       );
     }
-    // Note: isLoading: false is handled in both success and error paths now
   }
 
   Future<void> addEntryObject(Entry entryToAdd) async {
@@ -264,40 +254,17 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  // Update _markEntryAsNotNewAfterDelay to add logging
+  // Update _markEntryAsNotNewAfterDelay to remove logging
   void _markEntryAsNotNewAfterDelay(Entry entry) {
-    // Cancel any existing timer for this specific entry
     _newEntryTimers[entry.timestamp]?.cancel();
-    AppLogger.debug(
-      '[Cubit._markEntryAsNotNewAfterDelay] Starting timer for entry: ${entry.text} (${entry.timestamp})',
-    );
-
-    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
-      AppLogger.debug(
-        '[Cubit._markEntryAsNotNewAfterDelay] Timer fired for entry: ${entry.text} (${entry.timestamp})',
-      );
+    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () async {
       if (!isClosed) {
-        // Ask repository to update the flag
-        bool updated = _entryRepository.markEntryAsNotNew(
-          entry.timestamp,
-          entry.text,
-        );
-        AppLogger.debug(
-          '[Cubit._markEntryAsNotNewAfterDelay] Repository update result: $updated',
-        );
+        bool updated = await _entryRepository.markEntryAsNotNew(entry.timestamp, entry.text);
         if (updated) {
-          // If updated, get the current list from repo and update UI state
           final currentEntries = _entryRepository.currentEntries;
-          AppLogger.debug(
-            '[Cubit._markEntryAsNotNewAfterDelay] Calling _updateStateFromRepository after flag update.',
-          );
           _updateStateFromRepository(updatedEntries: currentEntries);
         }
         _newEntryTimers.remove(entry.timestamp);
-      } else {
-        AppLogger.debug(
-          '[Cubit._markEntryAsNotNewAfterDelay] Timer fired but cubit closed.',
-        );
       }
     });
   }
@@ -305,13 +272,7 @@ class EntryCubit extends Cubit<EntryState> {
   Future<void> addCustomCategory(String newCategory) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository.addCustomCategory(
-        newCategory,
-      );
-      AppLogger.debug(
-        '[Cubit.addCustomCategory] Received from repo: $updatedCategories',
-      );
-      // Only update categories in state
+      final updatedCategories = await _entryRepository.addCustomCategory(newCategory);
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category via repository", error: e);
@@ -324,9 +285,6 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     try {
       final result = await _entryRepository.deleteCategory(categoryToDelete);
-      AppLogger.debug(
-        '[Cubit.deleteCategory] Received from repo: Categories=${result.categories}',
-      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
@@ -345,14 +303,10 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     try {
       final result = await _entryRepository.renameCategory(oldName, newName);
-      AppLogger.debug(
-        '[Cubit.renameCategory] Received from repo: Categories=${result.categories}',
-      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
-        newFilterCategory:
-            state.filterCategory == oldName ? newName : state.filterCategory,
+        newFilterCategory: state.filterCategory == oldName ? newName : state.filterCategory,
       );
     } catch (e) {
       AppLogger.error(

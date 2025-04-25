@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../entry/cubit/entry_cubit.dart';
-import '../utils/logger.dart';
 
 class FilterSection extends StatelessWidget {
   const FilterSection({super.key});
@@ -21,10 +20,6 @@ class FilterSection extends StatelessWidget {
         children: [
           BlocBuilder<EntryCubit, EntryState>(
             builder: (context, state) {
-              AppLogger.debug(
-                '[FilterSection.builder] Building with categories: ${state.categories}',
-              );
-
               final dropdownCategories = [
                 'All Categories',
                 ...List<String>.from(state.categories)..sort(),

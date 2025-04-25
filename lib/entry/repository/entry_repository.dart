@@ -174,111 +174,81 @@ class EntryRepository {
     return currentEntries; // Return a copy
   }
 
-  // Method to update isNew status (called by Cubit after delay)
-  // Returns true if an update occurred
-  bool markEntryAsNotNew(DateTime timestamp, String text) {
-    AppLogger.debug(
-      '[Repo.markEntryAsNotNew] Attempting to mark entry as not new: $text ($timestamp)',
-    );
-    final index = _entries.indexWhere(
-      (e) => e.timestamp == timestamp && e.text == text && e.isNew,
-    );
-    if (index != -1) {
-      AppLogger.debug(
-        '[Repo.markEntryAsNotNew] Found entry at index $index. Updating isNew to false.',
-      );
-      _entries[index] = _entries[index].copyWith(isNew: false);
-      // We don't save here; Cubit should trigger save after UI update if needed.
-      return true;
-    }
-    AppLogger.debug(
-      '[Repo.markEntryAsNotNew] Entry not found or already not new.',
-    );
-    return false;
-  }
-
   Future<List<String>> addCustomCategory(String newCategory) async {
     final trimmedCategory = newCategory.trim();
     if (trimmedCategory.isNotEmpty &&
         trimmedCategory != 'Misc' &&
         !_categories.contains(trimmedCategory)) {
-      AppLogger.debug('[Repo.addCustomCategory] Before: $_categories');
       _categories.add(trimmedCategory);
       await _saveCategories();
-      AppLogger.debug('[Repo.addCustomCategory] After: $_categories');
     }
-    // Return a copy using the getter
     return currentCategories;
   }
 
   Future<({List<Entry> entries, List<String> categories})> deleteCategory(
-    String categoryToDelete,
-  ) async {
-    if (categoryToDelete == 'Misc')
-      return (entries: currentEntries, categories: currentCategories);
+      String categoryToDelete) async {
+    if (categoryToDelete == 'Misc') return (entries: currentEntries, categories: currentCategories);
 
     if (_categories.contains(categoryToDelete)) {
-      AppLogger.debug('[Repo.deleteCategory] Before: $_categories');
       _categories.remove(categoryToDelete);
       bool entriesChanged = false;
-      _entries =
-          _entries.map((entry) {
-            if (entry.category == categoryToDelete) {
-              entriesChanged = true;
-              return entry.copyWith(category: 'Misc');
-            }
-            return entry;
-          }).toList();
+      _entries = _entries.map((entry) {
+        if (entry.category == categoryToDelete) {
+          entriesChanged = true;
+          return entry.copyWith(category: 'Misc');
+        }
+        return entry;
+      }).toList();
 
       await _saveCategories();
       if (entriesChanged) {
         await _saveEntries();
       }
-      AppLogger.debug('[Repo.deleteCategory] After: $_categories');
     }
-    // Return copies using the getters
     return (entries: currentEntries, categories: currentCategories);
   }
 
   Future<({List<Entry> entries, List<String> categories})> renameCategory(
-    String oldName,
-    String newName,
-  ) async {
+      String oldName, String newName) async {
     final trimmedNewName = newName.trim();
     if (oldName == 'Misc' ||
         trimmedNewName.isEmpty ||
         oldName == trimmedNewName ||
-        _categories.any(
-          (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
-        )) {
+        _categories.any((c) => c.toLowerCase() == trimmedNewName.toLowerCase())) {
       AppLogger.warning(
         'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
       );
-      return (
-        entries: currentEntries,
-        categories: currentCategories,
-      ); // Return copies
+      return (entries: currentEntries, categories: currentCategories);
     }
 
-    AppLogger.debug('[Repo.renameCategory] Before: $_categories');
-    _categories =
-        _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
+    _categories = _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
     bool entriesChanged = false;
-    _entries =
-        _entries.map((entry) {
-          if (entry.category == oldName) {
-            entriesChanged = true;
-            return entry.copyWith(category: trimmedNewName);
-          }
-          return entry;
-        }).toList();
+    _entries = _entries.map((entry) {
+      if (entry.category == oldName) {
+        entriesChanged = true;
+        return entry.copyWith(category: trimmedNewName);
+      }
+      return entry;
+    }).toList();
 
     await _saveCategories();
     if (entriesChanged) {
       await _saveEntries();
     }
-    AppLogger.debug('[Repo.renameCategory] After: $_categories');
-    // Return copies using the getters
     return (entries: currentEntries, categories: currentCategories);
+  }
+
+  // Method to update isNew status (called by Cubit after delay)
+  // Returns true if an update occurred
+  Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
+     final index = _entries.indexWhere(
+          (e) => e.timestamp == timestamp && e.text == text && e.isNew,
+        );
+     if (index != -1) {
+        _entries[index] = _entries[index].copyWith(isNew: false);
+        await _saveEntries(); 
+        return true;
+     }
+     return false;
   }
 }
