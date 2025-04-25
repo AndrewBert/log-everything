@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -32,7 +31,6 @@ class VoiceInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Listener for handling state changes like errors, permissions, status
     return BlocListener<VoiceInputCubit, VoiceInputState>(
       listenWhen: (previous, current) {
         // Listen for status changes, errors
@@ -134,7 +132,6 @@ class VoiceInput extends StatelessWidget {
           });
         }
       },
-      // Builder for the actual UI (button, timer)
       child: BlocBuilder<VoiceInputCubit, VoiceInputState>(
         builder: (context, state) {
           // Format recording duration for display
@@ -169,8 +166,8 @@ class VoiceInput extends StatelessWidget {
                   decoration: BoxDecoration(
                     color:
                         approachingLimit
-                            ? Colors.red.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.2),
+                            ? Colors.red.withAlpha((255 * 0.2).round())
+                            : Colors.grey.withAlpha((255 * 0.2).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

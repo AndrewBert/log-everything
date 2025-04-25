@@ -182,7 +182,8 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                               itemContext, // Use context from item builder
                                               category,
                                             );
-                                        if (confirmed) {
+                                        // Add mounted check before using context after await
+                                        if (confirmed && itemContext.mounted) {
                                           HapticFeedback.mediumImpact();
                                           // Cubit action is still needed here
                                           itemContext

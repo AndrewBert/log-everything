@@ -142,8 +142,13 @@ class EntriesList extends StatelessWidget {
                             ),
                             backgroundColor:
                                 isProcessing
-                                    ? Colors.orange.shade100.withOpacity(0.8)
-                                    : categoryColor.withOpacity(0.2),
+                                    // Replace deprecated withOpacity
+                                    ? Colors.orange.shade100.withAlpha(
+                                      (255 * 0.8).round(),
+                                    )
+                                    : categoryColor.withAlpha(
+                                      (255 * 0.2).round(),
+                                    ),
                             side: BorderSide.none,
                             visualDensity: VisualDensity.compact,
                             padding: const EdgeInsets.symmetric(

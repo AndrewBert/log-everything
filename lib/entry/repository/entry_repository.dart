@@ -120,7 +120,8 @@ class EntryRepository {
       // AI succeeded
       for (var data in extractedData) {
         final newEntry = Entry(
-          text: data.text_segment,
+          // Use the renamed field textSegment
+          text: data.textSegment,
           timestamp: processingTimestamp,
           category:
               _categories.contains(data.category) ? data.category : 'Misc',
@@ -246,7 +247,8 @@ class EntryRepository {
       // AI succeeded
       for (var data in extractedData) {
         final newEntry = Entry(
-          text: data.text_segment,
+          // Use the renamed field textSegment
+          text: data.textSegment,
           timestamp: tempEntryTimestamp, // Use original timestamp
           category:
               _categories.contains(data.category) ? data.category : 'Misc',
@@ -282,8 +284,9 @@ class EntryRepository {
   Future<({List<Entry> entries, List<String> categories})> deleteCategory(
     String categoryToDelete,
   ) async {
-    if (categoryToDelete == 'Misc')
+    if (categoryToDelete == 'Misc') {
       return (entries: currentEntries, categories: currentCategories);
+    }
 
     if (_categories.contains(categoryToDelete)) {
       _categories.remove(categoryToDelete);

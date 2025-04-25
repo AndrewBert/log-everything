@@ -3,8 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../utils/logger.dart'; // Assuming logger is accessible
 
-// Helper type for extracted entry data (can be moved here or kept in cubit)
-typedef EntryPrototype = ({String text_segment, String category});
+// Rename field in typedef to follow Dart conventions
+typedef EntryPrototype = ({String textSegment, String category});
 
 // Interface for AI Categorization Service
 abstract class AiCategorizationService {
@@ -124,7 +124,7 @@ class OpenAiCategorizationService implements AiCategorizationService {
         body: jsonEncode(requestBody),
       );
 
-      // --- Response Parsing Logic (Moved from Cubit) ---
+      // --- Response Parsing Logic ---
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
 
@@ -164,25 +164,28 @@ class OpenAiCategorizationService implements AiCategorizationService {
                 bool formatErrorOccurred = false;
 
                 for (var item in entriesListJson) {
+                  // Use string literal 'text_segment' for JSON key access
                   if (item is Map<String, dynamic> &&
                       item.containsKey('text_segment') &&
                       item['text_segment'] is String &&
                       item.containsKey('category') &&
                       item['category'] is String) {
-                    String segment = item['text_segment'];
+                    String segment = item['text_segment']; // Read from JSON key
                     String category = item['category'];
 
                     if (categories.contains(category)) {
+                      // Assign to the renamed typedef field
                       extractedEntries.add((
-                        text_segment: segment,
+                        textSegment: segment,
                         category: category,
                       ));
                     } else {
                       AppLogger.warning(
                         "OpenAI category ('$category') not in allowed list. Using 'Misc' for: '$segment'",
                       );
+                      // Assign to the renamed typedef field
                       extractedEntries.add((
-                        text_segment: segment,
+                        textSegment: segment,
                         category: 'Misc',
                       ));
                     }

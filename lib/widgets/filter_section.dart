@@ -38,9 +38,12 @@ class FilterSection extends StatelessWidget {
                   vertical: 0,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.4),
+                  // Replace deprecated surfaceVariant
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest // Use replacement
+                      // Replace deprecated withOpacity
+                      .withAlpha((255 * 0.4).round()),
                   borderRadius: BorderRadius.circular(20.0),
                 ),
                 child: DropdownButtonHideUnderline(

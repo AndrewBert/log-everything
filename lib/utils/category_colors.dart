@@ -7,7 +7,8 @@ import 'logger.dart';
 
 /// Utility class to manage colors for categories
 class CategoryColors {
-  static const String _prefs_key = 'category_colors_v1';
+  // Rename constant to lowerCamelCase
+  static const String _prefsKey = 'category_colors_v1';
 
   // Predefined set of more muted, text-friendly colors for categories
   // These colors are specifically chosen to work well as backgrounds with text
@@ -117,7 +118,7 @@ class CategoryColors {
     Map<String, Color> loadedColors = {}; // Load into a temporary map
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedColors = prefs.getString(_prefs_key);
+      final savedColors = prefs.getString(_prefsKey);
 
       if (savedColors != null) {
         try {
@@ -149,7 +150,10 @@ class CategoryColors {
       }
     } catch (e) {
       // Catch errors related to SharedPreferences access itself
-      AppLogger.error('Error accessing SharedPreferences for category colors', error: e);
+      AppLogger.error(
+        'Error accessing SharedPreferences for category colors',
+        error: e,
+      );
     }
     // Assign the successfully loaded colors (or empty map) to the static variable
     _categoryColors = loadedColors;
@@ -167,7 +171,7 @@ class CategoryColors {
         ),
       );
 
-      await prefs.setString(_prefs_key, jsonEncode(colorHexMap));
+      await prefs.setString(_prefsKey, jsonEncode(colorHexMap));
     } catch (e) {
       AppLogger.error('Error saving category colors', error: e);
     }
@@ -183,6 +187,8 @@ class CategoryColors {
 
   /// Convert a Color to a hex string
   static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+    int argb = color.toARGB32();
+    String hex = argb.toRadixString(16).padLeft(8, '0');
+    return '#${hex.substring(2)}';
   }
 }

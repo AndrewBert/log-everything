@@ -107,9 +107,12 @@ class _InputAreaState extends State<InputArea> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.6),
+                  // Replace deprecated surfaceVariant
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest // Use replacement
+                      // Replace deprecated withOpacity
+                      .withAlpha((255 * 0.6).round()),
                   labelText: isInputFocused ? 'Enter log entry' : null,
                   hintText: 'What happened?...',
                   isDense: true,
