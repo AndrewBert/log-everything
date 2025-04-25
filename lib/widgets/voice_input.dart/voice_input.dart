@@ -3,8 +3,8 @@ import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../cubit/voice_input_cubit.dart';
-import '../cubit/voice_input_state.dart';
+import 'cubit/voice_input_cubit.dart';
+import 'cubit/voice_input_state.dart';
 
 // Define a type for the snackbar callback
 typedef ShowSnackBarCallback =
@@ -16,13 +16,13 @@ typedef ShowSnackBarCallback =
       Color? backgroundColor,
     });
 
-class VoiceInputSection extends StatelessWidget {
+class VoiceInput extends StatelessWidget {
   final TextEditingController textController;
   final FocusNode inputFocusNode;
   final bool isInputFocused;
   final ShowSnackBarCallback showSnackBar;
 
-  const VoiceInputSection({
+  const VoiceInput({
     super.key,
     required this.textController,
     required this.inputFocusNode,
