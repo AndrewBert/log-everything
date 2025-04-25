@@ -3,7 +3,7 @@ import 'package:myapp/services/ai_categorization_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/speech_service.dart';
 import 'package:record/record.dart';
-import 'package:myapp/entry/cubit/entry_cubit.dart'; // <-- Import EntryCubit
+import 'package:myapp/entry/repository/entry_repository.dart'; // <-- Import EntryRepository
 
 // Create a GetIt instance
 GetIt locator = GetIt.instance;
@@ -19,7 +19,12 @@ void setupLocator() {
   locator.registerLazySingleton(() => SpeechService());
   locator.registerLazySingleton(() => AudioRecorder());
 
-  // Register EntryCubit as a lazy singleton
-  // It will fetch its dependencies (services) from the locator when created
-  locator.registerLazySingleton(() => EntryCubit());
+  // Register EntryRepository as a lazy singleton
+  // It fetches its dependencies (services) from the locator when created
+  locator.registerLazySingleton(
+    () => EntryRepository(
+      persistenceService: locator<EntryPersistenceService>(),
+      aiService: locator<AiCategorizationService>(),
+    ),
+  );
 }

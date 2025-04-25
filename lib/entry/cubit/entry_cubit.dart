@@ -5,268 +5,74 @@ import 'package:collection/collection.dart';
 
 import '../entry.dart';
 import '../../utils/logger.dart';
-import '../../services/ai_categorization_service.dart';
-import '../../services/entry_persistence_service.dart';
-import '../../locator.dart'; // <-- Import locator
+import '../repository/entry_repository.dart';
 
 part 'entry_state.dart';
 
 class EntryCubit extends Cubit<EntryState> {
-  final AiCategorizationService _aiService;
-  final EntryPersistenceService _persistenceService;
+  final EntryRepository _entryRepository;
 
-  // Modify constructor to use locator
-  EntryCubit()
-    : _aiService = locator<AiCategorizationService>(), // <-- Get from locator
-      _persistenceService =
-          locator<EntryPersistenceService>(), // <-- Get from locator
+  EntryCubit({required EntryRepository entryRepository})
+    : _entryRepository = entryRepository,
       super(EntryState()) {
-    _loadAllData();
+    _initialize();
   }
 
   final Map<DateTime, Timer> _newEntryTimers = {};
   static const Duration _newEntryHighlightDuration = Duration(seconds: 5);
 
   @override
-  Future<void> close() async {
+  Future<void> close() {
     _newEntryTimers.forEach((_, timer) => timer.cancel());
     _newEntryTimers.clear();
-    super.close();
+    return super.close();
   }
 
-  void _markEntryAsNotNewAfterDelay(Entry entry) {
-    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
-      if (!isClosed) {
-        final index = state.entries.indexWhere(
-          (e) => e.timestamp == entry.timestamp && e.text == entry.text,
-        );
-        if (index != -1) {
-          final updatedEntries = List<Entry>.from(state.entries);
-          updatedEntries[index] = entry.copyWith(isNew: false);
-
-          // Recalculate display list when 'isNew' changes
-          final newDisplayList = _buildDisplayList(
-            updatedEntries,
-            state.filterCategory,
-          );
-          emit(
-            state.copyWith(
-              entries: updatedEntries,
-              displayListItems: newDisplayList,
-            ),
-          );
-          _saveEntries(updatedEntries); // Call the cubit's save method
-        }
-        _newEntryTimers.remove(entry.timestamp);
-      }
-    });
-  }
-
-  // --- Category Management ---
-
-  Future<void> _loadCategories() async {
-    emit(state.copyWith(clearLastError: true));
-    try {
-      // Use persistence service
-      final loadedCategories = await _persistenceService.loadCategories();
-      emit(state.copyWith(categories: loadedCategories));
-      AppLogger.info("Cubit: Loaded Categories: ${state.categories}");
-    } catch (e) {
-      AppLogger.error("Cubit: Error loading categories", error: e);
-      emit(state.copyWith(lastErrorMessage: "Failed to load categories."));
-      // Optionally emit default categories from service as fallback?
-      // emit(state.copyWith(categories: _persistenceService.getDefaultCategories()));
-    }
-  }
-
-  Future<void> _saveCategories(List<String> categories) async {
-    emit(state.copyWith(clearLastError: true));
-    try {
-      // Use persistence service
-      await _persistenceService.saveCategories(categories);
-      AppLogger.info("Cubit: Saved Categories: $categories");
-    } catch (e) {
-      AppLogger.error("Cubit: Error saving categories", error: e);
-      emit(state.copyWith(lastErrorMessage: "Failed to save categories."));
-    }
-  }
-
-  Future<void> addCustomCategory(String newCategory) async {
-    final trimmedCategory = newCategory.trim();
-    if (trimmedCategory.isNotEmpty &&
-        trimmedCategory != 'Misc' &&
-        !state.categories.contains(trimmedCategory)) {
-      final updatedCategories = List<String>.from(state.categories)
-        ..add(trimmedCategory);
-      // Emit state first for responsiveness
-      emit(state.copyWith(categories: updatedCategories, clearLastError: true));
-      // Then save using the service
-      await _saveCategories(updatedCategories);
-    }
-  }
-
-  Future<void> deleteCategory(String categoryToDelete) async {
-    if (categoryToDelete == 'Misc') return;
-
-    if (state.categories.contains(categoryToDelete)) {
-      emit(state.copyWith(clearLastError: true));
-      final updatedCategories = List<String>.from(state.categories)
-        ..remove(categoryToDelete);
-      final updatedEntries =
-          state.entries.map((entry) {
-            return entry.category == categoryToDelete
-                ? entry.copyWith(category: 'Misc')
-                : entry;
-          }).toList();
-
-      // Recalculate display list after updating entries
-      final newDisplayList = _buildDisplayList(
-        updatedEntries,
-        state.filterCategory,
-      );
-
-      // Emit state first
-      emit(
-        state.copyWith(
-          categories: updatedCategories,
-          entries: updatedEntries,
-          displayListItems: newDisplayList,
-          // Clear filter if the deleted category was the selected filter
-          clearFilter: state.filterCategory == categoryToDelete,
-        ),
-      );
-      // Then save using the service
-      await _saveCategories(updatedCategories);
-      await _saveEntries(updatedEntries);
-    }
-  }
-
-  // Method to rename a category
-  Future<void> renameCategory(String oldName, String newName) async {
-    final trimmedNewName = newName.trim();
-    if (oldName == 'Misc' ||
-        trimmedNewName.isEmpty ||
-        oldName == trimmedNewName) {
-      return; // Cannot rename Misc, empty name, or same name
-    }
-
-    // Check if new name already exists (case-insensitive)
-    if (state.categories.any(
-      (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
-    )) {
-      AppLogger.warning(
-        'Rename failed: Category "$trimmedNewName" already exists.',
-      );
-      return; // Avoid renaming if the new name conflicts
-    }
-
-    final updatedCategories =
-        state.categories.map((c) => c == oldName ? trimmedNewName : c).toList();
-    final updatedEntries =
-        state.entries.map((entry) {
-          return entry.category == oldName
-              ? entry.copyWith(category: trimmedNewName)
-              : entry;
-        }).toList();
-
-    // Recalculate display list after updating entries
-    final newDisplayList = _buildDisplayList(
-      updatedEntries,
-      state.filterCategory == oldName
-          ? trimmedNewName
-          : state.filterCategory, // Update filter if it was the old name
-    );
-
-    // Emit state first
-    emit(
-      state.copyWith(
-        entries: updatedEntries,
-        categories: updatedCategories,
-        displayListItems: newDisplayList, // Update the display list
-        // Update filter category in state if it was the one being renamed
-        filterCategory:
-            state.filterCategory == oldName
-                ? trimmedNewName
-                : state.filterCategory,
-      ),
-    );
-    // Then save using the service
-    await _saveEntries(updatedEntries);
-    await _saveCategories(updatedCategories);
-  }
-
-  // --- Entry Loading/Saving ---
-  Future<void> _loadEntries() async {
-    emit(state.copyWith(clearLastError: true));
-    List<Entry> loadedEntries = [];
-    try {
-      // Use persistence service
-      loadedEntries = await _persistenceService.loadEntries();
-      AppLogger.info(
-        'Cubit: Successfully loaded ${loadedEntries.length} entries.',
-      );
-      // Calculate display list after loading
-      final newDisplayList = _buildDisplayList(
-        loadedEntries,
-        null,
-      ); // No filter initially
-      emit(
-        state.copyWith(
-          entries: loadedEntries,
-          displayListItems: newDisplayList,
-        ),
-      );
-    } catch (e) {
-      AppLogger.error(
-        'Cubit: Error loading entries. Clearing potentially incompatible data.',
-        error: e,
-      );
-      emit(
-        state.copyWith(
-          entries: [],
-          displayListItems: [], // Clear display list on error
-          lastErrorMessage: "Failed to load entries.", // More generic message
-        ),
-      );
-    }
-  }
-
-  Future<void> _loadAllData() async {
+  Future<void> _initialize() async {
     emit(state.copyWith(isLoading: true, clearLastError: true));
-    await _loadCategories();
-    if (state.lastErrorMessage == null) {
-      await _loadEntries(); // This now calculates and emits displayListItems
-    }
-    // Loading is finished, ensure isLoading is false, keep loaded data
-    emit(state.copyWith(isLoading: false));
-  }
-
-  Future<void> _saveEntries(List<Entry> entries) async {
     try {
-      // Use persistence service
-      await _persistenceService.saveEntries(entries);
-      AppLogger.info('Cubit: Saved ${entries.length} entries.');
+      await _entryRepository.initialize();
+      final initialEntries = _entryRepository.currentEntries;
+      final initialCategories = _entryRepository.currentCategories;
+      final initialDisplayList = _buildDisplayList(initialEntries, null);
+      emit(
+        state.copyWith(
+          isLoading: false,
+          categories: initialCategories,
+          displayListItems: initialDisplayList,
+        ),
+      );
+      initialEntries
+          .where((e) => e.isNew)
+          .forEach(_markEntryAsNotNewAfterDelay);
     } catch (e) {
-      AppLogger.error('Cubit: Error saving entries', error: e);
-      emit(state.copyWith(lastErrorMessage: "Failed to save entries."));
+      AppLogger.error("Cubit: Error initializing repository", error: e);
+      emit(
+        state.copyWith(
+          isLoading: false,
+          lastErrorMessage: "Failed to load initial data.",
+        ),
+      );
     }
   }
 
-  // --- Helper to build the display list ---
+  // Helper to build the display list from entries and filter
   List<dynamic> _buildDisplayList(List<Entry> entries, String? filterCategory) {
-    // Apply filtering
+    // Ensure we have a mutable list to work with before filtering/sorting
+    List<Entry> mutableEntries = List<Entry>.from(entries);
+
     final List<Entry> filteredEntries =
         filterCategory == null
-            ? entries
-            : entries
+            ? mutableEntries // Use the mutable copy
+            : mutableEntries
                 .where((entry) => entry.category == filterCategory)
-                .toList();
+                .toList(); // .where().toList() already creates a new mutable list
 
-    // Sort entries by timestamp (descending) - applied before grouping
+    // Sort the filtered list (which is now guaranteed to be mutable)
     filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     if (filteredEntries.isEmpty) {
-      return []; // Return empty list if no entries match
+      return [];
     }
 
     // Group entries by date
@@ -286,236 +92,239 @@ class EntryCubit extends Cubit<EntryState> {
     // Create the final list with headers and entries
     final List<dynamic> listItems = [];
     for (var date in sortedDates) {
-      listItems.add(date); // Add date header
-      // Entries within the date are already sorted by timestamp descending
-      listItems.addAll(groupedEntries[date]!); // Add entries for that date
+      listItems.add(date);
+      listItems.addAll(groupedEntries[date]!);
     }
 
     return listItems;
   }
 
-  // --- Method to set the filter ---
-  void setFilter(String? category) {
-    AppLogger.info(
-      "Setting filter to: ${category ?? 'null'}",
-    ); // Log the attempt
-    final newDisplayList = _buildDisplayList(state.entries, category);
+  void _updateStateFromRepository({
+    required List<Entry> updatedEntries,
+    List<String>? updatedCategories,
+    bool? clearFilter,
+    String? newFilterCategory,
+  }) {
+    final filterToUse =
+        (clearFilter ?? false)
+            ? null
+            : (newFilterCategory ?? state.filterCategory);
+    final newDisplayList = _buildDisplayList(updatedEntries, filterToUse);
     emit(
       state.copyWith(
-        // Pass the category value. It's used if non-null and clearFilter is false.
-        filterCategory: category,
-        // Explicitly set clearFilter to true when the desired category is null.
-        clearFilter: category == null,
+        categories: updatedCategories ?? state.categories,
         displayListItems: newDisplayList,
-        clearLastError: true, // Clear any previous errors when filter changes
-      ),
-    );
-  }
-
-  // --- Entry Manipulation ---
-  Future<void> addEntry(String text) async {
-    if (text.isEmpty) return;
-
-    // 1. Create a temporary processing entry
-    final DateTime processingTimestamp = DateTime.now();
-    final tempEntry = Entry(
-      text: text, // Use original text for temporary display
-      timestamp: processingTimestamp,
-      category: 'Processing...', // Temporary category
-      isNew: true,
-    );
-
-    // 2. Add temporary entry and emit state immediately
-    List<Entry> currentEntries = List<Entry>.from(state.entries);
-    currentEntries.insert(0, tempEntry);
-    final tempDisplayList = _buildDisplayList(
-      currentEntries,
-      state.filterCategory,
-    );
-    emit(
-      state.copyWith(
-        entries: currentEntries,
-        displayListItems: tempDisplayList,
-        isLoading: true, // Indicate background processing
+        filterCategory: filterToUse,
+        clearFilter: clearFilter ?? false,
         clearLastError: true,
       ),
     );
-    // Don't save the temporary entry yet
+  }
 
-    // 3. Perform AI categorization in the background
-    List<EntryPrototype> extractedData = [];
-    String? serviceError;
-    try {
-      extractedData = await _aiService.extractEntries(text, state.categories);
-    } on AiCategorizationException catch (e) {
-      AppLogger.error(
-        "AI Service failed: ${e.message}",
-        error: e.underlyingError,
-      );
-      serviceError = e.message;
-    } catch (e, stacktrace) {
-      AppLogger.error(
-        "Unexpected error calling AI Service",
-        error: e,
-        stackTrace: stacktrace,
-      );
-      serviceError = "An unexpected error occurred during categorization.";
-    }
+  // --- Public Methods (delegating to repository) ---
 
-    // 4. Process results and update/replace the temporary entry
-    List<Entry> finalEntries = List<Entry>.from(state.entries);
-    // Find the index of the temporary entry (match by timestamp and initial text)
-    final tempIndex = finalEntries.indexWhere(
-      (e) =>
-          e.timestamp == processingTimestamp &&
-          e.text == text &&
-          e.category == 'Processing...',
+  Future<void> addEntry(String text) async {
+    if (text.isEmpty) return;
+
+    // 1. Create temporary entry
+    final DateTime processingTimestamp = DateTime.now();
+    final tempEntry = Entry(
+      text: text, // Show original text while processing
+      timestamp: processingTimestamp,
+      category: 'Processing...',
+      isNew: true,
     );
 
-    if (tempIndex != -1) {
-      // Remove the temporary entry
-      finalEntries.removeAt(tempIndex);
-
-      if (serviceError != null) {
-        // AI failed, update the temp entry to Misc with error indication (optional)
-        // Or just revert to a standard 'Misc' entry
-        final fallbackEntry = Entry(
-          text: text,
-          timestamp: processingTimestamp, // Keep original timestamp
-          category: 'Misc', // Fallback category
-          isNew: true,
-        );
-        finalEntries.insert(tempIndex, fallbackEntry);
-        _markEntryAsNotNewAfterDelay(fallbackEntry);
-        emit(
-          state.copyWith(isLoading: false, lastErrorMessage: serviceError),
-        ); // Emit error
-      } else if (extractedData.isEmpty) {
-        // AI returned no specific entries, update temp entry to Misc
-        final fallbackEntry = Entry(
-          text: text,
-          timestamp: processingTimestamp,
-          category: 'Misc',
-          isNew: true,
-        );
-        finalEntries.insert(tempIndex, fallbackEntry);
-        _markEntryAsNotNewAfterDelay(fallbackEntry);
-      } else {
-        // AI succeeded, insert the new categorized entries
-        final List<Entry> newEntries = [];
-        for (var data in extractedData) {
-          final newEntry = Entry(
-            text: data.text_segment,
-            timestamp:
-                processingTimestamp, // Use consistent timestamp for related entries
-            category: data.category,
-            isNew: true,
-          );
-          newEntries.add(newEntry);
-          _markEntryAsNotNewAfterDelay(newEntry);
-        }
-        // Insert new entries at the original temporary entry position
-        finalEntries.insertAll(tempIndex, newEntries);
-      }
-    } else {
-      // Should not happen if state management is correct, but log if it does
-      AppLogger.warning("Temporary processing entry not found for update.");
-      // If temp entry wasn't found, handle error/fallback appropriately
-      if (serviceError != null) {
-        emit(state.copyWith(isLoading: false, lastErrorMessage: serviceError));
-      }
-    }
-
-    // 5. Recalculate display list and emit final state
-    final finalDisplayList = _buildDisplayList(
-      finalEntries,
+    // 2. Get current state from repository and create temporary list
+    final currentEntries = _entryRepository.currentEntries;
+    final tempEntriesList = [
+      tempEntry,
+      ...currentEntries,
+    ]; // Prepend temp entry
+    final tempDisplayList = _buildDisplayList(
+      tempEntriesList,
       state.filterCategory,
     );
-    // Add haptic feedback after processing is complete
-    HapticFeedback.mediumImpact();
+
+    // 3. Emit intermediate loading state with temporary entry visible
     emit(
       state.copyWith(
-        entries: finalEntries,
-        displayListItems: finalDisplayList,
-        isLoading: false, // Processing finished
-        // Keep error message if it occurred, otherwise clear it implicitly by not setting it
-        lastErrorMessage: serviceError,
+        isLoading: true,
+        displayListItems: tempDisplayList,
+        // Keep current categories, don't clear them here
+        // categories: state.categories,
+        clearLastError: true,
       ),
     );
-    await _saveEntries(finalEntries);
-  }
 
-  Future<void> addEntryObject(Entry entryToAdd) async {
-    emit(state.copyWith(clearLastError: true));
-    final updatedEntries = List<Entry>.from(state.entries)..add(entryToAdd);
-    // No need to sort here, _buildDisplayList handles sorting
-    final newDisplayList = _buildDisplayList(
-      updatedEntries,
-      state.filterCategory,
-    );
-    emit(
-      state.copyWith(entries: updatedEntries, displayListItems: newDisplayList),
-    );
-    // Save after adding
-    await _saveEntries(updatedEntries);
-    AppLogger.info("Undid delete for entry - ${entryToAdd.text}");
-  }
+    // 4. Call repository to process and save (this updates repo's internal list)
+    List<Entry> finalEntries = [];
+    try {
+      // Repository now handles AI call and saving
+      finalEntries = await _entryRepository.addEntry(text);
+      // Get latest categories in case they changed (unlikely here, but good practice)
+      final finalCategories = _entryRepository.currentCategories;
+      // Build final display list from repository's current state
+      final finalDisplayList = _buildDisplayList(
+        finalEntries,
+        state.filterCategory,
+      );
 
-  Future<void> deleteEntry(Entry entryToDelete) async {
-    emit(state.copyWith(clearLastError: true));
-    final originalEntries = List<Entry>.from(state.entries);
-    final updatedEntries =
-        originalEntries
-            .where(
-              (entry) =>
-                  !(entry.timestamp == entryToDelete.timestamp &&
-                      entry.text == entryToDelete.text),
-            )
-            .toList();
+      // 5. Emit final state
+      emit(
+        state.copyWith(
+          isLoading: false,
+          displayListItems: finalDisplayList,
+          categories: finalCategories,
+          // Error message is handled by the repository call result if needed
+        ),
+      );
 
-    if (updatedEntries.length < originalEntries.length) {
-      final newDisplayList = _buildDisplayList(
-        updatedEntries,
+      // 6. Start timers for the *actual* new entries added by the repository
+      finalEntries
+          .where(
+            (e) => e.isNew && e.timestamp == processingTimestamp,
+          ) // Find entries from this operation
+          .forEach(_markEntryAsNotNewAfterDelay);
+      HapticFeedback.mediumImpact(); // Feedback after successful processing
+    } catch (e) {
+      AppLogger.error("Cubit: Error adding entry via repository", error: e);
+      // If repo call failed, revert UI to state before temp entry was added?
+      // Or just show error and leave temp entry (which might be confusing)
+      // Let's revert for now:
+      final revertedDisplayList = _buildDisplayList(
+        currentEntries,
         state.filterCategory,
       );
       emit(
         state.copyWith(
-          entries: updatedEntries,
-          displayListItems: newDisplayList,
+          isLoading: false,
+          lastErrorMessage: "Failed to add entry.",
+          displayListItems: revertedDisplayList, // Show list without temp entry
         ),
       );
-      // Save after deleting
-      await _saveEntries(updatedEntries);
+    }
+    // Note: isLoading: false is handled in both success and error paths now
+  }
+
+  Future<void> addEntryObject(Entry entryToAdd) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedEntries = await _entryRepository.addEntryObject(entryToAdd);
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+    } catch (e) {
+      AppLogger.error(
+        "Cubit: Error adding entry object via repository",
+        error: e,
+      );
+      emit(state.copyWith(lastErrorMessage: "Failed to add entry."));
+    }
+  }
+
+  Future<void> deleteEntry(Entry entryToDelete) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedEntries = await _entryRepository.deleteEntry(entryToDelete);
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+    } catch (e) {
+      AppLogger.error("Cubit: Error deleting entry via repository", error: e);
+      emit(state.copyWith(lastErrorMessage: "Failed to delete entry."));
     }
   }
 
   Future<void> updateEntry(Entry originalEntry, Entry updatedEntry) async {
     emit(state.copyWith(clearLastError: true));
-    final index = state.entries.indexWhere(
-      (entry) =>
-          entry.timestamp == originalEntry.timestamp &&
-          entry.text == originalEntry.text,
-    );
-    if (index != -1) {
-      final updatedEntries = List<Entry>.from(state.entries);
-      // Ensure isNew is preserved or reset correctly if needed
-      updatedEntries[index] = updatedEntry.copyWith(
-        isNew: state.entries[index].isNew,
+    try {
+      final updatedEntries = await _entryRepository.updateEntry(
+        originalEntry,
+        updatedEntry,
       );
-
-      final newDisplayList = _buildDisplayList(
-        updatedEntries,
-        state.filterCategory,
-      );
-      emit(
-        state.copyWith(
-          entries: updatedEntries,
-          displayListItems: newDisplayList,
-        ),
-      );
-      // Save after updating
-      await _saveEntries(updatedEntries);
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+    } catch (e) {
+      AppLogger.error("Cubit: Error updating entry via repository", error: e);
+      emit(state.copyWith(lastErrorMessage: "Failed to update entry."));
     }
+  }
+
+  void _markEntryAsNotNewAfterDelay(Entry entry) {
+    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
+      if (!isClosed) {
+        bool updated = _entryRepository.markEntryAsNotNew(
+          entry.timestamp,
+          entry.text,
+        );
+        if (updated) {
+          final currentEntries = _entryRepository.currentEntries;
+          _updateStateFromRepository(updatedEntries: currentEntries);
+        }
+        _newEntryTimers.remove(entry.timestamp);
+      }
+    });
+  }
+
+  Future<void> addCustomCategory(String newCategory) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedCategories = await _entryRepository.addCustomCategory(
+        newCategory,
+      );
+      emit(state.copyWith(categories: updatedCategories));
+    } catch (e) {
+      AppLogger.error("Cubit: Error adding category via repository", error: e);
+      emit(state.copyWith(lastErrorMessage: "Failed to add category."));
+    }
+  }
+
+  Future<void> deleteCategory(String categoryToDelete) async {
+    if (categoryToDelete == 'Misc') return;
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final result = await _entryRepository.deleteCategory(categoryToDelete);
+      _updateStateFromRepository(
+        updatedEntries: result.entries,
+        updatedCategories: result.categories,
+        clearFilter: state.filterCategory == categoryToDelete,
+      );
+    } catch (e) {
+      AppLogger.error(
+        "Cubit: Error deleting category via repository",
+        error: e,
+      );
+      emit(state.copyWith(lastErrorMessage: "Failed to delete category."));
+    }
+  }
+
+  Future<void> renameCategory(String oldName, String newName) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final result = await _entryRepository.renameCategory(oldName, newName);
+      _updateStateFromRepository(
+        updatedEntries: result.entries,
+        updatedCategories: result.categories,
+        newFilterCategory:
+            state.filterCategory == oldName ? newName : state.filterCategory,
+      );
+    } catch (e) {
+      AppLogger.error(
+        "Cubit: Error renaming category via repository",
+        error: e,
+      );
+      emit(state.copyWith(lastErrorMessage: "Failed to rename category."));
+    }
+  }
+
+  void setFilter(String? category) {
+    AppLogger.info("Cubit: Setting filter to: ${category ?? 'null'}");
+    final currentEntries = _entryRepository.currentEntries;
+    final newDisplayList = _buildDisplayList(currentEntries, category);
+    emit(
+      state.copyWith(
+        filterCategory: category,
+        clearFilter: category == null,
+        displayListItems: newDisplayList,
+        clearLastError: true,
+      ),
+    );
   }
 
   void clearLastError() {

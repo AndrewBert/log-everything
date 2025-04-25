@@ -8,23 +8,23 @@ import 'package:flutter/services.dart';
 import '../../../speech_service.dart';
 import '../../../utils/logger.dart';
 import 'voice_input_state.dart';
-import '../../../entry/cubit/entry_cubit.dart';
-import '../../../locator.dart'; // <-- Import locator
+import '../../../entry/repository/entry_repository.dart';
+import '../../../locator.dart';
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;
   final SpeechService _speechService;
-  final EntryCubit _entryCubit;
+  final EntryRepository _entryRepository;
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
-  // Modify constructor to use locator
+  // Modify constructor to inject EntryRepository
   VoiceInputCubit()
-    : _audioRecorder = locator<AudioRecorder>(), // <-- Get from locator
-      _speechService = locator<SpeechService>(), // <-- Get from locator
-      _entryCubit = locator<EntryCubit>(), // <-- Get from locator
+    : _audioRecorder = locator<AudioRecorder>(),
+      _speechService = locator<SpeechService>(),
+      _entryRepository = locator<EntryRepository>(),
       super(const VoiceInputState()) {
     _initialize();
   }
@@ -34,7 +34,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     emit(state.copyWith(micPermissionStatus: status));
     _audioRecorder.onStateChanged().listen((recordState) {
       AppLogger.debug('AudioRecorder state changed: $recordState');
-      // Optionally update state based on recorder state if needed
     });
   }
 
@@ -45,13 +44,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       AppLogger.warning(
         '[requestMicrophonePermission] Microphone permission permanently denied.',
       );
-      // Optionally guide user to settings
     }
   }
 
   Future<void> toggleRecording() async {
     if (state.isRecording) {
-      await stopRecording(); // Normal stop triggers foreground transcription
+      await stopRecording();
     } else {
       await startRecording();
     }
@@ -59,11 +57,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> startRecording() async {
     AppLogger.info("[startRecording] Attempting to start recording...");
-    // NOTE: Haptic feedback on iOS might be suppressed when starting recording.
-    // This is because the audio session category needed for recording (playAndRecord or record)
-    // can interfere with or cancel haptic events triggered at the same time.
-    // See Apple documentation for AudioServicesPlayAlertSound.
-    HapticFeedback.mediumImpact(); // Trigger haptic feedback immediately
+    HapticFeedback.mediumImpact();
 
     PermissionStatus currentStatus = await Permission.microphone.status;
     if (currentStatus != state.micPermissionStatus) {
@@ -71,8 +65,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
 
     if (currentStatus != PermissionStatus.granted) {
-      await requestMicrophonePermission(); // This logs the result internally
-      // Re-check status *immediately* after requesting
+      await requestMicrophonePermission();
       currentStatus = await Permission.microphone.status;
       if (currentStatus != state.micPermissionStatus) {
         emit(state.copyWith(micPermissionStatus: currentStatus));
@@ -106,9 +99,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           recordingStartTime: DateTime.now(),
           recordingDuration: Duration.zero,
           clearErrorMessage: true,
-          transcriptionStatus: TranscriptionStatus.idle, // Reset status
-          clearTranscribedText: true, // Clear previous text
-          clearAudioPath: true, // Clear previous path
+          transcriptionStatus: TranscriptionStatus.idle,
+          clearTranscribedText: true,
+          clearAudioPath: true,
         ),
       );
       _startRecordingTimer();
@@ -126,7 +119,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   Future<void> stopRecording() async {
     AppLogger.info("Stopping recording (foreground transcription)");
     if (!state.isRecording) return;
-    HapticFeedback.lightImpact(); // Add haptic feedback on stop
+    HapticFeedback.lightImpact();
 
     _cancelRecordingTimer();
     final recordingDuration = _calculateRecordingDuration();
@@ -143,12 +136,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           clearRecordingTime: true,
           errorMessage:
               isTooShort ? 'Recording too short (less than 1 second)' : null,
-          clearErrorMessage: !isTooShort, // Clear error if not too short
+          clearErrorMessage: !isTooShort,
         ),
       );
 
       if (!isTooShort && path != null) {
-        await transcribeAudio(); // Triggers foreground flow
+        await transcribeAudio();
       } else {
         if (isTooShort) {
           AppLogger.info("Skipping transcription: recording too short.");
@@ -182,7 +175,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       "Stopping recording to combine with initial text: '$initialText'",
     );
     if (!state.isRecording) return;
-    HapticFeedback.lightImpact(); // Add haptic feedback on stop (for combine)
+    HapticFeedback.lightImpact();
 
     _cancelRecordingTimer();
     final recordingDuration = _calculateRecordingDuration();
@@ -229,8 +222,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           }
 
           if (combinedText.isNotEmpty) {
-            AppLogger.info('Adding combined entry: "$combinedText"');
-            _entryCubit.addEntry(combinedText);
+            AppLogger.info(
+              'Adding combined entry via repository: "$combinedText"',
+            );
+            // Use repository to add entry
+            await _entryRepository.addEntry(combinedText);
             emit(
               state.copyWith(
                 transcriptionStatus: TranscriptionStatus.idle,
@@ -250,9 +246,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           AppLogger.error("Transcription error during combine", error: e);
           if (initialText.isNotEmpty) {
             AppLogger.warning(
-              'Adding entry with only initial text due to transcription error.',
+              'Adding entry with only initial text via repository due to transcription error.',
             );
-            _entryCubit.addEntry(initialText);
+            // Use repository to add entry
+            await _entryRepository.addEntry(initialText);
           }
           emit(
             state.copyWith(
@@ -269,9 +266,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           );
           if (initialText.isNotEmpty) {
             AppLogger.info(
-              'Adding entry with only initial text (recording too short).',
+              'Adding entry with only initial text via repository (recording too short).',
             );
-            _entryCubit.addEntry(initialText);
+            // Use repository to add entry
+            await _entryRepository.addEntry(initialText);
           }
         } else {
           AppLogger.error(
@@ -279,9 +277,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           );
           if (initialText.isNotEmpty) {
             AppLogger.warning(
-              'Adding entry with only initial text (failed to save recording).',
+              'Adding entry with only initial text via repository (failed to save recording).',
             );
-            _entryCubit.addEntry(initialText);
+            // Use repository to add entry
+            await _entryRepository.addEntry(initialText);
           }
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
@@ -296,9 +295,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       AppLogger.error("Error stopping recording for combine", error: e);
       if (initialText.isNotEmpty) {
         AppLogger.warning(
-          'Adding entry with only initial text due to stop error.',
+          'Adding entry with only initial text via repository due to stop error.',
         );
-        _entryCubit.addEntry(initialText);
+        // Use repository to add entry
+        await _entryRepository.addEntry(initialText);
       }
       emit(
         state.copyWith(
@@ -335,7 +335,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
       if (transcription != null && transcription.isNotEmpty) {
         AppLogger.info('Foreground transcription successful: "$transcription"');
-        HapticFeedback.lightImpact(); // Haptic feedback on successful transcription
+        HapticFeedback.lightImpact();
         emit(
           state.copyWith(
             transcribedText: transcription,

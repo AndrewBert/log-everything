@@ -8,6 +8,7 @@ import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
 import 'entry/cubit/entry_cubit.dart';
+import 'entry/repository/entry_repository.dart'; // <-- Import repository
 import 'locator.dart';
 
 // Make main async
@@ -36,9 +37,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Provide the EntryCubit instance from the locator
-        BlocProvider<EntryCubit>.value(value: locator<EntryCubit>()),
-        BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit()),
+        // Create EntryCubit, injecting the repository from the locator
+        BlocProvider<EntryCubit>(
+          create:
+              (context) =>
+                  EntryCubit(entryRepository: locator<EntryRepository>()),
+        ),
+        BlocProvider<VoiceInputCubit>(
+          create:
+              (context) => VoiceInputCubit(), // Already uses locator internally
+        ),
         BlocProvider<HomeScreenCubit>(create: (context) => HomeScreenCubit()),
       ],
       child: MaterialApp(
