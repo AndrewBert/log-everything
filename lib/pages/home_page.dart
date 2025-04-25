@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:myapp/cubit/voice_input_cubit.dart'; // <-- Re-add VoiceInputCubit import
+import 'package:myapp/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
@@ -20,28 +20,17 @@ import '../dialogs/manage_categories_dialog.dart';
 import '../dialogs/change_category_dialog.dart';
 import '../dialogs/help_dialog.dart';
 import '../dialogs/whats_new_dialog.dart';
-import '../dialogs/delete_category_confirmation_dialog.dart'; // <-- Import the new dialog
-import '../dialogs/edit_category_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/delete_category_confirmation_dialog.dart';
+import '../dialogs/edit_category_dialog.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+// Convert HomePage to StatelessWidget
+class HomePage extends StatelessWidget {
+  HomePage({super.key});
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  // Move formatter here
   final DateFormat _timeFormatter = DateFormat('HH:mm');
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // Move methods from _HomePageState directly into HomePage
 
   void _showFloatingSnackBar(
     BuildContext targetContext, {
@@ -53,15 +42,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final messenger = ScaffoldMessenger.of(targetContext);
     messenger.hideCurrentSnackBar();
 
-    // Calculate margin based on keyboard visibility or a fixed offset
-    // This is a simplification; a more robust solution might involve
-    // listening to keyboard changes or using MediaQuery.viewInsets
     final keyboardVisible = MediaQuery.of(targetContext).viewInsets.bottom > 0;
     final bottomPadding = MediaQuery.of(targetContext).padding.bottom;
     final double bottomMargin =
         keyboardVisible
             ? MediaQuery.of(targetContext).viewInsets.bottom + 8.0
-            : bottomPadding + 80.0; // Estimate input area height + padding
+            : bottomPadding + 80.0;
 
     messenger.showSnackBar(
       SnackBar(
@@ -78,33 +64,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Future<void> _showWhatsNewDialog([String? version]) async {
-    if (!mounted) return;
-
+  Future<void> _showWhatsNewDialog(
+    BuildContext context, [
+    String? version,
+  ]) async {
+    // Need context passed in now
     String currentVersion = version ?? '';
-    // Fetch version only if not provided (e.g., manual trigger)
     if (currentVersion.isEmpty) {
       try {
         final packageInfo = await PackageInfo.fromPlatform();
-        // Use the format from the cubit (includes build number)
         currentVersion = 'v${packageInfo.version} (${packageInfo.buildNumber})';
       } catch (e, stackTrace) {
         AppLogger.error(
           'Error getting package info for What\'s New dialog: $e',
           stackTrace: stackTrace,
         );
-        if (mounted) {
-          _showFloatingSnackBar(
-            context,
-            content: const Text('Could not load version info.'),
-            backgroundColor: Colors.redAccent,
-          );
-        }
-        return; // Don't show dialog if version fetch fails
+        // Check context is still valid if async gap occurred
+        if (!context.mounted) return;
+        _showFloatingSnackBar(
+          context,
+          content: const Text('Could not load version info.'),
+          backgroundColor: Colors.redAccent,
+        );
+        return;
       }
     }
 
-    // Extract only the version number (e.g., "1.2.0") for display in the dialog title
     String displayVersion = currentVersion;
     final versionMatch = RegExp(
       r'v([0-9]+\.[0-9]+\.[0-9]+)',
@@ -113,46 +98,37 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       displayVersion = versionMatch.group(1) ?? currentVersion;
     }
 
-    // Check mounted again before showing dialog
-    if (!mounted) return;
-    // Use rootNavigator: true if showing from within another dialog like Help
+    if (!context.mounted) return;
     await showDialog(
       context: context,
       builder:
-          (dialogContext) => WhatsNewDialog(
-            currentVersion: displayVersion, // Pass only the version number part
-          ),
+          (dialogContext) => WhatsNewDialog(currentVersion: displayVersion),
     );
   }
 
-  void _handleInput(String currentText) {
+  void _handleInput(BuildContext context, String currentText) {
+    // Need context passed in now
     final voiceCubit = context.read<VoiceInputCubit>();
     final entryCubit = context.read<EntryCubit>();
 
-    // Handle manual send during recording
     if (voiceCubit.state.isRecording) {
       AppLogger.info(
         'Send tapped during recording. Stopping and combining text with transcription.',
       );
-      HapticFeedback.mediumImpact(); // Add haptic feedback
-      // Pass current text to the cubit for background processing
+      HapticFeedback.mediumImpact();
       voiceCubit.stopRecordingAndCombine(currentText);
-
-      _showProcessingSnackbar(
-        'Processing voice entry...',
-      ); // Show generic processing
-      return; // Stop further processing here; cubit handles adding entry
+      _showProcessingSnackbar(context, 'Processing voice entry...');
+      return;
     }
 
-    // Handle manual send when NOT recording
     if (currentText.isNotEmpty) {
       entryCubit.addEntry(currentText);
-      _showProcessingSnackbar('Processing text entry...');
+      _showProcessingSnackbar(context, 'Processing text entry...');
     }
   }
 
-  // Helper to show consistent processing snackbar
-  void _showProcessingSnackbar(String message) {
+  void _showProcessingSnackbar(BuildContext context, String message) {
+    // Need context passed in now
     _showFloatingSnackBar(
       context,
       content: Row(
@@ -170,49 +146,42 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // Update _showDeleteCategoryConfirmationDialog to use the new widget
   Future<bool> _showDeleteCategoryConfirmationDialog(
     BuildContext context,
     String category,
   ) async {
-    // Use the new DeleteCategoryConfirmationDialog widget
     return await showDialog<bool>(
           context: context,
           builder: (BuildContext dialogContext) {
             return DeleteCategoryConfirmationDialog(category: category);
           },
         ) ??
-        false; // Return false if dialog is dismissed
+        false;
   }
 
-  void _showManageCategoriesDialog() {
+  void _showManageCategoriesDialog(BuildContext context) {
+    // Need context passed in now
     HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (dialogContext) {
-        // Provide the necessary cubit to the dialog subtree
-        // (Assuming EntryCubit is already provided above HomePage)
         return ManageCategoriesDialog(
-          // Pass the existing dialog functions as callbacks
-          onShowEditCategoryDialog: _showEditCategoryDialog,
+          onShowEditCategoryDialog:
+              (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
           onShowDeleteCategoryConfirmationDialog:
-              _showDeleteCategoryConfirmationDialog,
+              (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
         );
       },
     );
   }
 
-  // Update _showEditCategoryDialog to use the new widget
   Future<String?> _showEditCategoryDialog(
-    BuildContext context, // Context is still needed to show the dialog
+    BuildContext context,
     String oldCategoryName,
   ) async {
-    // Use the new EditCategoryDialog widget
     return await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
-        // Provide the EntryCubit to the dialog subtree if needed for validation
-        // (Assuming EntryCubit is already provided above this context)
         return EditCategoryDialog(oldCategoryName: oldCategoryName);
       },
     );
@@ -222,11 +191,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     BuildContext context,
     Entry originalEntry,
   ) async {
-    // Show the new dialog and wait for the result (updated entry or null)
+    // Need context passed in now
     final Entry? updatedEntry = await showDialog<Entry?>(
       context: context,
       builder: (dialogContext) {
-        // Provide the necessary cubit to the dialog subtree
         return BlocProvider.value(
           value: BlocProvider.of<EntryCubit>(context),
           child: EditEntryDialog(originalEntry: originalEntry),
@@ -234,8 +202,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       },
     );
 
-    // If an entry was returned (meaning update was successful)
-    if (updatedEntry != null && mounted) {
+    if (updatedEntry != null && context.mounted) {
       _showFloatingSnackBar(
         context,
         content: const Text('Entry updated'),
@@ -244,22 +211,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  // Update _showChangeCategoryDialog to use the new widget
   Future<void> _showChangeCategoryDialog(
     BuildContext context,
     Entry entry,
   ) async {
+    // Need context passed in now
     final entryCubit = context.read<EntryCubit>();
     final availableCategories = List<String>.from(entryCubit.state.categories)
       ..sort();
     String? selectedCategory = entry.category;
 
-    // Ensure the current category is valid, default to Misc if not
     if (!availableCategories.contains(selectedCategory)) {
       selectedCategory = 'Misc';
     }
 
-    // Use the new ChangeCategoryDialog widget
     final String? newCategory = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
@@ -270,11 +235,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       },
     );
 
-    // Keep the logic to handle the result
     if (newCategory != null && newCategory != entry.category) {
       final updatedEntry = entry.copyWith(category: newCategory);
       entryCubit.updateEntry(entry, updatedEntry);
-      if (mounted) {
+      if (context.mounted) {
         _showFloatingSnackBar(
           context,
           content: Text('Category changed to "$newCategory"'),
@@ -284,15 +248,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  // Update _showHelpDialog to use the new widget
-  void _showHelpDialog() {
+  void _showHelpDialog(BuildContext context) {
+    // Need context passed in now
     HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return HelpDialog(
-          // Pass the existing method as a callback
-          onShowWhatsNewPressed: () => _showWhatsNewDialog(),
+          onShowWhatsNewPressed: () => _showWhatsNewDialog(context),
         );
       },
     );
@@ -317,11 +280,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return CategoryColors.getColorForCategory(category);
   }
 
-  // Create a helper method for delete logic
-  void _handleDeleteEntry(Entry entry) {
+  void _handleDeleteEntry(BuildContext context, Entry entry) {
+    // Need context passed in now
     final entryToDelete = entry;
     context.read<EntryCubit>().deleteEntry(entryToDelete);
-    if (mounted) {
+    // Check context is still valid
+    if (context.mounted) {
       _showFloatingSnackBar(
         context,
         content: const Text('Entry deleted'),
@@ -329,16 +293,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
-            context.read<EntryCubit>().addEntryObject(entryToDelete);
+            // Check context again inside async callback
+            if (context.mounted) {
+              context.read<EntryCubit>().addEntryObject(entryToDelete);
+            }
           },
         ),
       );
     }
   }
 
+  // Move build method here
   @override
   Widget build(BuildContext context) {
-    // Get the theme colors
     final Color primaryColor = Theme.of(context).colorScheme.primary;
     final Color? defaultTitleColor =
         Theme.of(context).appBarTheme.titleTextStyle?.color;
@@ -349,10 +316,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           onTap: () {
             context.read<HomeScreenCubit>().incrementTitleTap();
           },
-          // Replace Text with RichText for multi-colored title
           child: RichText(
             text: TextSpan(
-              // Default style for the title (taken from AppBar theme or default)
               style:
                   Theme.of(context).appBarTheme.titleTextStyle ??
                   Theme.of(context).textTheme.titleLarge,
@@ -360,15 +325,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 TextSpan(
                   text: 'Log',
                   style: TextStyle(
-                    color: primaryColor, // Color for "Log"
-                    fontWeight: FontWeight.bold, // Optional: make it bold
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 TextSpan(
-                  text: ' Splitter', // Note the leading space
-                  style: TextStyle(
-                    color: defaultTitleColor, // Color for "Splitter" (default)
-                  ),
+                  text: ' Splitter',
+                  style: TextStyle(color: defaultTitleColor),
                 ),
               ],
             ),
@@ -382,13 +345,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: Center(
-                    // Add Text widget to display the version
                     child: Text(
                       state.appVersion,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black87, // Changed to a dark color
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
                     ),
                   ),
                 );
@@ -400,14 +359,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           IconButton(
             icon: const Icon(Icons.help_outline),
             tooltip: 'Help / About',
-            // This now calls the updated method which shows the new dialog
-            onPressed: _showHelpDialog,
+            onPressed: () => _showHelpDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
-            // This now calls the updated method which shows the new dialog
-            onPressed: _showManageCategoriesDialog,
+            onPressed: () => _showManageCategoriesDialog(context),
           ),
           const SizedBox(width: 8),
         ],
@@ -419,8 +376,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 (prev, current) =>
                     !prev.showWhatsNewDialog && current.showWhatsNewDialog,
             listener: (context, state) async {
-              await _showWhatsNewDialog(state.appVersion);
-              if (mounted) {
+              // Pass context here
+              await _showWhatsNewDialog(context, state.appVersion);
+              if (context.mounted) {
                 context.read<HomeScreenCubit>().markWhatsNewShown();
               }
             },
@@ -455,11 +413,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const FilterSection(),
-                  _buildEntriesList(), // This method now returns the updated EntriesList
+                  // Call _buildEntriesList helper method
+                  _buildEntriesList(context),
                 ],
               ),
               InputArea(
-                onSendPressed: _handleInput,
+                // Pass context to handlers
+                onSendPressed: (text) => _handleInput(context, text),
                 showSnackBar: ({
                   required context,
                   required content,
@@ -483,18 +443,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // Update the _buildEntriesList method to pass the new callbacks
-  Widget _buildEntriesList() {
+  // Keep _buildEntriesList as a helper method within StatelessWidget
+  Widget _buildEntriesList(BuildContext context) {
+    // Need context passed in now
     return EntriesList(
       formatDateHeader: _formatDateHeader,
       getCategoryColor: _getCategoryColor,
       timeFormatter: _timeFormatter,
       onChangeCategoryPressed:
           (entry) => _showChangeCategoryDialog(context, entry),
-      onEditPressed:
-          (entry) =>
-              _showEditEntryDialog(context, entry), // <-- Pass edit dialog
-      onDeletePressed: _handleDeleteEntry, // <-- Pass delete handler
+      onEditPressed: (entry) => _showEditEntryDialog(context, entry),
+      // Pass context to delete handler
+      onDeletePressed: (entry) => _handleDeleteEntry(context, entry),
     );
   }
 }

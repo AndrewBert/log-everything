@@ -84,7 +84,7 @@ class MyApp extends StatelessWidget {
           useMaterial3: true, // Keep Material 3 enabled
         ),
         // Use the new HomeScreen widget
-        home: const HomePage(), // Keep title consistent
+        home: HomePage(), // Keep title consistent
       ),
     );
   }
