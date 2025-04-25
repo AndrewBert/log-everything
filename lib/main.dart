@@ -5,8 +5,8 @@ import 'package:intl/intl.dart'; // Import Intl
 import 'package:record/record.dart';
 
 import 'cubit/entry_cubit.dart';
-import 'cubit/home_screen_cubit.dart'; // Import HomeScreenCubit
-import 'cubit/voice_input_cubit.dart';
+import 'pages/cubit/home_screen_cubit.dart'; // Import HomeScreenCubit
+import 'widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'pages/home_page.dart'; // Import the new home screen
 import 'services/ai_categorization_service.dart'; // Import the AI service
 import 'speech_service.dart';

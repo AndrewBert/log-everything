@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/pages/cubit/home_screen_cubit.dart';
 import 'package:myapp/pages/cubit/home_screen_state.dart';
-import 'voice_input.dart/voice_input.dart'; // Assuming VoiceInputSection is in the same directory
+import 'voice_input/voice_input.dart'; // Assuming VoiceInputSection is in the same directory
 
 class InputArea extends StatefulWidget {
   final void Function(String text) onSendPressed;

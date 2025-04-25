@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:myapp/cubit/voice_input_cubit.dart';
+import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
 
 import '../cubit/entry_cubit.dart';
-import '../cubit/home_screen_cubit.dart';
-import '../cubit/home_screen_state.dart';
+import 'cubit/home_screen_cubit.dart';
+import 'cubit/home_screen_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
 import '../widgets/entries_list.dart';
