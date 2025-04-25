@@ -7,10 +7,10 @@ import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
 
-import '../cubit/entry_cubit.dart';
 import 'cubit/home_screen_cubit.dart';
 import 'cubit/home_screen_state.dart';
-import '../entry.dart';
+import '../entry/entry.dart';
+import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
 import '../widgets/entries_list.dart';
 import '../widgets/filter_section.dart';
@@ -23,7 +23,6 @@ import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart';
 import '../dialogs/edit_category_dialog.dart';
 
-// Convert HomePage to StatelessWidget
 class HomePage extends StatelessWidget {
   HomePage({super.key});
 
@@ -65,14 +64,16 @@ class HomePage extends StatelessWidget {
         ),
         actions: [
           BlocBuilder<HomeScreenCubit, HomeScreenState>(
+            // Remove unnecessary null checks
             buildWhen: (prev, current) => prev.appVersion != current.appVersion,
             builder: (context, state) {
+              // Remove unnecessary null checks
               if (state.appVersion.isNotEmpty) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: Center(
                     child: Text(
-                      state.appVersion,
+                      state.appVersion, // Remove !
                       style: TextStyle(fontSize: 12, color: Colors.black87),
                     ),
                   ),
@@ -98,10 +99,12 @@ class HomePage extends StatelessWidget {
       body: MultiBlocListener(
         listeners: [
           BlocListener<HomeScreenCubit, HomeScreenState>(
+            // Remove unnecessary null checks
             listenWhen:
                 (prev, current) =>
                     !prev.showWhatsNewDialog && current.showWhatsNewDialog,
             listener: (context, state) async {
+              // Remove unnecessary null check
               await _showWhatsNewDialog(context, state.appVersion);
               if (context.mounted) {
                 context.read<HomeScreenCubit>().markWhatsNewShown();
@@ -109,6 +112,7 @@ class HomePage extends StatelessWidget {
             },
           ),
           BlocListener<HomeScreenCubit, HomeScreenState>(
+            // Keep null check for snackBarMessage as it IS nullable
             listenWhen:
                 (prev, current) =>
                     prev.snackBarMessage != current.snackBarMessage &&
@@ -116,9 +120,9 @@ class HomePage extends StatelessWidget {
             listener: (context, state) {
               _showFloatingSnackBar(
                 context,
-                content: Text(state.snackBarMessage!),
+                content: Text(state.snackBarMessage!), // Keep !
                 duration:
-                    state.snackBarMessage!.contains('magic tap')
+                    state.snackBarMessage!.contains('magic tap') // Keep !
                         ? const Duration(seconds: 3)
                         : const Duration(milliseconds: 800),
               );

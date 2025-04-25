@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../entry.dart';
+import '../entry/entry.dart';
 
 class EntryActions extends StatelessWidget {
   final Entry entry;

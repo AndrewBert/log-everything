@@ -8,8 +8,7 @@ import 'package:flutter/services.dart'; // Import for HapticFeedback
 import '../../../speech_service.dart';
 import '../../../utils/logger.dart';
 import 'voice_input_state.dart';
-// Import EntryCubit to add entry directly
-import '../../../cubit/entry_cubit.dart';
+import '../../../entry/cubit/entry_cubit.dart'; // <-- New import location
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;

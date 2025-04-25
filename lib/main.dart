@@ -1,90 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart'; // Import Intl
-import 'package:record/record.dart';
+import 'package:intl/intl.dart';
+import 'package:myapp/pages/cubit/home_screen_cubit.dart';
+import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
+import 'package:myapp/pages/home_page.dart';
+import 'package:myapp/services/ai_categorization_service.dart';
+import 'package:myapp/speech_service.dart';
+import 'package:myapp/utils/category_colors.dart';
+import 'package:myapp/utils/logger.dart';
+import 'package:record/record.dart'; // <-- Add record import
+import 'entry/cubit/entry_cubit.dart';
 
-import 'cubit/entry_cubit.dart';
-import 'pages/cubit/home_screen_cubit.dart'; // Import HomeScreenCubit
-import 'widgets/voice_input/cubit/voice_input_cubit.dart';
-import 'pages/home_page.dart'; // Import the new home screen
-import 'services/ai_categorization_service.dart'; // Import the AI service
-import 'speech_service.dart';
-import 'utils/category_colors.dart'; // Import the category colors utility
-import 'utils/logger.dart'; // Import logger
-
-Future<void> main() async {
-  // Ensure Flutter bindings are initialized first
+// Make main async
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables before the app starts
   try {
     await dotenv.load(fileName: ".env");
     AppLogger.info('Environment variables loaded successfully.');
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
-    // Handle error or proceed without .env
   }
 
-  // Initialize the category colors system
   await CategoryColors.initialize();
 
-  // Set the default locale for the entire app
   Intl.defaultLocale = 'en_US';
 
-  // Initialize services
-  final aiService = OpenAiCategorizationService();
-  final audioRecorder = AudioRecorder();
-  final speechService = SpeechService();
-
-  // Create Cubit instances
-  final entryCubit = EntryCubit(aiService: aiService);
-  final homeScreenCubit = HomeScreenCubit();
-  // Inject EntryCubit into VoiceInputCubit
-  final voiceInputCubit = VoiceInputCubit(
-    audioRecorder: audioRecorder,
-    speechService: speechService,
-    entryCubit: entryCubit,
-  );
-
-  // Run the app
-  runApp(
-    MyApp(
-      entryCubit: entryCubit,
-      homeScreenCubit: homeScreenCubit,
-      voiceInputCubit: voiceInputCubit,
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final EntryCubit entryCubit;
-  final HomeScreenCubit homeScreenCubit;
-  final VoiceInputCubit voiceInputCubit;
-
-  const MyApp({
-    super.key,
-    required this.entryCubit,
-    required this.homeScreenCubit,
-    required this.voiceInputCubit,
-  });
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Instantiate concrete services and dependencies
+    final aiService =
+        OpenAiCategorizationService(); // Use concrete implementation
+    final speechService = SpeechService();
+    final audioRecorder = AudioRecorder(); // Instantiate AudioRecorder
+
+    // Create EntryCubit instance first to pass it to VoiceInputCubit
+    final entryCubit = EntryCubit(aiService: aiService);
+
     return MultiBlocProvider(
       providers: [
-        BlocProvider.value(value: entryCubit),
-        BlocProvider.value(value: homeScreenCubit),
-        BlocProvider.value(value: voiceInputCubit),
+        // Provide the existing EntryCubit instance
+        BlocProvider<EntryCubit>.value(value: entryCubit),
+        BlocProvider<VoiceInputCubit>(
+          create:
+              (context) => VoiceInputCubit(
+                speechService: speechService,
+                audioRecorder: audioRecorder,
+                entryCubit: entryCubit, // Pass the created EntryCubit instance
+              ),
+        ),
+        BlocProvider<HomeScreenCubit>(create: (context) => HomeScreenCubit()),
       ],
       child: MaterialApp(
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
-          useMaterial3: true, // Keep Material 3 enabled
+          useMaterial3: true,
         ),
-        // Use the new HomeScreen widget
-        home: HomePage(), // Keep title consistent
+        home: HomePage(),
       ),
     );
   }

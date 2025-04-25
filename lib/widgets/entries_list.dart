@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../entry.dart';
-import '../cubit/entry_cubit.dart';
+import '../entry/entry.dart';
+import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
 import 'entry_actions.dart';
 

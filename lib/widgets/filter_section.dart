@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../cubit/entry_cubit.dart';
+import '../entry/cubit/entry_cubit.dart';
 
 class FilterSection extends StatelessWidget {
   const FilterSection({super.key});

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../cubit/entry_cubit.dart';
-import '../entry.dart';
+import '../entry/cubit/entry_cubit.dart';
+import '../entry/entry.dart';
 
-// todo refactor to use bloc and make stateless
 class EditEntryDialog extends StatefulWidget {
   final Entry originalEntry;
 
