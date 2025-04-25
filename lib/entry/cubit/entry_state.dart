@@ -1,44 +1,53 @@
 part of 'entry_cubit.dart';
 
-class EntryState {
-  final List<Entry> entries;
+// Extend Equatable
+class EntryState extends Equatable {
+  // Remove entries list from state, repository is source of truth
+  // final List<Entry> entries;
   final List<String> categories;
   final bool isLoading;
   final String? lastErrorMessage;
-  final String? filterCategory; // Add filter category
-  final List<dynamic> displayListItems; // Add processed list for UI
+  final String? filterCategory;
+  final List<dynamic> displayListItems;
 
-  EntryState({
-    this.entries = const [],
+  const EntryState({
+    // this.entries = const [], // Removed
     this.categories = const [],
     this.isLoading = false,
     this.lastErrorMessage,
-    this.filterCategory, // Initialize filter
-    this.displayListItems = const [], // Initialize display list
+    this.filterCategory,
+    this.displayListItems = const [],
   });
 
-  // Helper method to create a copy with updated values
+  // Implement props getter
+  @override
+  List<Object?> get props => [
+    categories,
+    isLoading,
+    lastErrorMessage,
+    filterCategory,
+    displayListItems,
+  ];
+
+  // copyWith remains the same, but without entries
   EntryState copyWith({
-    List<Entry>? entries,
+    // List<Entry>? entries, // Removed
     List<String>? categories,
     bool? isLoading,
     String? lastErrorMessage,
-    String? filterCategory, // Add filter to copyWith
-    List<dynamic>? displayListItems, // Add displayListItems to copyWith
+    String? filterCategory,
+    List<dynamic>? displayListItems,
     bool clearLastError = false,
-    bool clearFilter = false, // Add flag to clear filter
+    bool clearFilter = false,
   }) {
     return EntryState(
-      entries: entries ?? this.entries,
+      // entries: entries ?? this.entries, // Removed
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
       lastErrorMessage:
           clearLastError ? null : (lastErrorMessage ?? this.lastErrorMessage),
       filterCategory:
-          clearFilter
-              ? null
-              : (filterCategory ??
-                  this.filterCategory), // Handle filter update/clear
+          clearFilter ? null : (filterCategory ?? this.filterCategory),
       displayListItems: displayListItems ?? this.displayListItems,
     );
   }

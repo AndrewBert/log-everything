@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
+import 'package:equatable/equatable.dart';
 
 import '../entry.dart';
 import '../../utils/logger.dart';
@@ -99,6 +100,7 @@ class EntryCubit extends Cubit<EntryState> {
     return listItems;
   }
 
+  // Update _updateStateFromRepository to log category changes
   void _updateStateFromRepository({
     required List<Entry> updatedEntries,
     List<String>? updatedCategories,
@@ -110,6 +112,22 @@ class EntryCubit extends Cubit<EntryState> {
             ? null
             : (newFilterCategory ?? state.filterCategory);
     final newDisplayList = _buildDisplayList(updatedEntries, filterToUse);
+
+    // Log category changes before emitting
+    if (updatedCategories != null &&
+        !const DeepCollectionEquality().equals(
+          state.categories,
+          updatedCategories,
+        )) {
+      AppLogger.debug(
+        '[Cubit._updateStateFromRepository] Categories changed. Emitting: $updatedCategories',
+      );
+    } else if (updatedCategories != null) {
+      AppLogger.debug(
+        '[Cubit._updateStateFromRepository] Categories provided but unchanged.',
+      );
+    }
+
     emit(
       state.copyWith(
         categories: updatedCategories ?? state.categories,
@@ -268,6 +286,10 @@ class EntryCubit extends Cubit<EntryState> {
       final updatedCategories = await _entryRepository.addCustomCategory(
         newCategory,
       );
+      AppLogger.debug(
+        '[Cubit.addCustomCategory] Received from repo: $updatedCategories',
+      );
+      // Only update categories in state
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category via repository", error: e);
@@ -280,6 +302,9 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     try {
       final result = await _entryRepository.deleteCategory(categoryToDelete);
+      AppLogger.debug(
+        '[Cubit.deleteCategory] Received from repo: Categories=${result.categories}',
+      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
@@ -298,6 +323,9 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     try {
       final result = await _entryRepository.renameCategory(oldName, newName);
+      AppLogger.debug(
+        '[Cubit.renameCategory] Received from repo: Categories=${result.categories}',
+      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,

@@ -133,7 +133,7 @@ class EntryRepository {
     // Add to the internal list (prepend)
     _entries.insertAll(0, addedEntries);
     await _saveEntries();
-    return _entries; // Return the updated list
+    return currentEntries; // Return a copy
   }
 
   // Direct entry add (e.g., for undo)
@@ -141,7 +141,7 @@ class EntryRepository {
     _entries.add(entryToAdd);
     await _saveEntries();
     AppLogger.info("Repository: Added entry object - ${entryToAdd.text}");
-    return _entries;
+    return currentEntries; // Return a copy
   }
 
   Future<List<Entry>> deleteEntry(Entry entryToDelete) async {
@@ -154,7 +154,7 @@ class EntryRepository {
     if (_entries.length < originalLength) {
       await _saveEntries();
     }
-    return _entries;
+    return currentEntries; // Return a copy
   }
 
   Future<List<Entry>> updateEntry(
@@ -171,7 +171,7 @@ class EntryRepository {
       _entries[index] = updatedEntry.copyWith(isNew: _entries[index].isNew);
       await _saveEntries();
     }
-    return _entries;
+    return currentEntries; // Return a copy
   }
 
   // Method to update isNew status (called by Cubit after delay)
@@ -193,19 +193,23 @@ class EntryRepository {
     if (trimmedCategory.isNotEmpty &&
         trimmedCategory != 'Misc' &&
         !_categories.contains(trimmedCategory)) {
+      AppLogger.debug('[Repo.addCustomCategory] Before: $_categories');
       _categories.add(trimmedCategory);
       await _saveCategories();
+      AppLogger.debug('[Repo.addCustomCategory] After: $_categories');
     }
-    return _categories;
+    // Return a copy using the getter
+    return currentCategories;
   }
 
   Future<({List<Entry> entries, List<String> categories})> deleteCategory(
     String categoryToDelete,
   ) async {
     if (categoryToDelete == 'Misc')
-      return (entries: _entries, categories: _categories);
+      return (entries: currentEntries, categories: currentCategories);
 
     if (_categories.contains(categoryToDelete)) {
+      AppLogger.debug('[Repo.deleteCategory] Before: $_categories');
       _categories.remove(categoryToDelete);
       bool entriesChanged = false;
       _entries =
@@ -221,8 +225,10 @@ class EntryRepository {
       if (entriesChanged) {
         await _saveEntries();
       }
+      AppLogger.debug('[Repo.deleteCategory] After: $_categories');
     }
-    return (entries: _entries, categories: _categories);
+    // Return copies using the getters
+    return (entries: currentEntries, categories: currentCategories);
   }
 
   Future<({List<Entry> entries, List<String> categories})> renameCategory(
@@ -236,13 +242,16 @@ class EntryRepository {
         _categories.any(
           (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
         )) {
-      // Correct the logger call syntax with proper interpolation
       AppLogger.warning(
         'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
       );
-      return (entries: _entries, categories: _categories); // No change
+      return (
+        entries: currentEntries,
+        categories: currentCategories,
+      ); // Return copies
     }
 
+    AppLogger.debug('[Repo.renameCategory] Before: $_categories');
     _categories =
         _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
     bool entriesChanged = false;
@@ -259,6 +268,8 @@ class EntryRepository {
     if (entriesChanged) {
       await _saveEntries();
     }
-    return (entries: _entries, categories: _categories);
+    AppLogger.debug('[Repo.renameCategory] After: $_categories');
+    // Return copies using the getters
+    return (entries: currentEntries, categories: currentCategories);
   }
 }
