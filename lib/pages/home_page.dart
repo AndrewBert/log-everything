@@ -14,6 +14,7 @@ import '../entry.dart';
 import '../utils/category_colors.dart';
 import '../widgets/voice_input_section.dart';
 import '../widgets/whats_new_dialog.dart'; // Import the new dialog
+import '../widgets/entries_list.dart'; // Import the new EntriesList widget
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -823,168 +824,6 @@ Entries using this category will be moved to "Misc".''',
     return CategoryColors.getColorForCategory(category);
   }
 
-  Widget _buildEntriesList() {
-    return Expanded(
-      child: BlocBuilder<EntryCubit, EntryState>(
-        builder: (context, state) {
-          final List<dynamic> listItems = state.displayListItems;
-          if (state.isLoading && listItems.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Return the Expanded ListView directly
-          if (listItems.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Text(
-                  state.filterCategory != null
-                      ? 'No entries found for category: "${state.filterCategory}"'
-                      : 'No entries yet.\nType or use the mic below!',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: EdgeInsets.only(
-              bottom: 150.0,
-              left: 16.0,
-              right: 16.0,
-              // Adjust top padding based on whether the filter section is visible
-              // or if processing indicator *was* showing (keeping similar spacing)
-              top: 8.0, // Simplified top padding
-            ),
-            itemCount: listItems.length,
-            separatorBuilder: (context, index) {
-              // ...existing separator logic...
-              final currentItem = listItems[index];
-              final nextItem =
-                  (index + 1 < listItems.length) ? listItems[index + 1] : null;
-              if (currentItem is Entry && nextItem is Entry) {
-                return const SizedBox(height: 8.0);
-              }
-              // Add space after date header if needed, or keep minimal
-              if (currentItem is DateTime && nextItem is Entry) {
-                return const SizedBox(height: 4.0);
-              }
-              return const SizedBox.shrink();
-            },
-            itemBuilder: (context, index) {
-              final item = listItems[index];
-
-              if (item is DateTime) {
-                // ... existing date header builder ...
-                return Padding(
-                  padding: const EdgeInsets.only(
-                    top: 12.0,
-                    bottom: 4.0, // Reduced bottom padding
-                  ),
-                  child: Text(
-                    _formatDateHeader(item),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                );
-              } else if (item is Entry) {
-                // ... existing entry card builder ...
-                final entry = item;
-                bool isProcessing = entry.category == 'Processing...';
-                bool isNew = entry.isNew;
-                Color categoryColor = _getCategoryColor(entry.category);
-
-                return Card(
-                  elevation: isNew ? 4.0 : 1.0,
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4.0,
-                    horizontal: 0,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                    side:
-                        isNew
-                            ? BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 1.5,
-                            )
-                            : BorderSide.none,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-                    child: ListTile(
-                      title: Padding(
-                        padding: const EdgeInsets.only(bottom: 6.0),
-                        child: Text(entry.text),
-                      ),
-                      subtitle: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _timeFormatter.format(entry.timestamp),
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                          // Use ActionChip for tappable behavior
-                          ActionChip(
-                            label: Text(
-                              entry.category,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    isProcessing
-                                        ? Colors.orange[900]
-                                        : CategoryColors.getTextColorForCategory(
-                                          entry.category,
-                                        ),
-                              ),
-                            ),
-                            backgroundColor:
-                                isProcessing
-                                    ? Colors.orange.shade100.withOpacity(0.8)
-                                    : categoryColor.withOpacity(0.2),
-                            side: BorderSide.none,
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6.0,
-                            ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            // Use onPressed for ActionChip
-                            onPressed:
-                                isProcessing
-                                    ? null
-                                    : () {
-                                      HapticFeedback.lightImpact(); // Add haptic feedback
-                                      _showChangeCategoryDialog(context, entry);
-                                    },
-                            tooltip: isProcessing ? null : 'Change Category',
-                          ),
-                        ],
-                      ),
-                      trailing: _buildEntryActions(entry, isProcessing),
-                      dense: true,
-                    ),
-                  ),
-                );
-              }
-              return Container(); // Should not happen
-            },
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildFilterSection() {
     return Padding(
       padding: const EdgeInsets.only(
@@ -1357,6 +1196,21 @@ Entries using this category will be moved to "Misc".''',
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEntriesList() {
+    // This method is now replaced by the EntriesList widget.
+    return EntriesList(
+      formatDateHeader: _formatDateHeader,
+      getCategoryColor: _getCategoryColor,
+      buildEntryActions: _buildEntryActions,
+      timeFormatter: _timeFormatter,
+      onChangeCategoryPressed:
+          (entry) => _showChangeCategoryDialog(
+            context,
+            entry,
+          ), // <-- Pass the dialog function
     );
   }
 }
