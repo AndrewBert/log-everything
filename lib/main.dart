@@ -6,10 +6,11 @@ import 'package:myapp/pages/cubit/home_screen_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/services/ai_categorization_service.dart';
+import 'package:myapp/services/entry_persistence_service.dart'; // <-- Import persistence service
 import 'package:myapp/speech_service.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
-import 'package:record/record.dart'; // <-- Add record import
+import 'package:record/record.dart';
 import 'entry/cubit/entry_cubit.dart';
 
 // Make main async
@@ -35,25 +36,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Instantiate concrete services and dependencies
-    final aiService =
-        OpenAiCategorizationService(); // Use concrete implementation
+    // Instantiate services
+    final aiService = OpenAiCategorizationService();
     final speechService = SpeechService();
-    final audioRecorder = AudioRecorder(); // Instantiate AudioRecorder
+    final audioRecorder = AudioRecorder();
+    final persistenceService =
+        SharedPreferencesEntryPersistenceService(); // <-- Instantiate persistence service
 
-    // Create EntryCubit instance first to pass it to VoiceInputCubit
-    final entryCubit = EntryCubit(aiService: aiService);
+    // Create EntryCubit instance first
+    final entryCubit = EntryCubit(
+      aiService: aiService,
+      persistenceService: persistenceService, // <-- Pass persistence service
+    );
 
     return MultiBlocProvider(
       providers: [
-        // Provide the existing EntryCubit instance
         BlocProvider<EntryCubit>.value(value: entryCubit),
         BlocProvider<VoiceInputCubit>(
           create:
               (context) => VoiceInputCubit(
                 speechService: speechService,
                 audioRecorder: audioRecorder,
-                entryCubit: entryCubit, // Pass the created EntryCubit instance
+                entryCubit: entryCubit,
               ),
         ),
         BlocProvider<HomeScreenCubit>(create: (context) => HomeScreenCubit()),

@@ -1,29 +1,28 @@
-import 'dart:async'; // Keep dart:async for Timer
-import 'package:flutter/services.dart'; // Import for HapticFeedback
-
+import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:collection/collection.dart';
 
-import '../entry.dart'; // Adjusted path
-import '../../utils/logger.dart'; // Adjusted path
-import '../../services/ai_categorization_service.dart'; // Adjusted path
+import '../entry.dart';
+import '../../utils/logger.dart';
+import '../../services/ai_categorization_service.dart';
+import '../../services/entry_persistence_service.dart';
 
-part 'entry_state.dart'; // Path remains relative to this file
+part 'entry_state.dart';
 
 class EntryCubit extends Cubit<EntryState> {
-  // ... (rest of the cubit code remains the same) ...
   // Inject the service
   final AiCategorizationService _aiService;
+  final EntryPersistenceService _persistenceService;
 
-  EntryCubit({required AiCategorizationService aiService})
-    : _aiService = aiService, // Initialize the service
-      super(EntryState()) {
+  EntryCubit({
+    required AiCategorizationService aiService,
+    required EntryPersistenceService persistenceService,
+  }) : _aiService = aiService,
+       _persistenceService = persistenceService,
+       super(EntryState()) {
     _loadAllData();
   }
-
-  static const String _entriesKey = 'saved_entries_v3_categorized';
-  static const String _categoriesKey = 'custom_categories_v1';
 
   final Map<DateTime, Timer> _newEntryTimers = {};
   static const Duration _newEntryHighlightDuration = Duration(seconds: 5);
@@ -56,7 +55,7 @@ class EntryCubit extends Cubit<EntryState> {
               displayListItems: newDisplayList,
             ),
           );
-          _saveEntries(updatedEntries); // Save updated entries
+          _saveEntries(updatedEntries); // Call the cubit's save method
         }
         _newEntryTimers.remove(entry.timestamp);
       }
@@ -64,49 +63,30 @@ class EntryCubit extends Cubit<EntryState> {
   }
 
   // --- Category Management ---
-  List<String> get _defaultCategories => [
-    'Misc',
-    'Work',
-    'Personal',
-    'Ideas',
-    'To-Do',
-    'Journal',
-    'Learning',
-    'Health',
-    'Finance',
-    'Goals',
-  ];
 
   Future<void> _loadCategories() async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedCategories = prefs.getStringList(_categoriesKey);
-      if (savedCategories == null || savedCategories.isEmpty) {
-        emit(state.copyWith(categories: _defaultCategories));
-        await _saveCategories(_defaultCategories);
-      } else {
-        List<String> currentCategories = List<String>.from(savedCategories);
-        if (!currentCategories.contains('Misc')) {
-          currentCategories.add('Misc');
-        }
-        emit(state.copyWith(categories: currentCategories));
-      }
-      AppLogger.info("Loaded Categories: ${state.categories}");
+      // Use persistence service
+      final loadedCategories = await _persistenceService.loadCategories();
+      emit(state.copyWith(categories: loadedCategories));
+      AppLogger.info("Cubit: Loaded Categories: ${state.categories}");
     } catch (e) {
-      AppLogger.error("Error loading categories", error: e);
+      AppLogger.error("Cubit: Error loading categories", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to load categories."));
+      // Optionally emit default categories from service as fallback?
+      // emit(state.copyWith(categories: _persistenceService.getDefaultCategories()));
     }
   }
 
   Future<void> _saveCategories(List<String> categories) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_categoriesKey, categories);
-      AppLogger.info("Saved Categories: $categories");
+      // Use persistence service
+      await _persistenceService.saveCategories(categories);
+      AppLogger.info("Cubit: Saved Categories: $categories");
     } catch (e) {
-      AppLogger.error("Error saving categories", error: e);
+      AppLogger.error("Cubit: Error saving categories", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to save categories."));
     }
   }
@@ -118,7 +98,9 @@ class EntryCubit extends Cubit<EntryState> {
         !state.categories.contains(trimmedCategory)) {
       final updatedCategories = List<String>.from(state.categories)
         ..add(trimmedCategory);
+      // Emit state first for responsiveness
       emit(state.copyWith(categories: updatedCategories, clearLastError: true));
+      // Then save using the service
       await _saveCategories(updatedCategories);
     }
   }
@@ -133,16 +115,17 @@ class EntryCubit extends Cubit<EntryState> {
       final updatedEntries =
           state.entries.map((entry) {
             return entry.category == categoryToDelete
-                ? entry.copyWith(category: 'Misc') // Use copyWith
+                ? entry.copyWith(category: 'Misc')
                 : entry;
           }).toList();
 
       // Recalculate display list after updating entries
       final newDisplayList = _buildDisplayList(
         updatedEntries,
-        state.filterCategory, // Use current filter
+        state.filterCategory,
       );
 
+      // Emit state first
       emit(
         state.copyWith(
           categories: updatedCategories,
@@ -152,6 +135,7 @@ class EntryCubit extends Cubit<EntryState> {
           clearFilter: state.filterCategory == categoryToDelete,
         ),
       );
+      // Then save using the service
       await _saveCategories(updatedCategories);
       await _saveEntries(updatedEntries);
     }
@@ -193,6 +177,7 @@ class EntryCubit extends Cubit<EntryState> {
           : state.filterCategory, // Update filter if it was the old name
     );
 
+    // Emit state first
     emit(
       state.copyWith(
         entries: updatedEntries,
@@ -205,6 +190,7 @@ class EntryCubit extends Cubit<EntryState> {
                 : state.filterCategory,
       ),
     );
+    // Then save using the service
     await _saveEntries(updatedEntries);
     await _saveCategories(updatedCategories);
   }
@@ -214,26 +200,10 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     List<Entry> loadedEntries = [];
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedEntriesJson = prefs.getStringList(_entriesKey) ?? [];
-      if (savedEntriesJson.isNotEmpty) {
-        loadedEntries =
-            savedEntriesJson.map((jsonString) {
-              try {
-                return Entry.fromJsonString(jsonString);
-              } catch (e) {
-                AppLogger.error("Error parsing entry JSON", error: e);
-                return Entry(
-                  text: "Error parsing entry",
-                  timestamp: DateTime.now(),
-                  category: "Error",
-                );
-              }
-            }).toList();
-        loadedEntries.removeWhere((entry) => entry.category == "Error");
-      }
+      // Use persistence service
+      loadedEntries = await _persistenceService.loadEntries();
       AppLogger.info(
-        'Successfully loaded ${loadedEntries.length} categorized entries.',
+        'Cubit: Successfully loaded ${loadedEntries.length} entries.',
       );
       // Calculate display list after loading
       final newDisplayList = _buildDisplayList(
@@ -248,16 +218,14 @@ class EntryCubit extends Cubit<EntryState> {
       );
     } catch (e) {
       AppLogger.error(
-        'Error loading entries. Clearing potentially incompatible data.',
+        'Cubit: Error loading entries. Clearing potentially incompatible data.',
         error: e,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_entriesKey);
       emit(
         state.copyWith(
           entries: [],
           displayListItems: [], // Clear display list on error
-          lastErrorMessage: "Failed to load entries, data cleared.",
+          lastErrorMessage: "Failed to load entries.", // More generic message
         ),
       );
     }
@@ -275,16 +243,11 @@ class EntryCubit extends Cubit<EntryState> {
 
   Future<void> _saveEntries(List<Entry> entries) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      // Ensure 'isNew' is false before saving
-      final entriesToSave =
-          entries.map((e) => e.copyWith(isNew: false)).toList();
-      final entriesJson =
-          entriesToSave.map((entry) => entry.toJsonString()).toList();
-      await prefs.setStringList(_entriesKey, entriesJson);
-      AppLogger.info('Saved ${entries.length} categorized entries.');
+      // Use persistence service
+      await _persistenceService.saveEntries(entries);
+      AppLogger.info('Cubit: Saved ${entries.length} entries.');
     } catch (e) {
-      AppLogger.error('Error saving entries', error: e);
+      AppLogger.error('Cubit: Error saving entries', error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to save entries."));
     }
   }
@@ -493,14 +456,16 @@ class EntryCubit extends Cubit<EntryState> {
     emit(
       state.copyWith(entries: updatedEntries, displayListItems: newDisplayList),
     );
+    // Save after adding
     await _saveEntries(updatedEntries);
     AppLogger.info("Undid delete for entry - ${entryToAdd.text}");
   }
 
   Future<void> deleteEntry(Entry entryToDelete) async {
     emit(state.copyWith(clearLastError: true));
+    final originalEntries = List<Entry>.from(state.entries);
     final updatedEntries =
-        state.entries
+        originalEntries
             .where(
               (entry) =>
                   !(entry.timestamp == entryToDelete.timestamp &&
@@ -508,7 +473,7 @@ class EntryCubit extends Cubit<EntryState> {
             )
             .toList();
 
-    if (updatedEntries.length < state.entries.length) {
+    if (updatedEntries.length < originalEntries.length) {
       final newDisplayList = _buildDisplayList(
         updatedEntries,
         state.filterCategory,
@@ -519,6 +484,7 @@ class EntryCubit extends Cubit<EntryState> {
           displayListItems: newDisplayList,
         ),
       );
+      // Save after deleting
       await _saveEntries(updatedEntries);
     }
   }
@@ -547,6 +513,7 @@ class EntryCubit extends Cubit<EntryState> {
           displayListItems: newDisplayList,
         ),
       );
+      // Save after updating
       await _saveEntries(updatedEntries);
     }
   }
