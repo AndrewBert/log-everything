@@ -17,7 +17,8 @@ import '../widgets/entries_list.dart'; // Import the new EntriesList widget
 import '../widgets/filter_section.dart'; // Import the new FilterSection widget
 import '../widgets/input_area.dart';
 import '../dialogs/edit_entry_dialog.dart';
-import '../dialogs/manage_categories_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/manage_categories_dialog.dart';
+import '../dialogs/change_category_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -313,6 +314,7 @@ Entries using this category will be moved to "Misc".''',
     }
   }
 
+  // Update _showChangeCategoryDialog to use the new widget
   Future<void> _showChangeCategoryDialog(
     BuildContext context,
     Entry entry,
@@ -327,40 +329,18 @@ Entries using this category will be moved to "Misc".''',
       selectedCategory = 'Misc';
     }
 
-    final String? newCategory = await showDialog<String>(
+    // Use the new ChangeCategoryDialog widget
+    final String? newCategory = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
-        return SimpleDialog(
-          title: const Text('Change Category'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          children:
-              availableCategories.map((category) {
-                return SimpleDialogOption(
-                  onPressed: () {
-                    HapticFeedback.selectionClick(); // Add haptic feedback
-                    Navigator.pop(dialogContext, category);
-                  },
-                  child: Text(
-                    category,
-                    style: TextStyle(
-                      fontWeight:
-                          category == selectedCategory
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                      color:
-                          category == selectedCategory
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                    ),
-                  ),
-                );
-              }).toList(),
+        return ChangeCategoryDialog(
+          currentCategory: selectedCategory,
+          availableCategories: availableCategories,
         );
       },
     );
 
+    // Keep the logic to handle the result
     if (newCategory != null && newCategory != entry.category) {
       final updatedEntry = entry.copyWith(category: newCategory);
       entryCubit.updateEntry(entry, updatedEntry);
