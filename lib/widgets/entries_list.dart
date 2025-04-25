@@ -5,21 +5,24 @@ import 'package:intl/intl.dart';
 import '../entry.dart';
 import '../cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
+import 'entry_actions.dart';
 
 class EntriesList extends StatelessWidget {
   final String Function(DateTime) formatDateHeader;
   final Color Function(String) getCategoryColor;
-  final Widget Function(Entry entry, bool isProcessing) buildEntryActions;
   final DateFormat timeFormatter;
   final void Function(Entry entry) onChangeCategoryPressed;
+  final void Function(Entry entry) onEditPressed;
+  final void Function(Entry entry) onDeletePressed;
 
   const EntriesList({
     super.key,
     required this.formatDateHeader,
     required this.getCategoryColor,
-    required this.buildEntryActions,
     required this.timeFormatter,
     required this.onChangeCategoryPressed,
+    required this.onEditPressed,
+    required this.onDeletePressed,
   });
 
   @override
@@ -159,7 +162,12 @@ class EntriesList extends StatelessWidget {
                           ),
                         ],
                       ),
-                      trailing: buildEntryActions(entry, isProcessing),
+                      trailing: EntryActions(
+                        entry: entry,
+                        isProcessing: isProcessing,
+                        onEditPressed: () => onEditPressed(entry),
+                        onDeletePressed: () => onDeletePressed(entry),
+                      ),
                       dense: true,
                     ),
                   ),

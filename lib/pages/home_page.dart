@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import HapticFeedback
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:myapp/cubit/voice_input_cubit.dart';
+import 'package:myapp/cubit/voice_input_cubit.dart'; // <-- Re-add VoiceInputCubit import
 import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
@@ -12,10 +12,10 @@ import '../cubit/home_screen_cubit.dart';
 import '../cubit/home_screen_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
-import '../widgets/voice_input_section.dart';
 import '../widgets/whats_new_dialog.dart'; // Import the new dialog
 import '../widgets/entries_list.dart'; // Import the new EntriesList widget
 import '../widgets/filter_section.dart'; // Import the new FilterSection widget
+import '../widgets/input_area.dart'; // <-- Import the new InputArea widget
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,31 +24,17 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-// Add TickerProviderStateMixin for AnimationController
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
-  final TextEditingController _textController = TextEditingController();
   final DateFormat _timeFormatter = DateFormat('HH:mm');
-  final FocusNode _inputFocusNode = FocusNode();
-  final GlobalKey _inputAreaKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _inputFocusNode.addListener(_onInputFocusChange);
   }
 
   @override
   void dispose() {
-    _textController.dispose();
-    _inputFocusNode.removeListener(_onInputFocusChange);
-    _inputFocusNode.dispose();
     super.dispose();
-  }
-
-  void _onInputFocusChange() {
-    if (mounted && context.mounted) {
-      context.read<HomeScreenCubit>().setInputFocus(_inputFocusNode.hasFocus);
-    }
   }
 
   void _showFloatingSnackBar(
@@ -61,22 +47,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final messenger = ScaffoldMessenger.of(targetContext);
     messenger.hideCurrentSnackBar();
 
-    EdgeInsetsGeometry? margin = EdgeInsets.only(
-      bottom: 8.0, // Default bottom margin if input area not found
-      left: 16.0,
-      right: 16.0,
-    );
-
-    final RenderBox? inputAreaRenderBox =
-        _inputAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (inputAreaRenderBox != null) {
-      final inputAreaHeight = inputAreaRenderBox.size.height;
-      margin = EdgeInsets.only(
-        bottom: inputAreaHeight + 8.0,
-        left: 16.0,
-        right: 16.0,
-      );
-    }
+    // Calculate margin based on keyboard visibility or a fixed offset
+    // This is a simplification; a more robust solution might involve
+    // listening to keyboard changes or using MediaQuery.viewInsets
+    final keyboardVisible = MediaQuery.of(targetContext).viewInsets.bottom > 0;
+    final bottomPadding = MediaQuery.of(targetContext).padding.bottom;
+    final double bottomMargin =
+        keyboardVisible
+            ? MediaQuery.of(targetContext).viewInsets.bottom + 8.0
+            : bottomPadding + 80.0; // Estimate input area height + padding
 
     messenger.showSnackBar(
       SnackBar(
@@ -85,7 +64,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         action: action,
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        margin: margin, // Use calculated or default margin
+        margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
@@ -140,10 +119,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _handleInput() {
+  void _handleInput(String currentText) {
     final voiceCubit = context.read<VoiceInputCubit>();
     final entryCubit = context.read<EntryCubit>();
-    final currentText = _textController.text.trim();
 
     // Handle manual send during recording
     if (voiceCubit.state.isRecording) {
@@ -154,8 +132,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // Pass current text to the cubit for background processing
       voiceCubit.stopRecordingAndCombine(currentText);
 
-      _textController.clear();
-      FocusScope.of(context).unfocus();
       _showProcessingSnackbar(
         'Processing voice entry...',
       ); // Show generic processing
@@ -166,8 +142,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (currentText.isNotEmpty) {
       entryCubit.addEntry(currentText);
       _showProcessingSnackbar('Processing text entry...');
-      _textController.clear();
-      FocusScope.of(context).unfocus();
     }
   }
 
@@ -825,157 +799,23 @@ Entries using this category will be moved to "Misc".''',
     return CategoryColors.getColorForCategory(category);
   }
 
-  Widget _buildInputArea() {
-    return BlocBuilder<HomeScreenCubit, HomeScreenState>(
-      buildWhen:
-          (prev, current) => prev.isInputFocused != current.isInputFocused,
-      builder: (context, state) {
-        final isInputFocused = state.isInputFocused;
-
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Material(
-            elevation: 8.0,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20.0),
-                topRight: Radius.circular(20.0),
-              ),
-            ),
-            child: Container(
-              key: _inputAreaKey,
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 8,
-                top: 12,
-                bottom: MediaQuery.of(context).padding.bottom + 12,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20.0),
-                  topRight: Radius.circular(20.0),
-                ),
-              ),
-              child: TextField(
-                focusNode: _inputFocusNode,
-                controller: _textController,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.6),
-                  labelText: isInputFocused ? 'Enter log entry' : null,
-                  hintText: 'What happened?...',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  suffixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 4.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        VoiceInputSection(
-                          textController: _textController,
-                          inputFocusNode: _inputFocusNode,
-                          isInputFocused: isInputFocused,
-                          showSnackBar: _showFloatingSnackBar,
-                        ),
-                        IconButton(
-                          onPressed:
-                              () =>
-                                  _handleInput(), // Call without args for manual send
-                          icon: const Icon(Icons.send_rounded),
-                          color: Theme.of(context).colorScheme.primary,
-                          iconSize: 28,
-                          tooltip: 'Add Entry',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                onSubmitted: (_) => _handleInput(),
-                minLines: 1,
-                maxLines: 5,
-                onTapOutside: (_) {
-                  if (_inputFocusNode.hasFocus) {
-                    FocusScope.of(context).unfocus();
-                  }
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEntryActions(Entry entry, bool isProcessing) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isProcessing)
-          const Padding(
-            padding: EdgeInsets.only(right: 4.0),
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.0),
-            ),
-          ),
-        IconButton(
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          tooltip: 'Edit Entry',
-          visualDensity: VisualDensity.compact,
-          splashRadius: 20,
-          onPressed:
-              isProcessing ? null : () => _showEditEntryDialog(context, entry),
+  // Create a helper method for delete logic
+  void _handleDeleteEntry(Entry entry) {
+    final entryToDelete = entry;
+    context.read<EntryCubit>().deleteEntry(entryToDelete);
+    if (mounted) {
+      _showFloatingSnackBar(
+        context,
+        content: const Text('Entry deleted'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            context.read<EntryCubit>().addEntryObject(entryToDelete);
+          },
         ),
-        IconButton(
-          icon: Icon(
-            Icons.delete_outline,
-            color: Colors.redAccent.shade100,
-            size: 18,
-          ),
-          tooltip: 'Delete Entry',
-          visualDensity: VisualDensity.compact,
-          splashRadius: 20,
-          onPressed:
-              isProcessing
-                  ? null
-                  : () {
-                    final entryToDelete = entry;
-                    context.read<EntryCubit>().deleteEntry(entryToDelete);
-                    if (mounted) {
-                      _showFloatingSnackBar(
-                        context,
-                        content: const Text('Entry deleted'),
-                        duration: const Duration(seconds: 4),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () {
-                            context.read<EntryCubit>().addEntryObject(
-                              entryToDelete,
-                            );
-                          },
-                        ),
-                      );
-                    }
-                  },
-        ),
-      ],
-    );
+      );
+    }
   }
 
   @override
@@ -1094,11 +934,28 @@ Entries using this category will be moved to "Misc".''',
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const FilterSection(), // <-- Use the new widget
-                  _buildEntriesList(),
+                  const FilterSection(),
+                  _buildEntriesList(), // This method now returns the updated EntriesList
                 ],
               ),
-              _buildInputArea(),
+              InputArea(
+                onSendPressed: _handleInput,
+                showSnackBar: ({
+                  required context,
+                  required content,
+                  Duration? duration,
+                  action,
+                  backgroundColor,
+                }) {
+                  _showFloatingSnackBar(
+                    context,
+                    content: content,
+                    duration: duration ?? const Duration(seconds: 4),
+                    action: action,
+                    backgroundColor: backgroundColor,
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -1106,18 +963,18 @@ Entries using this category will be moved to "Misc".''',
     );
   }
 
+  // Update the _buildEntriesList method to pass the new callbacks
   Widget _buildEntriesList() {
-    // This method is now replaced by the EntriesList widget.
     return EntriesList(
       formatDateHeader: _formatDateHeader,
       getCategoryColor: _getCategoryColor,
-      buildEntryActions: _buildEntryActions,
       timeFormatter: _timeFormatter,
       onChangeCategoryPressed:
-          (entry) => _showChangeCategoryDialog(
-            context,
-            entry,
-          ), // <-- Pass the dialog function
+          (entry) => _showChangeCategoryDialog(context, entry),
+      onEditPressed:
+          (entry) =>
+              _showEditEntryDialog(context, entry), // <-- Pass edit dialog
+      onDeletePressed: _handleDeleteEntry, // <-- Pass delete handler
     );
   }
 }
