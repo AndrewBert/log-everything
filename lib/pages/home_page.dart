@@ -18,7 +18,8 @@ import '../widgets/filter_section.dart'; // Import the new FilterSection widget
 import '../widgets/input_area.dart';
 import '../dialogs/edit_entry_dialog.dart';
 import '../dialogs/manage_categories_dialog.dart';
-import '../dialogs/change_category_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/change_category_dialog.dart';
+import '../dialogs/help_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -354,78 +355,15 @@ Entries using this category will be moved to "Misc".''',
     }
   }
 
+  // Update _showHelpDialog to use the new widget
   void _showHelpDialog() {
-    HapticFeedback.lightImpact(); // Add haptic feedback
+    HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.info_outline),
-              SizedBox(width: 8),
-              Text('About Log Splitter'), // Updated title
-            ],
-          ),
-          content: const SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Motivation:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'This app helps you quickly capture thoughts, tasks, or events using voice or text, automatically categorizing them for easy review later.',
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Purpose & Key Features:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '- Log entries via text input or voice dictation.\n'
-                  '- Automatic categorization using AI (powered by OpenAI).\n'
-                  '- View entries grouped by date.\n'
-                  '- Filter entries by category.\n'
-                  '- Manage custom categories.\n'
-                  '- Edit or delete existing entries.',
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Feedback:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Your feedback is valuable! Please report any bugs, suggest improvements, or share your experience, especially regarding:\n'
-                  '- Accuracy of voice transcription.\n'
-                  '- Relevance of AI categorization.\n'
-                  '- Overall usability and workflow.',
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            // Add button to show What's New
-            TextButton(
-              child: const Text("What's New"),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close help dialog first
-                _showWhatsNewDialog(); // Show the What's New dialog
-              },
-            ),
-            TextButton(
-              child: const Text('Close'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
+        return HelpDialog(
+          // Pass the existing method as a callback
+          onShowWhatsNewPressed: () => _showWhatsNewDialog(),
         );
       },
     );
@@ -533,6 +471,7 @@ Entries using this category will be moved to "Misc".''',
           IconButton(
             icon: const Icon(Icons.help_outline),
             tooltip: 'Help / About',
+            // This now calls the updated method which shows the new dialog
             onPressed: _showHelpDialog,
           ),
           IconButton(
