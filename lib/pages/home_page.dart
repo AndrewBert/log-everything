@@ -16,7 +16,8 @@ import '../widgets/whats_new_dialog.dart'; // Import the new dialog
 import '../widgets/entries_list.dart'; // Import the new EntriesList widget
 import '../widgets/filter_section.dart'; // Import the new FilterSection widget
 import '../widgets/input_area.dart';
-import '../dialogs/edit_entry_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/edit_entry_dialog.dart';
+import '../dialogs/manage_categories_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -199,263 +200,20 @@ Entries using this category will be moved to "Misc".''',
   }
 
   void _showManageCategoriesDialog() {
-    HapticFeedback.lightImpact(); // Add haptic feedback
-    final categoryInputController = TextEditingController();
-    String feedbackMessage = '';
-    Timer? feedbackTimer;
-    // Animation controller for feedback text
-    late AnimationController feedbackAnimationController;
-    late Animation<double> feedbackScaleAnimation;
-
-    feedbackAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this, // Use the TickerProviderStateMixin
-    );
-    feedbackScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: feedbackAnimationController,
-        curve: Curves.easeOutBack,
-      ),
-    );
-
+    HapticFeedback.lightImpact();
     showDialog(
       context: context,
-      builder:
-          (dialogContext) => StatefulBuilder(
-            builder: (stfContext, stfSetState) {
-              void showFeedback(String message) {
-                feedbackTimer?.cancel();
-                stfSetState(() {
-                  feedbackMessage = message;
-                });
-                // Trigger animation
-                feedbackAnimationController.forward(from: 0.0);
-                feedbackTimer = Timer(
-                  const Duration(seconds: 2, milliseconds: 500),
-                  () {
-                    if (mounted) {
-                      stfSetState(() {
-                        feedbackMessage = '';
-                      });
-                    }
-                  },
-                );
-              }
-
-              return BlocProvider.value(
-                value: BlocProvider.of<EntryCubit>(context),
-                child: AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: const Text('Manage Categories'),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: Text(
-                            'Add custom categories or delete unused ones.',
-                            style: Theme.of(stfContext).textTheme.bodySmall,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Flexible(
-                          child: BlocBuilder<EntryCubit, EntryState>(
-                            builder: (listBuilderContext, state) {
-                              if (state.categories.isEmpty) {
-                                return const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 16.0,
-                                    ),
-                                    child: Text('No categories found.'),
-                                  ),
-                                );
-                              }
-                              // Sort categories: Most recent first, Misc last
-                              final List<String> displayCategories =
-                                  List<String>.from(state.categories);
-                              displayCategories.remove(
-                                'Misc',
-                              ); // Remove Misc temporarily
-                              final sortedCategories =
-                                  displayCategories.reversed
-                                      .toList(); // Reverse for most recent first
-                              sortedCategories.add(
-                                'Misc',
-                              ); // Add Misc back at the end
-
-                              return ListView.builder(
-                                shrinkWrap: true,
-                                itemCount: sortedCategories.length,
-                                itemBuilder: (context, index) {
-                                  final category = sortedCategories[index];
-                                  final bool isMisc = category == 'Misc';
-                                  return ListTile(
-                                    title: Text(
-                                      category,
-                                      style: TextStyle(
-                                        color: isMisc ? Colors.grey : null,
-                                      ),
-                                    ),
-                                    dense: true,
-                                    trailing:
-                                        isMisc
-                                            ? null
-                                            : Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.edit_outlined,
-                                                    size: 20,
-                                                  ),
-                                                  tooltip: 'Rename Category',
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  splashRadius: 20,
-                                                  onPressed: () async {
-                                                    final String? newName =
-                                                        await _showEditCategoryDialog(
-                                                          stfContext,
-                                                          category,
-                                                        );
-                                                    if (newName != null &&
-                                                        newName.isNotEmpty &&
-                                                        newName != category) {
-                                                      HapticFeedback.mediumImpact(); // Add haptic feedback
-                                                      showFeedback(
-                                                        'Category renamed to "$newName"',
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: Icon(
-                                                    Icons.delete_outline,
-                                                    color:
-                                                        Colors.redAccent[100],
-                                                    size: 20,
-                                                  ),
-                                                  tooltip: 'Delete Category',
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  splashRadius: 20,
-                                                  onPressed: () async {
-                                                    final entryCubit =
-                                                        listBuilderContext
-                                                            .read<EntryCubit>();
-
-                                                    bool confirmed =
-                                                        await _showDeleteCategoryConfirmationDialog(
-                                                          listBuilderContext,
-                                                          category,
-                                                        );
-                                                    if (confirmed) {
-                                                      HapticFeedback.mediumImpact(); // Add haptic feedback
-                                                      entryCubit.deleteCategory(
-                                                        category,
-                                                      );
-                                                      showFeedback(
-                                                        'Category "$category" deleted',
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        if (feedbackMessage.isNotEmpty)
-                          ScaleTransition(
-                            scale: feedbackScaleAnimation,
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: 10.0,
-                                top: 4.0,
-                              ),
-                              child: Text(
-                                feedbackMessage,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(stfContext).colorScheme.primary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: TextField(
-                            controller: categoryInputController,
-                            decoration: InputDecoration(
-                              labelText: 'New Category Name',
-                              hintText: 'Enter category to add...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                            ),
-                            onSubmitted: (value) {
-                              if (value.trim().isNotEmpty) {
-                                final newCategory = value.trim();
-                                HapticFeedback.mediumImpact(); // Add haptic feedback
-                                BlocProvider.of<EntryCubit>(
-                                  dialogContext,
-                                ).addCustomCategory(newCategory);
-                                categoryInputController.clear();
-                                showFeedback('Category "$newCategory" added');
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      child: const Text('Done'),
-                      onPressed: () {
-                        feedbackTimer?.cancel();
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                    FilledButton(
-                      child: const Text('Add Category'),
-                      onPressed: () {
-                        final newCategory = categoryInputController.text.trim();
-                        if (newCategory.isNotEmpty) {
-                          HapticFeedback.mediumImpact(); // Add haptic feedback
-                          BlocProvider.of<EntryCubit>(
-                            dialogContext,
-                          ).addCustomCategory(newCategory);
-                          categoryInputController.clear();
-                          showFeedback('Category "$newCategory" added');
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-    ).whenComplete(() {
-      feedbackTimer?.cancel();
-      feedbackAnimationController.dispose(); // Dispose controller on dismiss
-    });
+      builder: (dialogContext) {
+        // Provide the necessary cubit to the dialog subtree
+        // (Assuming EntryCubit is already provided above HomePage)
+        return ManageCategoriesDialog(
+          // Pass the existing dialog functions as callbacks
+          onShowEditCategoryDialog: _showEditCategoryDialog,
+          onShowDeleteCategoryConfirmationDialog:
+              _showDeleteCategoryConfirmationDialog,
+        );
+      },
+    );
   }
 
   Future<String?> _showEditCategoryDialog(
@@ -800,6 +558,7 @@ Entries using this category will be moved to "Misc".''',
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Manage Categories',
+            // This now calls the updated method which shows the new dialog
             onPressed: _showManageCategoriesDialog,
           ),
           const SizedBox(width: 8),
