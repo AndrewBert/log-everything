@@ -12,14 +12,15 @@ import '../cubit/home_screen_cubit.dart';
 import '../cubit/home_screen_state.dart';
 import '../entry.dart';
 import '../utils/category_colors.dart';
-import '../widgets/whats_new_dialog.dart'; // Import the new dialog
-import '../widgets/entries_list.dart'; // Import the new EntriesList widget
-import '../widgets/filter_section.dart'; // Import the new FilterSection widget
+import '../widgets/entries_list.dart';
+import '../widgets/filter_section.dart';
 import '../widgets/input_area.dart';
 import '../dialogs/edit_entry_dialog.dart';
 import '../dialogs/manage_categories_dialog.dart';
 import '../dialogs/change_category_dialog.dart';
-import '../dialogs/help_dialog.dart'; // <-- Import the new dialog
+import '../dialogs/help_dialog.dart';
+import '../dialogs/whats_new_dialog.dart';
+import '../dialogs/delete_category_confirmation_dialog.dart'; // <-- Import the new dialog
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -168,37 +169,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // Update _showDeleteCategoryConfirmationDialog to use the new widget
   Future<bool> _showDeleteCategoryConfirmationDialog(
     BuildContext context,
     String category,
   ) async {
+    // Use the new DeleteCategoryConfirmationDialog widget
     return await showDialog<bool>(
           context: context,
           builder: (BuildContext dialogContext) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text('Confirm Delete Category'),
-              content: Text(
-                '''Are you sure you want to delete the category "$category"?
-Entries using this category will be moved to "Misc".''',
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                ),
-              ],
-            );
+            return DeleteCategoryConfirmationDialog(category: category);
           },
         ) ??
-        false;
+        false; // Return false if dialog is dismissed
   }
 
   void _showManageCategoriesDialog() {
