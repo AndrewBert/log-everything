@@ -15,6 +15,7 @@ import '../utils/category_colors.dart';
 import '../widgets/voice_input_section.dart';
 import '../widgets/whats_new_dialog.dart'; // Import the new dialog
 import '../widgets/entries_list.dart'; // Import the new EntriesList widget
+import '../widgets/filter_section.dart'; // Import the new FilterSection widget
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -824,103 +825,6 @@ Entries using this category will be moved to "Misc".''',
     return CategoryColors.getColorForCategory(category);
   }
 
-  Widget _buildFilterSection() {
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: 4.0,
-        bottom: 4.0,
-        left: 16.0,
-        right: 16.0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          BlocBuilder<EntryCubit, EntryState>(
-            buildWhen: (prev, current) {
-              bool shouldBuild =
-                  prev.categories != current.categories ||
-                  prev.filterCategory != current.filterCategory;
-              return shouldBuild;
-            },
-            builder: (context, state) {
-              final dropdownCategories = [
-                'All Categories',
-                ...List<String>.from(state.categories)..sort(),
-              ];
-
-              String currentDisplayValue =
-                  state.filterCategory ?? 'All Categories';
-              if (!dropdownCategories.contains(currentDisplayValue)) {
-                currentDisplayValue = 'All Categories';
-              }
-
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12.0,
-                  vertical: 0,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(20.0),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: currentDisplayValue,
-                    icon: const Icon(Icons.filter_list_alt, size: 20),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                    items:
-                        dropdownCategories.map((String category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                fontWeight:
-                                    category == currentDisplayValue
-                                        ? FontWeight
-                                            .bold // Make selected bold
-                                        : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      // Add the onChanged callback
-                      if (newValue == null) {
-                        return;
-                      }
-
-                      final cubit = context.read<EntryCubit>();
-                      final currentFilter = state.filterCategory;
-
-                      if (newValue == 'All Categories') {
-                        if (currentFilter != null) {
-                          cubit.setFilter(null);
-                        }
-                      } else {
-                        if (currentFilter != newValue) {
-                          cubit.setFilter(newValue);
-                        }
-                      }
-                    },
-                    isDense: true,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInputArea() {
     return BlocBuilder<HomeScreenCubit, HomeScreenState>(
       buildWhen:
@@ -1189,7 +1093,10 @@ Entries using this category will be moved to "Misc".''',
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[_buildFilterSection(), _buildEntriesList()],
+                children: <Widget>[
+                  const FilterSection(), // <-- Use the new widget
+                  _buildEntriesList(),
+                ],
               ),
               _buildInputArea(),
             ],
