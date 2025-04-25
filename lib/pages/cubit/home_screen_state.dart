@@ -1,12 +1,13 @@
-import 'package:equatable/equatable.dart'; // <-- Import Equatable
+import 'package:equatable/equatable.dart';
 
-// Extend Equatable
 class HomeScreenState extends Equatable {
   final bool isInputFocused;
   final String appVersion;
   final bool showWhatsNewDialog;
-  final String? snackBarMessage; // Nullable
-  final int titleTapCount; // Added based on file content
+  final String? snackBarMessage;
+  final int titleTapCount;
+  final String? lastSeenVersion;
+  final bool isVersionLoading;
 
   const HomeScreenState({
     this.isInputFocused = false,
@@ -14,9 +15,10 @@ class HomeScreenState extends Equatable {
     this.showWhatsNewDialog = false,
     this.snackBarMessage,
     this.titleTapCount = 0,
+    this.lastSeenVersion,
+    this.isVersionLoading = false,
   });
 
-  // Implement props getter
   @override
   List<Object?> get props => [
     isInputFocused,
@@ -24,6 +26,8 @@ class HomeScreenState extends Equatable {
     showWhatsNewDialog,
     snackBarMessage,
     titleTapCount,
+    lastSeenVersion,
+    isVersionLoading,
   ];
 
   HomeScreenState copyWith({
@@ -33,6 +37,8 @@ class HomeScreenState extends Equatable {
     String? snackBarMessage,
     bool clearSnackBarMessage = false,
     int? titleTapCount,
+    String? lastSeenVersion,
+    bool? isVersionLoading,
   }) {
     return HomeScreenState(
       isInputFocused: isInputFocused ?? this.isInputFocused,
@@ -41,6 +47,8 @@ class HomeScreenState extends Equatable {
       snackBarMessage:
           clearSnackBarMessage ? null : snackBarMessage ?? this.snackBarMessage,
       titleTapCount: titleTapCount ?? this.titleTapCount,
+      lastSeenVersion: lastSeenVersion ?? this.lastSeenVersion,
+      isVersionLoading: isVersionLoading ?? this.isVersionLoading,
     );
   }
 }

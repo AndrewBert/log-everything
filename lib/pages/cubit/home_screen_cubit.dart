@@ -148,14 +148,14 @@ class HomeScreenCubit extends Cubit<HomeScreenState> {
       state.copyWith(
         titleTapCount: newCount,
         snackBarMessage: snackBarMsg,
-        clearSnackBar: snackBarMsg == null,
+        clearSnackBarMessage: snackBarMsg == null,
       ),
     );
   }
 
   void clearSnackBarMessage() {
     if (state.snackBarMessage != null) {
-      emit(state.copyWith(clearSnackBar: true));
+      emit(state.copyWith(clearSnackBarMessage: true));
     }
   }
 }

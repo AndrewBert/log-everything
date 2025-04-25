@@ -175,16 +175,25 @@ class EntryRepository {
   }
 
   // Method to update isNew status (called by Cubit after delay)
-  // Returns true if an update occurred and saving is needed
+  // Returns true if an update occurred
   bool markEntryAsNotNew(DateTime timestamp, String text) {
+    AppLogger.debug(
+      '[Repo.markEntryAsNotNew] Attempting to mark entry as not new: $text ($timestamp)',
+    );
     final index = _entries.indexWhere(
       (e) => e.timestamp == timestamp && e.text == text && e.isNew,
     );
     if (index != -1) {
+      AppLogger.debug(
+        '[Repo.markEntryAsNotNew] Found entry at index $index. Updating isNew to false.',
+      );
       _entries[index] = _entries[index].copyWith(isNew: false);
-      // Don't save here, let the caller (Cubit) handle saving after state update
+      // We don't save here; Cubit should trigger save after UI update if needed.
       return true;
     }
+    AppLogger.debug(
+      '[Repo.markEntryAsNotNew] Entry not found or already not new.',
+    );
     return false;
   }
 

@@ -264,18 +264,40 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
+  // Update _markEntryAsNotNewAfterDelay to add logging
   void _markEntryAsNotNewAfterDelay(Entry entry) {
+    // Cancel any existing timer for this specific entry
+    _newEntryTimers[entry.timestamp]?.cancel();
+    AppLogger.debug(
+      '[Cubit._markEntryAsNotNewAfterDelay] Starting timer for entry: ${entry.text} (${entry.timestamp})',
+    );
+
     _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () {
+      AppLogger.debug(
+        '[Cubit._markEntryAsNotNewAfterDelay] Timer fired for entry: ${entry.text} (${entry.timestamp})',
+      );
       if (!isClosed) {
+        // Ask repository to update the flag
         bool updated = _entryRepository.markEntryAsNotNew(
           entry.timestamp,
           entry.text,
         );
+        AppLogger.debug(
+          '[Cubit._markEntryAsNotNewAfterDelay] Repository update result: $updated',
+        );
         if (updated) {
+          // If updated, get the current list from repo and update UI state
           final currentEntries = _entryRepository.currentEntries;
+          AppLogger.debug(
+            '[Cubit._markEntryAsNotNewAfterDelay] Calling _updateStateFromRepository after flag update.',
+          );
           _updateStateFromRepository(updatedEntries: currentEntries);
         }
         _newEntryTimers.remove(entry.timestamp);
+      } else {
+        AppLogger.debug(
+          '[Cubit._markEntryAsNotNewAfterDelay] Timer fired but cubit closed.',
+        );
       }
     });
   }
