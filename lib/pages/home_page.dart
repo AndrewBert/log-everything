@@ -266,33 +266,36 @@ class HomePage extends StatelessWidget {
         'Send tapped during recording. Stopping and combining text with transcription.',
       );
       HapticFeedback.mediumImpact();
-      voiceCubit.stopRecordingAndCombine(currentText);
-      _showProcessingSnackbar(context, 'Processing voice entry...');
-      return;
+
+      // 1. Create temporary entry
+      final DateTime processingTimestamp = DateTime.now();
+      final tempEntry = Entry(
+        text:
+            currentText.isEmpty
+                ? "Processing voice..."
+                : currentText, // Show initial text if available
+        timestamp: processingTimestamp,
+        category: 'Processing...',
+        isNew: true,
+      );
+
+      // 2. Show temporary entry in UI immediately
+      entryCubit.showTemporaryEntry(tempEntry);
+
+      // 3. Tell VoiceInputCubit to stop, combine, and process,
+      //    passing the timestamp to identify the temporary entry later.
+      voiceCubit.stopRecordingAndCombine(currentText, processingTimestamp);
+
+      // No longer call _showProcessingSnackbar here, EntryCubit handles loading state
+      // _showProcessingSnackbar(context, 'Processing voice entry...');
+      return; // VoiceInputCubit/EntryCubit will handle final state
     }
 
+    // Handle manual send when NOT recording (remains the same)
     if (currentText.isNotEmpty) {
       entryCubit.addEntry(currentText);
-      _showProcessingSnackbar(context, 'Processing text entry...');
+      // _showProcessingSnackbar(context, 'Processing text entry...'); // EntryCubit handles this
     }
-  }
-
-  void _showProcessingSnackbar(BuildContext context, String message) {
-    _showFloatingSnackBar(
-      context,
-      content: Row(
-        children: [
-          const Icon(
-            Icons.pending_actions_outlined,
-            size: 18,
-            color: Colors.white70,
-          ),
-          const SizedBox(width: 8),
-          Text(message),
-        ],
-      ),
-      duration: const Duration(milliseconds: 1200),
-    );
   }
 
   Future<bool> _showDeleteCategoryConfirmationDialog(

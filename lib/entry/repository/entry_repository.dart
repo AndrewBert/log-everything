@@ -174,6 +174,100 @@ class EntryRepository {
     return currentEntries; // Return a copy
   }
 
+  Future<List<Entry>> processCombinedEntry(
+    String combinedText,
+    DateTime tempEntryTimestamp,
+  ) async {
+    AppLogger.info(
+      '[Repo.processCombinedEntry] Processing combined text: "$combinedText" for temp timestamp: $tempEntryTimestamp',
+    );
+    if (combinedText.isEmpty) {
+      // If combined text is empty, just remove the temp entry
+      _entries.removeWhere(
+        (e) =>
+            e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
+      );
+      await _saveEntries();
+      return currentEntries;
+    }
+
+    // 1. Call AI Service
+    List<EntryPrototype> extractedData = [];
+    String? serviceError;
+    try {
+      extractedData = await _aiService.extractEntries(
+        combinedText,
+        _categories,
+      );
+    } on AiCategorizationException catch (e) {
+      AppLogger.error(
+        "Repository: AI Service failed for combined entry: ${e.message}",
+        error: e.underlyingError,
+      );
+      serviceError = e.message;
+    } catch (e, stacktrace) {
+      AppLogger.error(
+        "Repository: Unexpected error calling AI Service for combined entry",
+        error: e,
+        stackTrace: stacktrace,
+      );
+      serviceError = "An unexpected error occurred during categorization.";
+    }
+
+    // 2. Find and remove the temporary entry
+    int tempIndex = _entries.indexWhere(
+      (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
+    );
+    if (tempIndex != -1) {
+      AppLogger.debug(
+        '[Repo.processCombinedEntry] Found and removing temp entry at index $tempIndex',
+      );
+      _entries.removeAt(tempIndex);
+    } else {
+      AppLogger.warning(
+        '[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!',
+      );
+      // If temp entry not found, proceed to add the new one anyway, but insert at top
+      tempIndex = 0;
+    }
+
+    // 3. Create new entries based on AI result or fallback
+    final List<Entry> addedEntries = [];
+    if (serviceError != null || extractedData.isEmpty) {
+      // AI failed or returned nothing, add as Misc
+      final fallbackEntry = Entry(
+        text: combinedText,
+        timestamp: tempEntryTimestamp, // Use original timestamp
+        category: 'Misc',
+        isNew: true,
+      );
+      addedEntries.add(fallbackEntry);
+    } else {
+      // AI succeeded
+      for (var data in extractedData) {
+        final newEntry = Entry(
+          text: data.text_segment,
+          timestamp: tempEntryTimestamp, // Use original timestamp
+          category:
+              _categories.contains(data.category) ? data.category : 'Misc',
+          isNew: true,
+        );
+        addedEntries.add(newEntry);
+      }
+    }
+
+    // 4. Insert new entries at the correct position
+    if (tempIndex >= 0 && tempIndex <= _entries.length) {
+      _entries.insertAll(tempIndex, addedEntries);
+    } else {
+      _entries.insertAll(0, addedEntries); // Fallback to inserting at top
+    }
+
+    // 5. Save and return
+    await _saveEntries();
+    return currentEntries; // Return copy
+  }
+
   Future<List<String>> addCustomCategory(String newCategory) async {
     final trimmedCategory = newCategory.trim();
     if (trimmedCategory.isNotEmpty &&
@@ -186,19 +280,22 @@ class EntryRepository {
   }
 
   Future<({List<Entry> entries, List<String> categories})> deleteCategory(
-      String categoryToDelete) async {
-    if (categoryToDelete == 'Misc') return (entries: currentEntries, categories: currentCategories);
+    String categoryToDelete,
+  ) async {
+    if (categoryToDelete == 'Misc')
+      return (entries: currentEntries, categories: currentCategories);
 
     if (_categories.contains(categoryToDelete)) {
       _categories.remove(categoryToDelete);
       bool entriesChanged = false;
-      _entries = _entries.map((entry) {
-        if (entry.category == categoryToDelete) {
-          entriesChanged = true;
-          return entry.copyWith(category: 'Misc');
-        }
-        return entry;
-      }).toList();
+      _entries =
+          _entries.map((entry) {
+            if (entry.category == categoryToDelete) {
+              entriesChanged = true;
+              return entry.copyWith(category: 'Misc');
+            }
+            return entry;
+          }).toList();
 
       await _saveCategories();
       if (entriesChanged) {
@@ -209,27 +306,33 @@ class EntryRepository {
   }
 
   Future<({List<Entry> entries, List<String> categories})> renameCategory(
-      String oldName, String newName) async {
+    String oldName,
+    String newName,
+  ) async {
     final trimmedNewName = newName.trim();
     if (oldName == 'Misc' ||
         trimmedNewName.isEmpty ||
         oldName == trimmedNewName ||
-        _categories.any((c) => c.toLowerCase() == trimmedNewName.toLowerCase())) {
+        _categories.any(
+          (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
+        )) {
       AppLogger.warning(
         'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
       );
       return (entries: currentEntries, categories: currentCategories);
     }
 
-    _categories = _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
+    _categories =
+        _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
     bool entriesChanged = false;
-    _entries = _entries.map((entry) {
-      if (entry.category == oldName) {
-        entriesChanged = true;
-        return entry.copyWith(category: trimmedNewName);
-      }
-      return entry;
-    }).toList();
+    _entries =
+        _entries.map((entry) {
+          if (entry.category == oldName) {
+            entriesChanged = true;
+            return entry.copyWith(category: trimmedNewName);
+          }
+          return entry;
+        }).toList();
 
     await _saveCategories();
     if (entriesChanged) {
@@ -241,14 +344,14 @@ class EntryRepository {
   // Method to update isNew status (called by Cubit after delay)
   // Returns true if an update occurred
   Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
-     final index = _entries.indexWhere(
-          (e) => e.timestamp == timestamp && e.text == text && e.isNew,
-        );
-     if (index != -1) {
-        _entries[index] = _entries[index].copyWith(isNew: false);
-        await _saveEntries(); 
-        return true;
-     }
-     return false;
+    final index = _entries.indexWhere(
+      (e) => e.timestamp == timestamp && e.text == text && e.isNew,
+    );
+    if (index != -1) {
+      _entries[index] = _entries[index].copyWith(isNew: false);
+      await _saveEntries();
+      return true;
+    }
+    return false;
   }
 }

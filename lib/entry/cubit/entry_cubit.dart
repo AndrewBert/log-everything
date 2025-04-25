@@ -115,13 +115,15 @@ class EntryCubit extends Cubit<EntryState> {
             : (newFilterCategory ?? state.filterCategory);
     final newDisplayList = _buildDisplayList(updatedEntries, filterToUse);
 
-    emit(state.copyWith(
-      categories: updatedCategories ?? state.categories,
-      displayListItems: newDisplayList,
-      filterCategory: filterToUse,
-      clearFilter: clearFilter ?? false,
-      clearLastError: true,
-    ));
+    emit(
+      state.copyWith(
+        categories: updatedCategories ?? state.categories,
+        displayListItems: newDisplayList,
+        filterCategory: filterToUse,
+        clearFilter: clearFilter ?? false,
+        clearLastError: true,
+      ),
+    );
   }
 
   // Re-add: Method to show a temporary entry immediately
@@ -191,9 +193,10 @@ class EntryCubit extends Cubit<EntryState> {
 
       finalizeProcessing(finalEntries);
 
-      final entriesToStartTimerFor = finalEntries
-          .where((e) => e.isNew && e.timestamp == processingTimestamp)
-          .toList();
+      final entriesToStartTimerFor =
+          finalEntries
+              .where((e) => e.isNew && e.timestamp == processingTimestamp)
+              .toList();
 
       entriesToStartTimerFor.forEach(_markEntryAsNotNewAfterDelay);
       HapticFeedback.mediumImpact();
@@ -257,22 +260,30 @@ class EntryCubit extends Cubit<EntryState> {
   // Update _markEntryAsNotNewAfterDelay to remove logging
   void _markEntryAsNotNewAfterDelay(Entry entry) {
     _newEntryTimers[entry.timestamp]?.cancel();
-    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () async {
-      if (!isClosed) {
-        bool updated = await _entryRepository.markEntryAsNotNew(entry.timestamp, entry.text);
-        if (updated) {
-          final currentEntries = _entryRepository.currentEntries;
-          _updateStateFromRepository(updatedEntries: currentEntries);
+    _newEntryTimers[entry.timestamp] = Timer(
+      _newEntryHighlightDuration,
+      () async {
+        if (!isClosed) {
+          bool updated = await _entryRepository.markEntryAsNotNew(
+            entry.timestamp,
+            entry.text,
+          );
+          if (updated) {
+            final currentEntries = _entryRepository.currentEntries;
+            _updateStateFromRepository(updatedEntries: currentEntries);
+          }
+          _newEntryTimers.remove(entry.timestamp);
         }
-        _newEntryTimers.remove(entry.timestamp);
-      }
-    });
+      },
+    );
   }
 
   Future<void> addCustomCategory(String newCategory) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository.addCustomCategory(newCategory);
+      final updatedCategories = await _entryRepository.addCustomCategory(
+        newCategory,
+      );
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category via repository", error: e);
@@ -306,7 +317,8 @@ class EntryCubit extends Cubit<EntryState> {
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
-        newFilterCategory: state.filterCategory == oldName ? newName : state.filterCategory,
+        newFilterCategory:
+            state.filterCategory == oldName ? newName : state.filterCategory,
       );
     } catch (e) {
       AppLogger.error(

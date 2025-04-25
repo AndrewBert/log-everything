@@ -8,23 +8,26 @@ import 'package:flutter/services.dart';
 import '../../../speech_service.dart';
 import '../../../utils/logger.dart';
 import 'voice_input_state.dart';
+import '../../../entry/cubit/entry_cubit.dart';
 import '../../../entry/repository/entry_repository.dart';
 import '../../../locator.dart';
+import '../../../entry/entry.dart';
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   final AudioRecorder _audioRecorder;
   final SpeechService _speechService;
   final EntryRepository _entryRepository;
+  final EntryCubit _entryCubit;
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
-  // Modify constructor to inject EntryRepository
-  VoiceInputCubit()
+  VoiceInputCubit({required EntryCubit entryCubit})
     : _audioRecorder = locator<AudioRecorder>(),
       _speechService = locator<SpeechService>(),
       _entryRepository = locator<EntryRepository>(),
+      _entryCubit = entryCubit,
       super(const VoiceInputState()) {
     _initialize();
   }
@@ -170,7 +173,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
   }
 
-  Future<void> stopRecordingAndCombine(String initialText) async {
+  Future<void> stopRecordingAndCombine(
+    String initialText,
+    DateTime processingTimestamp,
+  ) async {
     AppLogger.info(
       "Stopping recording to combine with initial text: '$initialText'",
     );
@@ -192,12 +198,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           clearRecordingTime: true,
           audioPath: audioPath,
           clearErrorMessage: true,
-          transcriptionStatus:
-              (!isTooShort && audioPath != null)
-                  ? TranscriptionStatus.transcribing
-                  : TranscriptionStatus.idle,
         ),
       );
+
+      List<Entry> finalEntries = [];
+      String combinedText = initialText;
 
       if (!isTooShort && audioPath != null) {
         try {
@@ -205,8 +210,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             audioPath,
             language: 'en',
           );
-
-          String combinedText = initialText;
           if (transcription != null && transcription.isNotEmpty) {
             AppLogger.info('Transcription successful: "$transcription"');
             if (combinedText.isNotEmpty &&
@@ -220,93 +223,71 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
               'Transcription failed or returned empty text. Using only initial text.',
             );
           }
-
-          if (combinedText.isNotEmpty) {
-            AppLogger.info(
-              'Adding combined entry via repository: "$combinedText"',
-            );
-            // Use repository to add entry
-            await _entryRepository.addEntry(combinedText);
-            emit(
-              state.copyWith(
-                transcriptionStatus: TranscriptionStatus.idle,
-                clearAudioPath: true,
-              ),
-            );
-          } else {
-            AppLogger.warning('Combined text is empty, not adding entry.');
-            emit(
-              state.copyWith(
-                transcriptionStatus: TranscriptionStatus.idle,
-                clearAudioPath: true,
-              ),
-            );
-          }
         } catch (e) {
           AppLogger.error("Transcription error during combine", error: e);
-          if (initialText.isNotEmpty) {
-            AppLogger.warning(
-              'Adding entry with only initial text via repository due to transcription error.',
-            );
-            // Use repository to add entry
-            await _entryRepository.addEntry(initialText);
-          }
-          emit(
-            state.copyWith(
-              transcriptionStatus: TranscriptionStatus.error,
-              errorMessage: 'Transcription error: $e',
-              clearAudioPath: true,
-            ),
-          );
+          emit(state.copyWith(errorMessage: 'Transcription error: $e'));
         }
       } else {
         if (isTooShort) {
           AppLogger.info(
             "Skipping transcription for combine: recording too short.",
           );
-          if (initialText.isNotEmpty) {
-            AppLogger.info(
-              'Adding entry with only initial text via repository (recording too short).',
-            );
-            // Use repository to add entry
-            await _entryRepository.addEntry(initialText);
-          }
         } else {
           AppLogger.error(
             "Failed to save recording for combine, path is null.",
           );
-          if (initialText.isNotEmpty) {
-            AppLogger.warning(
-              'Adding entry with only initial text via repository (failed to save recording).',
-            );
-            // Use repository to add entry
-            await _entryRepository.addEntry(initialText);
-          }
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
-        emit(
-          state.copyWith(
-            clearAudioPath: true,
-            transcriptionStatus: TranscriptionStatus.idle,
-          ),
-        );
       }
-    } catch (e) {
-      AppLogger.error("Error stopping recording for combine", error: e);
-      if (initialText.isNotEmpty) {
+
+      if (combinedText.isNotEmpty) {
+        AppLogger.info(
+          'Calling repository to process combined entry: "$combinedText" (Timestamp: $processingTimestamp)',
+        );
+        try {
+          finalEntries = await _entryRepository.processCombinedEntry(
+            combinedText,
+            processingTimestamp,
+          );
+          // Use the injected _entryCubit instance
+          _entryCubit.finalizeProcessing(finalEntries);
+        } catch (e) {
+          AppLogger.error(
+            "Error processing combined entry in repository",
+            error: e,
+          );
+          // Use the injected _entryCubit instance
+          _entryCubit.finalizeProcessing([]); // Pass empty list
+          emit(state.copyWith(errorMessage: 'Failed to process entry.'));
+        }
+      } else {
         AppLogger.warning(
-          'Adding entry with only initial text via repository due to stop error.',
+          'Combined text is empty, finalizing state without adding entry.',
         );
-        // Use repository to add entry
-        await _entryRepository.addEntry(initialText);
+        final currentEntries =
+            _entryRepository.currentEntries
+                .where((e) => e.timestamp != processingTimestamp)
+                .toList();
+        // Use the injected _entryCubit instance
+        _entryCubit.finalizeProcessing(currentEntries);
       }
+
+      emit(state.copyWith(clearAudioPath: true));
+    } catch (e) {
+      // Handle error stopping recording
+      AppLogger.error("Error stopping recording for combine", error: e);
+      final currentEntries =
+          _entryRepository.currentEntries
+              .where((e) => e.timestamp != processingTimestamp)
+              .toList();
+      // Use the injected _entryCubit instance
+      _entryCubit.finalizeProcessing(currentEntries);
       emit(
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',
           isRecording: false,
           clearRecordingTime: true,
           clearAudioPath: true,
-          transcriptionStatus: TranscriptionStatus.idle,
         ),
       );
     }
