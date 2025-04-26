@@ -40,8 +40,7 @@ class HomePageTestScope {
   static const initialVoiceInputState = VoiceInputState();
   static const initialHomeScreenState = HomeScreenState();
   static const testEntryText = 'Test entry 1';
-  static final timestamp =
-      DateTime.now(); // Use a fixed time if needed for consistency
+  static final timestamp = DateTime(2025, 4, 25, 12, 0, 0);
   static final tempEntry = Entry(
     text: testEntryText,
     timestamp: timestamp,
