@@ -40,9 +40,8 @@ class _FakeVoiceInputState_1 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-class _FakeHomeScreenState_2 extends _i1.SmartFake
-    implements _i4.HomePageState {
-  _FakeHomeScreenState_2(Object parent, Invocation parentInvocation)
+class _FakeHomePageState_2 extends _i1.SmartFake implements _i4.HomePageState {
+  _FakeHomePageState_2(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -337,11 +336,11 @@ class MockVoiceInputCubit extends _i1.Mock implements _i8.VoiceInputCubit {
   );
 }
 
-/// A class which mocks [HomeScreenCubit].
+/// A class which mocks [HomePageCubit].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHomeScreenCubit extends _i1.Mock implements _i9.HomePageCubit {
-  MockHomeScreenCubit() {
+class MockHomePageCubit extends _i1.Mock implements _i9.HomePageCubit {
+  MockHomePageCubit() {
     _i1.throwOnMissingStub(this);
   }
 
@@ -349,10 +348,7 @@ class MockHomeScreenCubit extends _i1.Mock implements _i9.HomePageCubit {
   _i4.HomePageState get state =>
       (super.noSuchMethod(
             Invocation.getter(#state),
-            returnValue: _FakeHomeScreenState_2(
-              this,
-              Invocation.getter(#state),
-            ),
+            returnValue: _FakeHomePageState_2(this, Invocation.getter(#state)),
           )
           as _i4.HomePageState);
 
