@@ -26,30 +26,12 @@ import 'package:myapp/widgets/entries_list.dart';
 // Import base, shell, registrar, and mocks
 // import 'test_scope_base.dart'; // Not using yet
 // import 'widget_test_shell.dart'; // Not using yet
+import 'mock_path_provider_platform.dart';
 import 'test_di_registrar.dart'; // Import the DI setup function
 import 'mocks.mocks.dart';
 import 'package:myapp/locator.dart';
 import 'package:permission_handler/permission_handler.dart'; // Import PermissionStatus
 import 'package:record/record.dart'; // Ensure RecordState is imported if needed
-
-// --- Mock Platform Interface for path_provider ---
-// Create a mock class that implements the necessary methods
-class MockPathProviderPlatform extends Mock
-    with
-        MockPlatformInterfaceMixin // Use MockPlatformInterfaceMixin
-    implements PathProviderPlatform {
-  // Mock the methods you expect to be called
-  @override
-  Future<String?> getApplicationDocumentsPath() async {
-    return '/fake/documents/path'; // Return a fake path
-  }
-
-  // Mock other methods if needed (e.g., getTemporaryPath)
-  // @override
-  // Future<String?> getTemporaryPath() async {
-  //   return '/fake/temporary/path';
-  // }
-}
 
 // --- Test Scope ---
 class HomePageTestScope {
