@@ -4,16 +4,15 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
+import 'dart:typed_data' as _i8;
 
-import 'package:flutter_bloc/flutter_bloc.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:myapp/entry/cubit/entry_cubit.dart' as _i2;
-import 'package:myapp/entry/entry.dart' as _i6;
-import 'package:myapp/entry/repository/entry_repository.dart' as _i10;
-import 'package:myapp/pages/cubit/home_page_cubit.dart' as _i9;
-import 'package:myapp/pages/cubit/home_page_state.dart' as _i4;
-import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart' as _i8;
-import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart' as _i3;
+import 'package:myapp/entry/entry.dart' as _i4;
+import 'package:myapp/entry/repository/entry_repository.dart' as _i3;
+import 'package:myapp/speech_service.dart' as _i6;
+import 'package:record/src/record.dart' as _i7;
+import 'package:record_platform_interface/record_platform_interface.dart'
+    as _i2;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -29,436 +28,26 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeEntryState_0 extends _i1.SmartFake implements _i2.EntryState {
-  _FakeEntryState_0(Object parent, Invocation parentInvocation)
+class _FakeAmplitude_0 extends _i1.SmartFake implements _i2.Amplitude {
+  _FakeAmplitude_0(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
-}
-
-class _FakeVoiceInputState_1 extends _i1.SmartFake
-    implements _i3.VoiceInputState {
-  _FakeVoiceInputState_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeHomePageState_2 extends _i1.SmartFake implements _i4.HomePageState {
-  _FakeHomePageState_2(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-/// A class which mocks [EntryCubit].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockEntryCubit extends _i1.Mock implements _i2.EntryCubit {
-  MockEntryCubit() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i2.EntryState get state =>
-      (super.noSuchMethod(
-            Invocation.getter(#state),
-            returnValue: _FakeEntryState_0(this, Invocation.getter(#state)),
-          )
-          as _i2.EntryState);
-
-  @override
-  _i5.Stream<_i2.EntryState> get stream =>
-      (super.noSuchMethod(
-            Invocation.getter(#stream),
-            returnValue: _i5.Stream<_i2.EntryState>.empty(),
-          )
-          as _i5.Stream<_i2.EntryState>);
-
-  @override
-  bool get isClosed =>
-      (super.noSuchMethod(Invocation.getter(#isClosed), returnValue: false)
-          as bool);
-
-  @override
-  _i5.Future<void> close() =>
-      (super.noSuchMethod(
-            Invocation.method(#close, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  void showTemporaryEntry(_i6.Entry? tempEntry) => super.noSuchMethod(
-    Invocation.method(#showTemporaryEntry, [tempEntry]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void finalizeProcessing(List<_i6.Entry>? finalEntries) => super.noSuchMethod(
-    Invocation.method(#finalizeProcessing, [finalEntries]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  _i5.Future<void> addEntry(String? text) =>
-      (super.noSuchMethod(
-            Invocation.method(#addEntry, [text]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> addEntryObject(_i6.Entry? entryToAdd) =>
-      (super.noSuchMethod(
-            Invocation.method(#addEntryObject, [entryToAdd]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> deleteEntry(_i6.Entry? entryToDelete) =>
-      (super.noSuchMethod(
-            Invocation.method(#deleteEntry, [entryToDelete]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> updateEntry(
-    _i6.Entry? originalEntry,
-    _i6.Entry? updatedEntry,
-  ) =>
-      (super.noSuchMethod(
-            Invocation.method(#updateEntry, [originalEntry, updatedEntry]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> addCustomCategory(String? newCategory) =>
-      (super.noSuchMethod(
-            Invocation.method(#addCustomCategory, [newCategory]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> deleteCategory(String? categoryToDelete) =>
-      (super.noSuchMethod(
-            Invocation.method(#deleteCategory, [categoryToDelete]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> renameCategory(String? oldName, String? newName) =>
-      (super.noSuchMethod(
-            Invocation.method(#renameCategory, [oldName, newName]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  void setFilter(String? category) => super.noSuchMethod(
-    Invocation.method(#setFilter, [category]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void clearLastError() => super.noSuchMethod(
-    Invocation.method(#clearLastError, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void emit(_i2.EntryState? state) => super.noSuchMethod(
-    Invocation.method(#emit, [state]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onChange(_i7.Change<_i2.EntryState>? change) => super.noSuchMethod(
-    Invocation.method(#onChange, [change]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addError(Object? error, [StackTrace? stackTrace]) => super.noSuchMethod(
-    Invocation.method(#addError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onError(Object? error, StackTrace? stackTrace) => super.noSuchMethod(
-    Invocation.method(#onError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-}
-
-/// A class which mocks [VoiceInputCubit].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockVoiceInputCubit extends _i1.Mock implements _i8.VoiceInputCubit {
-  MockVoiceInputCubit() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i3.VoiceInputState get state =>
-      (super.noSuchMethod(
-            Invocation.getter(#state),
-            returnValue: _FakeVoiceInputState_1(
-              this,
-              Invocation.getter(#state),
-            ),
-          )
-          as _i3.VoiceInputState);
-
-  @override
-  _i5.Stream<_i3.VoiceInputState> get stream =>
-      (super.noSuchMethod(
-            Invocation.getter(#stream),
-            returnValue: _i5.Stream<_i3.VoiceInputState>.empty(),
-          )
-          as _i5.Stream<_i3.VoiceInputState>);
-
-  @override
-  bool get isClosed =>
-      (super.noSuchMethod(Invocation.getter(#isClosed), returnValue: false)
-          as bool);
-
-  @override
-  _i5.Future<void> requestMicrophonePermission() =>
-      (super.noSuchMethod(
-            Invocation.method(#requestMicrophonePermission, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> toggleRecording() =>
-      (super.noSuchMethod(
-            Invocation.method(#toggleRecording, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> startRecording() =>
-      (super.noSuchMethod(
-            Invocation.method(#startRecording, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> stopRecording() =>
-      (super.noSuchMethod(
-            Invocation.method(#stopRecording, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> stopRecordingAndCombine(
-    String? initialText,
-    DateTime? processingTimestamp,
-  ) =>
-      (super.noSuchMethod(
-            Invocation.method(#stopRecordingAndCombine, [
-              initialText,
-              processingTimestamp,
-            ]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> transcribeAudio() =>
-      (super.noSuchMethod(
-            Invocation.method(#transcribeAudio, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  void clearTranscribedText() => super.noSuchMethod(
-    Invocation.method(#clearTranscribedText, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void clearErrorState() => super.noSuchMethod(
-    Invocation.method(#clearErrorState, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  _i5.Future<void> close() =>
-      (super.noSuchMethod(
-            Invocation.method(#close, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  void emit(_i3.VoiceInputState? state) => super.noSuchMethod(
-    Invocation.method(#emit, [state]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onChange(_i7.Change<_i3.VoiceInputState>? change) => super.noSuchMethod(
-    Invocation.method(#onChange, [change]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addError(Object? error, [StackTrace? stackTrace]) => super.noSuchMethod(
-    Invocation.method(#addError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onError(Object? error, StackTrace? stackTrace) => super.noSuchMethod(
-    Invocation.method(#onError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-}
-
-/// A class which mocks [HomePageCubit].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockHomePageCubit extends _i1.Mock implements _i9.HomePageCubit {
-  MockHomePageCubit() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i4.HomePageState get state =>
-      (super.noSuchMethod(
-            Invocation.getter(#state),
-            returnValue: _FakeHomePageState_2(this, Invocation.getter(#state)),
-          )
-          as _i4.HomePageState);
-
-  @override
-  _i5.Stream<_i4.HomePageState> get stream =>
-      (super.noSuchMethod(
-            Invocation.getter(#stream),
-            returnValue: _i5.Stream<_i4.HomePageState>.empty(),
-          )
-          as _i5.Stream<_i4.HomePageState>);
-
-  @override
-  bool get isClosed =>
-      (super.noSuchMethod(Invocation.getter(#isClosed), returnValue: false)
-          as bool);
-
-  @override
-  _i5.Future<void> loadVersionInfo() =>
-      (super.noSuchMethod(
-            Invocation.method(#loadVersionInfo, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> checkWhatsNew() =>
-      (super.noSuchMethod(
-            Invocation.method(#checkWhatsNew, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> markWhatsNewShown() =>
-      (super.noSuchMethod(
-            Invocation.method(#markWhatsNewShown, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  void setInputFocus(bool? hasFocus) => super.noSuchMethod(
-    Invocation.method(#setInputFocus, [hasFocus]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void incrementTitleTap() => super.noSuchMethod(
-    Invocation.method(#incrementTitleTap, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void clearSnackBarMessage() => super.noSuchMethod(
-    Invocation.method(#clearSnackBarMessage, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void emit(_i4.HomePageState? state) => super.noSuchMethod(
-    Invocation.method(#emit, [state]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onChange(_i7.Change<_i4.HomePageState>? change) => super.noSuchMethod(
-    Invocation.method(#onChange, [change]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addError(Object? error, [StackTrace? stackTrace]) => super.noSuchMethod(
-    Invocation.method(#addError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void onError(Object? error, StackTrace? stackTrace) => super.noSuchMethod(
-    Invocation.method(#onError, [error, stackTrace]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  _i5.Future<void> close() =>
-      (super.noSuchMethod(
-            Invocation.method(#close, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
 }
 
 /// A class which mocks [EntryRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockEntryRepository extends _i1.Mock implements _i10.EntryRepository {
+class MockEntryRepository extends _i1.Mock implements _i3.EntryRepository {
   MockEntryRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  List<_i6.Entry> get currentEntries =>
+  List<_i4.Entry> get currentEntries =>
       (super.noSuchMethod(
             Invocation.getter(#currentEntries),
-            returnValue: <_i6.Entry>[],
+            returnValue: <_i4.Entry>[],
           )
-          as List<_i6.Entry>);
+          as List<_i4.Entry>);
 
   @override
   List<String> get currentCategories =>
@@ -478,42 +67,42 @@ class MockEntryRepository extends _i1.Mock implements _i10.EntryRepository {
           as _i5.Future<void>);
 
   @override
-  _i5.Future<List<_i6.Entry>> addEntry(String? text) =>
+  _i5.Future<List<_i4.Entry>> addEntry(String? text) =>
       (super.noSuchMethod(
             Invocation.method(#addEntry, [text]),
-            returnValue: _i5.Future<List<_i6.Entry>>.value(<_i6.Entry>[]),
+            returnValue: _i5.Future<List<_i4.Entry>>.value(<_i4.Entry>[]),
           )
-          as _i5.Future<List<_i6.Entry>>);
+          as _i5.Future<List<_i4.Entry>>);
 
   @override
-  _i5.Future<List<_i6.Entry>> addEntryObject(_i6.Entry? entryToAdd) =>
+  _i5.Future<List<_i4.Entry>> addEntryObject(_i4.Entry? entryToAdd) =>
       (super.noSuchMethod(
             Invocation.method(#addEntryObject, [entryToAdd]),
-            returnValue: _i5.Future<List<_i6.Entry>>.value(<_i6.Entry>[]),
+            returnValue: _i5.Future<List<_i4.Entry>>.value(<_i4.Entry>[]),
           )
-          as _i5.Future<List<_i6.Entry>>);
+          as _i5.Future<List<_i4.Entry>>);
 
   @override
-  _i5.Future<List<_i6.Entry>> deleteEntry(_i6.Entry? entryToDelete) =>
+  _i5.Future<List<_i4.Entry>> deleteEntry(_i4.Entry? entryToDelete) =>
       (super.noSuchMethod(
             Invocation.method(#deleteEntry, [entryToDelete]),
-            returnValue: _i5.Future<List<_i6.Entry>>.value(<_i6.Entry>[]),
+            returnValue: _i5.Future<List<_i4.Entry>>.value(<_i4.Entry>[]),
           )
-          as _i5.Future<List<_i6.Entry>>);
+          as _i5.Future<List<_i4.Entry>>);
 
   @override
-  _i5.Future<List<_i6.Entry>> updateEntry(
-    _i6.Entry? originalEntry,
-    _i6.Entry? updatedEntry,
+  _i5.Future<List<_i4.Entry>> updateEntry(
+    _i4.Entry? originalEntry,
+    _i4.Entry? updatedEntry,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#updateEntry, [originalEntry, updatedEntry]),
-            returnValue: _i5.Future<List<_i6.Entry>>.value(<_i6.Entry>[]),
+            returnValue: _i5.Future<List<_i4.Entry>>.value(<_i4.Entry>[]),
           )
-          as _i5.Future<List<_i6.Entry>>);
+          as _i5.Future<List<_i4.Entry>>);
 
   @override
-  _i5.Future<List<_i6.Entry>> processCombinedEntry(
+  _i5.Future<List<_i4.Entry>> processCombinedEntry(
     String? combinedText,
     DateTime? tempEntryTimestamp,
   ) =>
@@ -522,9 +111,9 @@ class MockEntryRepository extends _i1.Mock implements _i10.EntryRepository {
               combinedText,
               tempEntryTimestamp,
             ]),
-            returnValue: _i5.Future<List<_i6.Entry>>.value(<_i6.Entry>[]),
+            returnValue: _i5.Future<List<_i4.Entry>>.value(<_i4.Entry>[]),
           )
-          as _i5.Future<List<_i6.Entry>>);
+          as _i5.Future<List<_i4.Entry>>);
 
   @override
   _i5.Future<List<String>> addCustomCategory(String? newCategory) =>
@@ -535,26 +124,26 @@ class MockEntryRepository extends _i1.Mock implements _i10.EntryRepository {
           as _i5.Future<List<String>>);
 
   @override
-  _i5.Future<({List<String> categories, List<_i6.Entry> entries})>
+  _i5.Future<({List<String> categories, List<_i4.Entry> entries})>
   deleteCategory(String? categoryToDelete) =>
       (super.noSuchMethod(
             Invocation.method(#deleteCategory, [categoryToDelete]),
             returnValue: _i5.Future<
-              ({List<String> categories, List<_i6.Entry> entries})
-            >.value((categories: <String>[], entries: <_i6.Entry>[])),
+              ({List<String> categories, List<_i4.Entry> entries})
+            >.value((categories: <String>[], entries: <_i4.Entry>[])),
           )
-          as _i5.Future<({List<String> categories, List<_i6.Entry> entries})>);
+          as _i5.Future<({List<String> categories, List<_i4.Entry> entries})>);
 
   @override
-  _i5.Future<({List<String> categories, List<_i6.Entry> entries})>
+  _i5.Future<({List<String> categories, List<_i4.Entry> entries})>
   renameCategory(String? oldName, String? newName) =>
       (super.noSuchMethod(
             Invocation.method(#renameCategory, [oldName, newName]),
             returnValue: _i5.Future<
-              ({List<String> categories, List<_i6.Entry> entries})
-            >.value((categories: <String>[], entries: <_i6.Entry>[])),
+              ({List<String> categories, List<_i4.Entry> entries})
+            >.value((categories: <String>[], entries: <_i4.Entry>[])),
           )
-          as _i5.Future<({List<String> categories, List<_i6.Entry> entries})>);
+          as _i5.Future<({List<String> categories, List<_i4.Entry> entries})>);
 
   @override
   _i5.Future<bool> markEntryAsNotNew(DateTime? timestamp, String? text) =>
@@ -563,4 +152,179 @@ class MockEntryRepository extends _i1.Mock implements _i10.EntryRepository {
             returnValue: _i5.Future<bool>.value(false),
           )
           as _i5.Future<bool>);
+}
+
+/// A class which mocks [SpeechService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockSpeechService extends _i1.Mock implements _i6.SpeechService {
+  MockSpeechService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<String?> transcribeAudio(
+    String? filePath, {
+    String? language = 'en',
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #transcribeAudio,
+              [filePath],
+              {#language: language},
+            ),
+            returnValue: _i5.Future<String?>.value(),
+          )
+          as _i5.Future<String?>);
+}
+
+/// A class which mocks [AudioRecorder].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockAudioRecorder extends _i1.Mock implements _i7.AudioRecorder {
+  MockAudioRecorder() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<void> start(_i2.RecordConfig? config, {required String? path}) =>
+      (super.noSuchMethod(
+            Invocation.method(#start, [config], {#path: path}),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<_i5.Stream<_i8.Uint8List>> startStream(_i2.RecordConfig? config) =>
+      (super.noSuchMethod(
+            Invocation.method(#startStream, [config]),
+            returnValue: _i5.Future<_i5.Stream<_i8.Uint8List>>.value(
+              _i5.Stream<_i8.Uint8List>.empty(),
+            ),
+          )
+          as _i5.Future<_i5.Stream<_i8.Uint8List>>);
+
+  @override
+  _i5.Future<String?> stop() =>
+      (super.noSuchMethod(
+            Invocation.method(#stop, []),
+            returnValue: _i5.Future<String?>.value(),
+          )
+          as _i5.Future<String?>);
+
+  @override
+  _i5.Future<void> cancel() =>
+      (super.noSuchMethod(
+            Invocation.method(#cancel, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> pause() =>
+      (super.noSuchMethod(
+            Invocation.method(#pause, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> resume() =>
+      (super.noSuchMethod(
+            Invocation.method(#resume, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<bool> isRecording() =>
+      (super.noSuchMethod(
+            Invocation.method(#isRecording, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> isPaused() =>
+      (super.noSuchMethod(
+            Invocation.method(#isPaused, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> hasPermission() =>
+      (super.noSuchMethod(
+            Invocation.method(#hasPermission, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<List<_i2.InputDevice>> listInputDevices() =>
+      (super.noSuchMethod(
+            Invocation.method(#listInputDevices, []),
+            returnValue: _i5.Future<List<_i2.InputDevice>>.value(
+              <_i2.InputDevice>[],
+            ),
+          )
+          as _i5.Future<List<_i2.InputDevice>>);
+
+  @override
+  _i5.Future<_i2.Amplitude> getAmplitude() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAmplitude, []),
+            returnValue: _i5.Future<_i2.Amplitude>.value(
+              _FakeAmplitude_0(this, Invocation.method(#getAmplitude, [])),
+            ),
+          )
+          as _i5.Future<_i2.Amplitude>);
+
+  @override
+  _i5.Future<bool> isEncoderSupported(_i2.AudioEncoder? encoder) =>
+      (super.noSuchMethod(
+            Invocation.method(#isEncoderSupported, [encoder]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> dispose() =>
+      (super.noSuchMethod(
+            Invocation.method(#dispose, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Stream<_i2.RecordState> onStateChanged() =>
+      (super.noSuchMethod(
+            Invocation.method(#onStateChanged, []),
+            returnValue: _i5.Stream<_i2.RecordState>.empty(),
+          )
+          as _i5.Stream<_i2.RecordState>);
+
+  @override
+  _i5.Stream<_i2.Amplitude> onAmplitudeChanged(Duration? interval) =>
+      (super.noSuchMethod(
+            Invocation.method(#onAmplitudeChanged, [interval]),
+            returnValue: _i5.Stream<_i2.Amplitude>.empty(),
+          )
+          as _i5.Stream<_i2.Amplitude>);
+
+  @override
+  List<int> convertBytesToInt16(
+    _i8.Uint8List? bytes, [
+    dynamic endian = _i8.Endian.little,
+  ]) =>
+      (super.noSuchMethod(
+            Invocation.method(#convertBytesToInt16, [bytes, endian]),
+            returnValue: <int>[],
+          )
+          as List<int>);
 }
