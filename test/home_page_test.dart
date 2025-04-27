@@ -9,6 +9,7 @@ import 'dart:developer'; // <-- Import for log
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart'; // <-- Import Mockito
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
@@ -49,57 +50,40 @@ class HomePageTestScope {
   // Test Data (can remain mostly the same)
   static const testEntryText = 'Test entry 1';
   static final timestamp = DateTime(2025, 4, 25, 12, 0, 0);
-  static final tempEntry = Entry(
-    text: testEntryText,
-    timestamp: timestamp,
-    category: 'Processing...',
-    isNew: true,
-  );
-  static final finalEntry = Entry(
-    text: testEntryText,
-    timestamp: timestamp,
-    category: 'Misc',
-    isNew: true,
-  );
-  static final loadingEntryState = EntryState(
-    isLoading: true,
-    displayListItems: [tempEntry],
-  );
-  static final finalEntryState = EntryState(
-    isLoading: false,
-    displayListItems: [finalEntry],
-    categories: ['Misc'],
-  );
-  // Use isRecording based on actual VoiceInputState
-  static final recordingState = VoiceInputState(isRecording: true);
 
-  // Test Data for Entries
-  static final entryApr25_1 = Entry(
+  // Test Data for Entries (Make dates relative to now)
+  static final now = DateTime.now();
+  static final today = DateTime(now.year, now.month, now.day);
+  static final yesterday = today.subtract(const Duration(days: 1));
+  static final twoDaysAgo = today.subtract(const Duration(days: 2));
+
+  static final entryToday1 = Entry(
     text: 'Entry today 1',
-    timestamp: DateTime(2025, 4, 25, 14, 30, 0), // Today
+    timestamp: today.add(const Duration(hours: 14, minutes: 30)), // Today 14:30
     category: 'Misc',
   );
-  static final entryApr25_2 = Entry(
+  static final entryToday2 = Entry(
     text: 'Entry today 2',
-    timestamp: DateTime(2025, 4, 25, 10, 15, 0), // Today
+    timestamp: today.add(const Duration(hours: 10, minutes: 15)), // Today 10:15
     category: 'Work',
   );
-  static final entryApr24 = Entry(
+  static final entryYesterday = Entry(
     text: 'Entry yesterday',
-    timestamp: DateTime(2025, 4, 24, 16, 0, 0), // Yesterday
+    timestamp: yesterday.add(const Duration(hours: 16)), // Yesterday 16:00
     category: 'Personal',
   );
-  static final entryApr22 = Entry(
+  static final entryOlder = Entry(
     text: 'Entry older',
-    timestamp: DateTime(2025, 4, 22, 9, 0, 0), // Older
+    timestamp: twoDaysAgo.add(const Duration(hours: 9)), // Two days ago 09:00
     category: 'Misc',
   );
+
   // Keep this list for verifying repository calls, maybe not for state.
   static final rawEntriesList = [
-    entryApr25_1,
-    entryApr25_2,
-    entryApr24,
-    entryApr22,
+    entryToday1,
+    entryToday2,
+    entryYesterday,
+    entryOlder,
   ];
   static final categoriesList = ['Misc', 'Work', 'Personal'];
 
@@ -287,7 +271,10 @@ void main() {
         // THEN: The entry should be processed and displayed by the REAL cubit
         // Need pumpAndSettle for the Cubit to process and UI to update
         await tester.pumpAndSettle();
-        _thenEntryIsDisplayedInList(tester, HomePageTestScope.testEntryText);
+        await _thenEntryIsDisplayedInList(
+          tester,
+          HomePageTestScope.testEntryText,
+        );
         _thenTextFieldIsCleared(tester);
       });
     });
@@ -296,11 +283,28 @@ void main() {
       testWidgets('should display initial UI elements correctly', (
         WidgetTester tester,
       ) async {
-        // GIVEN: HomePage is displayed with initial mock states
+        // GIVEN: HomePage is displayed with initial mock states (from setUp)
         await _givenHomePageIsDisplayed(tester, scope);
 
-        // THEN: Verify essential UI elements are present
-        _thenInitialUIElementsArePresent(tester);
+        // THEN: Verify essential UI elements are present, like the first entry
+        // Check if the text from the first entry in our mock data is displayed
+        expect(
+          find.text(HomePageTestScope.entryToday1.text),
+          findsOneWidget,
+          reason: 'First initial entry text should be displayed',
+        );
+        // Check for the input field
+        expect(
+          find.byType(TextField),
+          findsOneWidget,
+          reason: 'Input TextField should be present',
+        );
+        // Check for the mic button
+        expect(
+          find.byIcon(Icons.mic),
+          findsOneWidget,
+          reason: 'Mic button should be present initially',
+        );
       });
     });
 
@@ -308,22 +312,63 @@ void main() {
       testWidgets('should show stop_circle icon when mic button is tapped', (
         WidgetTester tester,
       ) async {
-        // GIVEN: Voice input is stubbed to emit recording state
-        scope.stubStartRecordingSuccess(); // Use the correct helper
+        // GIVEN: Stub recorder start
+        scope.stubStartRecordingSuccess();
         await _givenHomePageIsDisplayed(
           tester,
           scope,
+          // Don't settle yet, allow button tap to trigger state change
           settle: false,
-        ); // Don't settle yet
+        );
 
         // WHEN: The microphone button is tapped
         await _whenMicButtonIsTapped(tester);
 
         // THEN: Verify the stop_circle_outlined icon is displayed
         _thenStopCircleIconIsDisplayed(tester);
+        // Verify recorder start was called
+        verify(
+          scope.mockAudioRecorder.start(any, path: anyNamed('path')),
+        ).called(1);
       });
 
+      testWidgets(
+        'should call stop and transcribe when stop button is tapped',
+        (WidgetTester tester) async {
+          // GIVEN: Recording is started
+          scope.stubStartRecordingSuccess();
+          const transcribedText = 'This is the transcribed text';
+          scope.stubTranscriptionSuccess(transcribedText);
+          await _givenHomePageIsDisplayed(tester, scope, settle: false);
+          await _whenMicButtonIsTapped(tester); // Start recording
+          _thenStopCircleIconIsDisplayed(tester); // Verify recording started
+
+          // WHEN: The stop button (same as mic button when recording) is tapped
+          await _whenStopButtonIsTapped(tester);
+
+          // THEN: Verify recorder stop was called
+          verify(scope.mockAudioRecorder.stop()).called(1);
+
+          // THEN: Verify transcription was called
+          // Need pumpAndSettle for async transcription call
+          await tester.pumpAndSettle();
+          verify(
+            scope.mockSpeechService.transcribeAudio(
+              any, // Path is checked in stub
+              language: 'en',
+            ),
+          ).called(1);
+
+          // THEN: Verify the icon reverts to mic
+          _thenMicIconIsDisplayed(tester);
+
+          // THEN: Verify transcribed text is appended to the text field
+          _thenTextFieldContains(tester, transcribedText);
+        },
+      );
+
       // TODO: Add tests for voice input state changes (listening, processing, success, error)
+      // TODO: Add test for combining text and voice
     });
 
     group('Displaying Entries', () {
@@ -340,28 +385,124 @@ void main() {
         // THEN: Verify entries are displayed with correct text and time format
         _thenEntryIsDisplayed(
           tester,
-          HomePageTestScope.entryApr25_1.text, // Use renamed var
+          HomePageTestScope.entryToday1.text, // Use renamed var
           '14:30',
         );
         _thenEntryIsDisplayed(
           tester,
-          HomePageTestScope.entryApr25_2.text, // Use renamed var
+          HomePageTestScope.entryToday2.text, // Use renamed var
           '10:15',
         );
         _thenEntryIsDisplayed(
           tester,
-          HomePageTestScope.entryApr24.text, // Use renamed var
+          HomePageTestScope.entryYesterday.text, // Use renamed var
           '16:00',
         );
         _thenEntryIsDisplayed(
           tester,
-          HomePageTestScope.entryApr22.text, // Use renamed var
+          HomePageTestScope.entryOlder.text, // Use renamed var
           '09:00',
         );
       });
 
-      // TODO: Re-evaluate date header test without fakeAsync
-      // testWidgets('should display correct date headers', ...);
+      testWidgets('should display correct date headers', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN: HomePage is displayed with initial entries spanning multiple days (from setUp)
+        await _givenHomePageIsDisplayed(tester, scope);
+
+        // THEN: Verify the date headers appear correctly above their respective entries
+
+        // Find headers and first entry of each group
+        final todayHeaderFinder = find.text('Today');
+        final yesterdayHeaderFinder = find.text('Yesterday');
+        // Use DateFormat consistent with the app's _formatDateHeader logic
+        final olderDateHeaderFinder = find.text(
+          DateFormat.yMMMd().format(HomePageTestScope.entryOlder.timestamp),
+        );
+
+        final firstTodayEntryFinder = find.text(
+          HomePageTestScope.entryToday1.text,
+        );
+        final firstYesterdayEntryFinder = find.text(
+          HomePageTestScope.entryYesterday.text,
+        );
+        final firstOlderEntryFinder = find.text(
+          HomePageTestScope.entryOlder.text,
+        );
+
+        // Verify headers exist
+        expect(
+          todayHeaderFinder,
+          findsOneWidget,
+          reason: '"Today" header not found',
+        );
+        expect(
+          yesterdayHeaderFinder,
+          findsOneWidget,
+          reason: '"Yesterday" header not found',
+        );
+        expect(
+          olderDateHeaderFinder,
+          findsOneWidget,
+          reason: 'Older date header not found',
+        );
+
+        // Verify entries exist
+        expect(
+          firstTodayEntryFinder,
+          findsOneWidget,
+          reason: 'First entry for today not found',
+        );
+        expect(
+          firstYesterdayEntryFinder,
+          findsOneWidget,
+          reason: 'First entry for yesterday not found',
+        );
+        expect(
+          firstOlderEntryFinder,
+          findsOneWidget,
+          reason: 'First entry for older date not found',
+        );
+
+        // Verify order (Header should come before the first entry of its group)
+        // This relies on the vertical arrangement in the ListView
+        final listFinder = find.byType(ListView);
+        expect(listFinder, findsOneWidget);
+
+        // Get the vertical offsets
+        final todayHeaderOffset = tester.getTopLeft(todayHeaderFinder).dy;
+        final firstTodayEntryOffset =
+            tester.getTopLeft(firstTodayEntryFinder).dy;
+
+        final yesterdayHeaderOffset =
+            tester.getTopLeft(yesterdayHeaderFinder).dy;
+        final firstYesterdayEntryOffset =
+            tester.getTopLeft(firstYesterdayEntryFinder).dy;
+
+        final olderHeaderOffset = tester.getTopLeft(olderDateHeaderFinder).dy;
+        final firstOlderEntryOffset =
+            tester.getTopLeft(firstOlderEntryFinder).dy;
+
+        // Assert vertical order
+        expect(
+          todayHeaderOffset,
+          lessThan(firstTodayEntryOffset),
+          reason: '"Today" header should be above its first entry',
+        );
+        expect(
+          yesterdayHeaderOffset,
+          lessThan(firstYesterdayEntryOffset),
+          reason: '"Yesterday" header should be above its first entry',
+        );
+        expect(
+          olderHeaderOffset,
+          lessThan(firstOlderEntryOffset),
+          reason: 'Older date header should be above its first entry',
+        );
+
+        log('THEN: Date headers are displayed correctly above their entries.');
+      });
     });
 
     // Add more groups and tests here following the same pattern
@@ -420,6 +561,20 @@ Future<void> _whenMicButtonIsTapped(WidgetTester tester) async {
   log('WHEN: Mic button tapped.');
 }
 
+Future<void> _whenStopButtonIsTapped(WidgetTester tester) async {
+  // The stop button is the same physical button as the mic button, but with a different icon
+  final stopButtonFinder = find.byIcon(Icons.stop_circle_outlined);
+  expect(
+    stopButtonFinder,
+    findsOneWidget,
+    reason: 'Could not find Stop Button (stop_circle_outlined icon)',
+  );
+  await tester.tap(stopButtonFinder);
+  // Don't settle here immediately, allow transcription call verification later
+  await tester.pump();
+  log('WHEN: Stop button tapped.');
+}
+
 // --- THEN ---
 
 Future<void> _thenEntryIsDisplayedInList(
@@ -454,24 +609,6 @@ void _thenTextFieldIsCleared(WidgetTester tester) {
   log('THEN: TextField is cleared.');
 }
 
-void _thenInitialUIElementsArePresent(WidgetTester tester) {
-  expect(find.byType(TextField), findsOneWidget, reason: 'TextField not found');
-  expect(
-    find.byIcon(Icons.send_rounded),
-    findsOneWidget,
-    reason: 'Send Button not found',
-  );
-  expect(
-    find.byIcon(Icons.mic),
-    findsOneWidget,
-    reason: 'Mic Button not found',
-  );
-  // Optionally, check if the EntriesList is initially empty or shows specific initial content
-  // Example: Check for an empty list placeholder if one exists
-  // expect(find.text('No entries yet'), findsOneWidget);
-  log('THEN: Initial UI elements are present.');
-}
-
 void _thenStopCircleIconIsDisplayed(WidgetTester tester) {
   // Verify that the icon changed from mic to stop_circle_outlined
   expect(
@@ -485,6 +622,31 @@ void _thenStopCircleIconIsDisplayed(WidgetTester tester) {
     reason: 'Stop circle icon should be displayed',
   );
   log('THEN: Stop circle icon is displayed, indicating recording started.');
+}
+
+void _thenMicIconIsDisplayed(WidgetTester tester) {
+  expect(
+    find.byIcon(Icons.stop_circle_outlined),
+    findsNothing,
+    reason: 'Stop circle icon should not be present',
+  );
+  expect(
+    find.byIcon(Icons.mic),
+    findsOneWidget,
+    reason: 'Mic icon should be displayed after stopping',
+  );
+  log('THEN: Mic icon is displayed.');
+}
+
+void _thenTextFieldContains(WidgetTester tester, String text) {
+  final inputFinder = find.byType(TextField);
+  final textField = tester.widget<TextField>(inputFinder);
+  expect(
+    textField.controller?.text,
+    contains(text),
+    reason: 'TextField should contain "$text"',
+  );
+  log('THEN: TextField contains "$text".');
 }
 
 void _thenEntryIsDisplayed(WidgetTester tester, String text, String time) {
