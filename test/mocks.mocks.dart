@@ -9,7 +9,9 @@ import 'dart:typed_data' as _i8;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:myapp/entry/entry.dart' as _i4;
 import 'package:myapp/entry/repository/entry_repository.dart' as _i3;
+import 'package:myapp/services/permission_service.dart' as _i9;
 import 'package:myapp/speech_service.dart' as _i6;
+import 'package:permission_handler/permission_handler.dart' as _i10;
 import 'package:record/src/record.dart' as _i7;
 import 'package:record_platform_interface/record_platform_interface.dart'
     as _i2;
@@ -327,4 +329,33 @@ class MockAudioRecorder extends _i1.Mock implements _i7.AudioRecorder {
             returnValue: <int>[],
           )
           as List<int>);
+}
+
+/// A class which mocks [PermissionService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockPermissionService extends _i1.Mock implements _i9.PermissionService {
+  MockPermissionService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<_i10.PermissionStatus> getMicrophoneStatus() =>
+      (super.noSuchMethod(
+            Invocation.method(#getMicrophoneStatus, []),
+            returnValue: _i5.Future<_i10.PermissionStatus>.value(
+              _i10.PermissionStatus.denied,
+            ),
+          )
+          as _i5.Future<_i10.PermissionStatus>);
+
+  @override
+  _i5.Future<_i10.PermissionStatus> requestMicrophonePermission() =>
+      (super.noSuchMethod(
+            Invocation.method(#requestMicrophonePermission, []),
+            returnValue: _i5.Future<_i10.PermissionStatus>.value(
+              _i10.PermissionStatus.denied,
+            ),
+          )
+          as _i5.Future<_i10.PermissionStatus>);
 }

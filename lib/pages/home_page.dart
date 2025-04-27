@@ -415,10 +415,6 @@ class HomePage extends StatelessWidget {
     final yesterday = today.subtract(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
-    AppLogger.debug(
-      '[_formatDateHeader] Input: $date, Now: $now, Today: $today, Yesterday: $yesterday, DateOnly: $dateOnly',
-    );
-
     String header;
     if (dateOnly == today) {
       header = 'Today';
@@ -427,7 +423,6 @@ class HomePage extends StatelessWidget {
     } else {
       header = DateFormat.yMMMd().format(date);
     }
-    AppLogger.debug('[_formatDateHeader] Returning: "$header"');
     return header;
   }
 

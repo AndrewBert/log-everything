@@ -8,26 +8,48 @@
 import 'dart:developer'; // <-- Import for log
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+// Add these imports for path_provider mocking
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:mockito/mockito.dart'; // <-- Import Mockito
+import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
-import 'package:myapp/entry/repository/entry_repository.dart'; // <-- Import EntryRepository
-import 'package:myapp/pages/cubit/home_page_state.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/pages/home_page.dart';
+import 'package:myapp/utils/logger.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/entries_list.dart';
-import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart';
 
 // Import base, shell, registrar, and mocks
 // import 'test_scope_base.dart'; // Not using yet
 // import 'widget_test_shell.dart'; // Not using yet
 import 'test_di_registrar.dart'; // Import the DI setup function
 import 'mocks.mocks.dart';
-import 'dart:developer'; // Keep log
-import 'package:myapp/locator.dart'; // Import locator for teardown
+import 'package:myapp/locator.dart';
+import 'package:permission_handler/permission_handler.dart'; // Import PermissionStatus
+import 'package:record/record.dart'; // Ensure RecordState is imported if needed
+
+// --- Mock Platform Interface for path_provider ---
+// Create a mock class that implements the necessary methods
+class MockPathProviderPlatform extends Mock
+    with
+        MockPlatformInterfaceMixin // Use MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  // Mock the methods you expect to be called
+  @override
+  Future<String?> getApplicationDocumentsPath() async {
+    return '/fake/documents/path'; // Return a fake path
+  }
+
+  // Mock other methods if needed (e.g., getTemporaryPath)
+  // @override
+  // Future<String?> getTemporaryPath() async {
+  //   return '/fake/temporary/path';
+  // }
+}
 
 // --- Test Scope ---
 class HomePageTestScope {
@@ -35,6 +57,7 @@ class HomePageTestScope {
   late MockEntryRepository mockEntryRepository;
   late MockSpeechService mockSpeechService;
   late MockAudioRecorder mockAudioRecorder;
+  late MockPermissionService mockPermissionService;
   // Add mocks for HomePageCubit dependencies if needed
   // late MockSharedPreferences mockSharedPreferences;
   // late MockPackageInfo mockPackageInfo;
@@ -95,6 +118,12 @@ class HomePageTestScope {
     mockEntryRepository = MockEntryRepository();
     mockSpeechService = MockSpeechService();
     mockAudioRecorder = MockAudioRecorder();
+    // Add stub for onStateChanged right after initialization
+    when(
+      mockAudioRecorder.onStateChanged(),
+    ).thenAnswer((_) => Stream<RecordState>.empty());
+    mockPermissionService = MockPermissionService();
+    // Add mocks for HomePageCubit dependencies if needed
     // mockSharedPreferences = MockSharedPreferences(); // etc.
 
     // Build the widget tree with REAL Cubits
@@ -174,17 +203,29 @@ class HomePageTestScope {
     });
   }
 
+  // Example: Stubbing permission status
+  void stubPermissionGranted() {
+    when(
+      mockPermissionService.getMicrophoneStatus(),
+    ).thenAnswer((_) async => PermissionStatus.granted);
+    when(
+      mockPermissionService.requestMicrophonePermission(),
+    ).thenAnswer((_) async => PermissionStatus.granted);
+    log('Mock PermissionService stubbed to return granted.');
+  }
+
   // Example: Stubbing voice recording start
   void stubStartRecordingSuccess() {
-    // Mock permission check if necessary (might need a wrapper service)
-    // For now, assume permission is granted - Cubit checks this
-    // when(mockPermissionsService.getMicrophoneStatus()).thenAnswer((_) async => PermissionStatus.granted);
-
     // Mock recorder start
     when(mockAudioRecorder.start(any, path: anyNamed('path'))).thenAnswer((
-      _,
+      invocation, // Add invocation parameter
     ) async {
-      log('Mock AudioRecorder start called.');
+      // Add logging HERE
+      AppLogger.debug(
+        '[Test Mock] mockAudioRecorder.start called. Path: ${invocation.namedArguments[#path]}',
+      );
+      // Ensure it completes successfully (no return value needed for Future<void>)
+      return Future.value(); // Explicitly return a completed void future
     });
     // Mock recorder state if needed
     when(mockAudioRecorder.isRecording()).thenAnswer((_) async => true);
@@ -223,19 +264,27 @@ void main() {
 
   late HomePageTestScope scope;
 
-  // Use async setUp to initialize DI
+  // Use async setUp to initialize DI and mock platform channels
   setUp(() async {
+    // --- Mock path_provider ---
+    // Create an instance of the mock platform implementation
+    final mockPathProvider = MockPathProviderPlatform();
+    // Set this mock instance as the one to be used by the path_provider package
+    PathProviderPlatform.instance = mockPathProvider;
+    log('Mock PathProviderPlatform set up.');
+    // --- End Mock path_provider ---
+
     scope = HomePageTestScope();
     // Initialize DI with the mocks created in the scope constructor
     await setupTestDependencies(
       entryRepository: scope.mockEntryRepository,
       speechService: scope.mockSpeechService,
       audioRecorder: scope.mockAudioRecorder,
-      // Pass other mocks...
+      permissionService: scope.mockPermissionService,
     );
-    // Perform any other async setup needed before each test
-    // e.g., stubbing initial repository state for all tests
+    // Stub initial states needed for most tests
     scope.stubRepositoryWithInitialEntries();
+    scope.stubPermissionGranted();
   });
 
   // Clean up resources after each test
@@ -244,6 +293,9 @@ void main() {
     await locator.reset();
     // Call scope dispose if it has custom logic
     await scope.dispose();
+    // Reset the platform interface after tests
+    // Use null check or a default implementation if available
+    // PathProviderPlatform.instance = MethodChannelPathProvider(); // Or similar default if exists
   });
 
   group('HomePage Widget Tests', () {
@@ -312,17 +364,20 @@ void main() {
       testWidgets('should show stop_circle icon when mic button is tapped', (
         WidgetTester tester,
       ) async {
-        // GIVEN: Stub recorder start
+        // GIVEN: Stub recorder start (Permission already stubbed in setUp)
         scope.stubStartRecordingSuccess();
         await _givenHomePageIsDisplayed(
           tester,
           scope,
           // Don't settle yet, allow button tap to trigger state change
-          settle: false,
+          settle: false, // Keep settle: false here
         );
+        // Pump once after initial display to ensure cubit initialization (like permission check) completes
+        await tester.pump();
+        log('[Test] Pumped once after initial display for cubit init.');
 
         // WHEN: The microphone button is tapped
-        await _whenMicButtonIsTapped(tester);
+        await _whenMicButtonIsTapped(tester); // This calls pumpAndSettle
 
         // THEN: Verify the stop_circle_outlined icon is displayed
         _thenStopCircleIconIsDisplayed(tester);
@@ -330,21 +385,28 @@ void main() {
         verify(
           scope.mockAudioRecorder.start(any, path: anyNamed('path')),
         ).called(1);
+        // Verify permission status was checked (at least once during init or start)
+        verify(
+          scope.mockPermissionService.getMicrophoneStatus(),
+        ).called(greaterThanOrEqualTo(1));
       });
 
       testWidgets(
         'should call stop and transcribe when stop button is tapped',
         (WidgetTester tester) async {
-          // GIVEN: Recording is started
+          // GIVEN: Recording is started (Permission granted in setUp)
           scope.stubStartRecordingSuccess();
           const transcribedText = 'This is the transcribed text';
           scope.stubTranscriptionSuccess(transcribedText);
           await _givenHomePageIsDisplayed(tester, scope, settle: false);
-          await _whenMicButtonIsTapped(tester); // Start recording
+          await tester.pump(); // Pump for init
+          await _whenMicButtonIsTapped(
+            tester,
+          ); // Start recording (calls pumpAndSettle)
           _thenStopCircleIconIsDisplayed(tester); // Verify recording started
 
           // WHEN: The stop button (same as mic button when recording) is tapped
-          await _whenStopButtonIsTapped(tester);
+          await _whenStopButtonIsTapped(tester); // Calls pump()
 
           // THEN: Verify recorder stop was called
           verify(scope.mockAudioRecorder.stop()).called(1);
@@ -523,8 +585,10 @@ Future<void> _givenHomePageIsDisplayed(
     // Pump and settle is often needed after initial pump
     // to allow Cubits to initialize and process initial state
     await tester.pumpAndSettle();
+    log('GIVEN: HomePage is displayed and settled.');
+  } else {
+    log('GIVEN: HomePage is displayed (widget pumped, not settled).');
   }
-  log('GIVEN: HomePage is displayed.');
   // Log initial state from REAL cubits if needed (requires accessing them)
   // log('Initial EntryCubit state: ${scope.locate<EntryCubit>().state}');
   // log('Initial VoiceInputCubit state: ${scope.locate<VoiceInputCubit>().state}');

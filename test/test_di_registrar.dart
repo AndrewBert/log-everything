@@ -1,12 +1,10 @@
-import 'package:get_it/get_it.dart';
-import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/speech_service.dart';
 import 'package:record/record.dart';
-import 'package:myapp/locator.dart'; // Import your app's locator
+import 'package:myapp/locator.dart';
+import 'package:myapp/services/permission_service.dart';
 
-// Import mocks (assuming they are generated or defined in mocks.dart)
-import 'mocks.mocks.dart'; // Adjust if your mock file is named differently
+import 'mocks.mocks.dart';
 
 /// Sets up mocked dependencies in the GetIt locator for testing.
 Future<void> setupTestDependencies({
@@ -15,6 +13,7 @@ Future<void> setupTestDependencies({
   MockEntryRepository? entryRepository,
   MockSpeechService? speechService,
   MockAudioRecorder? audioRecorder,
+  MockPermissionService? permissionService, // Add permission service mock
   // Add other mocks as needed (e.g., SharedPreferences, PackageInfo)
 }) async {
   // Reset GetIt before registering mocks for a clean slate
@@ -31,6 +30,10 @@ Future<void> setupTestDependencies({
   // Use MockAudioRecorder directly as Record() constructor might do setup
   locator.registerLazySingleton<AudioRecorder>(
     () => audioRecorder ?? MockAudioRecorder(),
+  );
+  // Register mock permission service
+  locator.registerLazySingleton<PermissionService>(
+    () => permissionService ?? MockPermissionService(),
   );
 
   // Register other mocks as needed (e.g., SharedPreferences, PackageInfo)

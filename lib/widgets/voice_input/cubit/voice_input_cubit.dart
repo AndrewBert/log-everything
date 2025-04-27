@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/services/permission_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -18,6 +19,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   final SpeechService _speechService;
   final EntryRepository _entryRepository;
   final EntryCubit _entryCubit;
+  final PermissionService
+  _permissionService; // Add PermissionService dependency
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
@@ -27,21 +30,27 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     : _audioRecorder = locator<AudioRecorder>(),
       _speechService = locator<SpeechService>(),
       _entryRepository = locator<EntryRepository>(),
+      _permissionService = locator<PermissionService>(),
       _entryCubit = entryCubit,
       super(const VoiceInputState()) {
+    AppLogger.debug('[VoiceInputCubit] Initializing...');
     _initialize();
   }
 
   Future<void> _initialize() async {
-    final status = await Permission.microphone.status;
+    AppLogger.debug('[VoiceInputCubit] _initialize started.');
+    // Use injected service
+    final status = await _permissionService.getMicrophoneStatus();
     emit(state.copyWith(micPermissionStatus: status));
     _audioRecorder.onStateChanged().listen((recordState) {
       AppLogger.debug('AudioRecorder state changed: $recordState');
     });
+    AppLogger.debug('[VoiceInputCubit] _initialize finished.');
   }
 
   Future<void> requestMicrophonePermission() async {
-    final status = await Permission.microphone.request();
+    // Use injected service
+    final status = await _permissionService.requestMicrophonePermission();
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
       AppLogger.warning(
@@ -51,25 +60,34 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Future<void> toggleRecording() async {
+    AppLogger.info(
+      "[toggleRecording] Called. Current state isRecording: ${state.isRecording}",
+    );
     if (state.isRecording) {
+      AppLogger.info("[toggleRecording] Calling stopRecording...");
       await stopRecording();
     } else {
+      AppLogger.info("[toggleRecording] Calling startRecording...");
       await startRecording();
     }
+    AppLogger.info("[toggleRecording] Finished.");
   }
 
   Future<void> startRecording() async {
     AppLogger.info("[startRecording] Attempting to start recording...");
     HapticFeedback.mediumImpact();
 
-    PermissionStatus currentStatus = await Permission.microphone.status;
+    // Use injected service
+    PermissionStatus currentStatus =
+        await _permissionService.getMicrophoneStatus();
     if (currentStatus != state.micPermissionStatus) {
       emit(state.copyWith(micPermissionStatus: currentStatus));
     }
 
     if (currentStatus != PermissionStatus.granted) {
-      await requestMicrophonePermission();
-      currentStatus = await Permission.microphone.status;
+      await requestMicrophonePermission(); // This now uses the service
+      // Use injected service again to get updated status
+      currentStatus = await _permissionService.getMicrophoneStatus();
       if (currentStatus != state.micPermissionStatus) {
         emit(state.copyWith(micPermissionStatus: currentStatus));
       }
@@ -87,6 +105,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         return;
       }
     }
+    AppLogger.debug(
+      "[startRecording] Permission check passed (Status: $currentStatus).",
+    );
 
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -94,8 +115,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           '${directory.path}/recording-${DateTime.now().millisecondsSinceEpoch}.m4a';
       const config = RecordConfig(encoder: AudioEncoder.aacLc);
 
+      AppLogger.debug("[startRecording] Calling _audioRecorder.start...");
       await _audioRecorder.start(config, path: path);
       AppLogger.info("Recording started, path: $path");
+      AppLogger.debug("[startRecording] Emitting state: isRecording = true");
       emit(
         state.copyWith(
           isRecording: true,
@@ -108,8 +131,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         ),
       );
       _startRecordingTimer();
+      AppLogger.debug("[startRecording] Timer started.");
     } catch (e) {
       AppLogger.error("Error starting recording", error: e);
+      AppLogger.debug(
+        "[startRecording] Emitting state: isRecording = false (due to error)",
+      );
       emit(
         state.copyWith(
           errorMessage: 'Error starting recording: $e',
@@ -117,10 +144,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         ),
       );
     }
+    AppLogger.info("[startRecording] Finished.");
   }
 
   Future<void> stopRecording() async {
-    AppLogger.info("Stopping recording (foreground transcription)");
+    AppLogger.info("[stopRecording] Called.");
     if (!state.isRecording) return;
     HapticFeedback.lightImpact();
 
@@ -131,7 +159,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     try {
       final path = await _audioRecorder.stop();
       AppLogger.info("Recording stopped, audio path: $path");
-
+      AppLogger.debug("[stopRecording] Emitting state: isRecording = false");
       emit(
         state.copyWith(
           isRecording: false,
@@ -161,6 +189,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       }
     } catch (e) {
       AppLogger.error("Error stopping recording", error: e);
+      AppLogger.debug(
+        "[stopRecording] Emitting state: isRecording = false (due to error)",
+      );
       emit(
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',
@@ -171,6 +202,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         ),
       );
     }
+    AppLogger.info("[stopRecording] Finished.");
   }
 
   Future<void> stopRecordingAndCombine(
