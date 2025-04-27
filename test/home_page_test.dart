@@ -28,7 +28,7 @@ class HomePageTestScope {
   // Mocks
   late MockEntryCubit mockEntryCubit;
   late MockVoiceInputCubit mockVoiceInputCubit;
-  late MockHomeScreenCubit mockHomeScreenCubit;
+  late MockHomePageCubit mockHomeScreenCubit;
 
   // Stream Controllers for simulating state changes
   late StreamController<EntryState> entryStateController;
@@ -68,30 +68,41 @@ class HomePageTestScope {
   );
 
   // Test Data for Entries
-  static final entryToday1 = Entry(
+  static final entry1 = Entry(
     text: 'Entry today 1',
     timestamp: DateTime(2025, 4, 25, 14, 30, 0), // Today
     category: 'Misc',
   );
-  static final entryToday2 = Entry(
+  static final entry2 = Entry(
     text: 'Entry today 2',
     timestamp: DateTime(2025, 4, 25, 10, 15, 0), // Today
     category: 'Work',
   );
-  static final entryYesterday = Entry(
+  static final entry3 = Entry(
     text: 'Entry yesterday',
     timestamp: DateTime(2025, 4, 24, 16, 0, 0), // Yesterday
     category: 'Personal',
   );
-  static final entryOlder = Entry(
+  static final entry4 = Entry(
     text: 'Entry older',
     timestamp: DateTime(2025, 4, 22, 9, 0, 0), // Older
     category: 'Misc',
   );
 
+  // Manually construct the expected display list WITH headers
+  static final expectedDisplayListWithHeaders = [
+    DateTime.now(), // Today Header
+    entry1,
+    entry2,
+    DateTime.now().subtract(Duration(days: 1)), // Yesterday Header
+    entry3,
+    DateTime(2025, 4, 22), // Older Header
+    entry4,
+  ];
+
   static final entryStateWithItems = initialEntryState.copyWith(
-    displayListItems: [entryToday1, entryToday2, entryYesterday, entryOlder],
-    // Assuming categories are derived or loaded separately if needed
+    // Use the correctly constructed list
+    displayListItems: expectedDisplayListWithHeaders,
     categories: ['Misc', 'Work', 'Personal'],
   );
 
@@ -102,7 +113,7 @@ class HomePageTestScope {
     // Initialize mocks
     mockEntryCubit = MockEntryCubit();
     mockVoiceInputCubit = MockVoiceInputCubit();
-    mockHomeScreenCubit = MockHomeScreenCubit();
+    mockHomeScreenCubit = MockHomePageCubit();
 
     // Initialize Stream Controllers
     entryStateController = StreamController<EntryState>.broadcast();
@@ -277,36 +288,18 @@ void main() {
         await _givenHomePageIsDisplayed(tester, scope, settle: true);
 
         // THEN: Verify entries are displayed with correct text and time format
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryToday1.text,
-          '14:30',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryToday2.text,
-          '10:15',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryYesterday.text,
-          '16:00',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryOlder.text,
-          '09:00',
-        );
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entry1.text, '14:30');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entry2.text, '10:15');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entry3.text, '16:00');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entry4.text, '09:00');
       });
 
       testWidgets('should display correct date headers', (
         WidgetTester tester,
       ) async {
-        // GIVEN: EntryCubit has entries with varying dates
         _givenEntriesAreAvailable(scope);
         await _givenHomePageIsDisplayed(tester, scope);
 
-        // THEN: Verify date headers are present
         _thenDateHeaderIsDisplayed(tester, 'Today');
         _thenDateHeaderIsDisplayed(tester, 'Yesterday');
         _thenDateHeaderIsDisplayed(tester, 'Apr 22, 2025');
