@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:clock/clock.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/services/permission_service.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -19,8 +20,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   final SpeechService _speechService;
   final EntryRepository _entryRepository;
   final EntryCubit _entryCubit;
-  final PermissionService
-  _permissionService; // Add PermissionService dependency
+  final PermissionService _permissionService;
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
@@ -122,7 +122,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       emit(
         state.copyWith(
           isRecording: true,
-          recordingStartTime: DateTime.now(),
+          recordingStartTime: clock.now(), // <-- Use top-level clock.now()
           recordingDuration: Duration.zero,
           clearErrorMessage: true,
           transcriptionStatus: TranscriptionStatus.idle,
@@ -381,8 +381,11 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Duration _calculateRecordingDuration() {
-    if (state.recordingStartTime == null) return Duration.zero;
-    return DateTime.now().difference(state.recordingStartTime!);
+    final now = clock.now(); // <-- Use top-level clock.now()
+    final startTime = state.recordingStartTime;
+    if (startTime == null) return Duration.zero;
+    final duration = now.difference(startTime);
+    return duration;
   }
 
   void _startRecordingTimer() {
