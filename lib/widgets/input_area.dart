@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:myapp/pages/cubit/home_screen_cubit.dart';
-import 'package:myapp/pages/cubit/home_screen_state.dart';
+import 'package:myapp/pages/cubit/home_page_cubit.dart';
+import 'package:myapp/pages/cubit/home_page_state.dart';
 import 'voice_input/voice_input.dart'; // Assuming VoiceInputSection is in the same directory
 
 class InputArea extends StatefulWidget {
@@ -46,7 +46,7 @@ class _InputAreaState extends State<InputArea> {
   void _onInputFocusChange() {
     // Update HomeScreenCubit about focus state
     if (mounted && context.mounted) {
-      context.read<HomeScreenCubit>().setInputFocus(_inputFocusNode.hasFocus);
+      context.read<HomePageCubit>().setInputFocus(_inputFocusNode.hasFocus);
     }
   }
 
@@ -62,7 +62,7 @@ class _InputAreaState extends State<InputArea> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<HomeScreenCubit, HomeScreenState>(
+    return BlocBuilder<HomePageCubit, HomePageState>(
       buildWhen:
           (prev, current) => prev.isInputFocused != current.isInputFocused,
       builder: (context, homeScreenState) {

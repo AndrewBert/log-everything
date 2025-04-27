@@ -7,8 +7,8 @@ import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
 
-import 'cubit/home_screen_cubit.dart';
-import 'cubit/home_screen_state.dart';
+import 'cubit/home_page_cubit.dart';
+import 'cubit/home_page_state.dart';
 import '../entry/entry.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
@@ -39,7 +39,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: GestureDetector(
           onTap: () {
-            context.read<HomeScreenCubit>().incrementTitleTap();
+            context.read<HomePageCubit>().incrementTitleTap();
           },
           child: RichText(
             text: TextSpan(
@@ -63,7 +63,7 @@ class HomePage extends StatelessWidget {
           ),
         ),
         actions: [
-          BlocBuilder<HomeScreenCubit, HomeScreenState>(
+          BlocBuilder<HomePageCubit, HomePageState>(
             // Remove unnecessary null checks
             buildWhen: (prev, current) => prev.appVersion != current.appVersion,
             builder: (context, state) {
@@ -98,7 +98,7 @@ class HomePage extends StatelessWidget {
       ),
       body: MultiBlocListener(
         listeners: [
-          BlocListener<HomeScreenCubit, HomeScreenState>(
+          BlocListener<HomePageCubit, HomePageState>(
             // Remove unnecessary null checks
             listenWhen:
                 (prev, current) =>
@@ -107,11 +107,11 @@ class HomePage extends StatelessWidget {
               // Remove unnecessary null check
               await _showWhatsNewDialog(context, state.appVersion);
               if (context.mounted) {
-                context.read<HomeScreenCubit>().markWhatsNewShown();
+                context.read<HomePageCubit>().markWhatsNewShown();
               }
             },
           ),
-          BlocListener<HomeScreenCubit, HomeScreenState>(
+          BlocListener<HomePageCubit, HomePageState>(
             // Keep null check for snackBarMessage as it IS nullable
             listenWhen:
                 (prev, current) =>
@@ -128,7 +128,7 @@ class HomePage extends StatelessWidget {
               );
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
-                  context.read<HomeScreenCubit>().clearSnackBarMessage();
+                  context.read<HomePageCubit>().clearSnackBarMessage();
                 }
               });
             },
@@ -415,13 +415,20 @@ class HomePage extends StatelessWidget {
     final yesterday = today.subtract(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
+    AppLogger.debug(
+      '[_formatDateHeader] Input: $date, Now: $now, Today: $today, Yesterday: $yesterday, DateOnly: $dateOnly',
+    );
+
+    String header;
     if (dateOnly == today) {
-      return 'Today';
+      header = 'Today';
     } else if (dateOnly == yesterday) {
-      return 'Yesterday';
+      header = 'Yesterday';
     } else {
-      return DateFormat.yMMMd().format(date);
+      header = DateFormat.yMMMd().format(date);
     }
+    AppLogger.debug('[_formatDateHeader] Returning: "$header"');
+    return header;
   }
 
   Color _getCategoryColor(String category) {

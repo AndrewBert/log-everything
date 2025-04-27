@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-class HomeScreenState extends Equatable {
+class HomePageState extends Equatable {
   final bool isInputFocused;
   final String appVersion;
   final bool showWhatsNewDialog;
@@ -9,7 +9,7 @@ class HomeScreenState extends Equatable {
   final String? lastSeenVersion;
   final bool isVersionLoading;
 
-  const HomeScreenState({
+  const HomePageState({
     this.isInputFocused = false,
     this.appVersion = '',
     this.showWhatsNewDialog = false,
@@ -30,7 +30,7 @@ class HomeScreenState extends Equatable {
     isVersionLoading,
   ];
 
-  HomeScreenState copyWith({
+  HomePageState copyWith({
     bool? isInputFocused,
     String? appVersion,
     bool? showWhatsNewDialog,
@@ -40,7 +40,7 @@ class HomeScreenState extends Equatable {
     String? lastSeenVersion,
     bool? isVersionLoading,
   }) {
-    return HomeScreenState(
+    return HomePageState(
       isInputFocused: isInputFocused ?? this.isInputFocused,
       appVersion: appVersion ?? this.appVersion,
       showWhatsNewDialog: showWhatsNewDialog ?? this.showWhatsNewDialog,

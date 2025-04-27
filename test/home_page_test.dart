@@ -13,10 +13,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
-import 'package:myapp/pages/cubit/home_screen_state.dart';
+import 'package:myapp/pages/cubit/home_page_state.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
-import 'package:myapp/pages/cubit/home_screen_cubit.dart';
+import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/entries_list.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart';
 
@@ -33,12 +33,12 @@ class HomePageTestScope {
   // Stream Controllers for simulating state changes
   late StreamController<EntryState> entryStateController;
   late StreamController<VoiceInputState> voiceInputStateController;
-  late StreamController<HomeScreenState> homeScreenStateController;
+  late StreamController<HomePageState> homeScreenStateController;
 
   // Test Data
   static const initialEntryState = EntryState();
   static const initialVoiceInputState = VoiceInputState();
-  static const initialHomeScreenState = HomeScreenState();
+  static const initialHomeScreenState = HomePageState();
   static const testEntryText = 'Test entry 1';
   static final timestamp = DateTime(2025, 4, 25, 12, 0, 0);
   static final tempEntry = Entry(
@@ -62,6 +62,38 @@ class HomePageTestScope {
     displayListItems: [finalEntry],
     categories: ['Misc'],
   );
+  // Use isRecording based on actual VoiceInputState
+  static final recordingState = initialVoiceInputState.copyWith(
+    isRecording: true,
+  );
+
+  // Test Data for Entries
+  static final entryToday1 = Entry(
+    text: 'Entry today 1',
+    timestamp: DateTime(2025, 4, 25, 14, 30, 0), // Today
+    category: 'Misc',
+  );
+  static final entryToday2 = Entry(
+    text: 'Entry today 2',
+    timestamp: DateTime(2025, 4, 25, 10, 15, 0), // Today
+    category: 'Work',
+  );
+  static final entryYesterday = Entry(
+    text: 'Entry yesterday',
+    timestamp: DateTime(2025, 4, 24, 16, 0, 0), // Yesterday
+    category: 'Personal',
+  );
+  static final entryOlder = Entry(
+    text: 'Entry older',
+    timestamp: DateTime(2025, 4, 22, 9, 0, 0), // Older
+    category: 'Misc',
+  );
+
+  static final entryStateWithItems = initialEntryState.copyWith(
+    displayListItems: [entryToday1, entryToday2, entryYesterday, entryOlder],
+    // Assuming categories are derived or loaded separately if needed
+    categories: ['Misc', 'Work', 'Personal'],
+  );
 
   // Widget Under Test Setup
   late Widget widgetUnderTest;
@@ -75,7 +107,7 @@ class HomePageTestScope {
     // Initialize Stream Controllers
     entryStateController = StreamController<EntryState>.broadcast();
     voiceInputStateController = StreamController<VoiceInputState>.broadcast();
-    homeScreenStateController = StreamController<HomeScreenState>.broadcast();
+    homeScreenStateController = StreamController<HomePageState>.broadcast();
 
     // Stub initial states and streams
     _stubInitialStatesAndStreams();
@@ -85,7 +117,7 @@ class HomePageTestScope {
       providers: [
         BlocProvider<EntryCubit>.value(value: mockEntryCubit),
         BlocProvider<VoiceInputCubit>.value(value: mockVoiceInputCubit),
-        BlocProvider<HomeScreenCubit>.value(value: mockHomeScreenCubit),
+        BlocProvider<HomePageCubit>.value(value: mockHomeScreenCubit),
       ],
       child: MaterialApp(home: HomePage()),
     );
@@ -133,11 +165,30 @@ class HomePageTestScope {
     });
   }
 
+  void stubStartRecordingEmitsRecordingState() {
+    // Stub the startRecording method to emit the recording state
+    when(mockVoiceInputCubit.startRecording()).thenAnswer((_) async {
+      log('Mock startRecording called.');
+      // Update the state getter first
+      when(mockVoiceInputCubit.state).thenReturn(recordingState);
+      // Emit the state via the stream
+      voiceInputStateController.add(recordingState);
+      log('Mock emitting recording state: $recordingState');
+    });
+  }
+
   // Method to clean up resources
   void dispose() {
     entryStateController.close();
     voiceInputStateController.close();
     homeScreenStateController.close();
+  }
+
+  // Modify this method to ONLY stub the state getter
+  void stubEntryCubitStateWithItems() {
+    when(mockEntryCubit.state).thenReturn(entryStateWithItems);
+    log('Mock EntryCubit .state getter stubbed with items.');
+    // DO NOT emit via stream here for initial display tests
   }
 }
 
@@ -182,9 +233,89 @@ void main() {
       });
     });
 
+    group('Initial State', () {
+      testWidgets('should display initial UI elements correctly', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN: HomePage is displayed with initial mock states
+        await _givenHomePageIsDisplayed(tester, scope);
+
+        // THEN: Verify essential UI elements are present
+        _thenInitialUIElementsArePresent(tester);
+      });
+    });
+
+    group('Voice Input', () {
+      testWidgets('should show stop_circle icon when mic button is tapped', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN: Voice input is stubbed to emit recording state
+        _givenVoiceInputStartsRecording(scope);
+        await _givenHomePageIsDisplayed(
+          tester,
+          scope,
+          settle: false,
+        ); // Don't settle yet
+
+        // WHEN: The microphone button is tapped
+        await _whenMicButtonIsTapped(tester);
+
+        // THEN: Verify the stop_circle_outlined icon is displayed
+        _thenStopCircleIconIsDisplayed(tester);
+      });
+
+      // TODO: Add tests for voice input state changes (listening, processing, success, error)
+    });
+
+    group('Displaying Entries', () {
+      testWidgets('should display entries with correct text and time', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN: EntryCubit has entries
+        _givenEntriesAreAvailable(scope);
+        // Settle needed for list to build
+        await _givenHomePageIsDisplayed(tester, scope, settle: true);
+
+        // THEN: Verify entries are displayed with correct text and time format
+        _thenEntryIsDisplayed(
+          tester,
+          HomePageTestScope.entryToday1.text,
+          '14:30',
+        );
+        _thenEntryIsDisplayed(
+          tester,
+          HomePageTestScope.entryToday2.text,
+          '10:15',
+        );
+        _thenEntryIsDisplayed(
+          tester,
+          HomePageTestScope.entryYesterday.text,
+          '16:00',
+        );
+        _thenEntryIsDisplayed(
+          tester,
+          HomePageTestScope.entryOlder.text,
+          '09:00',
+        );
+      });
+
+      testWidgets('should display correct date headers', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN: EntryCubit has entries with varying dates
+        _givenEntriesAreAvailable(scope);
+        await _givenHomePageIsDisplayed(tester, scope);
+
+        // THEN: Verify date headers are present
+        _thenDateHeaderIsDisplayed(tester, 'Today');
+        _thenDateHeaderIsDisplayed(tester, 'Yesterday');
+        _thenDateHeaderIsDisplayed(tester, 'Apr 22, 2025');
+      });
+    });
+
     // Add more groups and tests here following the same pattern
-    // e.g., group('Voice Input', () { ... });
     // e.g., group('Category Management', () { ... });
+    // e.g., group('Error Handling', () { ... });
   });
 }
 
@@ -197,15 +328,34 @@ void _givenAddEntryStubs(HomePageTestScope scope) {
 
 Future<void> _givenHomePageIsDisplayed(
   WidgetTester tester,
-  HomePageTestScope scope,
-) async {
+  HomePageTestScope scope, {
+  bool settle = true, // Add optional parameter
+}) async {
   await tester.pumpWidget(scope.widgetUnderTest);
-  // Pump and settle might be needed if there are initial async operations
-  // await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle(); // Add pumpAndSettle
+  }
   log('GIVEN: HomePage is displayed.');
   log('Initial mockEntryCubit state: ${scope.mockEntryCubit.state}');
   log('Initial mockVoiceInputCubit state: ${scope.mockVoiceInputCubit.state}');
   log('Initial mockHomeScreenCubit state: ${scope.mockHomeScreenCubit.state}');
+}
+
+void _givenVoiceInputStartsRecording(HomePageTestScope scope) {
+  // Set up the mock behavior for starting recording
+  scope.stubStartRecordingEmitsRecordingState();
+  log('GIVEN: Voice input stubbed to emit recording state.');
+}
+
+void _givenEntriesAreAvailable(HomePageTestScope scope) {
+  // Stub BOTH the state getter AND emit the initial state via stream
+  when(
+    scope.mockEntryCubit.state,
+  ).thenReturn(HomePageTestScope.entryStateWithItems);
+  scope.entryStateController.add(HomePageTestScope.entryStateWithItems);
+  log(
+    'GIVEN: Entries are available in EntryCubit state AND emitted via stream.',
+  );
 }
 
 // --- WHEN ---
@@ -229,6 +379,16 @@ Future<void> _whenSendButtonIsTapped(WidgetTester tester) async {
   // Pump and settle to allow all animations and async operations (like state changes) to complete
   await tester.pumpAndSettle();
   log('WHEN: Send button tapped.');
+}
+
+Future<void> _whenMicButtonIsTapped(WidgetTester tester) async {
+  // Assuming the mic button is an IconButton with Icons.mic
+  // Adjust the finder if your implementation is different
+  final micButtonFinder = find.byIcon(Icons.mic);
+  expect(micButtonFinder, findsOneWidget, reason: 'Could not find Mic Button');
+  await tester.tap(micButtonFinder);
+  await tester.pumpAndSettle(); // Allow any animations or state changes
+  log('WHEN: Mic button tapped.');
 }
 
 // --- THEN ---
@@ -267,4 +427,70 @@ void _thenTextFieldIsCleared(WidgetTester tester) {
     reason: 'TextField was not cleared',
   );
   log('THEN: TextField is cleared.');
+}
+
+void _thenInitialUIElementsArePresent(WidgetTester tester) {
+  expect(find.byType(TextField), findsOneWidget, reason: 'TextField not found');
+  expect(
+    find.byIcon(Icons.send_rounded),
+    findsOneWidget,
+    reason: 'Send Button not found',
+  );
+  expect(
+    find.byIcon(Icons.mic),
+    findsOneWidget,
+    reason: 'Mic Button not found',
+  );
+  // Optionally, check if the EntriesList is initially empty or shows specific initial content
+  // Example: Check for an empty list placeholder if one exists
+  // expect(find.text('No entries yet'), findsOneWidget);
+  log('THEN: Initial UI elements are present.');
+}
+
+void _thenStopCircleIconIsDisplayed(WidgetTester tester) {
+  // Verify that the icon changed from mic to stop_circle_outlined
+  expect(
+    find.byIcon(Icons.mic),
+    findsNothing,
+    reason: 'Mic icon should not be present',
+  );
+  expect(
+    find.byIcon(Icons.stop_circle_outlined), // Correct icon
+    findsOneWidget,
+    reason: 'Stop circle icon should be displayed',
+  );
+  log('THEN: Stop circle icon is displayed, indicating recording started.');
+}
+
+void _thenEntryIsDisplayed(WidgetTester tester, String text, String time) {
+  final entryTextFinder = find.text(text);
+  final entryTimeFinder = find.text(time);
+
+  // Find the specific list item containing the text
+  final entryListItemFinder = find.ancestor(
+    of: entryTextFinder,
+    matching: find.byType(ListTile), // Adjust if using a different widget
+  );
+
+  expect(
+    entryTextFinder,
+    findsOneWidget,
+    reason: 'Entry text "$text" not found',
+  );
+  // Check that the time is within the same list item as the text
+  expect(
+    find.descendant(of: entryListItemFinder, matching: entryTimeFinder),
+    findsOneWidget,
+    reason: 'Time "$time" for entry "$text" not found or not in same item',
+  );
+  log('THEN: Entry "$text" at "$time" is displayed.');
+}
+
+void _thenDateHeaderIsDisplayed(WidgetTester tester, String headerText) {
+  expect(
+    find.text(headerText),
+    findsOneWidget, // Use findsOneWidget or findsWidgets depending on grouping
+    reason: 'Date header "$headerText" not found',
+  );
+  log('THEN: Date header "$headerText" is displayed.');
 }

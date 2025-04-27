@@ -3,13 +3,13 @@ import 'package:myapp/utils/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'home_screen_state.dart';
+import 'home_page_state.dart';
 
-class HomeScreenCubit extends Cubit<HomeScreenState> {
+class HomePageCubit extends Cubit<HomePageState> {
   static const String _lastShownVersionKey = 'last_shown_whats_new_version';
   final int _targetTapCount = 7; // Easter egg target
 
-  HomeScreenCubit() : super(const HomeScreenState()) {
+  HomePageCubit() : super(const HomePageState()) {
     _loadInitialData();
   }
 

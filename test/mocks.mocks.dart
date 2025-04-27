@@ -10,8 +10,8 @@ import 'package:mockito/mockito.dart' as _i1;
 import 'package:myapp/entry/cubit/entry_cubit.dart' as _i2;
 import 'package:myapp/entry/entry.dart' as _i6;
 import 'package:myapp/entry/repository/entry_repository.dart' as _i10;
-import 'package:myapp/pages/cubit/home_screen_cubit.dart' as _i9;
-import 'package:myapp/pages/cubit/home_screen_state.dart' as _i4;
+import 'package:myapp/pages/cubit/home_page_cubit.dart' as _i9;
+import 'package:myapp/pages/cubit/home_page_state.dart' as _i4;
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart' as _i8;
 import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart' as _i3;
 
@@ -41,7 +41,7 @@ class _FakeVoiceInputState_1 extends _i1.SmartFake
 }
 
 class _FakeHomeScreenState_2 extends _i1.SmartFake
-    implements _i4.HomeScreenState {
+    implements _i4.HomePageState {
   _FakeHomeScreenState_2(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
@@ -340,13 +340,13 @@ class MockVoiceInputCubit extends _i1.Mock implements _i8.VoiceInputCubit {
 /// A class which mocks [HomeScreenCubit].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHomeScreenCubit extends _i1.Mock implements _i9.HomeScreenCubit {
+class MockHomeScreenCubit extends _i1.Mock implements _i9.HomePageCubit {
   MockHomeScreenCubit() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.HomeScreenState get state =>
+  _i4.HomePageState get state =>
       (super.noSuchMethod(
             Invocation.getter(#state),
             returnValue: _FakeHomeScreenState_2(
@@ -354,15 +354,15 @@ class MockHomeScreenCubit extends _i1.Mock implements _i9.HomeScreenCubit {
               Invocation.getter(#state),
             ),
           )
-          as _i4.HomeScreenState);
+          as _i4.HomePageState);
 
   @override
-  _i5.Stream<_i4.HomeScreenState> get stream =>
+  _i5.Stream<_i4.HomePageState> get stream =>
       (super.noSuchMethod(
             Invocation.getter(#stream),
-            returnValue: _i5.Stream<_i4.HomeScreenState>.empty(),
+            returnValue: _i5.Stream<_i4.HomePageState>.empty(),
           )
-          as _i5.Stream<_i4.HomeScreenState>);
+          as _i5.Stream<_i4.HomePageState>);
 
   @override
   bool get isClosed =>
@@ -415,13 +415,13 @@ class MockHomeScreenCubit extends _i1.Mock implements _i9.HomeScreenCubit {
   );
 
   @override
-  void emit(_i4.HomeScreenState? state) => super.noSuchMethod(
+  void emit(_i4.HomePageState? state) => super.noSuchMethod(
     Invocation.method(#emit, [state]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void onChange(_i7.Change<_i4.HomeScreenState>? change) => super.noSuchMethod(
+  void onChange(_i7.Change<_i4.HomePageState>? change) => super.noSuchMethod(
     Invocation.method(#onChange, [change]),
     returnValueForMissingStub: null,
   );

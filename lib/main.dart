@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
-import 'package:myapp/pages/cubit/home_screen_cubit.dart';
+import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        BlocProvider<HomeScreenCubit>(create: (context) => HomeScreenCubit()),
+        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
       ],
       child: MaterialApp(
         theme: ThemeData(
