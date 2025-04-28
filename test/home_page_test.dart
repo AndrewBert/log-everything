@@ -5,43 +5,41 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'dart:developer'; // <-- Import for log
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fake_async/fake_async.dart'; // <-- Import fake_async
-// Add these imports for path_provider mocking
+import 'package:fake_async/fake_async.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
-import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/entry/repository/entry_repository.dart'; // Import REAL repository
 import 'package:myapp/pages/home_page.dart';
-import 'package:myapp/utils/logger.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/entries_list.dart';
+import 'package:myapp/services/audio_recorder_service.dart'; // Import service
+import 'package:myapp/services/entry_persistence_service.dart'; // Import service
+import 'package:myapp/services/ai_categorization_service.dart'; // Import service
 
-// Import base, shell, registrar, and mocks
-// import 'test_scope_base.dart'; // Not using yet
-// import 'widget_test_shell.dart'; // Not using yet
 import 'mock_path_provider_platform.dart';
-import 'test_di_registrar.dart'; // Import the DI setup function
-import 'mocks.mocks.dart';
+import 'test_di_registrar.dart';
+import 'mocks.mocks.dart'; // Import generated mocks
 import 'package:myapp/locator.dart';
-import 'package:permission_handler/permission_handler.dart'; // Import PermissionStatus
-import 'package:record/record.dart'; // Ensure RecordState is imported if needed
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 // --- Test Scope ---
 class HomePageTestScope {
-  // Mocks for DEPENDENCIES
-  late MockEntryRepository mockEntryRepository;
+  // Mocks for DEPENDENCIES of the REAL repository and other components
+  late MockEntryPersistenceService mockPersistenceService;
+  late MockAiCategorizationService mockAiService;
   late MockSpeechService mockSpeechService;
-  late MockAudioRecorder mockAudioRecorder;
+  late MockAudioRecorderService mockAudioRecorderService; // Use service mock
   late MockPermissionService mockPermissionService;
 
-  // Test Data
+  // Test Data (remains the same)
   static const testEntryText = 'Test entry 1';
   static final timestamp = DateTime(2025, 4, 25, 12, 0, 0);
   static final now = DateTime.now();
@@ -82,25 +80,32 @@ class HomePageTestScope {
   late Widget widgetUnderTest;
 
   HomePageTestScope() {
-    mockEntryRepository = MockEntryRepository();
+    // Instantiate mocks for dependencies
+    mockPersistenceService = MockEntryPersistenceService();
+    mockAiService = MockAiCategorizationService();
     mockSpeechService = MockSpeechService();
-    mockAudioRecorder = MockAudioRecorder();
+    mockAudioRecorderService = MockAudioRecorderService();
     when(
-      mockAudioRecorder.onStateChanged(),
+      mockAudioRecorderService.onStateChanged(), // Stub stream for service
     ).thenAnswer((_) => Stream<RecordState>.empty());
     mockPermissionService = MockPermissionService();
 
+    // Widget setup uses BlocProviders which will get dependencies from locator
     widgetUnderTest = MultiBlocProvider(
       providers: [
         BlocProvider<EntryCubit>(
           create:
-              (context) =>
-                  EntryCubit(entryRepository: locator<EntryRepository>()),
+              (context) => EntryCubit(
+                // EntryCubit gets REAL repository from locator
+                entryRepository: locator<EntryRepository>(),
+              ),
         ),
         BlocProvider<VoiceInputCubit>(
           create:
-              (context) =>
-                  VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
+              (context) => VoiceInputCubit(
+                entryCubit: context.read<EntryCubit>(),
+                // VoiceInputCubit gets its dependencies (incl. AudioRecorderService) from locator
+              ),
         ),
         BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
       ],
@@ -110,34 +115,21 @@ class HomePageTestScope {
 
   // --- Mocking Helpers ---
 
-  void stubAddEntrySuccess() {
-    when(mockEntryRepository.addEntry(testEntryText)).thenAnswer((_) async {
-      final finalEntry = Entry(
-        text: testEntryText,
-        timestamp: timestamp,
-        category: 'Misc',
-        isNew: true,
-      );
-      return [finalEntry];
-    });
-    when(mockEntryRepository.currentEntries).thenAnswer((_) {
-      final finalEntry = Entry(
-        text: testEntryText,
-        timestamp: timestamp,
-        category: 'Misc',
-        isNew: true,
-      );
-      return [finalEntry];
-    });
-    when(mockEntryRepository.currentCategories).thenAnswer((_) {
-      return ['Misc'];
-    });
-  }
+  // Remove stubAddEntrySuccess (verification will be on persistence)
 
-  void stubRepositoryWithInitialEntries() {
-    when(mockEntryRepository.initialize()).thenAnswer((_) async {});
-    when(mockEntryRepository.currentEntries).thenReturn(rawEntriesList);
-    when(mockEntryRepository.currentCategories).thenReturn(categoriesList);
+  // Rename and update to stub PERSISTENCE service
+  void stubPersistenceWithInitialEntries() {
+    // Stub loading methods used by the REAL repository's initialize()
+    when(
+      mockPersistenceService.loadEntries(),
+    ).thenAnswer((_) async => List.from(rawEntriesList)); // Return a copy
+    when(
+      mockPersistenceService.loadCategories(),
+    ).thenAnswer((_) async => List.from(categoriesList)); // Return a copy
+
+    // Stub saving methods to succeed (important for delete/add/update)
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
   }
 
   void stubPermissionGranted() {
@@ -149,13 +141,17 @@ class HomePageTestScope {
     ).thenAnswer((_) async => PermissionStatus.granted);
   }
 
+  // Update to stub AudioRecorderSERVICE
   void stubStartRecordingSuccess() {
     when(
-      mockAudioRecorder.start(any, path: anyNamed('path')),
-    ).thenAnswer((_) async => Future.value());
-    when(mockAudioRecorder.isRecording()).thenAnswer((_) async => true);
+      mockAudioRecorderService.generateRecordingPath(),
+    ).thenAnswer((_) async => 'fake/path/recording.m4a');
     when(
-      mockAudioRecorder.stop(),
+      mockAudioRecorderService.start(any, path: anyNamed('path')),
+    ).thenAnswer((_) async => Future.value());
+    when(mockAudioRecorderService.isRecording()).thenAnswer((_) async => true);
+    when(
+      mockAudioRecorderService.stop(),
     ).thenAnswer((_) async => 'fake/path/recording.m4a');
   }
 
@@ -196,14 +192,23 @@ void main() {
     PathProviderPlatform.instance = mockPathProvider;
 
     scope = HomePageTestScope();
+    // Update call to setupTestDependencies
     await setupTestDependencies(
-      entryRepository: scope.mockEntryRepository,
+      persistenceService: scope.mockPersistenceService, // Pass persistence mock
+      aiService: scope.mockAiService, // Pass AI mock
       speechService: scope.mockSpeechService,
-      audioRecorder: scope.mockAudioRecorder,
+      audioRecorder: scope.mockAudioRecorderService, // Pass service mock
       permissionService: scope.mockPermissionService,
     );
-    scope.stubRepositoryWithInitialEntries();
+    // Use the updated stubbing method
+    scope.stubPersistenceWithInitialEntries();
     scope.stubPermissionGranted();
+
+    // IMPORTANT: Ensure repository is initialized IF the cubit doesn't do it.
+    // If EntryCubit calls repository.initialize() on creation, this is fine.
+    // Otherwise, you might need:
+    // await locator<EntryRepository>().initialize();
+    // Make sure stubs are set *before* this.
   });
 
   tearDown(() async {
@@ -212,34 +217,8 @@ void main() {
   });
 
   group('HomePage Widget Tests', () {
-    group('Add Text Entry', () {
-      testWidgets('should add entry to list when text is entered and sent', (
-        WidgetTester tester,
-      ) async {
-        // GIVEN
-        scope.stubAddEntrySuccess();
-        scope.stubTranscriptionSuccess(
-          'transcribed text',
-        ); // Avoid interference
-        await _givenHomePageIsDisplayed(tester, scope);
-
-        // WHEN
-        await _whenTextIsEntered(tester, HomePageTestScope.testEntryText);
-        await _whenSendButtonIsTapped(tester);
-
-        // THEN
-        verify(
-          scope.mockEntryRepository.addEntry(HomePageTestScope.testEntryText),
-        ).called(1);
-        await _thenEntryIsDisplayedInList(
-          tester,
-          HomePageTestScope.testEntryText,
-        );
-        _thenTextFieldIsCleared(tester);
-      });
-    });
-
-    group('Initial State', () {
+    // Group: Tests related to the initial state and display of the list
+    group('Initialization and Display', () {
       testWidgets('should display initial UI elements correctly', (
         WidgetTester tester,
       ) async {
@@ -263,75 +242,7 @@ void main() {
           reason: 'Mic button should be present initially',
         );
       });
-    });
 
-    group('Voice Input', () {
-      testWidgets('should show stop_circle icon when mic button is tapped', (
-        WidgetTester tester,
-      ) async {
-        // GIVEN
-        scope.stubStartRecordingSuccess();
-        await _givenHomePageIsDisplayed(tester, scope, settle: false);
-        await tester.pump(); // Allow cubit init
-
-        // WHEN
-        await _whenMicButtonIsTapped(tester);
-
-        // THEN
-        _thenStopCircleIconIsDisplayed(tester);
-        verify(
-          scope.mockAudioRecorder.start(any, path: anyNamed('path')),
-        ).called(1);
-        verify(
-          scope.mockPermissionService.getMicrophoneStatus(),
-        ).called(greaterThanOrEqualTo(1));
-      });
-
-      testWidgets(
-        'should call stop and transcribe when stop button is tapped',
-        (WidgetTester tester) async {
-          // GIVEN
-          scope.stubStartRecordingSuccess();
-          const transcribedText = 'This is the transcribed text';
-          scope.stubTranscriptionSuccess(transcribedText);
-          await _givenHomePageIsDisplayed(tester, scope, settle: false);
-          await tester.pump(); // Allow cubit init
-
-          await runFakeAsync((async) async {
-            // WHEN: Start recording
-            await _whenMicButtonIsTapped(
-              tester,
-              settle: false,
-            ); // Don't settle fully inside fakeAsync
-
-            // Simulate recording time
-            async.elapse(const Duration(seconds: 3));
-
-            // WHEN: Stop recording
-            await _whenStopButtonIsTapped(tester); // Calls pump() inside
-
-            // Allow transcription to process
-            async.elapse(Duration.zero);
-          });
-
-          // Pump and settle AFTER fake async block completes
-          await tester.pumpAndSettle();
-
-          // THEN: Verify interactions and UI
-          verify(
-            scope.mockAudioRecorder.start(any, path: anyNamed('path')),
-          ).called(1);
-          verify(scope.mockAudioRecorder.stop()).called(1);
-          verify(
-            scope.mockSpeechService.transcribeAudio(any, language: 'en'),
-          ).called(1);
-          _thenMicIconIsDisplayed(tester);
-          _thenTextFieldContains(tester, transcribedText);
-        },
-      );
-    });
-
-    group('Displaying Entries', () {
       testWidgets('should display entries with correct text and time', (
         WidgetTester tester,
       ) async {
@@ -405,8 +316,253 @@ void main() {
         expect(yesterdayHeaderOffset, lessThan(firstYesterdayEntryOffset));
         expect(olderHeaderOffset, lessThan(firstOlderEntryOffset));
       });
-    });
-  });
+    }); // End of Initialization and Display group
+
+    // Group: Tests related to adding entries via the text field
+    group('Text Entry Input', () {
+      testWidgets('should add entry and save via persistence', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN
+        scope.stubTranscriptionSuccess(
+          'transcribed text',
+        ); // Avoid interference
+        await _givenHomePageIsDisplayed(tester, scope);
+
+        final newEntryText = HomePageTestScope.testEntryText;
+        final initialListLength = HomePageTestScope.rawEntriesList.length;
+
+        // WHEN
+        await _whenTextIsEntered(tester, newEntryText);
+        await _whenSendButtonIsTapped(tester);
+
+        // THEN: Verify UI
+        await _thenEntryIsDisplayedInList(tester, newEntryText);
+        _thenTextFieldIsCleared(tester);
+
+        // THEN: Verify Persistence Call
+        verify(
+          scope.mockPersistenceService.saveEntries(
+            // Use argThat with a predicate to check the saved list
+            argThat(
+              predicate<List<Entry>>((savedList) {
+                // 1. Check if the list length increased by one
+                if (savedList.length != initialListLength + 1) {
+                  return false;
+                }
+                // 2. Find the newly added entry
+                final addedEntry = savedList.firstWhere(
+                  (entry) => entry.text == newEntryText && entry.isNew,
+                  orElse:
+                      () => Entry(
+                        text: '',
+                        timestamp: DateTime(0),
+                        category: '',
+                      ), // Return dummy if not found
+                );
+
+                // 3. Verify properties of the added entry
+                final bool textMatches = addedEntry.text == newEntryText;
+                final bool categoryMatches =
+                    addedEntry.category == 'Misc'; // Assuming default category
+                final bool isNewMatches = addedEntry.isNew == true;
+                final bool timestampValid = addedEntry.timestamp.isAfter(
+                  DateTime(1970),
+                );
+
+                if (!textMatches ||
+                    !categoryMatches ||
+                    !isNewMatches ||
+                    !timestampValid) {
+                  return false;
+                }
+
+                // 4. Optional: Verify other entries are still present
+                final originalEntry1Present = savedList.any(
+                  (e) => e.text == HomePageTestScope.entryToday1.text,
+                );
+                if (!originalEntry1Present) {
+                  return false;
+                }
+
+                return true;
+              }),
+            ),
+          ),
+        ).called(1);
+      });
+    }); // End of Text Entry Input group
+
+    // Group: Tests related to voice input functionality
+    group('Voice Input', () {
+      testWidgets('should show stop_circle icon when mic button is tapped', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN
+        scope.stubStartRecordingSuccess(); // Uses service mock now
+        await _givenHomePageIsDisplayed(tester, scope, settle: false);
+        await tester.pump(); // Allow cubit init
+
+        // WHEN
+        await _whenMicButtonIsTapped(tester);
+
+        // THEN
+        _thenStopCircleIconIsDisplayed(tester);
+        // Verify service methods
+        verify(
+          scope.mockAudioRecorderService.generateRecordingPath(),
+        ).called(1);
+        verify(
+          scope.mockAudioRecorderService.start(any, path: anyNamed('path')),
+        ).called(1);
+        verify(
+          scope.mockPermissionService.getMicrophoneStatus(),
+        ).called(greaterThanOrEqualTo(1));
+      });
+
+      testWidgets(
+        'should call stop and transcribe when stop button is tapped',
+        (WidgetTester tester) async {
+          // GIVEN
+          scope.stubStartRecordingSuccess(); // Uses service mock now
+          const transcribedText = 'This is the transcribed text';
+          scope.stubTranscriptionSuccess(transcribedText);
+          await _givenHomePageIsDisplayed(tester, scope, settle: false);
+          await tester.pump(); // Allow cubit init
+
+          await runFakeAsync((async) async {
+            // WHEN: Start recording
+            await _whenMicButtonIsTapped(tester, settle: false);
+
+            // Simulate recording time
+            async.elapse(const Duration(seconds: 3));
+
+            // WHEN: Stop recording
+            await _whenStopButtonIsTapped(tester);
+
+            // Allow transcription to process
+            async.elapse(Duration.zero);
+          });
+
+          await tester.pumpAndSettle();
+
+          // THEN: Verify interactions and UI
+          // Verify service methods
+          verify(
+            scope.mockAudioRecorderService.generateRecordingPath(),
+          ).called(1);
+          verify(
+            scope.mockAudioRecorderService.start(any, path: anyNamed('path')),
+          ).called(1);
+          verify(scope.mockAudioRecorderService.stop()).called(1);
+          // Verify speech service
+          verify(
+            scope.mockSpeechService.transcribeAudio(any, language: 'en'),
+          ).called(1);
+          // Verify UI
+          _thenMicIconIsDisplayed(tester);
+          _thenTextFieldContains(tester, transcribedText);
+        },
+      );
+      // Add more voice input tests here (e.g., permissions, errors, combine)
+    }); // End of Voice Input group
+
+    // Group: Tests related to interactions with items in the entry list
+    group('Entry List Interactions', () {
+      // Sub-group for Deletion
+      group('Delete', () {
+        testWidgets('should delete entry and save via persistence', (
+          WidgetTester tester,
+        ) async {
+          // GIVEN
+          await _givenHomePageIsDisplayed(tester, scope);
+          final entryToDelete = HomePageTestScope.entryToday1;
+          final entryToDeleteText = entryToDelete.text;
+          final entryFinder = find.text(entryToDeleteText);
+          expect(
+            entryFinder,
+            findsOneWidget,
+            reason: 'Entry to delete should initially be visible',
+          );
+
+          // Prepare expected list for verification AFTER deletion
+          final expectedEntriesAfterDelete = List<Entry>.from(
+            HomePageTestScope.rawEntriesList,
+          )..removeWhere(
+            (e) =>
+                e.timestamp == entryToDelete.timestamp &&
+                e.text == entryToDelete.text,
+          );
+
+          // WHEN
+          await _whenDeleteIconIsTappedForEntry(tester, entryToDeleteText);
+
+          // THEN: Verify UI changes
+          expect(
+            entryFinder,
+            findsNothing,
+            reason: 'Entry should be removed from the list',
+          );
+          _thenSnackbarIsDisplayedWithMessage(tester, 'Entry deleted');
+          _thenSnackbarHasAction(tester, 'Undo');
+
+          // THEN: Verify Persistence Call
+          verify(
+            scope.mockPersistenceService.saveEntries(
+              // Use argThat with equals for exact list comparison
+              argThat(equals(expectedEntriesAfterDelete)),
+            ),
+          ).called(1);
+        });
+
+        testWidgets(
+          'should restore entry and save via persistence when Undo is tapped',
+          (WidgetTester tester) async {
+            // GIVEN
+            await _givenHomePageIsDisplayed(tester, scope);
+            final entryToRestore = HomePageTestScope.entryToday1;
+            final entryToRestoreText = entryToRestore.text;
+            final entryFinder = find.text(entryToRestoreText);
+            expect(entryFinder, findsOneWidget);
+
+            // Delete the entry first
+            await _whenDeleteIconIsTappedForEntry(tester, entryToRestoreText);
+            expect(entryFinder, findsNothing);
+            _thenSnackbarIsDisplayedWithMessage(tester, 'Entry deleted');
+
+            // Prepare expected list for verification AFTER undo
+            final expectedEntriesAfterUndo =
+                List<Entry>.from(HomePageTestScope.rawEntriesList)
+                  ..removeWhere(
+                    (e) =>
+                        e.timestamp == entryToRestore.timestamp &&
+                        e.text == entryToRestore.text,
+                  )
+                  ..add(entryToRestore); // Add the original entry back
+
+            // Clear previous interactions with saveEntries before Undo
+            clearInteractions(scope.mockPersistenceService);
+
+            // WHEN: Tap Undo
+            await _whenSnackbarActionIsTapped(tester, 'Undo');
+
+            // THEN: Verify UI
+            await _thenEntryIsDisplayedInList(tester, entryToRestoreText);
+
+            // THEN: Verify Persistence Call for the UNDO action
+            verify(
+              scope.mockPersistenceService.saveEntries(
+                // Use argThat with equals for exact list comparison
+                argThat(equals(expectedEntriesAfterUndo)),
+              ),
+            ).called(1);
+          },
+        );
+      }); // End of Delete sub-group
+
+      // Add sub-groups for Edit, Change Category etc. here
+    }); // End of Entry List Interactions group
+  }); // End of HomePage Widget Tests group
 }
 
 // --- GIVEN ---
@@ -459,6 +615,45 @@ Future<void> _whenStopButtonIsTapped(WidgetTester tester) async {
   await tester.pump(); // Don't settle immediately
 }
 
+Future<void> _whenDeleteIconIsTappedForEntry(
+  WidgetTester tester,
+  String entryText,
+) async {
+  final entryTextFinder = find.text(entryText);
+  expect(entryTextFinder, findsOneWidget);
+
+  // Find the Card containing the text, which represents the entry item
+  final entryCardFinder = find.ancestor(
+    of: entryTextFinder,
+    matching: find.byType(Card), // Use Card instead of EntryListItem
+  );
+  expect(entryCardFinder, findsOneWidget);
+
+  // Find the delete icon *within* that specific Card
+  final deleteIconFinder = find.descendant(
+    of: entryCardFinder, // Search within the Card
+    matching: find.byIcon(Icons.delete_outline),
+  );
+  expect(deleteIconFinder, findsOneWidget);
+
+  await tester.tap(deleteIconFinder);
+  await tester.pumpAndSettle(); // Allow snackbar to appear
+}
+
+Future<void> _whenSnackbarActionIsTapped(
+  WidgetTester tester,
+  String actionLabel,
+) async {
+  final snackBarFinder = find.byType(SnackBar);
+  expect(snackBarFinder, findsOneWidget);
+
+  final actionFinder = find.widgetWithText(SnackBarAction, actionLabel);
+  expect(actionFinder, findsOneWidget);
+
+  await tester.tap(actionFinder);
+  await tester.pumpAndSettle(); // Allow UI to update after undo
+}
+
 // --- THEN ---
 
 Future<void> _thenEntryIsDisplayedInList(
@@ -497,13 +692,42 @@ void _thenTextFieldContains(WidgetTester tester, String text) {
 void _thenEntryIsDisplayed(WidgetTester tester, String text, String time) {
   final entryTextFinder = find.text(text);
   final entryTimeFinder = find.text(time);
-  final entryListItemFinder = find.ancestor(
+  // Find the ListTile containing the entry text
+  final entryListTileFinder = find.ancestor(
     of: entryTextFinder,
-    matching: find.byType(ListTile),
+    matching: find.byType(ListTile), // Use ListTile instead of EntryListItem
   );
   expect(entryTextFinder, findsOneWidget);
   expect(
-    find.descendant(of: entryListItemFinder, matching: entryTimeFinder),
+    find.descendant(
+      of: entryListTileFinder,
+      matching: entryTimeFinder,
+    ), // Search within the ListTile
     findsOneWidget,
+  );
+}
+
+void _thenSnackbarIsDisplayedWithMessage(WidgetTester tester, String message) {
+  final snackBarFinder = find.byType(SnackBar);
+  expect(snackBarFinder, findsOneWidget, reason: 'Snackbar should be visible');
+  final messageFinder = find.descendant(
+    of: snackBarFinder,
+    matching: find.text(message),
+  );
+  expect(
+    messageFinder,
+    findsOneWidget,
+    reason: 'Snackbar should contain the message "$message"',
+  );
+}
+
+void _thenSnackbarHasAction(WidgetTester tester, String actionLabel) {
+  final snackBarFinder = find.byType(SnackBar);
+  expect(snackBarFinder, findsOneWidget);
+  final actionFinder = find.widgetWithText(SnackBarAction, actionLabel);
+  expect(
+    actionFinder,
+    findsOneWidget,
+    reason: 'Snackbar should have an action button labeled "$actionLabel"',
   );
 }

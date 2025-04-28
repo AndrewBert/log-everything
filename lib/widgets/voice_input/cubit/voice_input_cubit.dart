@@ -3,8 +3,9 @@ import 'package:clock/clock.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/services/permission_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
+// Remove path_provider import if only used by service now
+// import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart'; // Keep for RecordConfig, AudioEncoder, RecordState
 import 'package:flutter/services.dart';
 
 import '../../../speech_service.dart';
@@ -14,9 +15,11 @@ import '../../../entry/cubit/entry_cubit.dart';
 import '../../../entry/repository/entry_repository.dart';
 import '../../../locator.dart';
 import '../../../entry/entry.dart';
+import '../../../services/audio_recorder_service.dart'; // Import the service
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
-  final AudioRecorder _audioRecorder;
+  // Change type to the service abstraction
+  final AudioRecorderService _audioRecorderService;
   final SpeechService _speechService;
   final EntryRepository _entryRepository;
   final EntryCubit _entryCubit;
@@ -27,7 +30,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
   VoiceInputCubit({required EntryCubit entryCubit})
-    : _audioRecorder = locator<AudioRecorder>(),
+    // Fetch the service implementation from the locator
+    : _audioRecorderService = locator<AudioRecorderService>(),
       _speechService = locator<SpeechService>(),
       _entryRepository = locator<EntryRepository>(),
       _permissionService = locator<PermissionService>(),
@@ -39,17 +43,16 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> _initialize() async {
     AppLogger.debug('[VoiceInputCubit] _initialize started.');
-    // Use injected service
     final status = await _permissionService.getMicrophoneStatus();
     emit(state.copyWith(micPermissionStatus: status));
-    _audioRecorder.onStateChanged().listen((recordState) {
-      AppLogger.debug('AudioRecorder state changed: $recordState');
+    // Listen to state changes from the service
+    _audioRecorderService.onStateChanged().listen((recordState) {
+      AppLogger.debug('AudioRecorder state changed via service: $recordState');
     });
     AppLogger.debug('[VoiceInputCubit] _initialize finished.');
   }
 
   Future<void> requestMicrophonePermission() async {
-    // Use injected service
     final status = await _permissionService.requestMicrophonePermission();
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
@@ -77,7 +80,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     AppLogger.info("[startRecording] Attempting to start recording...");
     HapticFeedback.mediumImpact();
 
-    // Use injected service
     PermissionStatus currentStatus =
         await _permissionService.getMicrophoneStatus();
     if (currentStatus != state.micPermissionStatus) {
@@ -85,8 +87,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     }
 
     if (currentStatus != PermissionStatus.granted) {
-      await requestMicrophonePermission(); // This now uses the service
-      // Use injected service again to get updated status
+      await requestMicrophonePermission();
       currentStatus = await _permissionService.getMicrophoneStatus();
       if (currentStatus != state.micPermissionStatus) {
         emit(state.copyWith(micPermissionStatus: currentStatus));
@@ -110,19 +111,21 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     );
 
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final path =
-          '${directory.path}/recording-${DateTime.now().millisecondsSinceEpoch}.m4a';
+      // Use service to generate path
+      final path = await _audioRecorderService.generateRecordingPath();
       const config = RecordConfig(encoder: AudioEncoder.aacLc);
 
-      AppLogger.debug("[startRecording] Calling _audioRecorder.start...");
-      await _audioRecorder.start(config, path: path);
+      AppLogger.debug(
+        "[startRecording] Calling _audioRecorderService.start...",
+      );
+      // Use service to start recording
+      await _audioRecorderService.start(config, path: path);
       AppLogger.info("Recording started, path: $path");
       AppLogger.debug("[startRecording] Emitting state: isRecording = true");
       emit(
         state.copyWith(
           isRecording: true,
-          recordingStartTime: clock.now(), // <-- Use top-level clock.now()
+          recordingStartTime: clock.now(),
           recordingDuration: Duration.zero,
           clearErrorMessage: true,
           transcriptionStatus: TranscriptionStatus.idle,
@@ -149,6 +152,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   Future<void> stopRecording() async {
     AppLogger.info("[stopRecording] Called.");
+    // Check service if it's recording (optional, state.isRecording should suffice)
+    // if (!await _audioRecorderService.isRecording()) return;
     if (!state.isRecording) return;
     HapticFeedback.lightImpact();
 
@@ -157,7 +162,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     final bool isTooShort = recordingDuration < _minRecordingDuration;
 
     try {
-      final path = await _audioRecorder.stop();
+      // Use service to stop recording
+      final path = await _audioRecorderService.stop();
       AppLogger.info("Recording stopped, audio path: $path");
       AppLogger.debug("[stopRecording] Emitting state: isRecording = false");
       emit(
@@ -221,7 +227,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     String? audioPath;
 
     try {
-      audioPath = await _audioRecorder.stop();
+      // Use service to stop recording
+      audioPath = await _audioRecorderService.stop();
       AppLogger.info("Recording stopped for combine, audio path: $audioPath");
 
       emit(
@@ -281,15 +288,13 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             combinedText,
             processingTimestamp,
           );
-          // Use the injected _entryCubit instance
           _entryCubit.finalizeProcessing(finalEntries);
         } catch (e) {
           AppLogger.error(
             "Error processing combined entry in repository",
             error: e,
           );
-          // Use the injected _entryCubit instance
-          _entryCubit.finalizeProcessing([]); // Pass empty list
+          _entryCubit.finalizeProcessing([]);
           emit(state.copyWith(errorMessage: 'Failed to process entry.'));
         }
       } else {
@@ -300,7 +305,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             _entryRepository.currentEntries
                 .where((e) => e.timestamp != processingTimestamp)
                 .toList();
-        // Use the injected _entryCubit instance
         _entryCubit.finalizeProcessing(currentEntries);
       }
 
@@ -312,7 +316,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           _entryRepository.currentEntries
               .where((e) => e.timestamp != processingTimestamp)
               .toList();
-      // Use the injected _entryCubit instance
       _entryCubit.finalizeProcessing(currentEntries);
       emit(
         state.copyWith(
@@ -326,6 +329,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Future<void> transcribeAudio() async {
+    // ... (transcription logic remains the same, uses _speechService) ...
     AppLogger.info("Starting foreground transcription");
     if (state.audioPath == null || state.audioPath!.isEmpty) {
       AppLogger.error("Cannot transcribe: audio path is null or empty.");
@@ -381,7 +385,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   }
 
   Duration _calculateRecordingDuration() {
-    final now = clock.now(); // <-- Use top-level clock.now()
+    final now = clock.now();
     final startTime = state.recordingStartTime;
     if (startTime == null) return Duration.zero;
     final duration = now.difference(startTime);
@@ -419,7 +423,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   @override
   Future<void> close() {
     _cancelRecordingTimer();
-    _audioRecorder.dispose();
+    _audioRecorderService.dispose();
     return super.close();
   }
 }

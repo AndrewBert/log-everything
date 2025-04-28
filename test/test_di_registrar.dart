@@ -1,47 +1,53 @@
-import 'package:clock/clock.dart';
-import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/speech_service.dart';
-import 'package:record/record.dart';
-import 'package:myapp/locator.dart';
-import 'package:myapp/services/permission_service.dart';
+import 'package:myapp/entry/repository/entry_repository.dart'; // Import REAL repository
+import 'package:myapp/services/ai_categorization_service.dart'; // Import AI service
+import 'package:myapp/services/audio_recorder_service.dart';
+import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
+import 'package:myapp/services/permission_service.dart'; // Import Permission service
+import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 
-import 'mocks.mocks.dart';
+import 'package:myapp/locator.dart'; // Import your locator instance
 
-/// Sets up mocked dependencies in the GetIt locator for testing.
+import 'mocks.mocks.dart'; // Import generated mocks
+
+/// Sets up dependencies in the GetIt locator for testing.
+/// Registers REAL EntryRepository with MOCKED persistence and AI services.
 Future<void> setupTestDependencies({
   bool allowReassignment = true,
-  // Allow passing specific mocks if needed for certain tests
-  MockEntryRepository? entryRepository,
-  MockSpeechService? speechService,
-  MockAudioRecorder? audioRecorder,
-  MockPermissionService? permissionService, // Add permission service mock
-  // Add other mocks as needed (e.g., SharedPreferences, PackageInfo)
+  // Mocks for services needed by REAL repository and other components
+  required MockEntryPersistenceService persistenceService,
+  required MockAiCategorizationService aiService,
+  required MockSpeechService speechService,
+  // Use MockAudioRecorderService if that's the abstraction used,
+  // or MockAudioRecorder if Record is used directly. Adjust as needed.
+  required MockAudioRecorderService audioRecorder,
+  required MockPermissionService permissionService,
+  // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
   await locator.reset();
   locator.allowReassignment = allowReassignment;
 
-  // Register Mocks - Create instances or use provided ones
-  locator.registerLazySingleton<EntryRepository>(
-    () => entryRepository ?? MockEntryRepository(),
-  );
-  locator.registerLazySingleton<SpeechService>(
-    () => speechService ?? MockSpeechService(),
-  );
-  // Use MockAudioRecorder directly as Record() constructor might do setup
-  locator.registerLazySingleton<AudioRecorder>(
-    () => audioRecorder ?? MockAudioRecorder(),
-  );
-  // Register mock permission service
-  locator.registerLazySingleton<PermissionService>(
-    () => permissionService ?? MockPermissionService(),
+  // --- Register Mocks for Services ---
+  locator.registerSingleton<EntryPersistenceService>(persistenceService);
+  locator.registerSingleton<AiCategorizationService>(aiService);
+  locator.registerSingleton<SpeechService>(speechService);
+  locator.registerSingleton<AudioRecorderService>(audioRecorder);
+  locator.registerSingleton<PermissionService>(permissionService);
+  // Register other mocks if needed
+
+  // --- Register REAL EntryRepository ---
+  // It depends on the mocked services registered above.
+  locator.registerSingleton<EntryRepository>(
+    EntryRepository(
+      persistenceService: locator<EntryPersistenceService>(),
+      aiService: locator<AiCategorizationService>(),
+    ),
   );
 
-  // Register other mocks as needed (e.g., SharedPreferences, PackageInfo)
-  // Example:
-  // locator.registerLazySingleton<SharedPreferences>(() => sharedPreferences ?? MockSharedPreferences());
-  // locator.registerLazySingleton<PackageInfo>(() => packageInfo ?? MockPackageInfo());
+  // DO NOT Register REAL Cubits here. They will be created in BlocProviders.
+}
 
-  // DO NOT Register REAL Cubits here. They will be created in BlocProviders
-  // and fetch their dependencies (the mocks above) from the locator.
+// Optional: Keep reset function if used elsewhere
+Future<void> resetTestDependencies() async {
+  await locator.reset();
 }
