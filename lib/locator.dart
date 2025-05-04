@@ -2,7 +2,6 @@ import 'package:get_it/get_it.dart';
 import 'package:myapp/services/ai_categorization_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/speech_service.dart';
-import 'package:record/record.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/permission_service.dart'; // Import PermissionService
 import 'package:myapp/services/audio_recorder_service.dart'; // Import AudioRecorderService
@@ -19,7 +18,6 @@ void setupLocator() {
     () => SharedPreferencesEntryPersistenceService(),
   );
   locator.registerLazySingleton(() => SpeechService());
-  locator.registerLazySingleton(() => AudioRecorder());
 
   locator.registerLazySingleton<PermissionService>(
     () => PermissionServiceImpl(),
