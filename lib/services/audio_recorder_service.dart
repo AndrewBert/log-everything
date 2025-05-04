@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io'; // Import dart:io for Directory
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart'; // For date formatting in filename
+import 'package:path/path.dart' as p; // Import path package
 
 /// Abstract interface for audio recording operations.
 abstract class AudioRecorderService {
@@ -58,9 +60,18 @@ class AudioRecorderServiceImpl implements AudioRecorderService {
 
   @override
   Future<String> generateRecordingPath() async {
-    DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    // Get the application documents directory.
+    final Directory directory = await getApplicationDocumentsDirectory();
+    // Format the current timestamp.
+    final String timestamp = DateFormat(
+      'yyyyMMdd_HHmmss',
+    ).format(DateTime.now());
+    // Construct the path correctly using the path package for cross-platform compatibility
+    // and interpolating the actual directory path and timestamp string.
     // Using m4a as it's common for voice recordings on mobile
-    final path = '\${directory.path}/recording_\$timestamp.m4a';
-    return path;
+    final String filePath = p.join(directory.path, 'recording_$timestamp.m4a');
+    // Ensure the directory exists (optional but good practice)
+    // await Directory(p.dirname(filePath)).create(recursive: true);
+    return filePath;
   }
 }

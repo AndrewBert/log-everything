@@ -5,6 +5,7 @@ import 'package:myapp/speech_service.dart';
 import 'package:record/record.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/permission_service.dart'; // Import PermissionService
+import 'package:myapp/services/audio_recorder_service.dart'; // Import AudioRecorderService
 
 // Create a GetIt instance
 GetIt locator = GetIt.instance;
@@ -19,13 +20,15 @@ void setupLocator() {
   );
   locator.registerLazySingleton(() => SpeechService());
   locator.registerLazySingleton(() => AudioRecorder());
-  // Register PermissionService
+
   locator.registerLazySingleton<PermissionService>(
     () => PermissionServiceImpl(),
   );
 
-  // Register EntryRepository as a lazy singleton
-  // It fetches its dependencies (services) from the locator when created
+  locator.registerLazySingleton<AudioRecorderService>(
+    () => AudioRecorderServiceImpl(),
+  );
+
   locator.registerLazySingleton(
     () => EntryRepository(
       persistenceService: locator<EntryPersistenceService>(),

@@ -19,9 +19,6 @@ import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/entries_list.dart';
-import 'package:myapp/services/audio_recorder_service.dart'; // Import service
-import 'package:myapp/services/entry_persistence_service.dart'; // Import service
-import 'package:myapp/services/ai_categorization_service.dart'; // Import service
 
 import 'mock_path_provider_platform.dart';
 import 'test_di_registrar.dart';
