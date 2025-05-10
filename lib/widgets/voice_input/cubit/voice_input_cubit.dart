@@ -37,19 +37,14 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       _permissionService = locator<PermissionService>(),
       _entryCubit = entryCubit,
       super(const VoiceInputState()) {
-    AppLogger.debug('[VoiceInputCubit] Initializing...');
     _initialize();
   }
 
   Future<void> _initialize() async {
-    AppLogger.debug('[VoiceInputCubit] _initialize started.');
     final status = await _permissionService.getMicrophoneStatus();
     emit(state.copyWith(micPermissionStatus: status));
     // Listen to state changes from the service
-    _audioRecorderService.onStateChanged().listen((recordState) {
-      AppLogger.debug('AudioRecorder state changed via service: $recordState');
-    });
-    AppLogger.debug('[VoiceInputCubit] _initialize finished.');
+    _audioRecorderService.onStateChanged().listen((recordState) {});
   }
 
   Future<void> requestMicrophonePermission() async {
@@ -106,22 +101,15 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         return;
       }
     }
-    AppLogger.debug(
-      "[startRecording] Permission check passed (Status: $currentStatus).",
-    );
 
     try {
       // Use service to generate path
       final path = await _audioRecorderService.generateRecordingPath();
       const config = RecordConfig(encoder: AudioEncoder.aacLc);
 
-      AppLogger.debug(
-        "[startRecording] Calling _audioRecorderService.start...",
-      );
       // Use service to start recording
       await _audioRecorderService.start(config, path: path);
       AppLogger.info("Recording started, path: $path");
-      AppLogger.debug("[startRecording] Emitting state: isRecording = true");
       emit(
         state.copyWith(
           isRecording: true,
@@ -134,12 +122,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         ),
       );
       _startRecordingTimer();
-      AppLogger.debug("[startRecording] Timer started.");
     } catch (e) {
       AppLogger.error("Error starting recording", error: e);
-      AppLogger.debug(
-        "[startRecording] Emitting state: isRecording = false (due to error)",
-      );
       emit(
         state.copyWith(
           errorMessage: 'Error starting recording: $e',
@@ -165,7 +149,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       // Use service to stop recording
       final path = await _audioRecorderService.stop();
       AppLogger.info("Recording stopped, audio path: $path");
-      AppLogger.debug("[stopRecording] Emitting state: isRecording = false");
       emit(
         state.copyWith(
           isRecording: false,
@@ -195,9 +178,6 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       }
     } catch (e) {
       AppLogger.error("Error stopping recording", error: e);
-      AppLogger.debug(
-        "[stopRecording] Emitting state: isRecording = false (due to error)",
-      );
       emit(
         state.copyWith(
           errorMessage: 'Error stopping recording: $e',

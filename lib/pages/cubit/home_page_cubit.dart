@@ -23,14 +23,7 @@ class HomePageCubit extends Cubit<HomePageState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastSeenVersion = prefs.getString(_lastShownVersionKey);
-      if (lastSeenVersion != null) {
-        emit(state.copyWith(lastSeenVersion: lastSeenVersion));
-        AppLogger.debug(
-          'Loaded last seen What\'s New version: $lastSeenVersion',
-        );
-      } else {
-        AppLogger.debug('No last seen What\'s New version found in prefs.');
-      }
+      emit(state.copyWith(lastSeenVersion: lastSeenVersion));
     } catch (e, stackTrace) {
       AppLogger.error(
         'Error loading last seen version: $e',
@@ -74,17 +67,12 @@ class HomePageCubit extends Cubit<HomePageState> {
             : state.appVersion;
     final lastSeen = state.lastSeenVersion;
 
-    AppLogger.debug(
-      'Checking What\'s New: Current=$currentVersion, LastSeen=$lastSeen',
-    );
-
     if (lastSeen != currentVersion) {
       AppLogger.info(
         'New version detected ($currentVersion). Triggering What\'s New dialog.',
       );
       emit(state.copyWith(showWhatsNewDialog: true));
     } else {
-      AppLogger.debug('What\'s New already seen for version $currentVersion.');
       if (state.showWhatsNewDialog) {
         emit(state.copyWith(showWhatsNewDialog: false));
       }

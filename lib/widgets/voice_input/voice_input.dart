@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:myapp/utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'cubit/voice_input_cubit.dart';
@@ -135,10 +134,6 @@ class VoiceInput extends StatelessWidget {
       },
       child: BlocBuilder<VoiceInputCubit, VoiceInputState>(
         builder: (context, state) {
-          AppLogger.debug(
-            '[VoiceInput Widget Build] isRecording: ${state.isRecording}, status: ${state.transcriptionStatus}',
-          ); // <-- Add log
-          // Format recording duration for display
           String recordingTimeDisplay = '';
           bool approachingLimit = false;
           if (state.isRecording) {

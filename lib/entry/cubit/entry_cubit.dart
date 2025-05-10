@@ -128,9 +128,6 @@ class EntryCubit extends Cubit<EntryState> {
 
   // Re-add: Method to show a temporary entry immediately
   void showTemporaryEntry(Entry tempEntry) {
-    AppLogger.debug(
-      '[Cubit.showTemporaryEntry] Showing temp entry: ${tempEntry.text}',
-    );
     final currentEntries = _entryRepository.currentEntries;
     // Create a temporary list for display purposes only
     final tempEntriesList = [tempEntry, ...currentEntries];
@@ -149,9 +146,6 @@ class EntryCubit extends Cubit<EntryState> {
 
   // Re-add: Method to finalize state after background processing
   void finalizeProcessing(List<Entry> finalEntries) {
-    AppLogger.debug(
-      '[Cubit.finalizeProcessing] Finalizing with ${finalEntries.length} entries.',
-    );
     final finalCategories =
         _entryRepository.currentCategories; // Get latest categories
     final finalDisplayList = _buildDisplayList(

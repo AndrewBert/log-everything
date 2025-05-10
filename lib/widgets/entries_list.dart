@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../entry/entry.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
+import '../utils/widget_keys.dart'; // Import keys
 import 'entry_actions.dart';
 
 class EntriesList extends StatelessWidget {
@@ -94,6 +95,7 @@ class EntriesList extends StatelessWidget {
                 Color categoryColor = getCategoryColor(entry.category);
                 // todo pull out into private widget
                 return Card(
+                  key: entryCardKey(entry), // Add key to Card
                   elevation: isNew ? 4.0 : 1.0,
                   margin: const EdgeInsets.symmetric(
                     vertical: 4.0,
@@ -127,6 +129,9 @@ class EntriesList extends StatelessWidget {
                             ),
                           ),
                           ActionChip(
+                            key: entryCategoryChipKey(
+                              entry,
+                            ), // Add key to ActionChip
                             label: Text(
                               entry.category,
                               style: TextStyle(
@@ -168,6 +173,9 @@ class EntriesList extends StatelessWidget {
                         ],
                       ),
                       trailing: EntryActions(
+                        key: entryActionsWidgetKey(
+                          entry,
+                        ), // Add key to EntryActions
                         entry: entry,
                         isProcessing: isProcessing,
                         onEditPressed: () => onEditPressed(entry),

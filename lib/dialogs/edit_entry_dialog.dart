@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../entry/entry.dart';
+import '../utils/widget_keys.dart'; // Import keys
 
 class EditEntryDialog extends StatefulWidget {
   final Entry originalEntry;
@@ -59,6 +60,7 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      key: editEntryDialog, // Add key to dialog
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Edit Entry'),
       content: Form(
@@ -67,6 +69,7 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
+              key: editEntryDialogTextField, // Add key to text field
               controller: _editController,
               autofocus: true,
               decoration: InputDecoration(
@@ -89,6 +92,7 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
+              key: editEntryDialogCategoryDropdown, // Add key to dropdown
               value: _selectedCategory,
               decoration: InputDecoration(
                 labelText: 'Category',
@@ -120,10 +124,15 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
       ),
       actions: [
         TextButton(
+          key: editEntryDialogCancelButton, // Add key to cancel button
           child: const Text('Cancel'),
           onPressed: () => Navigator.of(context).pop(), // Return null
         ),
-        FilledButton(onPressed: _updateEntry, child: const Text('Update')),
+        FilledButton(
+          key: editEntryDialogSaveButton, // Add key to save button
+          onPressed: _updateEntry,
+          child: const Text('Update'),
+        ),
       ],
     );
   }

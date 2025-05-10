@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'package:equatable/equatable.dart'; // Add equatable import
 
 // Represents a single entry with text, a timestamp, and a category.
-class Entry {
+class Entry extends Equatable {
+  // Extend Equatable
   final String text;
   final DateTime timestamp;
   final String category; // Added category field
   final bool isNew; // Track whether this is a newly added entry
 
-  Entry({
+  const Entry({
     required this.text,
     required this.timestamp,
     required this.category, // Make category required
@@ -19,8 +21,6 @@ class Entry {
     return Entry(
       text: json['text'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
-      // Handle potential missing category in older data during load?
-      // For now, assume it exists or provide default if needed.
       category: json['category'] as String? ?? 'Unknown', // Default if missing
       isNew: json['isNew'] as bool? ?? false, // Default to false if missing
     );
@@ -57,4 +57,7 @@ class Entry {
       isNew: isNew ?? this.isNew,
     );
   }
+
+  @override
+  List<Object?> get props => [text, timestamp, category, isNew]; // Add props for Equatable
 }

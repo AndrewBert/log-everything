@@ -169,7 +169,8 @@ class EntryRepository {
     );
     if (index != -1) {
       // Preserve the isNew status from the original entry in the list
-      _entries[index] = updatedEntry.copyWith(isNew: _entries[index].isNew);
+      final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
+      _entries[index] = entryToSave;
       await _saveEntries();
     }
     return currentEntries; // Return a copy
@@ -220,9 +221,6 @@ class EntryRepository {
       (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
     );
     if (tempIndex != -1) {
-      AppLogger.debug(
-        '[Repo.processCombinedEntry] Found and removing temp entry at index $tempIndex',
-      );
       _entries.removeAt(tempIndex);
     } else {
       AppLogger.warning(

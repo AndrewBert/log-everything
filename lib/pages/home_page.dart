@@ -6,6 +6,7 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/logger.dart';
 import 'dart:async'; // Import async for Timer
 import 'package:package_info_plus/package_info_plus.dart'; // Import package_info_plus
+import '../utils/app_bar_keys.dart'; // Import the new app bar keys file
 
 import 'cubit/home_page_cubit.dart';
 import 'cubit/home_page_state.dart';
@@ -38,6 +39,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
+          key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
           onTap: () {
             context.read<HomePageCubit>().incrementTitleTap();
           },
@@ -113,11 +115,24 @@ class HomePage extends StatelessWidget {
           ),
           BlocListener<HomePageCubit, HomePageState>(
             // Keep null check for snackBarMessage as it IS nullable
-            listenWhen:
-                (prev, current) =>
-                    prev.snackBarMessage != current.snackBarMessage &&
-                    current.snackBarMessage != null,
+            listenWhen: (prev, current) {
+              // CP: Log listenWhen for snackBarMessage
+              AppLogger.info(
+                '[HomePage] SnackBar listenWhen: prev.snackBarMessage: ${prev.snackBarMessage}, current.snackBarMessage: ${current.snackBarMessage}',
+              );
+              final condition =
+                  prev.snackBarMessage != current.snackBarMessage &&
+                  current.snackBarMessage != null;
+              AppLogger.info(
+                '[HomePage] SnackBar listenWhen condition result: $condition',
+              );
+              return condition;
+            },
             listener: (context, state) {
+              // CP: Log listener invocation for snackBarMessage
+              AppLogger.info(
+                '[HomePage] SnackBar listener called. state.snackBarMessage: ${state.snackBarMessage}',
+              );
               _showFloatingSnackBar(
                 context,
                 content: Text(state.snackBarMessage!), // Keep !
@@ -126,7 +141,15 @@ class HomePage extends StatelessWidget {
                         ? const Duration(seconds: 3)
                         : const Duration(milliseconds: 800),
               );
+              // CP: Log before calling clearSnackBarMessage in addPostFrameCallback
+              AppLogger.info(
+                '[HomePage] Scheduling clearSnackBarMessage via addPostFrameCallback.',
+              );
               WidgetsBinding.instance.addPostFrameCallback((_) {
+                // CP: Log inside addPostFrameCallback before clearing
+                AppLogger.info(
+                  '[HomePage] addPostFrameCallback: Clearing SnackBar message.',
+                );
                 if (context.mounted) {
                   context.read<HomePageCubit>().clearSnackBarMessage();
                 }
