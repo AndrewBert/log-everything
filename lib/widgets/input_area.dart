@@ -181,7 +181,7 @@ class _InputAreaState extends State<InputArea> {
                               ? Icons.forum_rounded
                               : Icons.forum_outlined,
                         ),
-                        label: Text(isChatOpen ? 'Close Chat' : 'AI Chat'),
+                        label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
                         style: TextButton.styleFrom(
                           foregroundColor:
                               isChatOpen
