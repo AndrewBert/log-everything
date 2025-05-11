@@ -163,24 +163,35 @@ class HomePage extends StatelessWidget {
         child: SafeArea(
           bottom: false,
           child: Column(
+            // CP: Main column for overall layout
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
+                  // CP: Use Stack to overlay chat
                   children: <Widget>[
-                    const FilterSection(),
-                    _buildEntriesList(context),
+                    // CP: Base layer (Filter and EntriesList)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const FilterSection(),
+                        _buildEntriesList(context),
+                      ],
+                    ),
+                    // CP: Overlay layer (ChatBottomSheet)
+                    if (isChatOpen)
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: FractionallySizedBox(
+                          heightFactor:
+                              0.65, // CP: Occupy 85% of available height
+                          child: const ChatBottomSheet(),
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (isChatOpen)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 0.0),
-                    child: const ChatBottomSheet(),
-                  ),
-                ),
               InputArea(
+                // CP: InputArea remains at the bottom
                 onSendPressed: (text) => _handleInput(context, text),
                 showSnackBar: ({
                   required context,

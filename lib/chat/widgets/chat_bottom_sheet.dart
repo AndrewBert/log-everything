@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
+import 'package:myapp/pages/cubit/home_page_cubit.dart';
 
 class ChatBottomSheet extends StatelessWidget {
   const ChatBottomSheet({super.key});
@@ -13,14 +14,7 @@ class ChatBottomSheet extends StatelessWidget {
     final messages = chatCubit.state.messages;
     final DateFormat timeFormatter = DateFormat('HH:mm');
 
-    // CP: Determine the height of the bottom sheet.
-    // CP: For now, let's make it a fixed portion of the screen,
-    // CP: but not exceeding a certain max height.
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomSheetHeight = (screenHeight * 0.4).clamp(200.0, 400.0);
-
     return Container(
-      height: bottomSheetHeight,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
         borderRadius: const BorderRadius.only(
@@ -29,27 +23,21 @@ class ChatBottomSheet extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            // CP: Changed from withOpacity to withValues to avoid precision loss
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withAlpha(25),
             spreadRadius: 0,
             blurRadius: 8,
-            offset: const Offset(0, -4), // CP: shadow on the top
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: Column(
         children: [
-          // CP: Optional: Add a small drag handle
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(2.0),
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.keyboard_arrow_down),
+            tooltip: 'Collapse Chat',
+            onPressed: () {
+              context.read<HomePageCubit>().toggleChatOpen();
+            },
           ),
           Expanded(
             child:
@@ -63,15 +51,14 @@ class ChatBottomSheet extends StatelessWidget {
                       ),
                     )
                     : ListView.builder(
-                      reverse:
-                          true, // CP: To show latest messages at the bottom
+                      controller: ScrollController(),
+                      reverse: true,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 8.0,
                       ),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
-                        // CP: Display messages in reverse order for chat-like appearance
                         final message = messages[messages.length - 1 - index];
                         final isUserMessage = message.sender == ChatSender.user;
                         return _buildMessageBubble(
@@ -129,9 +116,8 @@ class ChatBottomSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   timeFormatter.format(message.timestamp),
-                  // CP: Changed from withOpacity to withValues to avoid precision loss
                   style: TextStyle(
-                    color: textColor.withValues(alpha: 0.7),
+                    color: textColor.withAlpha(179),
                     fontSize: 10,
                   ),
                 ),

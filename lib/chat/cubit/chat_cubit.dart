@@ -51,26 +51,30 @@ class ChatCubit extends Cubit<ChatState> {
 
   // CP: Dummy messages for initial UI
   void loadDummyMessages() {
-    final dummyMessages = [
-      ChatMessage(
-        id: _uuid.v4(),
-        text: "Hello! How can I help you today?",
-        sender: ChatSender.ai,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-      ChatMessage(
-        id: _uuid.v4(),
-        text: "Hi there! I'm looking for some information.",
-        sender: ChatSender.user,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-      ),
-      ChatMessage(
-        id: _uuid.v4(),
-        text: "Sure, what can I help you with?",
-        sender: ChatSender.ai,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-      ),
-    ];
-    emit(state.copyWith(messages: dummyMessages));
+    // CP: Commented out the dummy message creation to allow testing of empty state.
+    // final dummyMessages = [
+    //   ChatMessage(
+    //     id: _uuid.v4(),
+    //     text: "Hello! How can I help you today?",
+    //     sender: ChatSender.ai,
+    //     timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+    //   ),
+    //   ChatMessage(
+    //     id: _uuid.v4(),
+    //     text: "Hi there! I'm looking for some information.",
+    //     sender: ChatSender.user,
+    //     timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
+    //   ),
+    //   ChatMessage(
+    //     id: _uuid.v4(),
+    //     text: "Sure, what can I help you with?",
+    //     sender: ChatSender.ai,
+    //     timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
+    //   ),
+    // ];
+    // emit(state.copyWith(messages: dummyMessages));
+    emit(
+      state.copyWith(messages: []),
+    ); // CP: Ensure it emits an empty list if called
   }
 }

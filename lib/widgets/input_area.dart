@@ -89,30 +89,6 @@ class _InputAreaState extends State<InputArea> {
                 ? 'Chatting...'
                 : (isInputFocused ? 'Enter log entry' : 'What happened?...');
 
-        Widget chatArrowIndicator = GestureDetector(
-          onTap: () {
-            context.read<HomePageCubit>().toggleChatOpen();
-            if (!isChatOpen) {
-              _inputFocusNode.requestFocus();
-            } else {
-              if (_inputFocusNode.hasFocus) {
-                FocusScope.of(context).unfocus();
-              }
-            }
-          },
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            height: 24.0,
-            width: double.infinity,
-            alignment: Alignment.center,
-            child: Icon(
-              isChatOpen ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 24.0,
-            ),
-          ),
-        );
-
         return Material(
           elevation: 8.0,
           shape: const RoundedRectangleBorder(
@@ -132,16 +108,12 @@ class _InputAreaState extends State<InputArea> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                chatArrowIndicator,
                 Padding(
                   padding: EdgeInsets.only(
                     left: 16,
                     right: 8,
                     top: 8,
-                    bottom:
-                        MediaQuery.of(context).viewInsets.bottom +
-                        MediaQuery.of(context).padding.bottom +
-                        8,
+                    bottom: 4.0,
                   ),
                   child: Row(
                     children: [
@@ -169,47 +141,6 @@ class _InputAreaState extends State<InputArea> {
                               horizontal: 16,
                               vertical: 12,
                             ),
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 4.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (!isChatOpen)
-                                    VoiceInput(
-                                      textController: _textController,
-                                      inputFocusNode: _inputFocusNode,
-                                      isInputFocused: isInputFocused,
-                                      showSnackBar: (
-                                        BuildContext ctx, {
-                                        required Widget content,
-                                        Duration? duration,
-                                        SnackBarAction? action,
-                                        Color? backgroundColor,
-                                      }) {
-                                        widget.showSnackBar(
-                                          context: context,
-                                          content: content,
-                                          duration: duration,
-                                          action: action,
-                                          backgroundColor: backgroundColor,
-                                        );
-                                      },
-                                    ),
-                                  IconButton(
-                                    onPressed: _handleLocalSend,
-                                    icon: const Icon(Icons.send_rounded),
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    iconSize: 28,
-                                    tooltip:
-                                        isChatOpen
-                                            ? 'Send Message'
-                                            : 'Add Entry',
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
                           keyboardType: TextInputType.multiline,
                           textInputAction: TextInputAction.newline,
@@ -227,6 +158,82 @@ class _InputAreaState extends State<InputArea> {
                             }
                           },
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 0,
+                    bottom:
+                        MediaQuery.of(context).viewInsets.bottom > 0
+                            ? 8.0
+                            : MediaQuery.of(context).padding.bottom + 8.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      TextButton.icon(
+                        icon: Icon(
+                          isChatOpen
+                              ? Icons.forum_rounded
+                              : Icons.forum_outlined,
+                        ),
+                        label: Text(isChatOpen ? 'Close Chat' : 'AI Chat'),
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              isChatOpen
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          context.read<HomePageCubit>().toggleChatOpen();
+                          if (!isChatOpen) {
+                            _inputFocusNode.requestFocus();
+                          } else {
+                            if (_inputFocusNode.hasFocus) {
+                              FocusScope.of(context).unfocus();
+                            }
+                          }
+                        },
+                      ),
+                      const Spacer(),
+                      if (!isChatOpen)
+                        VoiceInput(
+                          textController: _textController,
+                          inputFocusNode: _inputFocusNode,
+                          isInputFocused: isInputFocused,
+                          showSnackBar: (
+                            BuildContext ctx, {
+                            required Widget content,
+                            Duration? duration,
+                            SnackBarAction? action,
+                            Color? backgroundColor,
+                          }) {
+                            widget.showSnackBar(
+                              context: context,
+                              content: content,
+                              duration: duration,
+                              action: action,
+                              backgroundColor: backgroundColor,
+                            );
+                          },
+                        ),
+                      IconButton(
+                        onPressed: _handleLocalSend,
+                        icon: const Icon(Icons.send_rounded),
+                        color: Theme.of(context).colorScheme.primary,
+                        iconSize: 28,
+                        tooltip: isChatOpen ? 'Send Message' : 'Add Entry',
                       ),
                     ],
                   ),
