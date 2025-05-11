@@ -7,6 +7,7 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
+import 'chat/chat.dart';
 import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
 import 'locator.dart';
@@ -14,7 +15,7 @@ import 'locator.dart';
 // Make main async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  setupLocator(); // <-- Call the setup function here
+  configureDependencies();
 
   try {
     await dotenv.load(fileName: ".env");
@@ -40,15 +41,21 @@ class MyApp extends StatelessWidget {
         BlocProvider<EntryCubit>(
           create:
               (context) =>
-                  EntryCubit(entryRepository: locator<EntryRepository>()),
+                  EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
-          // Get EntryCubit from context and pass it to constructor
+          // CP: Get EntryCubit from context and pass it to constructor
           create:
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
+        BlocProvider<ChatCubit>(create: (context) => ChatCubit()),
+
+        BlocProvider<HomePageCubit>(
+          create:
+              (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
+        ),
+        // CP: Provide ChatCubit at the app level
       ],
       child: MaterialApp(
         theme: ThemeData(

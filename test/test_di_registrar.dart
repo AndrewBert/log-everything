@@ -1,15 +1,14 @@
 import 'package:myapp/entry/repository/entry_repository.dart'; // Import REAL repository
+import 'package:myapp/locator.dart';
 import 'package:myapp/services/ai_categorization_service.dart'; // Import AI service
 import 'package:myapp/services/audio_recorder_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
 import 'package:myapp/services/permission_service.dart'; // Import Permission service
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 
-import 'package:myapp/locator.dart'; // Import your locator instance
-
 import 'mocks.mocks.dart'; // Import generated mocks
 
-/// Sets up dependencies in the GetIt locator for testing.
+/// Sets up dependencies in the GetIt getIt for testing.
 /// Registers REAL EntryRepository with MOCKED persistence and AI services.
 Future<void> setupTestDependencies({
   bool allowReassignment = true,
@@ -24,23 +23,23 @@ Future<void> setupTestDependencies({
   // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
-  await locator.reset();
-  locator.allowReassignment = allowReassignment;
+  await getIt.reset();
+  getIt.allowReassignment = allowReassignment;
 
   // --- Register Mocks for Services ---
-  locator.registerSingleton<EntryPersistenceService>(persistenceService);
-  locator.registerSingleton<AiCategorizationService>(aiService);
-  locator.registerSingleton<SpeechService>(speechService);
-  locator.registerSingleton<AudioRecorderService>(audioRecorder);
-  locator.registerSingleton<PermissionService>(permissionService);
+  getIt.registerSingleton<EntryPersistenceService>(persistenceService);
+  getIt.registerSingleton<AiCategorizationService>(aiService);
+  getIt.registerSingleton<SpeechService>(speechService);
+  getIt.registerSingleton<AudioRecorderService>(audioRecorder);
+  getIt.registerSingleton<PermissionService>(permissionService);
   // Register other mocks if needed
 
   // --- Register REAL EntryRepository ---
   // It depends on the mocked services registered above.
-  locator.registerSingleton<EntryRepository>(
+  getIt.registerSingleton<EntryRepository>(
     EntryRepository(
-      persistenceService: locator<EntryPersistenceService>(),
-      aiService: locator<AiCategorizationService>(),
+      persistenceService: getIt<EntryPersistenceService>(),
+      aiService: getIt<AiCategorizationService>(),
     ),
   );
 
@@ -49,5 +48,5 @@ Future<void> setupTestDependencies({
 
 // Optional: Keep reset function if used elsewhere
 Future<void> resetTestDependencies() async {
-  await locator.reset();
+  await getIt.reset();
 }

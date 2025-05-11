@@ -88,7 +88,7 @@ class HomePageTestScope {
         BlocProvider<EntryCubit>(
           create:
               (context) =>
-                  EntryCubit(entryRepository: locator<EntryRepository>()),
+                  EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
           create:
@@ -178,7 +178,7 @@ void main() {
   });
 
   tearDown(() async {
-    await locator.reset();
+    await getIt.reset();
     await scope.dispose();
   });
 

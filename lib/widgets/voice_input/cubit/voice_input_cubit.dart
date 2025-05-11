@@ -31,10 +31,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   VoiceInputCubit({required EntryCubit entryCubit})
     // Fetch the service implementation from the locator
-    : _audioRecorderService = locator<AudioRecorderService>(),
-      _speechService = locator<SpeechService>(),
-      _entryRepository = locator<EntryRepository>(),
-      _permissionService = locator<PermissionService>(),
+    : _audioRecorderService = getIt<AudioRecorderService>(),
+      _speechService = getIt<SpeechService>(),
+      _entryRepository = getIt<EntryRepository>(),
+      _permissionService = getIt<PermissionService>(),
       _entryCubit = entryCubit,
       super(const VoiceInputState()) {
     _initialize();

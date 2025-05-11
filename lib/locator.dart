@@ -3,34 +3,37 @@ import 'package:myapp/services/ai_categorization_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/speech_service.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/services/permission_service.dart'; // Import PermissionService
-import 'package:myapp/services/audio_recorder_service.dart'; // Import AudioRecorderService
+import 'package:myapp/services/permission_service.dart';
+import 'package:myapp/services/audio_recorder_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// Create a GetIt instance
-GetIt locator = GetIt.instance;
+final getIt = GetIt.instance;
 
-void setupLocator() {
+Future<void> configureDependencies() async {
   // Register services
-  locator.registerLazySingleton<AiCategorizationService>(
+  getIt.registerSingletonAsync<SharedPreferences>(
+    () => SharedPreferences.getInstance(),
+  );
+  await getIt.isReady<SharedPreferences>(); // Ensure SharedPreferences is ready
+
+  getIt.registerLazySingleton<AiCategorizationService>(
     () => OpenAiCategorizationService(),
   );
-  locator.registerLazySingleton<EntryPersistenceService>(
+  getIt.registerLazySingleton<EntryPersistenceService>(
     () => SharedPreferencesEntryPersistenceService(),
   );
-  locator.registerLazySingleton(() => SpeechService());
+  getIt.registerLazySingleton<SpeechService>(() => SpeechService());
 
-  locator.registerLazySingleton<PermissionService>(
-    () => PermissionServiceImpl(),
-  );
+  getIt.registerLazySingleton<PermissionService>(() => PermissionServiceImpl());
 
-  locator.registerLazySingleton<AudioRecorderService>(
+  getIt.registerLazySingleton<AudioRecorderService>(
     () => AudioRecorderServiceImpl(),
   );
 
-  locator.registerLazySingleton(
+  getIt.registerLazySingleton(
     () => EntryRepository(
-      persistenceService: locator<EntryPersistenceService>(),
-      aiService: locator<AiCategorizationService>(),
+      persistenceService: getIt<EntryPersistenceService>(),
+      aiService: getIt<AiCategorizationService>(),
     ),
   );
 }

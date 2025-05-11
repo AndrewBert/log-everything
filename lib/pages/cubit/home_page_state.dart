@@ -8,6 +8,7 @@ class HomePageState extends Equatable {
   final int titleTapCount;
   final String? lastSeenVersion;
   final bool isVersionLoading;
+  final bool isChatOpen;
 
   const HomePageState({
     this.isInputFocused = false,
@@ -17,6 +18,7 @@ class HomePageState extends Equatable {
     this.titleTapCount = 0,
     this.lastSeenVersion,
     this.isVersionLoading = false,
+    this.isChatOpen = false,
   });
 
   @override
@@ -28,6 +30,7 @@ class HomePageState extends Equatable {
     titleTapCount,
     lastSeenVersion,
     isVersionLoading,
+    isChatOpen,
   ];
 
   HomePageState copyWith({
@@ -39,6 +42,7 @@ class HomePageState extends Equatable {
     int? titleTapCount,
     String? lastSeenVersion,
     bool? isVersionLoading,
+    bool? isChatOpen,
   }) {
     return HomePageState(
       isInputFocused: isInputFocused ?? this.isInputFocused,
@@ -49,6 +53,7 @@ class HomePageState extends Equatable {
       titleTapCount: titleTapCount ?? this.titleTapCount,
       lastSeenVersion: lastSeenVersion ?? this.lastSeenVersion,
       isVersionLoading: isVersionLoading ?? this.isVersionLoading,
+      isChatOpen: isChatOpen ?? this.isChatOpen,
     );
   }
 }

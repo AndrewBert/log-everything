@@ -18,7 +18,8 @@ This project uses **Flutter** and **Dart**.
 - When asked to refactor code, avoid causing a regression in functionality. If it does happen, call it out loudly.
 - When creating a new cubit and state, use "part 'test_state.dart';" and "part of 'test_cubit.dart';" to link them instead of imports
 - Organize private methods below the build method in widgets
-- If you recognize a mistake you made and fix it, update this file copilot-instructions.md with a rule so it is avoided in the future
+- **Dependency Injection:** Only register services (e.g., Repositories, API clients, utility classes) in `locator.dart`. Cubits and Blocs should be provided at the widget tree level using `BlocProvider` or `MultiBlocProvider`.
+- If you recognize a mistake you made and fix it, update this file .github/copilot-instructions.md with a rule so it is avoided in the future
 
 # Copilot Coding Rules and Guidelines
 
