@@ -43,10 +43,61 @@ class ChatBottomSheet extends StatelessWidget {
             child:
                 messages.isEmpty
                     ? Center(
-                      child: Text(
-                        "No messages yet. Start a conversation!",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 16.0,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Unlock insights from your logs!",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Ask me to:",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "• Summarize recent entries\n• Find logs about a specific topic\n• Analyze patterns in your data",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                fontSize: 15,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "What would you like to explore?",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     )
