@@ -132,39 +132,66 @@ class ChatBottomSheet extends StatelessWidget {
     bool isUserMessage,
     DateFormat timeFormatter,
   ) {
-    final alignment =
+    final CrossAxisAlignment bubbleAlignment =
         isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final color =
-        isUserMessage
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Theme.of(context).colorScheme.secondaryContainer;
-    final textColor =
-        isUserMessage
-            ? Theme.of(context).colorScheme.onPrimaryContainer
-            : Theme.of(context).colorScheme.onSecondaryContainer;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Column(
-        crossAxisAlignment: alignment,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
+    if (isUserMessage) {
+      final Color bubbleColor = Theme.of(context).colorScheme.primaryContainer;
+      final Color textColor = Theme.of(context).colorScheme.onPrimaryContainer;
+
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Column(
+          crossAxisAlignment: bubbleAlignment,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message.text,
+                    style: TextStyle(color: textColor, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    timeFormatter.format(message.timestamp),
+                    style: TextStyle(
+                      color: textColor.withAlpha(179),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(16.0),
+          ],
+        ),
+      );
+    } else {
+      final Color textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+        child: Column(
+          crossAxisAlignment: bubbleAlignment,
+          children: [
+            Text(
+              message.text,
+              style: TextStyle(color: textColor, fontSize: 16),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
-                  message.text,
-                  style: TextStyle(color: textColor, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
                 Text(
                   timeFormatter.format(message.timestamp),
                   style: TextStyle(
@@ -172,11 +199,22 @@ class ChatBottomSheet extends StatelessWidget {
                     fontSize: 10,
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    'Assistant',
+                    style: TextStyle(
+                      color: textColor.withAlpha(150),
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    }
   }
 }
