@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import '../entry.dart';
-import '../../services/ai_categorization_service.dart';
+import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
 import '../../utils/logger.dart';
 
 class EntryRepository {
   final EntryPersistenceService _persistenceService;
-  final AiCategorizationService _aiService;
+  final AiService _aiService;
 
   // Internal state for entries and categories
   List<Entry> _entries = [];
@@ -19,7 +19,7 @@ class EntryRepository {
 
   EntryRepository({
     required EntryPersistenceService persistenceService,
-    required AiCategorizationService aiService,
+    required AiService aiService,
   }) : _persistenceService = persistenceService,
        _aiService = aiService;
 
@@ -91,7 +91,7 @@ class EntryRepository {
 
     try {
       extractedData = await _aiService.extractEntries(text, _categories);
-    } on AiCategorizationException catch (e) {
+    } on AiServiceException catch (e) {
       AppLogger.error(
         "Repository: AI Service failed: ${e.message}",
         error: e.underlyingError,
@@ -201,7 +201,7 @@ class EntryRepository {
         combinedText,
         _categories,
       );
-    } on AiCategorizationException catch (e) {
+    } on AiServiceException catch (e) {
       AppLogger.error(
         "Repository: AI Service failed for combined entry: ${e.message}",
         error: e.underlyingError,

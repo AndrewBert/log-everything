@@ -1,5 +1,5 @@
 import 'package:get_it/get_it.dart';
-import 'package:myapp/services/ai_categorization_service.dart';
+import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/speech_service.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -16,9 +16,7 @@ Future<void> configureDependencies() async {
   );
   await getIt.isReady<SharedPreferences>(); // Ensure SharedPreferences is ready
 
-  getIt.registerLazySingleton<AiCategorizationService>(
-    () => OpenAiCategorizationService(),
-  );
+  getIt.registerLazySingleton<AiService>(() => OpenAiService());
   getIt.registerLazySingleton<EntryPersistenceService>(
     () => SharedPreferencesEntryPersistenceService(),
   );
@@ -33,7 +31,7 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton(
     () => EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
-      aiService: getIt<AiCategorizationService>(),
+      aiService: getIt<AiService>(),
     ),
   );
 }

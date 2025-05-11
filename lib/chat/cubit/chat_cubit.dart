@@ -1,80 +1,90 @@
-import 'package:equatable/equatable.dart'; // CP: Added import for Equatable
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/chat/model/chat_message.dart';
+import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/utils/logger.dart'; // CP: Import AppLogger
 import 'package:uuid/uuid.dart';
 
 part 'chat_state.dart';
 
 class ChatCubit extends Cubit<ChatState> {
-  ChatCubit() : super(const ChatState());
-
+  // CP: Add AiService dependency
+  final AiService _aiService;
   final Uuid _uuid = const Uuid();
 
-  void addUserMessage(String text) {
+  // CP: Update constructor to accept AiService
+  ChatCubit({required AiService aiService})
+    : _aiService = aiService,
+      super(const ChatState());
+
+  Future<void> addUserMessage(String text) async {
+    // CP: Make method async
     final userMessage = ChatMessage(
       id: _uuid.v4(),
       text: text,
       sender: ChatSender.user,
       timestamp: DateTime.now(),
     );
-    final newMessages = List<ChatMessage>.from(state.messages)
-      ..add(userMessage);
-    emit(state.copyWith(messages: newMessages));
 
-    // CP: Simulate AI response for now
-    _addAIMessage("Thinking...");
-    Future.delayed(const Duration(seconds: 1), () {
-      final aiResponse = ChatMessage(
+    // CP: Add user message and set loading state
+    final messagesWithUser = List<ChatMessage>.from(state.messages)
+      ..add(userMessage);
+    emit(state.copyWith(messages: messagesWithUser, isLoading: true));
+
+    try {
+      // CP: Get the full conversation history to send to the API
+      // CP: This includes the new user message we just added to the state for context.
+      final String aiResponseText = await _aiService.getChatResponse(
+        messages: state.messages,
+      );
+
+      final aiMessage = ChatMessage(
         id: _uuid.v4(),
-        text: "I am a friendly AI. You said: '$text'",
+        text: aiResponseText,
         sender: ChatSender.ai,
         timestamp: DateTime.now(),
       );
-      // CP: Replace the "Thinking..." message
-      final updatedMessages = List<ChatMessage>.from(state.messages);
-      updatedMessages.removeLast(); // CP: Remove "Thinking..."
-      updatedMessages.add(aiResponse); // CP: Add actual AI response
-      emit(state.copyWith(messages: updatedMessages));
-    });
+      final messagesWithAi = List<ChatMessage>.from(state.messages)
+        ..add(aiMessage);
+      emit(state.copyWith(messages: messagesWithAi, isLoading: false));
+    } on AiServiceException catch (e) {
+      AppLogger.error(
+        'AiServiceException in ChatCubit: ${e.message}',
+        error: e.underlyingError,
+      );
+      final errorMessage = ChatMessage(
+        id: _uuid.v4(),
+        text: "Sorry, I couldn't get a response. Error: ${e.message}",
+        sender: ChatSender.ai, // CP: Error shown as an AI message
+        timestamp: DateTime.now(),
+      );
+      final messagesWithError = List<ChatMessage>.from(state.messages)
+        ..add(errorMessage);
+      emit(state.copyWith(messages: messagesWithError, isLoading: false));
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Unexpected error in ChatCubit: $e',
+        stackTrace: stackTrace,
+      );
+      final errorMessage = ChatMessage(
+        id: _uuid.v4(),
+        text:
+            "Sorry, an unexpected error occurred while fetching the chat response.",
+        sender: ChatSender.ai,
+        timestamp: DateTime.now(),
+      );
+      final messagesWithError = List<ChatMessage>.from(state.messages)
+        ..add(errorMessage);
+      emit(state.copyWith(messages: messagesWithError, isLoading: false));
+    }
   }
 
-  void _addAIMessage(String text) {
-    final aiMessage = ChatMessage(
-      id: _uuid.v4(),
-      text: text,
-      sender: ChatSender.ai,
-      timestamp: DateTime.now(),
-    );
-    final newMessages = List<ChatMessage>.from(state.messages)..add(aiMessage);
-    emit(state.copyWith(messages: newMessages));
-  }
+  // CP: _addAIMessage is no longer needed as AI responses are handled by addUserMessage
+  // void _addAIMessage(String text) { ... }
 
-  // CP: Dummy messages for initial UI
+  // CP: Dummy messages for initial UI (commented out as per previous request)
   void loadDummyMessages() {
-    // CP: Commented out the dummy message creation to allow testing of empty state.
-    // final dummyMessages = [
-    //   ChatMessage(
-    //     id: _uuid.v4(),
-    //     text: "Hello! How can I help you today?",
-    //     sender: ChatSender.ai,
-    //     timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    //   ),
-    //   ChatMessage(
-    //     id: _uuid.v4(),
-    //     text: "Hi there! I'm looking for some information.",
-    //     sender: ChatSender.user,
-    //     timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-    //   ),
-    //   ChatMessage(
-    //     id: _uuid.v4(),
-    //     text: "Sure, what can I help you with?",
-    //     sender: ChatSender.ai,
-    //     timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-    //   ),
-    // ];
-    // emit(state.copyWith(messages: dummyMessages));
-    emit(
-      state.copyWith(messages: []),
-    ); // CP: Ensure it emits an empty list if called
+    // ... (dummy messages code commented out)
+    emit(state.copyWith(messages: []));
   }
 }

@@ -9,7 +9,7 @@ import 'dart:typed_data' as _i6;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:myapp/entry/entry.dart' as _i10;
-import 'package:myapp/services/ai_categorization_service.dart' as _i11;
+import 'package:myapp/services/ai_service.dart' as _i11;
 import 'package:myapp/services/audio_recorder_service.dart' as _i12;
 import 'package:myapp/services/entry_persistence_service.dart' as _i9;
 import 'package:myapp/services/permission_service.dart' as _i7;
@@ -286,12 +286,11 @@ class MockEntryPersistenceService extends _i1.Mock
           as _i4.Future<void>);
 }
 
-/// A class which mocks [AiCategorizationService].
+/// A class which mocks [AiService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAiCategorizationService extends _i1.Mock
-    implements _i11.AiCategorizationService {
-  MockAiCategorizationService() {
+class MockAiService extends _i1.Mock implements _i11.AiService {
+  MockAiService() {
     _i1.throwOnMissingStub(this);
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
+import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -49,13 +50,14 @@ class MyApp extends StatelessWidget {
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        BlocProvider<ChatCubit>(create: (context) => ChatCubit()),
-
+        // CP: Provide ChatCubit with AiService dependency
+        BlocProvider<ChatCubit>(
+          create: (context) => ChatCubit(aiService: getIt<AiService>()),
+        ),
         BlocProvider<HomePageCubit>(
           create:
               (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
         ),
-        // CP: Provide ChatCubit at the app level
       ],
       child: MaterialApp(
         theme: ThemeData(

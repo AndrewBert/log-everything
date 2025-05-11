@@ -31,7 +31,7 @@ import 'package:record/record.dart';
 // --- Test Scope ---
 class HomePageTestScope {
   late MockEntryPersistenceService mockPersistenceService;
-  late MockAiCategorizationService mockAiService;
+  late MockAiService mockAiService;
   late MockSpeechService mockSpeechService;
   late MockAudioRecorderService mockAudioRecorderService;
   late MockPermissionService mockPermissionService;
@@ -75,7 +75,7 @@ class HomePageTestScope {
 
   HomePageTestScope() {
     mockPersistenceService = MockEntryPersistenceService();
-    mockAiService = MockAiCategorizationService();
+    mockAiService = MockAiService();
     mockSpeechService = MockSpeechService();
     mockAudioRecorderService = MockAudioRecorderService();
     when(

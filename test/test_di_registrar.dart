@@ -1,6 +1,6 @@
 import 'package:myapp/entry/repository/entry_repository.dart'; // Import REAL repository
 import 'package:myapp/locator.dart';
-import 'package:myapp/services/ai_categorization_service.dart'; // Import AI service
+import 'package:myapp/services/ai_service.dart'; // Import AI service
 import 'package:myapp/services/audio_recorder_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
 import 'package:myapp/services/permission_service.dart'; // Import Permission service
@@ -14,7 +14,7 @@ Future<void> setupTestDependencies({
   bool allowReassignment = true,
   // Mocks for services needed by REAL repository and other components
   required MockEntryPersistenceService persistenceService,
-  required MockAiCategorizationService aiService,
+  required MockAiService aiService,
   required MockSpeechService speechService,
   // Use MockAudioRecorderService if that's the abstraction used,
   // or MockAudioRecorder if Record is used directly. Adjust as needed.
@@ -28,7 +28,7 @@ Future<void> setupTestDependencies({
 
   // --- Register Mocks for Services ---
   getIt.registerSingleton<EntryPersistenceService>(persistenceService);
-  getIt.registerSingleton<AiCategorizationService>(aiService);
+  getIt.registerSingleton<AiService>(aiService);
   getIt.registerSingleton<SpeechService>(speechService);
   getIt.registerSingleton<AudioRecorderService>(audioRecorder);
   getIt.registerSingleton<PermissionService>(permissionService);
@@ -39,7 +39,7 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<EntryRepository>(
     EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
-      aiService: getIt<AiCategorizationService>(),
+      aiService: getIt<AiService>(),
     ),
   );
 

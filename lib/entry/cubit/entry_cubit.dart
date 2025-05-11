@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import '../entry.dart';
 import '../../utils/logger.dart';
 import '../repository/entry_repository.dart';
+import '../../services/ai_service.dart'; // CP: Import AiServiceException
 
 part 'entry_state.dart';
 
@@ -194,6 +195,26 @@ class EntryCubit extends Cubit<EntryState> {
 
       entriesToStartTimerFor.forEach(_markEntryAsNotNewAfterDelay);
       HapticFeedback.mediumImpact();
+    } on AiServiceException catch (e) {
+      // CP: Catch AiServiceException specifically
+      AppLogger.error(
+        "Cubit: AiServiceException adding entry: ${e.message}",
+        error: e.underlyingError,
+      );
+      // Revert UI state
+      final currentEntries = _entryRepository.currentEntries;
+      final revertedDisplayList = _buildDisplayList(
+        currentEntries,
+        state.filterCategory,
+      );
+      emit(
+        state.copyWith(
+          isLoading: false,
+          lastErrorMessage:
+              "AI processing failed: ${e.message}", // CP: More specific error
+          displayListItems: revertedDisplayList,
+        ),
+      );
     } catch (e) {
       AppLogger.error("Cubit: Error adding entry via repository", error: e);
       // Revert UI state
