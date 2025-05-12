@@ -19,12 +19,17 @@ abstract class AiService {
     List<String> categories,
   );
 
-  /// Gets a chat response from the AI model based on the provided message history.
+  /// Gets a chat response from the AI model based on the provided message history
+  /// and optional log context.
   ///
-  /// Takes a list of [ChatMessage] objects representing the conversation history.
+  /// Takes a list of [ChatMessage] objects representing the conversation history
+  /// and an optional [logContext] string containing relevant log entries.
   /// Returns a plain text response from the AI model.
   /// Throws an [AiServiceException] if the process fails.
-  Future<String> getChatResponse({required List<ChatMessage> messages});
+  Future<String> getChatResponse({
+    required List<ChatMessage> messages,
+    String? logContext,
+  });
 }
 
 // Custom Exception for the service
@@ -285,7 +290,10 @@ class OpenAiService implements AiService {
   }
 
   @override
-  Future<String> getChatResponse({required List<ChatMessage> messages}) async {
+  Future<String> getChatResponse({
+    required List<ChatMessage> messages,
+    String? logContext,
+  }) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
     }
@@ -298,6 +306,11 @@ class OpenAiService implements AiService {
     AppLogger.info(
       "Calling OpenAI API ($_modelId) for chat response. Message count: ${messages.length}",
     );
+    if (logContext != null && logContext.isNotEmpty) {
+      AppLogger.info(
+        "Providing log context with ${logContext.length} characters.",
+      );
+    }
 
     final List<Map<String, String>> inputMessages =
         messages.map((msg) {
@@ -307,8 +320,13 @@ class OpenAiService implements AiService {
           };
         }).toList();
 
-    const String systemInstructions =
+    String systemInstructions =
         "You are a helpful AI assistant designed to analyze and discuss log entries with users. You can help them summarize entries, find patterns, answer questions about their logged data, and engage in general conversation related to their logs. Be concise and helpful.";
+
+    if (logContext != null && logContext.isNotEmpty) {
+      systemInstructions =
+          "The user has provided the following log entries for context:\n\n--BEGIN LOGS--\n$logContext\n--END LOGS--\n\nBased on these logs and our ongoing conversation, please respond to the user. Original assistant instructions: $systemInstructions";
+    }
 
     final requestBody = {
       'model': _modelId,

@@ -12,6 +12,7 @@ class ChatBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatCubit = context.watch<ChatCubit>();
     final messages = chatCubit.state.messages;
+    final isLoading = chatCubit.state.isLoading;
     final DateFormat timeFormatter = DateFormat('HH:mm');
 
     return Container(
@@ -41,7 +42,7 @@ class ChatBottomSheet extends StatelessWidget {
           ),
           Expanded(
             child:
-                messages.isEmpty
+                messages.isEmpty && !isLoading
                     ? Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -120,6 +121,27 @@ class ChatBottomSheet extends StatelessWidget {
                         );
                       },
                     ),
+          ),
+          if (isLoading) _buildThinkingIndicator(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThinkingIndicator(BuildContext context) {
+    final Color textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            "Thinking...",
+            style: TextStyle(
+              color: textColor,
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
       ),

@@ -50,9 +50,13 @@ class MyApp extends StatelessWidget {
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        // CP: Provide ChatCubit with AiService dependency
+        // CP: Provide ChatCubit with AiService and EntryRepository dependencies
         BlocProvider<ChatCubit>(
-          create: (context) => ChatCubit(aiService: getIt<AiService>()),
+          create:
+              (context) => ChatCubit(
+                aiService: getIt<AiService>(),
+                entryRepository: getIt<EntryRepository>(),
+              ),
         ),
         BlocProvider<HomePageCubit>(
           create:

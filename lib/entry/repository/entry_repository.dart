@@ -355,4 +355,23 @@ class EntryRepository {
     }
     return false;
   }
+
+  // CP: New method to get all entries formatted as a string for log context
+  Future<String> getAllEntriesAsLogContext() async {
+    // CP: Sort entries by timestamp, oldest to newest, to give chronological context.
+    final sortedEntries = List<Entry>.from(_entries)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    final buffer = StringBuffer();
+    for (final entry in sortedEntries) {
+      // CP: Simple format: Timestamp - Category - Text
+      buffer.writeln(
+        '${entry.timestamp.toIso8601String()} - [${entry.category}] - ${entry.text}',
+      );
+    }
+    AppLogger.info(
+      'Repository: Generated log context with ${sortedEntries.length} entries, total length ${buffer.length}',
+    );
+    return buffer.toString();
+  }
 }
