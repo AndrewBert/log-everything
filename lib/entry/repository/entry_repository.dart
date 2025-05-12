@@ -223,7 +223,7 @@ class EntryRepository {
     if (tempIndex != -1) {
       _entries.removeAt(tempIndex);
     } else {
-      AppLogger.warning(
+      AppLogger.warn(
         '[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!',
       );
       // If temp entry not found, proceed to add the new one anyway, but insert at top
@@ -317,7 +317,7 @@ class EntryRepository {
         _categories.any(
           (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
         )) {
-      AppLogger.warning(
+      AppLogger.warn(
         'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
       );
       return (entries: currentEntries, categories: currentCategories);

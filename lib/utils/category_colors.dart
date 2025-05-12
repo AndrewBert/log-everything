@@ -131,7 +131,7 @@ class CategoryColors {
               loadedColors[entry.key] = color;
             } catch (e) {
               // Log error for the specific entry but continue with others
-              AppLogger.warning(
+              AppLogger.warn(
                 'Error parsing color for category "${entry.key}" (value: ${entry.value}). Skipping.',
                 error: e,
               );

@@ -38,7 +38,7 @@ class AppLogger {
   }
 
   /// Log a warning message (only in debug mode)
-  static void warning(String message, {Object? error}) {
+  static void warn(String message, {Object? error}) {
     // Added optional error parameter for consistency
     if (kDebugMode) {
       debugPrint('⚠️ WARNING: $message');
