@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
+import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
 
 class ChatBottomSheet extends StatelessWidget {
   const ChatBottomSheet({super.key});
@@ -205,9 +206,16 @@ class ChatBottomSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: bubbleAlignment,
           children: [
-            Text(
-              message.text,
-              style: TextStyle(color: textColor, fontSize: 16),
+            MarkdownBody(
+              data: message.text,
+              styleSheet: MarkdownStyleSheet.fromTheme(
+                Theme.of(context),
+              ).copyWith(
+                p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  fontSize: 16,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             Row(
