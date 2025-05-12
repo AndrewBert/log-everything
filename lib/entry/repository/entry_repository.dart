@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:intl/intl.dart'; // CP: Added for date formatting
 import '../entry.dart';
 import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
+import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
 import '../../utils/logger.dart';
 
 class EntryRepository {
   final EntryPersistenceService _persistenceService;
   final AiService _aiService;
+  final VectorStoreService
+  _vectorStoreService; // CP: Added VectorStoreService field
 
   // Internal state for entries and categories
   List<Entry> _entries = [];
@@ -20,13 +24,25 @@ class EntryRepository {
   EntryRepository({
     required EntryPersistenceService persistenceService,
     required AiService aiService,
+    required VectorStoreService
+    vectorStoreService, // CP: Added VectorStoreService to constructor
   }) : _persistenceService = persistenceService,
-       _aiService = aiService;
+       _aiService = aiService,
+       _vectorStoreService =
+           vectorStoreService; // CP: Initialize VectorStoreService
 
   // --- Initialization ---
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
+    // CP: Trigger initial sync for today's logs
+    _triggerVectorStoreSyncForDate(DateTime.now()).catchError((e, stackTrace) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed during initialization",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
   }
 
   // --- Loading/Saving (Internal) ---
@@ -134,6 +150,19 @@ class EntryRepository {
     // Add to the internal list (prepend)
     _entries.insertAll(0, addedEntries);
     await _saveEntries();
+
+    // CP: Trigger vector store sync for the date of the new entries
+    _triggerVectorStoreSyncForDate(processingTimestamp).catchError((
+      e,
+      stackTrace,
+    ) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed for addEntry",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
+
     return currentEntries; // Return a copy
   }
 
@@ -154,6 +183,17 @@ class EntryRepository {
     );
     if (_entries.length < originalLength) {
       await _saveEntries();
+      // CP: Trigger vector store sync for the date of the deleted entry
+      _triggerVectorStoreSyncForDate(entryToDelete.timestamp).catchError((
+        e,
+        stackTrace,
+      ) {
+        AppLogger.error(
+          "Repository: Background vector store sync failed for deleteEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
+      });
     }
     return currentEntries; // Return a copy
   }
@@ -172,6 +212,18 @@ class EntryRepository {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
       await _saveEntries();
+      // CP: Trigger vector store sync for the date of the updated entry
+      // CP: (uses originalEntry.timestamp as that's the key for the daily log file)
+      _triggerVectorStoreSyncForDate(originalEntry.timestamp).catchError((
+        e,
+        stackTrace,
+      ) {
+        AppLogger.error(
+          "Repository: Background vector store sync failed for updateEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
+      });
     }
     return currentEntries; // Return a copy
   }
@@ -265,6 +317,17 @@ class EntryRepository {
 
     // 5. Save and return
     await _saveEntries();
+    // CP: Trigger vector store sync for the date of the processed entries
+    _triggerVectorStoreSyncForDate(tempEntryTimestamp).catchError((
+      e,
+      stackTrace,
+    ) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed for processCombinedEntry",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
     return currentEntries; // Return copy
   }
 
@@ -289,10 +352,20 @@ class EntryRepository {
     if (_categories.contains(categoryToDelete)) {
       _categories.remove(categoryToDelete);
       bool entriesChanged = false;
+      // CP: Collect all unique dates of modified entries
+      final Set<DateTime> affectedDates = {};
       _entries =
           _entries.map((entry) {
             if (entry.category == categoryToDelete) {
               entriesChanged = true;
+              // CP: Add date to set before modifying entry (use y/m/d for uniqueness)
+              affectedDates.add(
+                DateTime(
+                  entry.timestamp.year,
+                  entry.timestamp.month,
+                  entry.timestamp.day,
+                ),
+              );
               return entry.copyWith(category: 'Misc');
             }
             return entry;
@@ -301,35 +374,71 @@ class EntryRepository {
       await _saveCategories();
       if (entriesChanged) {
         await _saveEntries();
+        // CP: Trigger sync for all affected dates
+        for (final date in affectedDates) {
+          _triggerVectorStoreSyncForDate(date).catchError((e, stackTrace) {
+            AppLogger.error(
+              "Repository: Background vector store sync failed for deleteCategory (date: $date)",
+              error: e,
+              stackTrace: stackTrace,
+            );
+          });
+        }
       }
     }
     return (entries: currentEntries, categories: currentCategories);
   }
 
+  // CP: Method to mark an entry as not new
+  Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
+    final index = _entries.indexWhere(
+      (entry) => entry.timestamp == timestamp && entry.text == text,
+    );
+    if (index != -1 && _entries[index].isNew) {
+      _entries[index] = _entries[index].copyWith(isNew: false);
+      await _saveEntries();
+      // CP: No vector store sync needed for just changing isNew flag
+      return true;
+    }
+    return false;
+  }
+
+  // CP: Method to rename a category
   Future<({List<Entry> entries, List<String> categories})> renameCategory(
     String oldName,
     String newName,
   ) async {
     final trimmedNewName = newName.trim();
-    if (oldName == 'Misc' ||
-        trimmedNewName.isEmpty ||
-        oldName == trimmedNewName ||
-        _categories.any(
-          (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
-        )) {
-      AppLogger.warn(
-        'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
-      );
+    if (trimmedNewName.isEmpty ||
+        trimmedNewName == oldName ||
+        _categories.contains(trimmedNewName)) {
+      // CP: Avoid empty, no-change, or duplicate new names
       return (entries: currentEntries, categories: currentCategories);
     }
 
-    _categories =
-        _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
+    final oldCategoryIndex = _categories.indexOf(oldName);
+    if (oldCategoryIndex == -1) {
+      // CP: Old category doesn't exist
+      return (entries: currentEntries, categories: currentCategories);
+    }
+
+    _categories[oldCategoryIndex] = trimmedNewName;
+
     bool entriesChanged = false;
+    // CP: Collect all unique dates of modified entries
+    final Set<DateTime> affectedDates = {};
     _entries =
         _entries.map((entry) {
           if (entry.category == oldName) {
             entriesChanged = true;
+            // CP: Add date to set before modifying entry (use y/m/d for uniqueness)
+            affectedDates.add(
+              DateTime(
+                entry.timestamp.year,
+                entry.timestamp.month,
+                entry.timestamp.day,
+              ),
+            );
             return entry.copyWith(category: trimmedNewName);
           }
           return entry;
@@ -338,40 +447,85 @@ class EntryRepository {
     await _saveCategories();
     if (entriesChanged) {
       await _saveEntries();
+      // CP: Trigger sync for all affected dates
+      for (final date in affectedDates) {
+        _triggerVectorStoreSyncForDate(date).catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Background vector store sync failed for renameCategory (date: $date)",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
+      }
     }
     return (entries: currentEntries, categories: currentCategories);
   }
 
-  // Method to update isNew status (called by Cubit after delay)
-  // Returns true if an update occurred
-  Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
-    final index = _entries.indexWhere(
-      (e) => e.timestamp == timestamp && e.text == text && e.isNew,
-    );
-    if (index != -1) {
-      _entries[index] = _entries[index].copyWith(isNew: false);
-      await _saveEntries();
-      return true;
-    }
-    return false;
+  // --- Helper Methods ---
+  String getAllEntriesAsLogContext() {
+    if (_entries.isEmpty) return "No log entries yet.";
+
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    return _entries
+        .map((entry) {
+          return "[${formatter.format(entry.timestamp)}] (${entry.category}): ${entry.text}";
+        })
+        .join('\n');
   }
 
-  // CP: New method to get all entries formatted as a string for log context
-  Future<String> getAllEntriesAsLogContext() async {
-    // CP: Sort entries by timestamp, oldest to newest, to give chronological context.
-    final sortedEntries = List<Entry>.from(_entries)
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    final buffer = StringBuffer();
-    for (final entry in sortedEntries) {
-      // CP: Simple format: Timestamp - Category - Text
-      buffer.writeln(
-        '${entry.timestamp.toIso8601String()} - [${entry.category}] - ${entry.text}',
-      );
-    }
+  // CP: New private method to trigger vector store sync for a specific date
+  Future<void> _triggerVectorStoreSyncForDate(DateTime date) async {
     AppLogger.info(
-      'Repository: Generated log context with ${sortedEntries.length} entries, total length ${buffer.length}',
+      "[EntryRepository] Triggering vector store sync for date: $date",
     );
-    return buffer.toString();
+    try {
+      final String vectorStoreId =
+          await _vectorStoreService.getOrCreateVectorStoreId();
+
+      // Format entries for the given day
+      final DateFormat dayFormatter = DateFormat('yyyy-MM-dd');
+      final String targetDayString = dayFormatter.format(date);
+
+      final List<Entry> entriesForDay =
+          _entries.where((entry) {
+            return dayFormatter.format(entry.timestamp) == targetDayString;
+          }).toList();
+
+      String formattedContent = "";
+      if (entriesForDay.isNotEmpty) {
+        final DateFormat entryFormatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+        formattedContent = entriesForDay
+            .map((entry) {
+              return "[${entryFormatter.format(entry.timestamp)}] (${entry.category}): ${entry.text}";
+            })
+            .join('\n');
+      }
+      AppLogger.info(
+        "[EntryRepository] Content for $targetDayString: ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
+      );
+
+      await _vectorStoreService.synchronizeDailyLogFile(
+        vectorStoreId,
+        date,
+        formattedContent,
+      );
+      AppLogger.info(
+        "[EntryRepository] Vector store sync for date $date completed successfully.",
+      );
+    } on VectorStoreSyncException catch (e, stackTrace) {
+      AppLogger.error(
+        "[EntryRepository] VectorStoreService sync failed for date $date",
+        error: e.message,
+        stackTrace: stackTrace,
+      );
+      // CP: Do not rethrow, allow main operation to continue
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        "[EntryRepository] Unexpected error during vector store sync for date $date",
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // CP: Do not rethrow
+    }
   }
 }

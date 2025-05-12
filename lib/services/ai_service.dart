@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart'; // CP: Added SharedPreferences
 import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
 
@@ -28,7 +29,7 @@ abstract class AiService {
   /// Throws an [AiServiceException] if the process fails.
   Future<String> getChatResponse({
     required List<ChatMessage> messages,
-    String? logContext,
+    // CP: Removed logContext String? logContext,
   });
 }
 
@@ -54,6 +55,11 @@ class OpenAiService implements AiService {
       dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/responses';
   final String _modelId = 'gpt-4o-mini';
+  final SharedPreferences _prefs; // CP: Added SharedPreferences field
+
+  // CP: Updated constructor to accept SharedPreferences
+  OpenAiService({required SharedPreferences sharedPreferences})
+    : _prefs = sharedPreferences;
 
   @override
   Future<List<EntryPrototype>> extractEntries(
@@ -292,7 +298,7 @@ class OpenAiService implements AiService {
   @override
   Future<String> getChatResponse({
     required List<ChatMessage> messages,
-    String? logContext,
+    // CP: Removed logContext
   }) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
@@ -306,13 +312,18 @@ class OpenAiService implements AiService {
     AppLogger.info(
       "Calling OpenAI API ($_modelId) for chat response. Message count: ${messages.length}",
     );
-    if (logContext != null && logContext.isNotEmpty) {
-      AppLogger.info(
-        "Providing log context with ${logContext.length} characters.",
+
+    // CP: Retrieve vector_store_id from SharedPreferences
+    final String? vectorStoreId = _prefs.getString('openai_vector_store_id');
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      AppLogger.info("Using Vector Store ID: $vectorStoreId for File Search.");
+    } else {
+      AppLogger.warn(
+        "No Vector Store ID found. File Search will not be enabled.",
       );
     }
 
-    final List<Map<String, String>> inputMessages =
+    final List<Map<String, dynamic>> inputMessages =
         messages.map((msg) {
           return {
             "role": msg.sender == ChatSender.user ? "user" : "assistant",
@@ -320,20 +331,35 @@ class OpenAiService implements AiService {
           };
         }).toList();
 
-    String systemInstructions =
-        "You are a helpful AI assistant designed to analyze and discuss log entries with users. You can help them summarize entries, find patterns, answer questions about their logged data, and engage in general conversation related to their logs. Be concise and helpful.";
+    // CP: Updated system instructions for File Search
+    const String systemInstructions =
+        "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.";
 
-    if (logContext != null && logContext.isNotEmpty) {
-      systemInstructions =
-          "The user has provided the following log entries for context:\n\n--BEGIN LOGS--\n$logContext\n--END LOGS--\n\nBased on these logs and our ongoing conversation, please respond to the user. Original assistant instructions: $systemInstructions";
-    }
-
-    final requestBody = {
+    // CP: Prepare the request body, including system instructions as the first message
+    final Map<String, dynamic> requestBody = {
       'model': _modelId,
-      'instructions': systemInstructions,
-      'input': inputMessages,
+      'input': [
+        {"role": "system", "content": systemInstructions},
+        ...inputMessages, // Spread the rest of the messages
+      ],
       'temperature': 0.7,
     };
+
+    // CP: Conditionally add tools for File Search
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      requestBody['tools'] = [
+        {
+          "type": "file_search",
+          "vector_store_ids": [vectorStoreId],
+        },
+      ];
+      // CP: As per OpenAI documentation, when 'tools' are used, 'instructions' parameter should not be used.
+      // The system message is now part of the 'input' array.
+    } else {
+      // CP: If no vector store, ensure the 'input' still contains the system message.
+      // This is already handled by the structure above.
+      // The 'instructions' parameter is not used in this new structure.
+    }
 
     try {
       final response = await http.post(

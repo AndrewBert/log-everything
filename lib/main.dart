@@ -16,11 +16,11 @@ import 'locator.dart';
 // Make main async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  configureDependencies();
 
   try {
     await dotenv.load(fileName: ".env");
     AppLogger.info('Environment variables loaded successfully.');
+    configureDependencies();
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
   }
@@ -55,7 +55,7 @@ class MyApp extends StatelessWidget {
           create:
               (context) => ChatCubit(
                 aiService: getIt<AiService>(),
-                entryRepository: getIt<EntryRepository>(),
+                // CP: Removed entryRepository as it's no longer a dependency
               ),
         ),
         BlocProvider<HomePageCubit>(

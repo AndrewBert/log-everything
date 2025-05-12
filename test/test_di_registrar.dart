@@ -4,7 +4,10 @@ import 'package:myapp/services/ai_service.dart'; // Import AI service
 import 'package:myapp/services/audio_recorder_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
 import 'package:myapp/services/permission_service.dart'; // Import Permission service
+import 'package:myapp/services/vector_store_service.dart'; // CP: Import VectorStoreService
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
+import 'package:shared_preferences/shared_preferences.dart'; // CP: Import SharedPreferences
+import 'package:http/http.dart' as http; // CP: Import http
 
 import 'mocks.mocks.dart'; // Import generated mocks
 
@@ -20,6 +23,11 @@ Future<void> setupTestDependencies({
   // or MockAudioRecorder if Record is used directly. Adjust as needed.
   required MockAudioRecorderService audioRecorder,
   required MockPermissionService permissionService,
+  required MockVectorStoreService
+  vectorStoreService, // CP: Add vectorStoreService mock
+  required MockSharedPreferences
+  sharedPreferences, // CP: Add SharedPreferences mock
+  required MockClient httpClient, // CP: Add http.Client mock
   // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
@@ -32,7 +40,15 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<SpeechService>(speechService);
   getIt.registerSingleton<AudioRecorderService>(audioRecorder);
   getIt.registerSingleton<PermissionService>(permissionService);
-  // Register other mocks if needed
+  getIt.registerSingleton<VectorStoreService>(
+    vectorStoreService,
+  ); // CP: Register VectorStoreService mock
+  getIt.registerSingleton<SharedPreferences>(
+    sharedPreferences,
+  ); // CP: Register SharedPreferences mock
+  getIt.registerSingleton<http.Client>(
+    httpClient,
+  ); // CP: Register http.Client mock
 
   // --- Register REAL EntryRepository ---
   // It depends on the mocked services registered above.
@@ -40,6 +56,8 @@ Future<void> setupTestDependencies({
     EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
       aiService: getIt<AiService>(),
+      vectorStoreService:
+          getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
     ),
   );
 

@@ -8,16 +8,19 @@ import 'dart:typed_data' as _i6;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i13;
+import 'package:myapp/chat/model/chat_message.dart' as _i12;
 import 'package:myapp/entry/entry.dart' as _i10;
 import 'package:myapp/services/ai_service.dart' as _i11;
-import 'package:myapp/services/audio_recorder_service.dart' as _i12;
+import 'package:myapp/services/audio_recorder_service.dart' as _i14;
 import 'package:myapp/services/entry_persistence_service.dart' as _i9;
 import 'package:myapp/services/permission_service.dart' as _i7;
+import 'package:myapp/services/vector_store_service.dart' as _i15;
 import 'package:myapp/speech_service.dart' as _i3;
 import 'package:permission_handler/permission_handler.dart' as _i8;
 import 'package:record/record.dart' as _i5;
 import 'package:record_platform_interface/record_platform_interface.dart'
     as _i2;
+import 'package:shared_preferences/shared_preferences.dart' as _i16;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -307,13 +310,28 @@ class MockAiService extends _i1.Mock implements _i11.AiService {
                 ),
           )
           as _i4.Future<List<({String category, String textSegment})>>);
+
+  @override
+  _i4.Future<String> getChatResponse({
+    required List<_i12.ChatMessage>? messages,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getChatResponse, [], {#messages: messages}),
+            returnValue: _i4.Future<String>.value(
+              _i13.dummyValue<String>(
+                this,
+                Invocation.method(#getChatResponse, [], {#messages: messages}),
+              ),
+            ),
+          )
+          as _i4.Future<String>);
 }
 
 /// A class which mocks [AudioRecorderService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAudioRecorderService extends _i1.Mock
-    implements _i12.AudioRecorderService {
+    implements _i14.AudioRecorderService {
   MockAudioRecorderService() {
     _i1.throwOnMissingStub(this);
   }
@@ -369,4 +387,167 @@ class MockAudioRecorderService extends _i1.Mock
             ),
           )
           as _i4.Future<String>);
+}
+
+/// A class which mocks [VectorStoreService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockVectorStoreService extends _i1.Mock
+    implements _i15.VectorStoreService {
+  MockVectorStoreService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<String> getOrCreateVectorStoreId() =>
+      (super.noSuchMethod(
+            Invocation.method(#getOrCreateVectorStoreId, []),
+            returnValue: _i4.Future<String>.value(
+              _i13.dummyValue<String>(
+                this,
+                Invocation.method(#getOrCreateVectorStoreId, []),
+              ),
+            ),
+          )
+          as _i4.Future<String>);
+
+  @override
+  _i4.Future<void> synchronizeDailyLogFile(
+    String? vectorStoreId,
+    DateTime? date,
+    String? formattedDailyLogContent,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#synchronizeDailyLogFile, [
+              vectorStoreId,
+              date,
+              formattedDailyLogContent,
+            ]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+}
+
+/// A class which mocks [SharedPreferences].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
+  MockSharedPreferences() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  Set<String> getKeys() =>
+      (super.noSuchMethod(
+            Invocation.method(#getKeys, []),
+            returnValue: <String>{},
+          )
+          as Set<String>);
+
+  @override
+  Object? get(String? key) =>
+      (super.noSuchMethod(Invocation.method(#get, [key])) as Object?);
+
+  @override
+  bool? getBool(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getBool, [key])) as bool?);
+
+  @override
+  int? getInt(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getInt, [key])) as int?);
+
+  @override
+  double? getDouble(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getDouble, [key])) as double?);
+
+  @override
+  String? getString(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getString, [key])) as String?);
+
+  @override
+  bool containsKey(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#containsKey, [key]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  List<String>? getStringList(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getStringList, [key]))
+          as List<String>?);
+
+  @override
+  _i4.Future<bool> setBool(String? key, bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setBool, [key, value]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> setInt(String? key, int? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setInt, [key, value]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> setDouble(String? key, double? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setDouble, [key, value]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> setString(String? key, String? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setString, [key, value]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> setStringList(String? key, List<String>? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setStringList, [key, value]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> remove(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#remove, [key]),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> commit() =>
+      (super.noSuchMethod(
+            Invocation.method(#commit, []),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> clear() =>
+      (super.noSuchMethod(
+            Invocation.method(#clear, []),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+
+  @override
+  _i4.Future<void> reload() =>
+      (super.noSuchMethod(
+            Invocation.method(#reload, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
 }
