@@ -63,29 +63,26 @@ class VectorStoreService {
 
   Future<String> getOrCreateVectorStoreId() async {
     String? vectorStoreId = _prefs.getString(_vectorStoreIdKey);
-    bool isPlaceholderId =
-        vectorStoreId != null && vectorStoreId.startsWith("vs_placeholder_id_");
 
-    if (vectorStoreId == null || vectorStoreId.isEmpty || isPlaceholderId) {
-      if (isPlaceholderId) {
-        AppLogger.info(
-          '[VectorStoreService] Found placeholder Vector Store ID: $vectorStoreId. Removing it and creating a new real one.',
-        );
-        // CP: Explicitly remove the placeholder ID from SharedPreferences
-        await _prefs.remove(_vectorStoreIdKey);
-        vectorStoreId = null; // CP: Ensure we proceed to creation path
-      } else {
-        AppLogger.info(
-          '[VectorStoreService] No existing Vector Store ID found or it was empty. Creating a new one.',
-        );
-      }
-      // CP: At this point, vectorStoreId is null, so we must create one.
+    if (vectorStoreId == null || vectorStoreId.isEmpty) {
+      AppLogger.info(
+        '[VectorStoreService] No existing Vector Store ID found or it was empty. Creating a new one.',
+      );
       try {
+        // CP: Generate a more unique name for the vector store
+        final String uniqueSuffix = DateTime.now().millisecondsSinceEpoch
+            .toRadixString(36);
+        final String vectorStoreName = 'LogEverythingApp_User_$uniqueSuffix';
+        AppLogger.info(
+          '[VectorStoreService] Attempting to create vector store with name: $vectorStoreName',
+        );
+
         final response = await _httpClient.post(
           Uri.parse('$_openAIBaseUrl/vector_stores'),
           headers: _getHeaders(),
           body: jsonEncode({
-            'name': 'LogEverythingAppVectorStore',
+            'name':
+                vectorStoreName, // CP: Use the dynamically generated unique name
             // CP: You can add metadata here if needed, e.g., app version
             // CP: "metadata": { "app_version": "1.0.0" }
           }),
@@ -102,12 +99,9 @@ class VectorStoreService {
           }
           vectorStoreId = createdId; // CP: Assign to the broader scope variable
           AppLogger.info(
-            '[VectorStoreService] New Vector Store created with ID: $vectorStoreId',
+            '[VectorStoreService] New Vector Store created with ID: $vectorStoreId and Name: $vectorStoreName',
           );
-          await _prefs.setString(
-            _vectorStoreIdKey,
-            vectorStoreId!,
-          ); // CP: Save the new, real ID
+          await _prefs.setString(_vectorStoreIdKey, vectorStoreId);
         } else {
           AppLogger.error(
             '[VectorStoreService] Failed to create vector store. Status: ${response.statusCode}, Body: ${response.body}',
@@ -134,19 +128,11 @@ class VectorStoreService {
         '[VectorStoreService] Using existing real Vector Store ID: $vectorStoreId',
       );
     }
-    // CP: If execution reaches here, vectorStoreId is guaranteed to be non-null
-    // CP: and real due to the logic above (either fetched, or created and saved, or an exception thrown).
-    if (vectorStoreId == null || vectorStoreId.isEmpty) {
-      // CP: This case should ideally not be reached if logic is correct.
-      // CP: It implies creation failed AND did not throw, or a placeholder was not properly cleared.
-      AppLogger.error(
-        '[VectorStoreService] CRITICAL: vectorStoreId is null or empty before return after creation/retrieval attempt.',
-      );
-      throw VectorStoreApiException(
-        'Vector Store ID is null or empty after creation/retrieval attempt.',
-      );
-    }
-    return vectorStoreId;
+    // CP: If execution reaches here, vectorStoreId should be non-null and non-empty.
+    // CP: Either it was valid from SharedPreferences, or it was successfully created and assigned.
+    // CP: If creation failed, an exception should have been thrown.
+    // CP: The method signature is Future<String>, so a non-null String is expected.
+    return vectorStoreId; // CP: Removed redundant null assertion.
   }
 
   Future<Map<String, String>> _getDailyLogFileIds() async {

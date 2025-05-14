@@ -408,6 +408,18 @@ class EntryRepository {
     String oldName,
     String newName,
   ) async {
+    // todo this was the old code, the misc check was removed by accident i think. investigate
+
+    //   if (oldName == 'Misc' ||
+    //   trimmedNewName.isEmpty ||
+    //   oldName == trimmedNewName ||
+    //   _categories.any(
+    //     (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
+    //   )) {
+    // AppLogger.warn(
+    //   'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
+    // );
+
     final trimmedNewName = newName.trim();
     if (trimmedNewName.isEmpty ||
         trimmedNewName == oldName ||

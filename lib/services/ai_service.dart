@@ -383,36 +383,104 @@ class OpenAiService implements AiService {
           throw AiServiceException(errorMsg);
         }
 
+        // CP: Start of new parsing logic for chat response
         if (responseBody['output'] != null &&
             responseBody['output'] is List &&
-            responseBody['output'].isNotEmpty &&
-            responseBody['output'][0]['type'] == 'message' &&
-            responseBody['output'][0]['content'] != null &&
-            responseBody['output'][0]['content'] is List &&
-            responseBody['output'][0]['content'].isNotEmpty &&
-            responseBody['output'][0]['content'][0]['type'] == 'output_text' &&
-            responseBody['output'][0]['content'][0]['text'] != null) {
-          final String aiResponseText =
-              responseBody['output'][0]['content'][0]['text'];
-          AppLogger.info(
-            "Received chat response from OpenAI: '$aiResponseText'",
-          );
-          return aiResponseText;
-        } else if (responseBody['output'] != null &&
-            responseBody['output'] is List &&
-            responseBody['output'].isNotEmpty &&
-            responseBody['output'][0]['type'] == 'refusal' &&
-            responseBody['output'][0]['refusal'] != null) {
-          final errorMsg =
-              'OpenAI refused the chat request: ${responseBody['output'][0]['refusal']}';
-          AppLogger.error(errorMsg);
-          throw AiServiceException(errorMsg);
+            (responseBody['output'] as List).isNotEmpty) {
+          // CP: Iterate through the output array to find the message
+          Map<String, dynamic>? messageOutputElement;
+          for (final item in responseBody['output'] as List) {
+            if (item is Map<String, dynamic> && item['type'] == 'message') {
+              messageOutputElement = item;
+              break;
+            }
+          }
+
+          if (messageOutputElement != null) {
+            final String? outputType =
+                messageOutputElement['type']
+                    as String?; // CP: This will be 'message'
+
+            // CP: No need to check outputType == 'message' again, as we've already found it.
+            // if (outputType == 'message') { // CP: This check is now redundant
+            final dynamic content = messageOutputElement['content'];
+            if (content != null && content is List && content.isNotEmpty) {
+              String? aiResponseText;
+              for (final item in content) {
+                if (item is Map<String, dynamic> &&
+                    item['type'] == 'output_text' &&
+                    item['text'] != null) {
+                  aiResponseText = item['text'] as String;
+                  break;
+                }
+              }
+
+              if (aiResponseText != null) {
+                AppLogger.info(
+                  "Received chat response from OpenAI: '$aiResponseText'",
+                );
+                return aiResponseText;
+              } else {
+                // CP: No 'output_text' found in message content
+                final errorMsg =
+                    'AI message content did not contain usable text output.';
+                AppLogger.error('$errorMsg Body: ${response.body}');
+                throw AiServiceException(errorMsg);
+              }
+            } else {
+              // CP: Message content is null, not a list, or empty
+              final errorMsg =
+                  'AI message content was missing, malformed, or empty.';
+              AppLogger.error('$errorMsg Body: ${response.body}');
+              throw AiServiceException(errorMsg);
+            }
+            // CP: } else if (outputType == 'refusal') { // CP: This block might be unreachable if we only look for 'message' type.
+            // CP: Consider if 'refusal' can appear within the 'output' array alongside 'file_search_call'
+            // CP: For now, this specific error was about not finding 'message' due to 'file_search_call' being first.
+            // CP: If a 'refusal' can be the *only* relevant item, the logic might need adjustment.
+            //   final refusalMessage = firstOutputElement['refusal'] as String?;
+            //   final errorMsg =
+            //       'OpenAI refused the chat request: ${refusalMessage ?? "No refusal message provided."}';
+            //   AppLogger.error(errorMsg);
+            //   throw AiServiceException(errorMsg);
+            // } else {
+            //   // CP: Unknown output type
+            //   final errorMsg =
+            //       'Unexpected output type (\'$outputType\') in OpenAI response when expecting a message.';
+            //   AppLogger.error('$errorMsg Body: ${response.body}');
+            //   throw AiServiceException(errorMsg);
+            // }
+          } else {
+            // CP: No 'message' type found in the output array.
+            // CP: Check for refusal as a top-level output item if no message is found.
+            Map<String, dynamic>? refusalOutputElement;
+            for (final item in responseBody['output'] as List) {
+              if (item is Map<String, dynamic> && item['type'] == 'refusal') {
+                refusalOutputElement = item;
+                break;
+              }
+            }
+            if (refusalOutputElement != null) {
+              final refusalMessage = refusalOutputElement['refusal'] as String?;
+              final errorMsg =
+                  'OpenAI refused the chat request: ${refusalMessage ?? "No refusal message provided."}';
+              AppLogger.error(errorMsg);
+              throw AiServiceException(errorMsg);
+            } else {
+              final errorMsg =
+                  'No usable message or refusal found in OpenAI response output.';
+              AppLogger.error('$errorMsg Body: ${response.body}');
+              throw AiServiceException(errorMsg);
+            }
+          }
         } else {
+          // CP: 'output' array is null, not a list, or empty
           final errorMsg =
-              'Failed to parse chat response from OpenAI or unexpected structure.';
+              'Failed to parse chat response: \'output\' array was missing, malformed, or empty.';
           AppLogger.error('$errorMsg Body: ${response.body}');
           throw AiServiceException(errorMsg);
         }
+        // CP: End of new parsing logic
       } else {
         String errorMessage;
         if (response.statusCode == 400) {
