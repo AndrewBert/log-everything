@@ -36,24 +36,25 @@ class EntryRepository {
     await _loadCategories();
     await _loadEntries();
 
-    // CP: Perform initial backfill if needed. This should run before any other sync.
-    try {
-      AppLogger.info(
-        "Repository: Starting initial vector store backfill check.",
-      );
-      await _vectorStoreService.performInitialBackfillIfNeeded();
-      AppLogger.info(
-        "Repository: Initial vector store backfill check completed.",
-      );
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        "Repository: Initial vector store backfill failed",
-        error: e,
-        stackTrace: stackTrace,
-      );
-      // CP: Decide if this error should prevent app startup or just be logged.
-      // CP: For now, logging and continuing.
-    }
+    // CP: Perform initial backfill if needed. This should run in the background.
+    AppLogger.info(
+      "Repository: Triggering initial vector store backfill check (background).",
+    );
+    _vectorStoreService
+        .performInitialBackfillIfNeeded()
+        .then((_) {
+          AppLogger.info(
+            "Repository: Initial vector store backfill process completed (background).",
+          );
+        })
+        .catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Initial vector store backfill failed (background)",
+            error: e,
+            stackTrace: stackTrace,
+          );
+          // CP: Logged, no rethrow as it's a background task.
+        });
 
     // CP: Trigger initial sync for today's logs
     _triggerVectorStoreSyncForDate(DateTime.now()).catchError((e, stackTrace) {
