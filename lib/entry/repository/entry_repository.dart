@@ -35,6 +35,26 @@ class EntryRepository {
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
+
+    // CP: Perform initial backfill if needed. This should run before any other sync.
+    try {
+      AppLogger.info(
+        "Repository: Starting initial vector store backfill check.",
+      );
+      await _vectorStoreService.performInitialBackfillIfNeeded();
+      AppLogger.info(
+        "Repository: Initial vector store backfill check completed.",
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        "Repository: Initial vector store backfill failed",
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // CP: Decide if this error should prevent app startup or just be logged.
+      // CP: For now, logging and continuing.
+    }
+
     // CP: Trigger initial sync for today's logs
     _triggerVectorStoreSyncForDate(DateTime.now()).catchError((e, stackTrace) {
       AppLogger.error(
@@ -491,8 +511,16 @@ class EntryRepository {
       "[EntryRepository] Triggering vector store sync for date: $date",
     );
     try {
-      final String vectorStoreId =
+      // CP: Ensure vectorStoreId can be null and handle it.
+      final String? vectorStoreId =
           await _vectorStoreService.getOrCreateVectorStoreId();
+
+      if (vectorStoreId == null) {
+        AppLogger.warn(
+          "[EntryRepository] Vector store ID is null. Skipping sync for date: $date",
+        );
+        return;
+      }
 
       // Format entries for the given day
       final DateFormat dayFormatter = DateFormat('yyyy-MM-dd');

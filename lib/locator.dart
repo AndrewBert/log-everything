@@ -37,6 +37,8 @@ Future<void> configureDependencies() async {
       sharedPreferences: getIt<SharedPreferences>(),
       httpClient: getIt<http.Client>(),
       apiKey: openAIApiKey, // CP: Use the API key loaded from .env
+      // CP: Provide EntryPersistenceService to VectorStoreService
+      entryPersistenceService: getIt<EntryPersistenceService>(),
     ),
   );
 
