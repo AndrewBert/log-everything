@@ -19,8 +19,6 @@ const String _fullBackfillRunAttemptedKey =
 // CP: Define the base URL for OpenAI API
 const String _openAIBaseUrl = 'https://api.openai.com/v1';
 
-// CP: Define SharedPreferences key for storing daily log file IDs (legacy)
-const String _legacyDailyLogFileIdsKey = 'vector_store_daily_log_file_ids';
 // CP: Define SharedPreferences key for storing monthly log file IDs
 const String _monthlyLogFileIdsKey = 'vector_store_monthly_log_file_ids';
 
@@ -81,98 +79,6 @@ class VectorStoreService {
        _apiKey = apiKey,
        _entryPersistenceService =
            entryPersistenceService; // CP: Initialize field
-
-  // CP: Temporary method to clear SharedPreferences for migration to monthly logs.
-  // CP: Call this ONCE after manually clearing vector store files from OpenAI.
-  Future<void> prepareForMonthlyMigration() async {
-    AppLogger.info(
-      '[VectorStoreService] Preparing for monthly migration: Clearing relevant SharedPreferences keys.',
-    );
-    await _prefs.remove(_backfillLastSuccessfulDateKey);
-    AppLogger.info(
-      '[VectorStoreService] Removed _backfillLastSuccessfulDateKey.',
-    );
-    await _prefs.remove(
-      _legacyDailyLogFileIdsKey,
-    ); // CP: Remove the old daily key
-    AppLogger.info('[VectorStoreService] Removed _legacyDailyLogFileIdsKey.');
-    await _prefs.setBool(_fullBackfillRunAttemptedKey, false);
-    AppLogger.info(
-      '[VectorStoreService] Set _fullBackfillRunAttemptedKey to false.',
-    );
-    // CP: Also clear the new monthly key in case of any partial previous attempts during development
-    await _prefs.remove(_monthlyLogFileIdsKey);
-    AppLogger.info(
-      '[VectorStoreService] Cleared _monthlyLogFileIdsKey as a precaution.',
-    );
-    AppLogger.info(
-      '[VectorStoreService] SharedPreferences prepared for monthly migration.',
-    );
-  }
-
-  // CP: Temporary method to print relevant SharedPreferences values for debugging
-  Future<void> debugPrintSharedPreferences() async {
-    AppLogger.info('[VectorStoreService] Debugging SharedPreferences...');
-
-    final String? backfillLastSuccessfulDate = _prefs.getString(
-      _backfillLastSuccessfulDateKey,
-    );
-    AppLogger.info(
-      '[VectorStoreService] Value of _backfillLastSuccessfulDateKey ($_backfillLastSuccessfulDateKey): $backfillLastSuccessfulDate',
-    );
-
-    final bool fullBackfillRunAttempted =
-        _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
-    AppLogger.info(
-      '[VectorStoreService] Value of _fullBackfillRunAttemptedKey ($_fullBackfillRunAttemptedKey): $fullBackfillRunAttempted',
-    );
-
-    final String? monthlyLogFileIdsString = _prefs.getString(
-      _monthlyLogFileIdsKey,
-    );
-    AppLogger.info(
-      '[VectorStoreService] Value of _monthlyLogFileIdsKey ($_monthlyLogFileIdsKey): $monthlyLogFileIdsString',
-    );
-    if (monthlyLogFileIdsString != null && monthlyLogFileIdsString.isNotEmpty) {
-      try {
-        final Map<String, dynamic> monthlyIds = jsonDecode(
-          monthlyLogFileIdsString,
-        );
-        AppLogger.info(
-          '[VectorStoreService] Parsed _monthlyLogFileIdsKey: $monthlyIds',
-        );
-      } catch (e) {
-        AppLogger.error(
-          '[VectorStoreService] Could not parse _monthlyLogFileIdsKey JSON: $e',
-        );
-      }
-    }
-
-    final String? legacyDailyLogFileIdsString = _prefs.getString(
-      _legacyDailyLogFileIdsKey,
-    );
-    AppLogger.info(
-      '[VectorStoreService] Value of _legacyDailyLogFileIdsKey ($_legacyDailyLogFileIdsKey): $legacyDailyLogFileIdsString',
-    );
-    if (legacyDailyLogFileIdsString != null &&
-        legacyDailyLogFileIdsString.isNotEmpty) {
-      try {
-        final Map<String, dynamic> legacyIds = jsonDecode(
-          legacyDailyLogFileIdsString,
-        );
-        AppLogger.info(
-          '[VectorStoreService] Parsed _legacyDailyLogFileIdsKey: $legacyIds',
-        );
-      } catch (e) {
-        AppLogger.error(
-          '[VectorStoreService] Could not parse _legacyDailyLogFileIdsKey JSON: $e',
-        );
-      }
-    }
-    AppLogger.info(
-      '[VectorStoreService] Finished debugging SharedPreferences.',
-    );
-  }
 
   Future<String?> getOrCreateVectorStoreId() async {
     String? vectorStoreId = _prefs.getString(_vectorStoreIdKey);
