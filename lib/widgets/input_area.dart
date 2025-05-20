@@ -82,8 +82,7 @@ class _InputAreaState extends State<InputArea> {
         final isInputFocused = homeScreenState.isInputFocused;
         final isChatOpen = homeScreenState.isChatOpen;
 
-        final String hintText =
-            isChatOpen ? 'Type your message...' : 'What happened?...';
+        final String hintText = isChatOpen ? 'Ask anything' : 'Log it or else';
         final String labelText =
             isChatOpen
                 ? 'Chatting...'
