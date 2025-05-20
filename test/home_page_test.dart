@@ -54,7 +54,7 @@ class HomePageTestScope {
   );
   static final entryYesterday = Entry(
     text: 'Entry yesterday',
-    timestamp: yesterday.add(const Duration(hours: 16)),
+    timestamp: yesterday.add(const Duration(hours: 4)),
     category: 'Personal',
   );
   static final entryOlder = Entry(
@@ -204,22 +204,22 @@ void main() {
         _thenEntryIsDisplayed(
           tester,
           HomePageTestScope.entryToday1.text,
-          '14:30',
+          '2:30 PM',
         );
         _thenEntryIsDisplayed(
           tester,
           HomePageTestScope.entryToday2.text,
-          '10:15',
+          '10:15 AM',
         );
         _thenEntryIsDisplayed(
           tester,
           HomePageTestScope.entryYesterday.text,
-          '16:00',
+          '4:00 PM',
         );
         _thenEntryIsDisplayed(
           tester,
           HomePageTestScope.entryOlder.text,
-          '09:00',
+          '9:00 AM',
         );
       });
 
@@ -414,7 +414,7 @@ void main() {
           // GIVEN
           await _givenHomePageIsDisplayed(tester, scope);
           final entryToDelete = HomePageTestScope.entryToday1;
-          _thenEntryIsDisplayed(tester, entryToDelete.text, '14:30');
+          _thenEntryIsDisplayed(tester, entryToDelete.text, '2:30 PM');
 
           final expectedEntriesAfterDelete = _getExpectedEntriesAfterDelete(
             entryToDelete,
