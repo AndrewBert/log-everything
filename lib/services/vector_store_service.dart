@@ -189,7 +189,7 @@ class VectorStoreService {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$_openAIBaseUrl/files'), // CP: Use _openAIBaseUrl
+        Uri.parse('$_openAIBaseUrl/files'),
       );
       request.headers.addAll(_getHeaders(isJsonContent: false));
       request.fields['purpose'] = 'assistants';
@@ -238,18 +238,31 @@ class VectorStoreService {
 
   Future<void> _addFileToVectorStore(
     String vectorStoreId,
-    String fileId,
-  ) async {
+    String fileId, {
+    List<Entry>? entries,
+    DateTime? monthDate,
+  }) async {
     AppLogger.info(
       '[VectorStoreService] Adding file "$fileId" to Vector Store "$vectorStoreId".',
     );
     try {
+      // CP: Calculate metadata if we have entries
+      Map<String, dynamic>? attributes;
+      if (entries != null && entries.isNotEmpty && monthDate != null) {
+        attributes = _calculateMonthlyMetadata(entries, monthDate);
+      }
+
+      final Map<String, dynamic> body = {'file_id': fileId};
+      if (attributes != null) {
+        body['attributes'] = attributes;
+      }
+
       final response = await _httpClient.post(
         Uri.parse(
           '$_openAIBaseUrl/vector_stores/$vectorStoreId/files',
         ), // CP: Use _openAIBaseUrl
         headers: _getHeaders(),
-        body: jsonEncode({'file_id': fileId}),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -520,8 +533,21 @@ class VectorStoreService {
     try {
       AppLogger.info(
         '[VectorStoreService] Adding new file $newFileId to vector store $vectorStoreId.',
+      ); // Get entries for metadata
+      final List<Entry> allEntries =
+          await _entryPersistenceService.loadEntries();
+      final List<Entry> monthEntries =
+          allEntries.where((e) {
+            return e.timestamp.year == date.year &&
+                e.timestamp.month == date.month;
+          }).toList();
+
+      await _addFileToVectorStore(
+        vectorStoreId,
+        newFileId,
+        entries: monthEntries,
+        monthDate: date,
       );
-      await _addFileToVectorStore(vectorStoreId, newFileId);
       AppLogger.info(
         '[VectorStoreService] File $newFileId successfully added and processed in vector store $vectorStoreId.',
       );
@@ -774,6 +800,26 @@ class VectorStoreService {
   // CP: Helper to format timestamp for individual log entries within a monthly file
   String _formatTimestampForLog(DateTime timestamp) {
     return "${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}";
+  } // CP: Helper to calculate metadata attributes for a month's entries
+
+  // Follows OpenAI API requirements:
+  // - Max 16 key-value pairs
+  // - Keys: max 64 chars
+  // - Values: max 512 chars, can be string/bool/number
+  Map<String, dynamic> _calculateMonthlyMetadata(
+    List<Entry> entries,
+    DateTime monthDate,
+  ) {
+    // Sort entries to find first and last timestamps
+    entries.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    return {
+      'month': _formatMonthKeyForStorage(monthDate),
+      'entry_count': entries.length,
+      'first_entry_ts': entries.first.timestamp.millisecondsSinceEpoch,
+      'last_entry_ts': entries.last.timestamp.millisecondsSinceEpoch,
+      'last_sync_ts': DateTime.now().millisecondsSinceEpoch,
+    };
   }
 
   // CP: Helper to get headers for OpenAI API calls
