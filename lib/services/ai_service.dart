@@ -21,15 +21,15 @@ abstract class AiService {
   );
 
   /// Gets a chat response from the AI model based on the provided message history
-  /// and optional log context.
+  /// and current date.
   ///
   /// Takes a list of [ChatMessage] objects representing the conversation history
-  /// and an optional [logContext] string containing relevant log entries.
+  /// and the current [DateTime] to provide temporal context for queries.
   /// Returns a plain text response from the AI model.
   /// Throws an [AiServiceException] if the process fails.
   Future<String> getChatResponse({
     required List<ChatMessage> messages,
-    // CP: Removed logContext String? logContext,
+    DateTime? currentDate,
   });
 }
 
@@ -306,7 +306,7 @@ Respond with a JSON object containing an array named "entries" holding these str
   @override
   Future<String> getChatResponse({
     required List<ChatMessage> messages,
-    // CP: Removed logContext
+    DateTime? currentDate,
   }) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
@@ -332,16 +332,18 @@ Respond with a JSON object containing an array named "entries" holding these str
     }
 
     final List<Map<String, dynamic>> inputMessages =
-        messages.map((msg) {
-          return {
-            "role": msg.sender == ChatSender.user ? "user" : "assistant",
-            "content": msg.text,
-          };
-        }).toList();
-
-    // CP: Updated system instructions for File Search
-    const String systemInstructions =
-        "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.";
+        messages.map(
+          (msg) {
+            return {
+              "role": msg.sender == ChatSender.user ? "user" : "assistant",
+              "content": msg.text,
+            };
+          },
+        ).toList(); // CP: Updated system instructions for File Search with temporal context
+    final String systemInstructions =
+        currentDate != null
+            ? "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files. Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
+            : "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.";
 
     // CP: Prepare the request body, including system instructions as the first message
     final Map<String, dynamic> requestBody = {
@@ -403,14 +405,8 @@ Respond with a JSON object containing an array named "entries" holding these str
               break;
             }
           }
-
           if (messageOutputElement != null) {
-            final String? outputType =
-                messageOutputElement['type']
-                    as String?; // CP: This will be 'message'
-
-            // CP: No need to check outputType == 'message' again, as we've already found it.
-            // if (outputType == 'message') { // CP: This check is now redundant
+            // CP: We already know this is a message type from the search above
             final dynamic content = messageOutputElement['content'];
             if (content != null && content is List && content.isNotEmpty) {
               String? aiResponseText;

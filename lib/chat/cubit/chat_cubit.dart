@@ -35,9 +35,10 @@ class ChatCubit extends Cubit<ChatState> {
     try {
       // CP: Get the full conversation history to send to the API
       // CP: This includes the new user message we just added to the state for context.
-
       final String aiResponseText = await _aiService.getChatResponse(
-        messages: state.messages, // CP: Pass only messages, no logContext
+        messages: state.messages,
+        currentDate:
+            DateTime.now(), // CP: Pass current date for temporal context
       );
 
       final aiMessage = ChatMessage(
