@@ -1,11 +1,9 @@
 import 'dart:convert';
-// CP: Removed unused import 'dart:io';
-// CP: Removed unused import 'package:flutter/foundation.dart';
+import 'dart:async'; // CP: Added for Completer
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart'; // CP: Added back for DateFormat
 import 'package:myapp/entry/entry.dart'; // CP: Added import for Entry
 import 'package:myapp/services/entry_persistence_service.dart'; // CP: Added import for EntryPersistenceService
-// CP: Removed unused import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/logger.dart';
@@ -65,6 +63,8 @@ class VectorStoreService {
   final http.Client _httpClient;
   final String _apiKey;
   final EntryPersistenceService _entryPersistenceService;
+  // CP: Add lock map to prevent concurrent syncs of the same month
+  final Map<String, Future<void>> _monthSyncLocks = {};
 
   static const String _vectorStoreIdKey = 'openai_vector_store_id';
 
@@ -453,132 +453,163 @@ class VectorStoreService {
     }
   }
 
+  // CP: Method to acquire sync lock for a month
+  Future<T> _withMonthSyncLock<T>(
+    String monthKey,
+    Future<T> Function() action,
+  ) async {
+    // Wait for any existing sync to complete
+    while (_monthSyncLocks.containsKey(monthKey)) {
+      try {
+        await _monthSyncLocks[monthKey];
+      } catch (_) {
+        // Previous sync failed, but we still want to continue with new sync
+      }
+    }
+
+    // Create new sync future
+    final completer = Completer<void>();
+    _monthSyncLocks[monthKey] = completer.future;
+
+    try {
+      final result = await action();
+      completer.complete();
+      return result;
+    } catch (e) {
+      completer.completeError(e);
+      rethrow;
+    } finally {
+      _monthSyncLocks.remove(monthKey);
+    }
+  }
+
   // CP: Renamed from synchronizeDailyLogFile and updated for monthly aggregation
   Future<void> synchronizeMonthlyLogFile(
     String vectorStoreId,
-    DateTime
-    date, // CP: This date now represents the month (e.g., first day of the month)
-    String formattedMonthlyLogContent, // CP: Content for the entire month
+    DateTime date,
+    String formattedMonthlyLogContent,
   ) async {
-    // CP: Use year and month for the key
     final monthKey = _formatMonthKeyForStorage(date);
-    final fileName = "logs_$monthKey.txt"; // CP: Monthly filename
-    AppLogger.info(
-      '[VectorStoreService] Starting synchronization for month: $monthKey, file: $fileName',
-    );
+    final fileName = "logs_$monthKey.txt";
 
-    Map<String, String> monthlyLogFileIds = await _getMonthlyLogFileIds();
-    final String? existingFileId =
-        monthlyLogFileIds[monthKey]; // CP: Use monthKey
-
-    if (existingFileId != null) {
+    return _withMonthSyncLock(monthKey, () async {
       AppLogger.info(
-        '[VectorStoreService] Existing file found for $monthKey: $existingFileId. Deleting it first.',
+        '[VectorStoreService] Starting synchronization for month: $monthKey, file: $fileName',
       );
-      try {
-        await _deleteFileFromVectorStore(vectorStoreId, existingFileId);
-      } catch (e) {
-        AppLogger.warn(
-          '[VectorStoreService] Error deleting file $existingFileId from vector store $vectorStoreId during sync: $e. Will attempt to delete OpenAI file anyway.',
-        );
-      }
-      try {
-        await _deleteOpenAIFile(existingFileId);
-      } catch (e) {
-        AppLogger.warn(
-          '[VectorStoreService] Error deleting OpenAI file $existingFileId during sync: $e. Proceeding with upload of new file.',
-        );
-      }
-    }
 
-    if (formattedMonthlyLogContent.isEmpty) {
-      AppLogger.info(
-        '[VectorStoreService] Formatted monthly log content for $monthKey is empty.',
-      );
+      Map<String, String> monthlyLogFileIds = await _getMonthlyLogFileIds();
+      final String? existingFileId = monthlyLogFileIds[monthKey];
+
       if (existingFileId != null) {
         AppLogger.info(
-          '[VectorStoreService] Removing $monthKey from monthly_log_file_ids as content is now empty.',
+          '[VectorStoreService] Existing file found for $monthKey: $existingFileId. Deleting it first.',
         );
-        monthlyLogFileIds.remove(monthKey); // CP: Use monthKey
-        await _saveMonthlyLogFileIds(monthlyLogFileIds);
+        try {
+          await _deleteFileFromVectorStore(vectorStoreId, existingFileId);
+        } catch (e) {
+          AppLogger.warn(
+            '[VectorStoreService] Error deleting file $existingFileId from vector store $vectorStoreId during sync: $e. Will attempt to delete OpenAI file anyway.',
+          );
+        }
+        try {
+          await _deleteOpenAIFile(existingFileId);
+        } catch (e) {
+          AppLogger.warn(
+            '[VectorStoreService] Error deleting OpenAI file $existingFileId during sync: $e. Proceeding with upload of new file.',
+          );
+        }
       }
-      AppLogger.info(
-        '[VectorStoreService] Synchronization for $monthKey skipped as content is empty.',
-      );
-      return;
-    }
 
-    AppLogger.info('[VectorStoreService] Uploading new content for $monthKey.');
-    String newFileId;
-    try {
-      newFileId = await _uploadLogContentToOpenAIFile(
-        fileName,
-        formattedMonthlyLogContent,
-      );
-      AppLogger.info(
-        '[VectorStoreService] Content for $monthKey uploaded. New file ID: $newFileId',
-      );
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        '[VectorStoreService] Failed to upload log content for $monthKey to OpenAI.',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      throw VectorStoreSyncException(
-        'Failed to upload log content for $monthKey',
-        underlyingError: e,
-      );
-    }
+      if (formattedMonthlyLogContent.isEmpty) {
+        AppLogger.info(
+          '[VectorStoreService] Formatted monthly log content for $monthKey is empty.',
+        );
+        if (existingFileId != null) {
+          AppLogger.info(
+            '[VectorStoreService] Removing $monthKey from monthly_log_file_ids as content is now empty.',
+          );
+          monthlyLogFileIds.remove(monthKey); // CP: Use monthKey
+          await _saveMonthlyLogFileIds(monthlyLogFileIds);
+        }
+        AppLogger.info(
+          '[VectorStoreService] Synchronization for $monthKey skipped as content is empty.',
+        );
+        return;
+      }
 
-    try {
       AppLogger.info(
-        '[VectorStoreService] Adding new file $newFileId to vector store $vectorStoreId.',
-      ); // Get entries for metadata
-      final List<Entry> allEntries =
-          await _entryPersistenceService.loadEntries();
-      final List<Entry> monthEntries =
-          allEntries.where((e) {
-            return e.timestamp.year == date.year &&
-                e.timestamp.month == date.month;
-          }).toList();
-
-      await _addFileToVectorStore(
-        vectorStoreId,
-        newFileId,
-        entries: monthEntries,
-        monthDate: date,
+        '[VectorStoreService] Uploading new content for $monthKey.',
       );
-      AppLogger.info(
-        '[VectorStoreService] File $newFileId successfully added and processed in vector store $vectorStoreId.',
-      );
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        '[VectorStoreService] Failed to add file $newFileId for $monthKey to vector store $vectorStoreId.',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      String newFileId;
       try {
-        AppLogger.warn(
-          '[VectorStoreService] Attempting to delete orphaned OpenAI file $newFileId after vector store add failure.',
+        newFileId = await _uploadLogContentToOpenAIFile(
+          fileName,
+          formattedMonthlyLogContent,
         );
-        await _deleteOpenAIFile(newFileId);
-      } catch (cleanupError) {
+        AppLogger.info(
+          '[VectorStoreService] Content for $monthKey uploaded. New file ID: $newFileId',
+        );
+      } catch (e, stackTrace) {
         AppLogger.error(
-          '[VectorStoreService] Failed to delete orphaned OpenAI file $newFileId during cleanup.',
-          error: cleanupError,
+          '[VectorStoreService] Failed to upload log content for $monthKey to OpenAI.',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        throw VectorStoreSyncException(
+          'Failed to upload log content for $monthKey',
+          underlyingError: e,
         );
       }
-      throw VectorStoreSyncException(
-        'Failed to add file $newFileId for $monthKey to vector store',
-        underlyingError: e,
-      );
-    }
 
-    monthlyLogFileIds[monthKey] = newFileId; // CP: Use monthKey
-    await _saveMonthlyLogFileIds(monthlyLogFileIds);
-    AppLogger.info(
-      '[VectorStoreService] Successfully synchronized file for $monthKey. New ID $newFileId stored.',
-    );
+      try {
+        AppLogger.info(
+          '[VectorStoreService] Adding new file $newFileId to vector store $vectorStoreId.',
+        ); // Get entries for metadata
+        final List<Entry> allEntries =
+            await _entryPersistenceService.loadEntries();
+        final List<Entry> monthEntries =
+            allEntries.where((e) {
+              return e.timestamp.year == date.year &&
+                  e.timestamp.month == date.month;
+            }).toList();
+        await _addFileToVectorStore(
+          vectorStoreId,
+          newFileId,
+          entries: monthEntries,
+          monthDate: date,
+        );
+        AppLogger.info(
+          '[VectorStoreService] File $newFileId successfully added and processed in vector store $vectorStoreId.',
+        );
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          '[VectorStoreService] Failed to add file $newFileId for $monthKey to vector store $vectorStoreId.',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        try {
+          AppLogger.warn(
+            '[VectorStoreService] Attempting to delete orphaned OpenAI file $newFileId after vector store add failure.',
+          );
+          await _deleteOpenAIFile(newFileId);
+        } catch (cleanupError) {
+          AppLogger.error(
+            '[VectorStoreService] Failed to delete orphaned OpenAI file $newFileId during cleanup.',
+            error: cleanupError,
+          );
+        }
+        throw VectorStoreSyncException(
+          'Failed to add file $newFileId for $monthKey to vector store',
+          underlyingError: e,
+        );
+      }
+
+      monthlyLogFileIds[monthKey] = newFileId; // CP: Use monthKey
+      await _saveMonthlyLogFileIds(monthlyLogFileIds);
+      AppLogger.info(
+        '[VectorStoreService] Successfully synchronized file for $monthKey. New ID $newFileId stored.',
+      );
+    });
   }
 
   // CP: New method to perform initial backfill of historical logs.
