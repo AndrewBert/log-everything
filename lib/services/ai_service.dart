@@ -115,7 +115,15 @@ class OpenAiService implements AiService {
         {
           "role": "system",
           "content":
-              "Analyze the user's text. Identify distinct pieces of information or tasks. **Group related sentences or ideas into a single entry whenever possible.** Avoid splitting closely related concepts into separate entries. For each logical entry, extract the relevant text segment (which might span multiple sentences) and assign the most appropriate category from the provided list using the JSON schema. If a segment doesn't fit any specific category, use 'Misc'. Respond with a JSON object containing an array named 'entries' holding these structured segments.",
+              """Analyze the user's text. Identify core ideas or distinct pieces of information, prioritizing clarity and conciseness over raw length.
+
+Summarize long or repetitive content into bullet-point-style entries that capture the essential meaning without unnecessary detail. Avoid preserving filler, repeated thoughts, or overly verbose phrasing.
+
+Group related thoughts when they contribute to a single clear idea, but split distinct ideas into their own entries — even if they're short.
+
+For each bullet-like idea, assign the most appropriate category from the provided list using the JSON schema. If a point doesn't fit a category, use "Misc".
+
+Respond with a JSON object containing an array named "entries" holding these structured, distilled points.""",
         },
         {"role": "user", "content": text},
       ],
@@ -127,7 +135,7 @@ class OpenAiService implements AiService {
           'strict': true,
         },
       },
-      'temperature': 0.2,
+      // 'temperature': 0.2,
     };
 
     // 3. Execute API Call and Handle Response/Errors
