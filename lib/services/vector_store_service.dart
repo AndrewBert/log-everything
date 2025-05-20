@@ -19,8 +19,10 @@ const String _fullBackfillRunAttemptedKey =
 // CP: Define the base URL for OpenAI API
 const String _openAIBaseUrl = 'https://api.openai.com/v1';
 
-// CP: Define SharedPreferences key for storing daily log file IDs
-const String _dailyLogFileIdsKey = 'vector_store_daily_log_file_ids';
+// CP: Define SharedPreferences key for storing daily log file IDs (legacy)
+const String _legacyDailyLogFileIdsKey = 'vector_store_daily_log_file_ids';
+// CP: Define SharedPreferences key for storing monthly log file IDs
+const String _monthlyLogFileIdsKey = 'vector_store_monthly_log_file_ids';
 
 // CP: Custom Exception for Vector Store API errors
 class VectorStoreApiException implements Exception {
@@ -79,6 +81,98 @@ class VectorStoreService {
        _apiKey = apiKey,
        _entryPersistenceService =
            entryPersistenceService; // CP: Initialize field
+
+  // CP: Temporary method to clear SharedPreferences for migration to monthly logs.
+  // CP: Call this ONCE after manually clearing vector store files from OpenAI.
+  Future<void> prepareForMonthlyMigration() async {
+    AppLogger.info(
+      '[VectorStoreService] Preparing for monthly migration: Clearing relevant SharedPreferences keys.',
+    );
+    await _prefs.remove(_backfillLastSuccessfulDateKey);
+    AppLogger.info(
+      '[VectorStoreService] Removed _backfillLastSuccessfulDateKey.',
+    );
+    await _prefs.remove(
+      _legacyDailyLogFileIdsKey,
+    ); // CP: Remove the old daily key
+    AppLogger.info('[VectorStoreService] Removed _legacyDailyLogFileIdsKey.');
+    await _prefs.setBool(_fullBackfillRunAttemptedKey, false);
+    AppLogger.info(
+      '[VectorStoreService] Set _fullBackfillRunAttemptedKey to false.',
+    );
+    // CP: Also clear the new monthly key in case of any partial previous attempts during development
+    await _prefs.remove(_monthlyLogFileIdsKey);
+    AppLogger.info(
+      '[VectorStoreService] Cleared _monthlyLogFileIdsKey as a precaution.',
+    );
+    AppLogger.info(
+      '[VectorStoreService] SharedPreferences prepared for monthly migration.',
+    );
+  }
+
+  // CP: Temporary method to print relevant SharedPreferences values for debugging
+  Future<void> debugPrintSharedPreferences() async {
+    AppLogger.info('[VectorStoreService] Debugging SharedPreferences...');
+
+    final String? backfillLastSuccessfulDate = _prefs.getString(
+      _backfillLastSuccessfulDateKey,
+    );
+    AppLogger.info(
+      '[VectorStoreService] Value of _backfillLastSuccessfulDateKey ($_backfillLastSuccessfulDateKey): $backfillLastSuccessfulDate',
+    );
+
+    final bool fullBackfillRunAttempted =
+        _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
+    AppLogger.info(
+      '[VectorStoreService] Value of _fullBackfillRunAttemptedKey ($_fullBackfillRunAttemptedKey): $fullBackfillRunAttempted',
+    );
+
+    final String? monthlyLogFileIdsString = _prefs.getString(
+      _monthlyLogFileIdsKey,
+    );
+    AppLogger.info(
+      '[VectorStoreService] Value of _monthlyLogFileIdsKey ($_monthlyLogFileIdsKey): $monthlyLogFileIdsString',
+    );
+    if (monthlyLogFileIdsString != null && monthlyLogFileIdsString.isNotEmpty) {
+      try {
+        final Map<String, dynamic> monthlyIds = jsonDecode(
+          monthlyLogFileIdsString,
+        );
+        AppLogger.info(
+          '[VectorStoreService] Parsed _monthlyLogFileIdsKey: $monthlyIds',
+        );
+      } catch (e) {
+        AppLogger.error(
+          '[VectorStoreService] Could not parse _monthlyLogFileIdsKey JSON: $e',
+        );
+      }
+    }
+
+    final String? legacyDailyLogFileIdsString = _prefs.getString(
+      _legacyDailyLogFileIdsKey,
+    );
+    AppLogger.info(
+      '[VectorStoreService] Value of _legacyDailyLogFileIdsKey ($_legacyDailyLogFileIdsKey): $legacyDailyLogFileIdsString',
+    );
+    if (legacyDailyLogFileIdsString != null &&
+        legacyDailyLogFileIdsString.isNotEmpty) {
+      try {
+        final Map<String, dynamic> legacyIds = jsonDecode(
+          legacyDailyLogFileIdsString,
+        );
+        AppLogger.info(
+          '[VectorStoreService] Parsed _legacyDailyLogFileIdsKey: $legacyIds',
+        );
+      } catch (e) {
+        AppLogger.error(
+          '[VectorStoreService] Could not parse _legacyDailyLogFileIdsKey JSON: $e',
+        );
+      }
+    }
+    AppLogger.info(
+      '[VectorStoreService] Finished debugging SharedPreferences.',
+    );
+  }
 
   Future<String?> getOrCreateVectorStoreId() async {
     String? vectorStoreId = _prefs.getString(_vectorStoreIdKey);
@@ -145,16 +239,16 @@ class VectorStoreService {
     return vectorStoreId;
   }
 
-  Future<Map<String, String>> _getDailyLogFileIds() async {
+  Future<Map<String, String>> _getMonthlyLogFileIds() async {
     final String? jsonString = _prefs.getString(
-      _dailyLogFileIdsKey,
-    ); // CP: Use defined key
+      _monthlyLogFileIdsKey, // CP: Use new monthly key
+    );
     if (jsonString != null && jsonString.isNotEmpty) {
       try {
         return Map<String, String>.from(jsonDecode(jsonString) as Map);
       } catch (e) {
         AppLogger.error(
-          '[VectorStoreService] Error decoding daily_log_file_ids from JSON: $e. Returning empty map.',
+          '[VectorStoreService] Error decoding monthly_log_file_ids from JSON: $e. Returning empty map.', // CP: Updated log
         );
         return {};
       }
@@ -162,18 +256,18 @@ class VectorStoreService {
     return {};
   }
 
-  Future<void> _saveDailyLogFileIds(Map<String, String> ids) async {
+  Future<void> _saveMonthlyLogFileIds(Map<String, String> ids) async {
     try {
       await _prefs.setString(
-        _dailyLogFileIdsKey,
+        _monthlyLogFileIdsKey, // CP: Use new monthly key
         jsonEncode(ids),
-      ); // CP: Use defined key
+      );
     } catch (e) {
       AppLogger.error(
-        '[VectorStoreService] Error encoding daily_log_file_ids to JSON: $e',
+        '[VectorStoreService] Error encoding monthly_log_file_ids to JSON: $e', // CP: Updated log
       );
       throw VectorStoreSyncException(
-        'Failed to save daily log file IDs to SharedPreferences',
+        'Failed to save monthly log file IDs to SharedPreferences', // CP: Updated message
         underlyingError: e,
       );
     }
@@ -440,24 +534,27 @@ class VectorStoreService {
     }
   }
 
-  Future<void> synchronizeDailyLogFile(
+  // CP: Renamed from synchronizeDailyLogFile and updated for monthly aggregation
+  Future<void> synchronizeMonthlyLogFile(
     String vectorStoreId,
-    DateTime date,
-    String formattedDailyLogContent,
+    DateTime
+    date, // CP: This date now represents the month (e.g., first day of the month)
+    String formattedMonthlyLogContent, // CP: Content for the entire month
   ) async {
-    final dateKey =
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    final fileName = "logs_$dateKey.txt";
+    // CP: Use year and month for the key
+    final monthKey = _formatMonthKeyForStorage(date);
+    final fileName = "logs_$monthKey.txt"; // CP: Monthly filename
     AppLogger.info(
-      '[VectorStoreService] Starting synchronization for date: $dateKey, file: $fileName',
+      '[VectorStoreService] Starting synchronization for month: $monthKey, file: $fileName',
     );
 
-    Map<String, String> dailyLogFileIds = await _getDailyLogFileIds();
-    final String? existingFileId = dailyLogFileIds[dateKey];
+    Map<String, String> monthlyLogFileIds = await _getMonthlyLogFileIds();
+    final String? existingFileId =
+        monthlyLogFileIds[monthKey]; // CP: Use monthKey
 
     if (existingFileId != null) {
       AppLogger.info(
-        '[VectorStoreService] Existing file found for $dateKey: $existingFileId. Deleting it first.',
+        '[VectorStoreService] Existing file found for $monthKey: $existingFileId. Deleting it first.',
       );
       try {
         await _deleteFileFromVectorStore(vectorStoreId, existingFileId);
@@ -475,41 +572,41 @@ class VectorStoreService {
       }
     }
 
-    if (formattedDailyLogContent.isEmpty) {
+    if (formattedMonthlyLogContent.isEmpty) {
       AppLogger.info(
-        '[VectorStoreService] Formatted daily log content for $dateKey is empty.',
+        '[VectorStoreService] Formatted monthly log content for $monthKey is empty.',
       );
       if (existingFileId != null) {
         AppLogger.info(
-          '[VectorStoreService] Removing $dateKey from daily_log_file_ids as content is now empty.',
+          '[VectorStoreService] Removing $monthKey from monthly_log_file_ids as content is now empty.',
         );
-        dailyLogFileIds.remove(dateKey);
-        await _saveDailyLogFileIds(dailyLogFileIds);
+        monthlyLogFileIds.remove(monthKey); // CP: Use monthKey
+        await _saveMonthlyLogFileIds(monthlyLogFileIds);
       }
       AppLogger.info(
-        '[VectorStoreService] Synchronization for $dateKey skipped as content is empty.',
+        '[VectorStoreService] Synchronization for $monthKey skipped as content is empty.',
       );
       return;
     }
 
-    AppLogger.info('[VectorStoreService] Uploading new content for $dateKey.');
+    AppLogger.info('[VectorStoreService] Uploading new content for $monthKey.');
     String newFileId;
     try {
       newFileId = await _uploadLogContentToOpenAIFile(
         fileName,
-        formattedDailyLogContent,
+        formattedMonthlyLogContent,
       );
       AppLogger.info(
-        '[VectorStoreService] Content for $dateKey uploaded. New file ID: $newFileId',
+        '[VectorStoreService] Content for $monthKey uploaded. New file ID: $newFileId',
       );
     } catch (e, stackTrace) {
       AppLogger.error(
-        '[VectorStoreService] Failed to upload log content for $dateKey to OpenAI.',
+        '[VectorStoreService] Failed to upload log content for $monthKey to OpenAI.',
         error: e,
         stackTrace: stackTrace,
       );
       throw VectorStoreSyncException(
-        'Failed to upload log content for $dateKey',
+        'Failed to upload log content for $monthKey',
         underlyingError: e,
       );
     }
@@ -524,7 +621,7 @@ class VectorStoreService {
       );
     } catch (e, stackTrace) {
       AppLogger.error(
-        '[VectorStoreService] Failed to add file $newFileId for $dateKey to vector store $vectorStoreId.',
+        '[VectorStoreService] Failed to add file $newFileId for $monthKey to vector store $vectorStoreId.',
         error: e,
         stackTrace: stackTrace,
       );
@@ -540,15 +637,15 @@ class VectorStoreService {
         );
       }
       throw VectorStoreSyncException(
-        'Failed to add file $newFileId for $dateKey to vector store',
+        'Failed to add file $newFileId for $monthKey to vector store',
         underlyingError: e,
       );
     }
 
-    dailyLogFileIds[dateKey] = newFileId;
-    await _saveDailyLogFileIds(dailyLogFileIds);
+    monthlyLogFileIds[monthKey] = newFileId; // CP: Use monthKey
+    await _saveMonthlyLogFileIds(monthlyLogFileIds);
     AppLogger.info(
-      '[VectorStoreService] Successfully synchronized file for $dateKey. New ID $newFileId stored.',
+      '[VectorStoreService] Successfully synchronized file for $monthKey. New ID $newFileId stored.',
     );
   }
 
@@ -596,123 +693,130 @@ class VectorStoreService {
         return;
       }
 
-      // CP: Group entries by date (day only, ignoring time)
-      final Map<DateTime, List<Entry>> entriesByDate = {};
+      // CP: Group entries by month (first day of the month as key)
+      final Map<DateTime, List<Entry>> entriesByMonth = {};
       for (final entry in allEntries) {
-        final dateKey = DateTime(
+        final monthKeyDate = DateTime(
           entry.timestamp.year,
           entry.timestamp.month,
-          entry.timestamp.day,
+          1, // CP: Use first day of the month for grouping
         );
-        if (entriesByDate.containsKey(dateKey)) {
-          entriesByDate[dateKey]!.add(entry);
+        if (entriesByMonth.containsKey(monthKeyDate)) {
+          entriesByMonth[monthKeyDate]!.add(entry);
         } else {
-          entriesByDate[dateKey] = [entry];
+          entriesByMonth[monthKeyDate] = [entry];
         }
       }
 
-      final List<DateTime> sortedDates = entriesByDate.keys.toList();
-      // CP: Sort dates ascending to process oldest first
-      sortedDates.sort((a, b) => a.compareTo(b));
+      final List<DateTime> sortedMonths = entriesByMonth.keys.toList();
+      // CP: Sort months ascending to process oldest first
+      sortedMonths.sort((a, b) => a.compareTo(b));
 
       final String? lastSuccessfulDateString = _prefs.getString(
         _backfillLastSuccessfulDateKey,
       );
-      DateTime? lastSuccessfulDate;
+      DateTime? lastSuccessfulBackfillMonth; // CP: Renamed for clarity
       if (lastSuccessfulDateString != null) {
         try {
-          lastSuccessfulDate = DateTime.parse(lastSuccessfulDateString);
+          lastSuccessfulBackfillMonth = DateTime.parse(
+            lastSuccessfulDateString,
+          );
+          // CP: Ensure it's the first of the month for consistent comparison
+          lastSuccessfulBackfillMonth = DateTime(
+            lastSuccessfulBackfillMonth.year,
+            lastSuccessfulBackfillMonth.month,
+            1,
+          );
         } catch (e) {
           AppLogger.warn(
-            "[VectorStoreService] Backfill: Could not parse last successful date: $lastSuccessfulDateString. Processing all discovered historical logs.",
+            "[VectorStoreService] Backfill: Could not parse last successful backfill month: $lastSuccessfulDateString. Processing all discovered historical logs.",
           );
         }
       }
 
-      final List<DateTime> datesToProcess =
-          sortedDates
-              .where(
-                (date) =>
-                    lastSuccessfulDate == null ||
-                    date.isAfter(lastSuccessfulDate),
-              )
-              .toList();
+      final List<DateTime> monthsToProcess =
+          sortedMonths.where((monthDate) {
+            if (lastSuccessfulBackfillMonth == null) {
+              return true; // CP: Process all if no last successful date
+            }
+            // CP: Process if current month is after the last successfully backfilled month
+            return monthDate.isAfter(lastSuccessfulBackfillMonth);
+          }).toList();
 
-      if (datesToProcess.isEmpty) {
+      if (monthsToProcess.isEmpty) {
         AppLogger.info(
-          "[VectorStoreService] Backfill: No new historical dates to process since last successful backfill ($lastSuccessfulDateString). Marking as fully attempted.",
+          "[VectorStoreService] Backfill: No new historical months to process since last successful backfill ($lastSuccessfulDateString). Marking as fully attempted.",
         );
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         return;
       }
 
       AppLogger.info(
-        "[VectorStoreService] Backfill: Found ${datesToProcess.length} historical dates to process. Starting from ${_formatDateKey(datesToProcess.first)}.",
+        "[VectorStoreService] Backfill: Found ${monthsToProcess.length} historical months to process. Starting from ${_formatMonthKeyForStorage(monthsToProcess.first)}.",
       );
 
       int successCount = 0;
       int failureCount = 0;
-      DateTime? latestSuccessfullyProcessedDateInThisRun;
+      DateTime? latestSuccessfullyProcessedMonthInThisRun;
 
-      for (final date in datesToProcess) {
-        final List<Entry> entriesForDate =
-            entriesByDate[date]!..sort(
-              (a, b) => a.timestamp.compareTo(b.timestamp),
-            ); // CP: Sort entries by timestamp to maintain order within the day's log
+      for (final monthDate in monthsToProcess) {
+        // CP: Iterate through months
+        // CP: Sort entries within the month by timestamp
+        final List<Entry> entriesForMonth =
+            entriesByMonth[monthDate]!
+              ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-        // CP: Format content for the day - simple concatenation for now
-        // CP: Consider adding timestamps or categories if needed for AI context
-        final String dailyLogContent = entriesForDate
-            .map((e) => e.text)
+        // CP: Format content for the entire month
+        final String monthlyLogContent = entriesForMonth
+            .map(
+              (e) => "${_formatTimestampForLog(e.timestamp)}: ${e.text}",
+            ) // CP: Add timestamp to each entry
             .join("\\n---\\n");
 
-        if (dailyLogContent.isNotEmpty) {
+        if (monthlyLogContent.isNotEmpty) {
           AppLogger.info(
-            "[VectorStoreService] Backfill: Processing logs for date: ${_formatDateKey(date)}",
+            "[VectorStoreService] Backfill: Processing logs for month: ${_formatMonthKeyForStorage(monthDate)}",
           );
           try {
-            await synchronizeDailyLogFile(
+            await synchronizeMonthlyLogFile(
               currentVectorStoreId,
-              date,
-              dailyLogContent,
+              monthDate, // CP: Pass the DateTime representing the month
+              monthlyLogContent,
             );
             successCount++;
-            latestSuccessfullyProcessedDateInThisRun = date;
-            // CP: Update last successful date immediately after each successful sync
+            latestSuccessfullyProcessedMonthInThisRun = monthDate;
+            // CP: Update last successful date to the first day of the processed month
             await _prefs.setString(
               _backfillLastSuccessfulDateKey,
-              _formatDateKey(date),
+              _formatDateKey(
+                monthDate,
+              ), // CP: Store as YYYY-MM-DD (first day of month)
             );
             AppLogger.info(
-              "[VectorStoreService] Backfill: Successfully processed and updated last successful date to ${_formatDateKey(date)}.",
+              "[VectorStoreService] Backfill: Successfully processed month ${_formatMonthKeyForStorage(monthDate)} and updated last successful backfill date to ${_formatDateKey(monthDate)}.",
             );
           } catch (e, stackTrace) {
             failureCount++;
             AppLogger.error(
-              "[VectorStoreService] Backfill: Failed to synchronize log for date ${_formatDateKey(date)}.",
+              "[VectorStoreService] Backfill: Failed to synchronize log for month ${_formatMonthKeyForStorage(monthDate)}.",
               error: e,
               stackTrace: stackTrace,
             );
-            // CP: If a day fails, we stop this backfill run here to allow retry from this point.
-            // CP: The _fullBackfillRunAttemptedKey will not be set to true.
             AppLogger.warn(
-              "[VectorStoreService] Backfill: Halting current backfill run due to error. Will retry from ${_formatDateKey(date)} on next attempt.",
+              "[VectorStoreService] Backfill: Halting current backfill run due to error. Will retry from month ${_formatMonthKeyForStorage(monthDate)} on next attempt.",
             );
             break;
           }
         } else {
           AppLogger.info(
-            "[VectorStoreService] Backfill: Skipping date ${_formatDateKey(date)} as it has no content after formatting.",
+            "[VectorStoreService] Backfill: Skipping month ${_formatMonthKeyForStorage(monthDate)} as it has no content after formatting.",
           );
-          // CP: If a day has no content, we can consider it "successfully processed" for backfill progress
-          // CP: to avoid getting stuck on empty log days.
-          latestSuccessfullyProcessedDateInThisRun = date;
+          latestSuccessfullyProcessedMonthInThisRun = monthDate;
           await _prefs.setString(
             _backfillLastSuccessfulDateKey,
-            _formatDateKey(date),
+            _formatDateKey(monthDate),
           );
         }
-        // CP: Optional: Add a small delay to be kind to the API and device resources, especially for many historical files.
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
@@ -720,24 +824,24 @@ class VectorStoreService {
         "[VectorStoreService] Backfill: Iteration finished. Processed this session: Successes: $successCount, Failures: $failureCount.",
       );
 
-      // CP: If all dates in datesToProcess were handled (either successfully or skipped due to no content)
-      // CP: and no errors caused an early break, then mark the full run as attempted.
       if (failureCount == 0 &&
-          (datesToProcess.isEmpty ||
-              latestSuccessfullyProcessedDateInThisRun ==
-                  datesToProcess.last)) {
+          (monthsToProcess.isEmpty ||
+              (latestSuccessfullyProcessedMonthInThisRun != null &&
+                  latestSuccessfullyProcessedMonthInThisRun.year ==
+                      monthsToProcess.last.year &&
+                  latestSuccessfullyProcessedMonthInThisRun.month ==
+                      monthsToProcess.last.month))) {
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         AppLogger.info(
-          "[VectorStoreService] Backfill: Successfully processed all pending historical dates. Marked full backfill run as attempted.",
+          "[VectorStoreService] Backfill: Successfully processed all pending historical months. Marked full backfill run as attempted.",
         );
       } else if (failureCount > 0) {
         AppLogger.info(
-          "[VectorStoreService] Backfill: Run completed with failures. Last successful date recorded was ${_formatDateKey(latestSuccessfullyProcessedDateInThisRun!)}. Full backfill not marked as attempted.",
+          "[VectorStoreService] Backfill: Run completed with failures. Last successful month recorded was ${_formatMonthKeyForStorage(latestSuccessfullyProcessedMonthInThisRun!)}. Full backfill not marked as attempted.",
         );
       } else {
-        // CP: This case might occur if datesToProcess was not empty, but loop didn't run or finish as expected without errors.
         AppLogger.warn(
-          "[VectorStoreService] Backfill: Run completed, but not all dates may have been processed. Last successful: ${latestSuccessfullyProcessedDateInThisRun != null ? _formatDateKey(latestSuccessfullyProcessedDateInThisRun) : 'None'}. Full backfill not marked as attempted.",
+          "[VectorStoreService] Backfill: Run completed, but not all months may have been processed. Last successful: ${latestSuccessfullyProcessedMonthInThisRun != null ? _formatMonthKeyForStorage(latestSuccessfullyProcessedMonthInThisRun) : 'None'}. Full backfill not marked as attempted.",
         );
       }
     } catch (e, stackTrace) {
@@ -754,6 +858,16 @@ class VectorStoreService {
   String _formatDateKey(DateTime date) {
     // CP: Ensure month and day are two digits
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  // CP: Helper to format date as YYYY-MM for monthly keys
+  String _formatMonthKeyForStorage(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}";
+  }
+
+  // CP: Helper to format timestamp for individual log entries within a monthly file
+  String _formatTimestampForLog(DateTime timestamp) {
+    return "${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}";
   }
 
   // CP: Helper to get headers for OpenAI API calls

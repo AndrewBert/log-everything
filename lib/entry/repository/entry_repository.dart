@@ -56,8 +56,9 @@ class EntryRepository {
           // CP: Logged, no rethrow as it's a background task.
         });
 
-    // CP: Trigger initial sync for today's logs
-    _triggerVectorStoreSyncForDate(DateTime.now()).catchError((e, stackTrace) {
+    // CP: Trigger initial sync for the current month
+    _triggerVectorStoreSyncForMonth(DateTime.now()).catchError((e, stackTrace) {
+      // CP: Changed to ForMonth
       AppLogger.error(
         "Repository: Background vector store sync failed during initialization",
         error: e,
@@ -173,7 +174,8 @@ class EntryRepository {
     await _saveEntries();
 
     // CP: Trigger vector store sync for the date of the new entries
-    _triggerVectorStoreSyncForDate(processingTimestamp).catchError((
+    _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((
+      // CP: Changed to ForMonth
       e,
       stackTrace,
     ) {
@@ -205,8 +207,9 @@ class EntryRepository {
     if (_entries.length < originalLength) {
       await _saveEntries();
       // CP: Trigger vector store sync for the date of the deleted entry
-      _triggerVectorStoreSyncForDate(entryToDelete.timestamp).catchError((
-        e,
+      _triggerVectorStoreSyncForMonth(entryToDelete.timestamp).catchError((
+        // CP: Changed to ForMonth
+        e, // CP: Added error parameter
         stackTrace,
       ) {
         AppLogger.error(
@@ -235,8 +238,9 @@ class EntryRepository {
       await _saveEntries();
       // CP: Trigger vector store sync for the date of the updated entry
       // CP: (uses originalEntry.timestamp as that's the key for the daily log file)
-      _triggerVectorStoreSyncForDate(originalEntry.timestamp).catchError((
-        e,
+      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((
+        // CP: Changed to ForMonth
+        e, // CP: Added error parameter
         stackTrace,
       ) {
         AppLogger.error(
@@ -339,7 +343,8 @@ class EntryRepository {
     // 5. Save and return
     await _saveEntries();
     // CP: Trigger vector store sync for the date of the processed entries
-    _triggerVectorStoreSyncForDate(tempEntryTimestamp).catchError((
+    _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((
+      // CP: Changed to ForMonth
       e,
       stackTrace,
     ) {
@@ -397,7 +402,9 @@ class EntryRepository {
         await _saveEntries();
         // CP: Trigger sync for all affected dates
         for (final date in affectedDates) {
-          _triggerVectorStoreSyncForDate(date).catchError((e, stackTrace) {
+          // CP: Ensure we are passing the DateTime object representing the month
+          _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
+            // CP: Changed to ForMonth
             AppLogger.error(
               "Repository: Background vector store sync failed for deleteCategory (date: $date)",
               error: e,
@@ -482,7 +489,8 @@ class EntryRepository {
       await _saveEntries();
       // CP: Trigger sync for all affected dates
       for (final date in affectedDates) {
-        _triggerVectorStoreSyncForDate(date).catchError((e, stackTrace) {
+        _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
+          // CP: Changed to ForMonth
           AppLogger.error(
             "Repository: Background vector store sync failed for renameCategory (date: $date)",
             error: e,
@@ -507,66 +515,81 @@ class EntryRepository {
   }
 
   // CP: New private method to trigger vector store sync for a specific date
-  Future<void> _triggerVectorStoreSyncForDate(DateTime date) async {
+  // CP: Renamed to _triggerVectorStoreSyncForMonth and updated logic
+  Future<void> _triggerVectorStoreSyncForMonth(DateTime date) async {
+    // CP: The 'date' parameter now represents any day within the month to be synced.
+    // CP: We'll derive the specific month (e.g., first day of the month) for processing.
+    final DateTime monthToSync = DateTime(date.year, date.month, 1);
+    final String monthKeyString =
+        "${monthToSync.year}-${monthToSync.month.toString().padLeft(2, '0')}";
+
     AppLogger.info(
-      "[EntryRepository] Triggering vector store sync for date: $date",
+      "[EntryRepository] Triggering vector store sync for month: $monthKeyString",
     );
     try {
-      // CP: Ensure vectorStoreId can be null and handle it.
       final String? vectorStoreId =
           await _vectorStoreService.getOrCreateVectorStoreId();
 
       if (vectorStoreId == null) {
         AppLogger.warn(
-          "[EntryRepository] Vector store ID is null. Skipping sync for date: $date",
+          "[EntryRepository] Vector store ID is null. Skipping sync for month: $monthKeyString",
         );
         return;
       }
 
-      // Format entries for the given day
-      final DateFormat dayFormatter = DateFormat('yyyy-MM-dd');
-      final String targetDayString = dayFormatter.format(date);
-
-      final List<Entry> entriesForDay =
+      // CP: Filter entries for the entire target month
+      final List<Entry> entriesForMonth =
           _entries.where((entry) {
-            return dayFormatter.format(entry.timestamp) == targetDayString;
+            return entry.timestamp.year == monthToSync.year &&
+                entry.timestamp.month == monthToSync.month;
           }).toList();
 
+      // CP: Sort entries by timestamp before formatting
+      entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
       String formattedContent = "";
-      if (entriesForDay.isNotEmpty) {
-        final DateFormat entryFormatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-        formattedContent = entriesForDay
+      if (entriesForMonth.isNotEmpty) {
+        // CP: Use the timestamp formatting from VectorStoreService for consistency
+        formattedContent = entriesForMonth
             .map((entry) {
-              return "[${entryFormatter.format(entry.timestamp)}] (${entry.category}): ${entry.text}";
+              final String timestampStr = _formatTimestampForLogEntry(
+                entry.timestamp,
+              ); // CP: Use local helper
+              return "[$timestampStr] (${entry.category}): ${entry.text}";
             })
-            .join('\n');
+            .join(
+              '\n---\n',
+            ); // CP: Use triple dash as separator for better readability
       }
       AppLogger.info(
-        "[EntryRepository] Content for $targetDayString: ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
+        "[EntryRepository] Content for $monthKeyString (first 100 chars): ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
       );
 
-      await _vectorStoreService.synchronizeDailyLogFile(
+      await _vectorStoreService.synchronizeMonthlyLogFile(
         vectorStoreId,
-        date,
+        monthToSync, // CP: Pass the DateTime representing the month (first day)
         formattedContent,
       );
       AppLogger.info(
-        "[EntryRepository] Vector store sync for date $date completed successfully.",
+        "[EntryRepository] Vector store sync for month $monthKeyString completed successfully.",
       );
     } on VectorStoreSyncException catch (e, stackTrace) {
       AppLogger.error(
-        "[EntryRepository] VectorStoreService sync failed for date $date",
-        error: e.message,
+        "[EntryRepository] VectorStoreService sync failed for month $monthKeyString",
+        error: e.message, // CP: Access the message property of the exception
         stackTrace: stackTrace,
       );
-      // CP: Do not rethrow, allow main operation to continue
     } catch (e, stackTrace) {
       AppLogger.error(
-        "[EntryRepository] Unexpected error during vector store sync for date $date",
+        "[EntryRepository] Unexpected error during vector store sync for month $monthKeyString",
         error: e,
         stackTrace: stackTrace,
       );
-      // CP: Do not rethrow
     }
+  }
+
+  // CP: Helper to format timestamp for individual log entries within a monthly file
+  String _formatTimestampForLogEntry(DateTime timestamp) {
+    return "${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}";
   }
 }

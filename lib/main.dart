@@ -16,11 +16,10 @@ import 'locator.dart';
 // Make main async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   try {
     await dotenv.load(fileName: ".env");
-    AppLogger.info('Environment variables loaded successfully.');
-    configureDependencies();
+    AppLogger.info('Environment variables loaded successfully.');    await configureDependencies();
+    AppLogger.info('Dependencies configured.');
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
   }
