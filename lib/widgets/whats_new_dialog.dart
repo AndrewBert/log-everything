@@ -7,31 +7,20 @@ class WhatsNewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- Define your What's New content here ---
-    // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '✨ Feature: Quick Category Change',
-        'Tap the category chip on any entry in the list to quickly reassign it to a different category.',
+        '💬 Feature: Chat',
+        'You can now interact with the assistant in a conversational way! Ask questions about your logs and get insights.',
       ),
       _buildChangeItem(
-        '✨ Feature: Edit Entries & Categories',
-        'You can now rename your categories via the "Manage Categories" screen.',
+        '🤖 Log Splitting Improvements',
+        'The assistant now processes your entries into more bite-sized, bullet-point style logs. If you submit a long entry, expect it to be split into several smaller logs. This is experimental and we welcome your feedback!',
       ),
       _buildChangeItem(
-        '✨ Feature: Help & About Section',
-        'Added a Help/About section (via the ? icon in the app bar) explaining the app and providing a way to view this "What\'s New" screen again.',
-      ),
-      _buildChangeItem(
-        '✨ Feature: Haptic Feedback',
-        'Added subtle vibrations for interactions like changing categories or managing them, enhancing the tactile feel of the app.',
-      ),
-      _buildChangeItem(
-        '⚙️ Improvement: Voice Logging',
-        'Improved the reliability and responsiveness of voice input for logging entries.',
+        '🔧 Bug Fixes',
+        'Various bug fixes and performance improvements to enhance your experience.',
       ),
     ];
-    // --- End of What's New content ---
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
