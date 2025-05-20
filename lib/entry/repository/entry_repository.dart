@@ -367,11 +367,14 @@ class EntryRepository {
   }
 
   Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
-    final index = _entries.indexWhere(
-      (entry) => entry.timestamp == timestamp && entry.text == text,
-    );
-    if (index != -1 && _entries[index].isNew) {
-      _entries[index] = _entries[index].copyWith(isNew: false);
+    bool anyUpdated = false;
+    for (int i = 0; i < _entries.length; i++) {
+      if (_entries[i].timestamp == timestamp && _entries[i].isNew) {
+        _entries[i] = _entries[i].copyWith(isNew: false);
+        anyUpdated = true;
+      }
+    }
+    if (anyUpdated) {
       await _saveEntries();
       return true;
     }
