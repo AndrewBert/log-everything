@@ -35,11 +35,15 @@ class ChatCubit extends Cubit<ChatState> {
     try {
       // CP: Get the full conversation history to send to the API
       // CP: This includes the new user message we just added to the state for context.
-      final String aiResponseText = await _aiService.getChatResponse(
+      final response = await _aiService.getChatResponse(
         messages: state.messages,
-        currentDate:
-            DateTime.now(), // CP: Pass current date for temporal context
+        currentDate: DateTime.now(),
+        store: true, // CP: Store conversations on OpenAI servers
+        previousResponseId:
+            state.lastResponseId, // CP: Chain to previous response
       );
+      final String aiResponseText = response.$1;
+      final String? newResponseId = response.$2;
 
       final aiMessage = ChatMessage(
         id: _uuid.v4(),
@@ -49,7 +53,13 @@ class ChatCubit extends Cubit<ChatState> {
       );
       final messagesWithAi = List<ChatMessage>.from(state.messages)
         ..add(aiMessage);
-      emit(state.copyWith(messages: messagesWithAi, isLoading: false));
+      emit(
+        state.copyWith(
+          messages: messagesWithAi,
+          isLoading: false,
+          lastResponseId: newResponseId,
+        ),
+      );
     } on AiServiceException catch (e) {
       AppLogger.error(
         'AiServiceException in ChatCubit: ${e.message}',

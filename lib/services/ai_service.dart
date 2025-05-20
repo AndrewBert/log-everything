@@ -23,13 +23,20 @@ abstract class AiService {
   /// Gets a chat response from the AI model based on the provided message history
   /// and current date.
   ///
-  /// Takes a list of [ChatMessage] objects representing the conversation history
-  /// and the current [DateTime] to provide temporal context for queries.
-  /// Returns a plain text response from the AI model.
+  /// Takes a list of [ChatMessage] objects representing the conversation history,
+  /// the current [DateTime] to provide temporal context for queries, and optionally
+  /// a previous response ID to maintain conversation context.
+  ///
+  /// Set [store] to false to prevent saving the response on OpenAI's servers.
+  /// Set [previousResponseId] to chain this response to a previous conversation.
+  ///
+  /// Returns a tuple containing the response text and the response ID.
   /// Throws an [AiServiceException] if the process fails.
-  Future<String> getChatResponse({
+  Future<(String text, String? responseId)> getChatResponse({
     required List<ChatMessage> messages,
     DateTime? currentDate,
+    bool store = true,
+    String? previousResponseId,
   });
 }
 
@@ -304,9 +311,11 @@ Respond with a JSON object containing an array named "entries" holding these str
   }
 
   @override
-  Future<String> getChatResponse({
+  Future<(String text, String? responseId)> getChatResponse({
     required List<ChatMessage> messages,
     DateTime? currentDate,
+    bool store = true,
+    String? previousResponseId,
   }) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
@@ -343,17 +352,21 @@ Respond with a JSON object containing an array named "entries" holding these str
     final String systemInstructions =
         currentDate != null
             ? "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files. Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
-            : "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.";
-
-    // CP: Prepare the request body, including system instructions as the first message
+            : "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files."; // CP: Prepare the request body, including system instructions as the first message
     final Map<String, dynamic> requestBody = {
       'model': _modelId,
       'input': [
         {"role": "system", "content": systemInstructions},
         ...inputMessages, // Spread the rest of the messages
       ],
-      'temperature': 0.7,
+      // 'temperature': 0.7,
+      'store': store, // CP: Control whether to store the response
     };
+
+    // CP: Add previous response ID if provided
+    if (previousResponseId != null) {
+      requestBody['previous_response_id'] = previousResponseId;
+    }
 
     // CP: Conditionally add tools for File Search
     if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
@@ -423,7 +436,7 @@ Respond with a JSON object containing an array named "entries" holding these str
                 AppLogger.info(
                   "Received chat response from OpenAI: '$aiResponseText'",
                 );
-                return aiResponseText;
+                return (aiResponseText, responseBody['id'] as String?);
               } else {
                 // CP: No 'output_text' found in message content
                 final errorMsg =
