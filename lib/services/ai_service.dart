@@ -359,7 +359,6 @@ Respond with a JSON object containing an array named "entries" holding these str
         {"role": "system", "content": systemInstructions},
         ...inputMessages, // Spread the rest of the messages
       ],
-      // 'temperature': 0.7,
       'store': store, // CP: Control whether to store the response
     };
 
