@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/chat/chat.dart'; // Added import for ChatCubit
 import 'package:myapp/utils/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,7 +10,9 @@ class HomePageCubit extends Cubit<HomePageState> {
   static const String _lastShownVersionKey = 'last_shown_whats_new_version';
   final int _targetTapCount = 7; // Easter egg target
 
-  HomePageCubit() : super(const HomePageState()) {
+  final ChatCubit chatCubit;
+
+  HomePageCubit({required this.chatCubit}) : super(const HomePageState()) {
     _loadInitialData();
   }
 
@@ -17,6 +20,7 @@ class HomePageCubit extends Cubit<HomePageState> {
     await loadVersionInfo();
     await _loadLastSeenVersion();
     await checkWhatsNew();
+    chatCubit.loadDummyMessages();
   }
 
   Future<void> _loadLastSeenVersion() async {
@@ -144,6 +148,13 @@ class HomePageCubit extends Cubit<HomePageState> {
   void clearSnackBarMessage() {
     if (state.snackBarMessage != null) {
       emit(state.copyWith(clearSnackBarMessage: true));
+    }
+  }
+
+  void toggleChatOpen() {
+    emit(state.copyWith(isChatOpen: !state.isChatOpen));
+    if (state.isChatOpen) {
+      setInputFocus(false);
     }
   }
 }

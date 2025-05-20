@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
+import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
+import 'chat/chat.dart';
 import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
 import 'locator.dart';
@@ -14,11 +16,10 @@ import 'locator.dart';
 // Make main async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  setupLocator(); // <-- Call the setup function here
-
   try {
     await dotenv.load(fileName: ".env");
-    AppLogger.info('Environment variables loaded successfully.');
+    AppLogger.info('Environment variables loaded successfully.');    await configureDependencies();
+    AppLogger.info('Dependencies configured.');
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
   }
@@ -40,15 +41,26 @@ class MyApp extends StatelessWidget {
         BlocProvider<EntryCubit>(
           create:
               (context) =>
-                  EntryCubit(entryRepository: locator<EntryRepository>()),
+                  EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
-          // Get EntryCubit from context and pass it to constructor
+          // CP: Get EntryCubit from context and pass it to constructor
           create:
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
+        // CP: Provide ChatCubit with AiService and EntryRepository dependencies
+        BlocProvider<ChatCubit>(
+          create:
+              (context) => ChatCubit(
+                aiService: getIt<AiService>(),
+                // CP: Removed entryRepository as it's no longer a dependency
+              ),
+        ),
+        BlocProvider<HomePageCubit>(
+          create:
+              (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
+        ),
       ],
       child: MaterialApp(
         theme: ThemeData(

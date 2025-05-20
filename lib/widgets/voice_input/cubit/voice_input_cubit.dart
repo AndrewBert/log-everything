@@ -31,10 +31,10 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
 
   VoiceInputCubit({required EntryCubit entryCubit})
     // Fetch the service implementation from the locator
-    : _audioRecorderService = locator<AudioRecorderService>(),
-      _speechService = locator<SpeechService>(),
-      _entryRepository = locator<EntryRepository>(),
-      _permissionService = locator<PermissionService>(),
+    : _audioRecorderService = getIt<AudioRecorderService>(),
+      _speechService = getIt<SpeechService>(),
+      _entryRepository = getIt<EntryRepository>(),
+      _permissionService = getIt<PermissionService>(),
       _entryCubit = entryCubit,
       super(const VoiceInputState()) {
     _initialize();
@@ -51,7 +51,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     final status = await _permissionService.requestMicrophonePermission();
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
-      AppLogger.warning(
+      AppLogger.warn(
         '[requestMicrophonePermission] Microphone permission permanently denied.',
       );
     }
@@ -89,7 +89,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       }
 
       if (currentStatus != PermissionStatus.granted) {
-        AppLogger.warning(
+        AppLogger.warn(
           "[startRecording] Microphone permission still not granted ($currentStatus). Cannot start recording.",
         );
         emit(
@@ -238,7 +238,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             }
             combinedText += transcription;
           } else {
-            AppLogger.warning(
+            AppLogger.warn(
               'Transcription failed or returned empty text. Using only initial text.',
             );
           }
@@ -278,7 +278,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           emit(state.copyWith(errorMessage: 'Failed to process entry.'));
         }
       } else {
-        AppLogger.warning(
+        AppLogger.warn(
           'Combined text is empty, finalizing state without adding entry.',
         );
         final currentEntries =

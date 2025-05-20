@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_state.dart';
-import 'voice_input/voice_input.dart'; // Assuming VoiceInputSection is in the same directory
+import 'voice_input/voice_input.dart';
+import 'package:myapp/chat/chat.dart';
 
 class InputArea extends StatefulWidget {
   final void Function(String text) onSendPressed;
@@ -44,133 +45,199 @@ class _InputAreaState extends State<InputArea> {
   }
 
   void _onInputFocusChange() {
-    // Update HomeScreenCubit about focus state
-    if (mounted && context.mounted) {
+    if (mounted &&
+        context.mounted &&
+        !context.read<HomePageCubit>().state.isChatOpen) {
       context.read<HomePageCubit>().setInputFocus(_inputFocusNode.hasFocus);
     }
   }
 
   void _handleLocalSend() {
     final currentText = _textController.text.trim();
-    // Call the callback passed from HomePage
-    widget.onSendPressed(currentText);
+    final homePageCubit = context.read<HomePageCubit>();
+    final chatCubit = context.read<ChatCubit>();
 
-    // Clear text and unfocus - managed locally now
+    if (homePageCubit.state.isChatOpen) {
+      if (currentText.isNotEmpty) {
+        chatCubit.addUserMessage(currentText);
+      }
+    } else {
+      widget.onSendPressed(currentText);
+    }
+
     _textController.clear();
-    FocusScope.of(context).unfocus();
+    if (!homePageCubit.state.isChatOpen && _inputFocusNode.hasFocus) {
+      FocusScope.of(context).unfocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomePageCubit, HomePageState>(
       buildWhen:
-          (prev, current) => prev.isInputFocused != current.isInputFocused,
+          (prev, current) =>
+              prev.isInputFocused != current.isInputFocused ||
+              prev.isChatOpen != current.isChatOpen,
       builder: (context, homeScreenState) {
         final isInputFocused = homeScreenState.isInputFocused;
+        final isChatOpen = homeScreenState.isChatOpen;
 
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Material(
-            elevation: 8.0,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
+        final String hintText = isChatOpen ? 'Ask anything' : 'Log it or else';
+        final String labelText =
+            isChatOpen
+                ? 'Chatting...'
+                : (isInputFocused ? 'Enter log entry' : 'What happened?...');
+
+        return Material(
+          elevation: 8.0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.0),
+              topRight: Radius.circular(20.0),
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20.0),
                 topRight: Radius.circular(20.0),
               ),
             ),
-            child: Container(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 8,
-                top: 12,
-                // Add MediaQuery padding.bottom to account for safe area
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom +
-                    MediaQuery.of(context).padding.bottom +
-                    12,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20.0),
-                  topRight: Radius.circular(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 8,
+                    top: 8,
+                    bottom: 4.0,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          focusNode: _inputFocusNode,
+                          controller: _textController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25.0),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withAlpha((255 * 0.6).round()),
+                            labelText:
+                                (isInputFocused || isChatOpen)
+                                    ? labelText
+                                    : null,
+                            hintText: hintText,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.newline,
+                          onSubmitted: (_) => _handleLocalSend(),
+                          minLines: 1,
+                          maxLines: 5,
+                          onTapOutside: (_) {
+                            if (_inputFocusNode.hasFocus && !isChatOpen) {
+                              FocusScope.of(context).unfocus();
+                            }
+                          },
+                          onTap: () {
+                            if (isChatOpen && !_inputFocusNode.hasFocus) {
+                              _inputFocusNode.requestFocus();
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: TextField(
-                focusNode: _inputFocusNode,
-                controller: _textController,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide: BorderSide.none,
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 0,
+                    bottom:
+                        MediaQuery.of(context).viewInsets.bottom > 0
+                            ? 8.0
+                            : MediaQuery.of(context).padding.bottom + 8.0,
                   ),
-                  filled: true,
-                  // Replace deprecated surfaceVariant
-                  fillColor: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest // Use replacement
-                      // Replace deprecated withOpacity
-                      .withAlpha((255 * 0.6).round()),
-                  labelText: isInputFocused ? 'Enter log entry' : null,
-                  hintText: 'What happened?...',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  suffixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 4.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      TextButton.icon(
+                        icon: Icon(
+                          isChatOpen
+                              ? Icons.forum_rounded
+                              : Icons.forum_outlined,
+                        ),
+                        label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              isChatOpen
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          context.read<HomePageCubit>().toggleChatOpen();
+                          if (!isChatOpen) {
+                            _inputFocusNode.requestFocus();
+                          } else {
+                            if (_inputFocusNode.hasFocus) {
+                              FocusScope.of(context).unfocus();
+                            }
+                          }
+                        },
+                      ),
+                      const Spacer(),
+                      if (!isChatOpen)
                         VoiceInput(
                           textController: _textController,
                           inputFocusNode: _inputFocusNode,
                           isInputFocused: isInputFocused,
                           showSnackBar: (
-                            BuildContext
-                            ctx, { // Context from VoiceInputSection
+                            BuildContext ctx, {
                             required Widget content,
                             Duration? duration,
                             SnackBarAction? action,
                             Color? backgroundColor,
                           }) {
-                            // Call the HomePage's snackbar function using the InputArea's context
                             widget.showSnackBar(
-                              context:
-                                  context, // Use context from InputArea build method
+                              context: context,
                               content: content,
-                              duration: duration, // Pass nullable duration
+                              duration: duration,
                               action: action,
                               backgroundColor: backgroundColor,
                             );
                           },
                         ),
-                        IconButton(
-                          onPressed: _handleLocalSend,
-                          icon: const Icon(Icons.send_rounded),
-                          color: Theme.of(context).colorScheme.primary,
-                          iconSize: 28,
-                          tooltip: 'Add Entry',
-                        ),
-                      ],
-                    ),
+                      IconButton(
+                        onPressed: _handleLocalSend,
+                        icon: const Icon(Icons.send_rounded),
+                        color: Theme.of(context).colorScheme.primary,
+                        iconSize: 28,
+                        tooltip: isChatOpen ? 'Send Message' : 'Add Entry',
+                      ),
+                    ],
                   ),
                 ),
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                onSubmitted: (_) => _handleLocalSend(),
-                minLines: 1,
-                maxLines: 5,
-                onTapOutside: (_) {
-                  if (_inputFocusNode.hasFocus) {
-                    FocusScope.of(context).unfocus();
-                  }
-                },
-              ),
+              ],
             ),
           ),
         );

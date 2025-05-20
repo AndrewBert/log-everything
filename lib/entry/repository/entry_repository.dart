@@ -1,45 +1,71 @@
 import 'dart:async';
-
+import 'package:intl/intl.dart';
 import '../entry.dart';
-import '../../services/ai_categorization_service.dart';
+import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
+import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
 import '../../utils/logger.dart';
 
+/// Manages the storage and retrieval of entries, synchronizing with vector store and handling AI categorization.
 class EntryRepository {
   final EntryPersistenceService _persistenceService;
-  final AiCategorizationService _aiService;
-
-  // Internal state for entries and categories
+  final AiService _aiService;
+  final VectorStoreService _vectorStoreService;
   List<Entry> _entries = [];
   List<String> _categories = [];
+  // CP: Map to store debounce timers for each month's sync
+  final Map<String, Timer> _syncDebounceTimers = {};
+  static const _syncDebounceMs = 2000; // CP: 2 second debounce
 
-  // Public getters for current state (read-only view)
   List<Entry> get currentEntries => List.unmodifiable(_entries);
   List<String> get currentCategories => List.unmodifiable(_categories);
 
   EntryRepository({
     required EntryPersistenceService persistenceService,
-    required AiCategorizationService aiService,
+    required AiService aiService,
+    required VectorStoreService vectorStoreService,
   }) : _persistenceService = persistenceService,
-       _aiService = aiService;
+       _aiService = aiService,
+       _vectorStoreService = vectorStoreService;
 
-  // --- Initialization ---
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
+
+    AppLogger.info(
+      "Repository: Triggering initial vector store backfill check (background).",
+    );
+    _vectorStoreService
+        .performInitialBackfillIfNeeded()
+        .then((_) {
+          AppLogger.info(
+            "Repository: Initial vector store backfill process completed (background).",
+          );
+        })
+        .catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Initial vector store backfill failed (background)",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
+
+    _triggerVectorStoreSyncForMonth(DateTime.now()).catchError((e, stackTrace) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed during initialization",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
   }
 
-  // --- Loading/Saving (Internal) ---
   Future<void> _loadCategories() async {
     try {
       _categories = await _persistenceService.loadCategories();
       AppLogger.info("Repository: Loaded Categories: $_categories");
     } catch (e) {
       AppLogger.error("Repository: Error loading categories", error: e);
-      // Decide on error handling - maybe load defaults?
-      _categories = []; // Fallback to empty or defaults
-      // Re-throw to notify caller?
-      // throw Exception("Failed to load categories in repository.");
+      _categories = [];
     }
   }
 
@@ -51,9 +77,7 @@ class EntryRepository {
       );
     } catch (e) {
       AppLogger.error('Repository: Error loading entries.', error: e);
-      _entries = []; // Fallback to empty
-      // Re-throw to notify caller?
-      // throw Exception("Failed to load entries in repository.");
+      _entries = [];
     }
   }
 
@@ -63,8 +87,6 @@ class EntryRepository {
       AppLogger.info("Repository: Saved Categories: $_categories");
     } catch (e) {
       AppLogger.error("Repository: Error saving categories", error: e);
-      // Re-throw?
-      // throw Exception("Failed to save categories in repository.");
     }
   }
 
@@ -74,24 +96,19 @@ class EntryRepository {
       AppLogger.info('Repository: Saved ${_entries.length} entries.');
     } catch (e) {
       AppLogger.error('Repository: Error saving entries', error: e);
-      // Re-throw?
-      // throw Exception("Failed to save entries in repository.");
     }
   }
-
-  // --- Public Data Manipulation Methods ---
 
   Future<List<Entry>> addEntry(String text) async {
     if (text.isEmpty) return _entries;
 
-    // Use a temporary timestamp for grouping AI results
     final DateTime processingTimestamp = DateTime.now();
     List<EntryPrototype> extractedData = [];
     String? serviceError;
 
     try {
       extractedData = await _aiService.extractEntries(text, _categories);
-    } on AiCategorizationException catch (e) {
+    } on AiServiceException catch (e) {
       AppLogger.error(
         "Repository: AI Service failed: ${e.message}",
         error: e.underlyingError,
@@ -108,41 +125,48 @@ class EntryRepository {
 
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      // AI failed or returned nothing, add as Misc
       final fallbackEntry = Entry(
         text: text,
         timestamp: processingTimestamp,
         category: 'Misc',
-        isNew: true, // Mark as new for UI highlight
+        isNew: true,
       );
       addedEntries.add(fallbackEntry);
     } else {
-      // AI succeeded
       for (var data in extractedData) {
         final newEntry = Entry(
-          // Use the renamed field textSegment
           text: data.textSegment,
           timestamp: processingTimestamp,
           category:
               _categories.contains(data.category) ? data.category : 'Misc',
-          isNew: true, // Mark as new for UI highlight
+          isNew: true,
         );
         addedEntries.add(newEntry);
       }
     }
 
-    // Add to the internal list (prepend)
     _entries.insertAll(0, addedEntries);
     await _saveEntries();
-    return currentEntries; // Return a copy
+
+    _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((
+      e,
+      stackTrace,
+    ) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed for addEntry",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
+
+    return currentEntries;
   }
 
-  // Direct entry add (e.g., for undo)
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
     _entries.add(entryToAdd);
     await _saveEntries();
     AppLogger.info("Repository: Added entry object - ${entryToAdd.text}");
-    return currentEntries; // Return a copy
+    return currentEntries;
   }
 
   Future<List<Entry>> deleteEntry(Entry entryToDelete) async {
@@ -154,8 +178,18 @@ class EntryRepository {
     );
     if (_entries.length < originalLength) {
       await _saveEntries();
+      _triggerVectorStoreSyncForMonth(entryToDelete.timestamp).catchError((
+        e,
+        stackTrace,
+      ) {
+        AppLogger.error(
+          "Repository: Background vector store sync failed for deleteEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
+      });
     }
-    return currentEntries; // Return a copy
+    return currentEntries;
   }
 
   Future<List<Entry>> updateEntry(
@@ -168,12 +202,21 @@ class EntryRepository {
           entry.text == originalEntry.text,
     );
     if (index != -1) {
-      // Preserve the isNew status from the original entry in the list
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
       await _saveEntries();
+      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((
+        e,
+        stackTrace,
+      ) {
+        AppLogger.error(
+          "Repository: Background vector store sync failed for updateEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
+      });
     }
-    return currentEntries; // Return a copy
+    return currentEntries;
   }
 
   Future<List<Entry>> processCombinedEntry(
@@ -184,7 +227,6 @@ class EntryRepository {
       '[Repo.processCombinedEntry] Processing combined text: "$combinedText" for temp timestamp: $tempEntryTimestamp',
     );
     if (combinedText.isEmpty) {
-      // If combined text is empty, just remove the temp entry
       _entries.removeWhere(
         (e) =>
             e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
@@ -193,7 +235,6 @@ class EntryRepository {
       return currentEntries;
     }
 
-    // 1. Call AI Service
     List<EntryPrototype> extractedData = [];
     String? serviceError;
     try {
@@ -201,7 +242,7 @@ class EntryRepository {
         combinedText,
         _categories,
       );
-    } on AiCategorizationException catch (e) {
+    } on AiServiceException catch (e) {
       AppLogger.error(
         "Repository: AI Service failed for combined entry: ${e.message}",
         error: e.underlyingError,
@@ -216,38 +257,32 @@ class EntryRepository {
       serviceError = "An unexpected error occurred during categorization.";
     }
 
-    // 2. Find and remove the temporary entry
     int tempIndex = _entries.indexWhere(
       (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
     );
     if (tempIndex != -1) {
       _entries.removeAt(tempIndex);
     } else {
-      AppLogger.warning(
+      AppLogger.warn(
         '[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!',
       );
-      // If temp entry not found, proceed to add the new one anyway, but insert at top
       tempIndex = 0;
     }
 
-    // 3. Create new entries based on AI result or fallback
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      // AI failed or returned nothing, add as Misc
       final fallbackEntry = Entry(
         text: combinedText,
-        timestamp: tempEntryTimestamp, // Use original timestamp
+        timestamp: tempEntryTimestamp,
         category: 'Misc',
         isNew: true,
       );
       addedEntries.add(fallbackEntry);
     } else {
-      // AI succeeded
       for (var data in extractedData) {
         final newEntry = Entry(
-          // Use the renamed field textSegment
           text: data.textSegment,
-          timestamp: tempEntryTimestamp, // Use original timestamp
+          timestamp: tempEntryTimestamp,
           category:
               _categories.contains(data.category) ? data.category : 'Misc',
           isNew: true,
@@ -256,16 +291,24 @@ class EntryRepository {
       }
     }
 
-    // 4. Insert new entries at the correct position
     if (tempIndex >= 0 && tempIndex <= _entries.length) {
       _entries.insertAll(tempIndex, addedEntries);
     } else {
-      _entries.insertAll(0, addedEntries); // Fallback to inserting at top
+      _entries.insertAll(0, addedEntries);
     }
 
-    // 5. Save and return
     await _saveEntries();
-    return currentEntries; // Return copy
+    _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((
+      e,
+      stackTrace,
+    ) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed for processCombinedEntry",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
+    return currentEntries;
   }
 
   Future<List<String>> addCustomCategory(String newCategory) async {
@@ -289,10 +332,18 @@ class EntryRepository {
     if (_categories.contains(categoryToDelete)) {
       _categories.remove(categoryToDelete);
       bool entriesChanged = false;
+      final Set<DateTime> affectedDates = {};
       _entries =
           _entries.map((entry) {
             if (entry.category == categoryToDelete) {
               entriesChanged = true;
+              affectedDates.add(
+                DateTime(
+                  entry.timestamp.year,
+                  entry.timestamp.month,
+                  entry.timestamp.day,
+                ),
+              );
               return entry.copyWith(category: 'Misc');
             }
             return entry;
@@ -301,9 +352,33 @@ class EntryRepository {
       await _saveCategories();
       if (entriesChanged) {
         await _saveEntries();
+        for (final date in affectedDates) {
+          _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
+            AppLogger.error(
+              "Repository: Background vector store sync failed for deleteCategory (date: $date)",
+              error: e,
+              stackTrace: stackTrace,
+            );
+          });
+        }
       }
     }
     return (entries: currentEntries, categories: currentCategories);
+  }
+
+  Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
+    bool anyUpdated = false;
+    for (int i = 0; i < _entries.length; i++) {
+      if (_entries[i].timestamp == timestamp && _entries[i].isNew) {
+        _entries[i] = _entries[i].copyWith(isNew: false);
+        anyUpdated = true;
+      }
+    }
+    if (anyUpdated) {
+      await _saveEntries();
+      return true;
+    }
+    return false;
   }
 
   Future<({List<Entry> entries, List<String> categories})> renameCategory(
@@ -311,25 +386,32 @@ class EntryRepository {
     String newName,
   ) async {
     final trimmedNewName = newName.trim();
-    if (oldName == 'Misc' ||
-        trimmedNewName.isEmpty ||
-        oldName == trimmedNewName ||
-        _categories.any(
-          (c) => c.toLowerCase() == trimmedNewName.toLowerCase(),
-        )) {
-      AppLogger.warning(
-        'Repository: Rename category validation failed ($oldName -> $trimmedNewName).',
-      );
+    if (trimmedNewName.isEmpty ||
+        trimmedNewName == oldName ||
+        _categories.contains(trimmedNewName)) {
       return (entries: currentEntries, categories: currentCategories);
     }
 
-    _categories =
-        _categories.map((c) => c == oldName ? trimmedNewName : c).toList();
+    final oldCategoryIndex = _categories.indexOf(oldName);
+    if (oldCategoryIndex == -1) {
+      return (entries: currentEntries, categories: currentCategories);
+    }
+
+    _categories[oldCategoryIndex] = trimmedNewName;
+
     bool entriesChanged = false;
+    final Set<DateTime> affectedDates = {};
     _entries =
         _entries.map((entry) {
           if (entry.category == oldName) {
             entriesChanged = true;
+            affectedDates.add(
+              DateTime(
+                entry.timestamp.year,
+                entry.timestamp.month,
+                entry.timestamp.day,
+              ),
+            );
             return entry.copyWith(category: trimmedNewName);
           }
           return entry;
@@ -338,21 +420,109 @@ class EntryRepository {
     await _saveCategories();
     if (entriesChanged) {
       await _saveEntries();
+      for (final date in affectedDates) {
+        _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Background vector store sync failed for renameCategory (date: $date)",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
+      }
     }
     return (entries: currentEntries, categories: currentCategories);
   }
 
-  // Method to update isNew status (called by Cubit after delay)
-  // Returns true if an update occurred
-  Future<bool> markEntryAsNotNew(DateTime timestamp, String text) async {
-    final index = _entries.indexWhere(
-      (e) => e.timestamp == timestamp && e.text == text && e.isNew,
+  String getAllEntriesAsLogContext() {
+    if (_entries.isEmpty) return "No log entries yet.";
+
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    return _entries
+        .map((entry) {
+          return "[${formatter.format(entry.timestamp)}] (${entry.category}): ${entry.text}";
+        })
+        .join('\n');
+  }
+
+  Future<void> _triggerVectorStoreSyncForMonth(DateTime date) async {
+    final DateTime monthToSync = DateTime(date.year, date.month, 1);
+    final String monthKeyString =
+        "${monthToSync.year}-${monthToSync.month.toString().padLeft(2, '0')}";
+
+    // CP: Cancel any existing timer for this month
+    _syncDebounceTimers[monthKeyString]?.cancel();
+
+    // CP: Create a new timer that will trigger the sync after the debounce period
+    _syncDebounceTimers[monthKeyString] = Timer(
+      Duration(milliseconds: _syncDebounceMs),
+      () async {
+        _syncDebounceTimers.remove(monthKeyString);
+
+        AppLogger.info(
+          "[EntryRepository] Triggering vector store sync for month: $monthKeyString",
+        );
+        try {
+          final String? vectorStoreId =
+              await _vectorStoreService.getOrCreateVectorStoreId();
+
+          if (vectorStoreId == null) {
+            AppLogger.warn(
+              "[EntryRepository] Vector store ID is null. Skipping sync for month: $monthKeyString",
+            );
+            return;
+          }
+
+          final List<Entry> entriesForMonth =
+              _entries.where((entry) {
+                return entry.timestamp.year == monthToSync.year &&
+                    entry.timestamp.month == monthToSync.month;
+              }).toList();
+
+          entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+          String formattedContent = "";
+          if (entriesForMonth.isNotEmpty) {
+            formattedContent = entriesForMonth
+                .map((entry) {
+                  final String timestampStr = _formatTimestampForLogEntry(
+                    entry.timestamp,
+                  );
+                  return "[$timestampStr] (${entry.category}): ${entry.text}";
+                })
+                .join('\n---\n');
+          }
+          AppLogger.info(
+            "[EntryRepository] Content for $monthKeyString (first 100 chars): ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
+          );
+
+          await _vectorStoreService.synchronizeMonthlyLogFile(
+            vectorStoreId,
+            monthToSync,
+            formattedContent,
+          );
+          AppLogger.info(
+            "[EntryRepository] Vector store sync for month $monthKeyString completed successfully.",
+          );
+        } on VectorStoreSyncException catch (e, stackTrace) {
+          AppLogger.error(
+            "[EntryRepository] VectorStoreService sync failed for month $monthKeyString",
+            error: e.message,
+            stackTrace: stackTrace,
+          );
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            "[EntryRepository] Unexpected error during vector store sync for month $monthKeyString",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      },
     );
-    if (index != -1) {
-      _entries[index] = _entries[index].copyWith(isNew: false);
-      await _saveEntries();
-      return true;
-    }
-    return false;
+  }
+
+  String _formatTimestampForLogEntry(DateTime timestamp) {
+    final timeFormat = DateFormat('h:mm a');
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   }
 }

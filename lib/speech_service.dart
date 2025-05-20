@@ -31,7 +31,7 @@ class SpeechService {
 
     final fileLength = await audioFile.length();
     if (fileLength == 0) {
-      AppLogger.warning("Audio file exists but is empty: $filePath");
+      AppLogger.warn("Audio file exists but is empty: $filePath");
     }
     AppLogger.info("Audio file size: $fileLength bytes");
 
@@ -65,7 +65,7 @@ class SpeechService {
 
               // 1. Check if empty after trimming
               if (trimmedText.isEmpty) {
-                AppLogger.warning(
+                AppLogger.warn(
                   "Transcription result is empty after trimming. Returning null.",
                   error: "Original text: '$transcribedText'",
                 );
@@ -74,7 +74,7 @@ class SpeechService {
 
               // 2. Check if it consists only of punctuation/whitespace
               if (_punctuationOnlyRegex.hasMatch(trimmedText)) {
-                AppLogger.warning(
+                AppLogger.warn(
                   "Transcription result contains only punctuation/whitespace. Returning null.",
                   error: "Original text: '$transcribedText'",
                 );
@@ -85,7 +85,7 @@ class SpeechService {
               final replacementCharCount =
                   '\uFFFD'.allMatches(trimmedText).length;
               if (replacementCharCount / trimmedText.length > 0.8) {
-                AppLogger.warning(
+                AppLogger.warn(
                   "Transcription result seems garbled (mostly replacement characters). Returning null.",
                   error: "Original text: '$transcribedText'",
                 );
@@ -128,12 +128,12 @@ class SpeechService {
         );
         if (response.statusCode == 400 &&
             response.body.contains('model_not_found')) {
-          AppLogger.warning(
+          AppLogger.warn(
             "Ensure the model 'gpt-4o-transcribe' is available for your API key.",
           );
         } else if (response.statusCode == 400 &&
             response.body.contains('language')) {
-          AppLogger.warning("Invalid language code '$language' provided.");
+          AppLogger.warn("Invalid language code '$language' provided.");
         }
         return null;
       }

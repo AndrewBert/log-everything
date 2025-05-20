@@ -23,11 +23,13 @@ import '../dialogs/help_dialog.dart';
 import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart';
 import '../dialogs/edit_category_dialog.dart';
+import '../chat/chat.dart'; // CP: Import chat features
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
 
-  final DateFormat _timeFormatter = DateFormat('HH:mm');
+  // CP: Changed from 24-hour to 12-hour format
+  final DateFormat _timeFormatter = DateFormat('h:mm a');
 
   // Move build method to the top
   @override
@@ -35,6 +37,8 @@ class HomePage extends StatelessWidget {
     final Color primaryColor = Theme.of(context).colorScheme.primary;
     final Color? defaultTitleColor =
         Theme.of(context).appBarTheme.titleTextStyle?.color;
+    final isChatOpen =
+        context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
 
     return Scaffold(
       appBar: AppBar(
@@ -159,16 +163,36 @@ class HomePage extends StatelessWidget {
         ],
         child: SafeArea(
           bottom: false,
-          child: Stack(
+          child: Column(
+            // CP: Main column for overall layout
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const FilterSection(),
-                  _buildEntriesList(context),
-                ],
+              Expanded(
+                child: Stack(
+                  // CP: Use Stack to overlay chat
+                  children: <Widget>[
+                    // CP: Base layer (Filter and EntriesList)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const FilterSection(),
+                        _buildEntriesList(context),
+                      ],
+                    ),
+                    // CP: Overlay layer (ChatBottomSheet)
+                    if (isChatOpen)
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: FractionallySizedBox(
+                          heightFactor:
+                              0.8, // CP: Occupy 80% of available height
+                          child: const ChatBottomSheet(),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               InputArea(
+                // CP: InputArea remains at the bottom
                 onSendPressed: (text) => _handleInput(context, text),
                 showSnackBar: ({
                   required context,
@@ -283,6 +307,17 @@ class HomePage extends StatelessWidget {
   void _handleInput(BuildContext context, String currentText) {
     final voiceCubit = context.read<VoiceInputCubit>();
     final entryCubit = context.read<EntryCubit>();
+    final homePageCubit =
+        context.read<HomePageCubit>(); // CP: Get HomePageCubit
+    final chatCubit = context.read<ChatCubit>(); // CP: Get ChatCubit
+
+    if (homePageCubit.state.isChatOpen) {
+      // CP: Check if chat is open
+      if (currentText.isNotEmpty) {
+        chatCubit.addUserMessage(currentText);
+      }
+      return;
+    }
 
     if (voiceCubit.state.isRecording) {
       AppLogger.info(
@@ -309,15 +344,11 @@ class HomePage extends StatelessWidget {
       //    passing the timestamp to identify the temporary entry later.
       voiceCubit.stopRecordingAndCombine(currentText, processingTimestamp);
 
-      // No longer call _showProcessingSnackbar here, EntryCubit handles loading state
-      // _showProcessingSnackbar(context, 'Processing voice entry...');
       return; // VoiceInputCubit/EntryCubit will handle final state
     }
 
-    // Handle manual send when NOT recording (remains the same)
     if (currentText.isNotEmpty) {
       entryCubit.addEntry(currentText);
-      // _showProcessingSnackbar(context, 'Processing text entry...'); // EntryCubit handles this
     }
   }
 
