@@ -28,7 +28,8 @@ import '../chat/chat.dart'; // CP: Import chat features
 class HomePage extends StatelessWidget {
   HomePage({super.key});
 
-  final DateFormat _timeFormatter = DateFormat('HH:mm');
+  // CP: Changed from 24-hour to 12-hour format
+  final DateFormat _timeFormatter = DateFormat('h:mm a');
 
   // Move build method to the top
   @override
@@ -183,7 +184,7 @@ class HomePage extends StatelessWidget {
                         alignment: Alignment.bottomCenter,
                         child: FractionallySizedBox(
                           heightFactor:
-                              0.65, // CP: Occupy 85% of available height
+                              0.8, // CP: Occupy 80% of available height
                           child: const ChatBottomSheet(),
                         ),
                       ),

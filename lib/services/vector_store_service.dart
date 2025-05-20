@@ -2,7 +2,7 @@ import 'dart:convert';
 // CP: Removed unused import 'dart:io';
 // CP: Removed unused import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-// CP: Removed unused import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // CP: Added back for DateFormat
 import 'package:myapp/entry/entry.dart'; // CP: Added import for Entry
 import 'package:myapp/services/entry_persistence_service.dart'; // CP: Added import for EntryPersistenceService
 // CP: Removed unused import 'package:path_provider/path_provider.dart';
@@ -797,9 +797,13 @@ class VectorStoreService {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}";
   }
 
-  // CP: Helper to format timestamp for individual log entries within a monthly file
+  // CP: Helper to format timestamp for individual log entries within a monthly file  // CP: Helper to format timestamp for individual log entries within log files
   String _formatTimestampForLog(DateTime timestamp) {
-    return "${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}";
+    final timeFormat = DateFormat(
+      'h:mm a',
+    ); // CP: Changed from 24-hour to 12-hour format
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   } // CP: Helper to calculate metadata attributes for a month's entries
 
   // Follows OpenAI API requirements:

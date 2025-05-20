@@ -588,8 +588,12 @@ class EntryRepository {
     }
   }
 
-  // CP: Helper to format timestamp for individual log entries within a monthly file
+  // CP: Helper to format timestamp for individual log entries within a monthly file  // CP: Helper to format timestamp for individual log entries within a monthly file
   String _formatTimestampForLogEntry(DateTime timestamp) {
-    return "${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}";
+    final timeFormat = DateFormat(
+      'h:mm a',
+    ); // CP: Changed from 24-hour to 12-hour format
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   }
 }

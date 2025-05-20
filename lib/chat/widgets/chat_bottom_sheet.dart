@@ -14,7 +14,8 @@ class ChatBottomSheet extends StatelessWidget {
     final chatCubit = context.watch<ChatCubit>();
     final messages = chatCubit.state.messages;
     final isLoading = chatCubit.state.isLoading;
-    final DateFormat timeFormatter = DateFormat('HH:mm');
+    // CP: Changed from 24-hour to 12-hour format
+    final DateFormat timeFormatter = DateFormat('h:mm a');
 
     return Container(
       decoration: BoxDecoration(
