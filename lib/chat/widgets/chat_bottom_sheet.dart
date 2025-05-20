@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
+import 'package:myapp/chat/model/chat_suggestion.dart';
+import 'package:myapp/chat/widgets/chat_suggestions.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
-import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ChatBottomSheet extends StatelessWidget {
   const ChatBottomSheet({super.key});
@@ -55,7 +57,7 @@ class ChatBottomSheet extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Unlock insights from your logs!",
+                              "Ask about your logs",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -65,7 +67,7 @@ class ChatBottomSheet extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              "Ask me to:",
+                              "Hello! Curious about your entries? I'm here to help.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color:
@@ -75,9 +77,9 @@ class ChatBottomSheet extends StatelessWidget {
                                 fontSize: 15,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 16),
                             Text(
-                              "• Summarize recent entries\n• Find logs about a specific topic\n• Analyze patterns in your data",
+                              "Not sure what to ask? Try one of these:",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color:
@@ -86,6 +88,22 @@ class ChatBottomSheet extends StatelessWidget {
                                     ).colorScheme.onSurfaceVariant,
                                 fontSize: 15,
                                 height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ChatSuggestions(
+                              suggestions: DefaultSuggestions.suggestions,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'AI responses may not be accurate.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
                             const SizedBox(height: 16),
