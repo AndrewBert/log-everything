@@ -88,156 +88,158 @@ class _InputAreaState extends State<InputArea> {
                 ? 'Chatting...'
                 : (isInputFocused ? 'Enter log entry' : 'What happened?...');
 
-        return Material(
-          elevation: 8.0,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20.0),
-              topRight: Radius.circular(20.0),
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.only(
+        return TextFieldTapRegion(
+          // CP: Use default groupId (EditableText) for correct grouping
+          child: Material(
+            elevation: 8.0,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(20.0),
                 topRight: Radius.circular(20.0),
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 8,
-                    top: 8,
-                    bottom: 4.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          focusNode: _inputFocusNode,
-                          controller: _textController,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25.0),
-                              borderSide: BorderSide.none,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20.0),
+                  topRight: Radius.circular(20.0),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 16,
+                      right: 8,
+                      top: 8,
+                      bottom: 4.0,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            focusNode: _inputFocusNode,
+                            controller: _textController,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25.0),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withAlpha((255 * 0.6).round()),
+                              labelText:
+                                  (isInputFocused || isChatOpen)
+                                      ? labelText
+                                      : null,
+                              hintText: hintText,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
-                            filled: true,
-                            fillColor: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withAlpha((255 * 0.6).round()),
-                            labelText:
-                                (isInputFocused || isChatOpen)
-                                    ? labelText
-                                    : null,
-                            hintText: hintText,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            onSubmitted: (_) => _handleLocalSend(),
+                            minLines: 1,
+                            maxLines: 5,
+                            onTapOutside: (_) {
+                              if (_inputFocusNode.hasFocus && !isChatOpen) {
+                                FocusScope.of(context).unfocus();
+                              }
+                            },
+                            onTap: () {
+                              if (isChatOpen && !_inputFocusNode.hasFocus) {
+                                _inputFocusNode.requestFocus();
+                              }
+                            },
                           ),
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.newline,
-                          onSubmitted: (_) => _handleLocalSend(),
-                          minLines: 1,
-                          maxLines: 5,
-                          onTapOutside: (_) {
-                            if (_inputFocusNode.hasFocus && !isChatOpen) {
-                              FocusScope.of(context).unfocus();
-                            }
-                          },
-                          onTap: () {
-                            if (isChatOpen && !_inputFocusNode.hasFocus) {
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
+                      top: 0,
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom > 0
+                              ? 8.0
+                              : MediaQuery.of(context).padding.bottom + 8.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        TextButton.icon(
+                          icon: Icon(
+                            isChatOpen
+                                ? Icons.forum_rounded
+                                : Icons.forum_outlined,
+                          ),
+                          label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                isChatOpen
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 4.0,
+                            ),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            final shouldOpenChat = !isChatOpen;
+                            context.read<HomePageCubit>().toggleChatOpen();
+                            // CP: Only request focus if opening chat and not already focused
+                            if (shouldOpenChat && !_inputFocusNode.hasFocus) {
                               _inputFocusNode.requestFocus();
                             }
+                            // CP: Do not unfocus when closing chat
                           },
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(
-                    left: 16.0,
-                    right: 16.0,
-                    top: 0,
-                    bottom:
-                        MediaQuery.of(context).viewInsets.bottom > 0
-                            ? 8.0
-                            : MediaQuery.of(context).padding.bottom + 8.0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      TextButton.icon(
-                        icon: Icon(
-                          isChatOpen
-                              ? Icons.forum_rounded
-                              : Icons.forum_outlined,
-                        ),
-                        label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
-                        style: TextButton.styleFrom(
-                          foregroundColor:
-                              isChatOpen
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8.0,
-                            vertical: 4.0,
+                        const Spacer(),
+                        if (!isChatOpen)
+                          VoiceInput(
+                            textController: _textController,
+                            inputFocusNode: _inputFocusNode,
+                            isInputFocused: isInputFocused,
+                            showSnackBar: (
+                              BuildContext ctx, {
+                              required Widget content,
+                              Duration? duration,
+                              SnackBarAction? action,
+                              Color? backgroundColor,
+                            }) {
+                              widget.showSnackBar(
+                                context: context,
+                                content: content,
+                                duration: duration,
+                                action: action,
+                                backgroundColor: backgroundColor,
+                              );
+                            },
                           ),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        IconButton(
+                          onPressed: _handleLocalSend,
+                          icon: const Icon(Icons.send_rounded),
+                          color: Theme.of(context).colorScheme.primary,
+                          iconSize: 28,
+                          tooltip: isChatOpen ? 'Send Message' : 'Add Entry',
                         ),
-                        onPressed: () {
-                          context.read<HomePageCubit>().toggleChatOpen();
-                          if (!isChatOpen) {
-                            _inputFocusNode.requestFocus();
-                          } else {
-                            if (_inputFocusNode.hasFocus) {
-                              FocusScope.of(context).unfocus();
-                            }
-                          }
-                        },
-                      ),
-                      const Spacer(),
-                      if (!isChatOpen)
-                        VoiceInput(
-                          textController: _textController,
-                          inputFocusNode: _inputFocusNode,
-                          isInputFocused: isInputFocused,
-                          showSnackBar: (
-                            BuildContext ctx, {
-                            required Widget content,
-                            Duration? duration,
-                            SnackBarAction? action,
-                            Color? backgroundColor,
-                          }) {
-                            widget.showSnackBar(
-                              context: context,
-                              content: content,
-                              duration: duration,
-                              action: action,
-                              backgroundColor: backgroundColor,
-                            );
-                          },
-                        ),
-                      IconButton(
-                        onPressed: _handleLocalSend,
-                        icon: const Icon(Icons.send_rounded),
-                        color: Theme.of(context).colorScheme.primary,
-                        iconSize: 28,
-                        tooltip: isChatOpen ? 'Send Message' : 'Add Entry',
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
