@@ -228,12 +228,25 @@ class _InputAreaState extends State<InputArea> {
                               );
                             },
                           ),
-                        IconButton(
-                          onPressed: _handleLocalSend,
-                          icon: const Icon(Icons.send_rounded),
-                          color: Theme.of(context).colorScheme.primary,
-                          iconSize: 28,
-                          tooltip: isChatOpen ? 'Send Message' : 'Add Entry',
+                        BlocBuilder<ChatCubit, ChatState>(
+                          builder: (context, chatState) {
+                            final isLoading = chatState.isLoading;
+                            final messages = chatState.messages;
+                            final lastIsUser =
+                                messages.isNotEmpty &&
+                                messages.last.sender == ChatSender.user;
+                            final shouldDisableSend =
+                                isChatOpen && (isLoading || lastIsUser);
+                            return IconButton(
+                              onPressed:
+                                  shouldDisableSend ? null : _handleLocalSend,
+                              icon: const Icon(Icons.send_rounded),
+                              color: Theme.of(context).colorScheme.primary,
+                              iconSize: 28,
+                              tooltip:
+                                  isChatOpen ? 'Send Message' : 'Add Entry',
+                            );
+                          },
                         ),
                       ],
                     ),
