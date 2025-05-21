@@ -186,7 +186,7 @@ class HomePage extends StatelessWidget {
                         alignment: Alignment.bottomCenter,
                         child: FractionallySizedBox(
                           heightFactor:
-                              0.8, // CP: Occupy 80% of available height
+                              0.92, // CP: Increased from 0.8 for a taller chat sheet
                           child: const ChatBottomSheet(),
                         ),
                       ),
