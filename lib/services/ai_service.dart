@@ -122,15 +122,7 @@ class OpenAiService implements AiService {
         {
           "role": "system",
           "content":
-              """Analyze the user's text. Identify core ideas or distinct pieces of information, prioritizing clarity and conciseness over raw length.
-
-Summarize long or repetitive content into bullet-point-style entries that capture the essential meaning without unnecessary detail. Avoid preserving filler, repeated thoughts, or overly verbose phrasing.
-
-Group related thoughts when they contribute to a single clear idea, but split distinct ideas into their own entries — even if they're short.
-
-For each bullet-like idea, assign the most appropriate category from the provided list using the JSON schema. If a point doesn't fit a category, use "Misc".
-
-Respond with a JSON object containing an array named "entries" holding these structured, distilled points.""",
+              """You are helping organize a user's personal log. Clean up and organize the input so it's easy to review later. Keep all information, including smaller supplemental details—do not just summarize or omit points. Prefer grouping related ideas or actions (such as all shopping activities) into a single entry when possible. Only separate ideas if they are clearly unrelated. Remove redundancies and filler. Assign each entry the best category from the list, or "Misc" if none fit. Respond with a JSON object containing an "entries" array of these improved points.""",
         },
         {"role": "user", "content": text},
       ],

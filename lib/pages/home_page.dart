@@ -95,7 +95,9 @@ class HomePage extends StatelessWidget {
             onPressed: () => _showHelpDialog(context),
           ),
           IconButton(
-            icon: const Icon(Icons.category_outlined),
+            icon: const Icon(
+              Icons.tune,
+            ), // CP: Changed from category_outlined to tune for clarity
             tooltip: 'Manage Categories',
             onPressed: () => _showManageCategoriesDialog(context),
           ),
