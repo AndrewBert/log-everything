@@ -10,6 +10,12 @@ typedef ShowEditCategoryDialogCallback =
 typedef ShowDeleteCategoryConfirmationDialogCallback =
     Future<bool> Function(BuildContext context, String category);
 
+// Helper to map backend 'Misc' to frontend 'None' and vice versa
+String categoryDisplayName(String category) =>
+    category == 'Misc' ? 'None' : category;
+String categoryBackendValue(String displayName) =>
+    displayName == 'None' ? 'Misc' : displayName;
+
 class ManageCategoriesDialog extends StatefulWidget {
   final ShowEditCategoryDialogCallback onShowEditCategoryDialog;
   final ShowDeleteCategoryConfirmationDialogCallback
@@ -115,28 +121,28 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                       ),
                     );
                   }
-                  // Sort categories: Most recent first, Misc last
+                  // Sort categories: Most recent first, None last
                   final List<String> displayCategories = List<String>.from(
-                    state.categories,
+                    state.categories.map(categoryDisplayName),
                   );
-                  displayCategories.remove('Misc');
+                  displayCategories.remove('None');
                   final sortedCategories = displayCategories.reversed.toList();
-                  sortedCategories.add('Misc');
+                  sortedCategories.add('None');
 
                   return ListView.builder(
                     shrinkWrap: true,
                     itemCount: sortedCategories.length,
                     itemBuilder: (itemContext, index) {
                       final category = sortedCategories[index];
-                      final bool isMisc = category == 'Misc';
+                      final bool isNone = category == 'None';
                       return ListTile(
                         title: Text(
                           category,
-                          style: TextStyle(color: isMisc ? Colors.grey : null),
+                          style: TextStyle(color: isNone ? Colors.grey : null),
                         ),
                         dense: true,
                         trailing:
-                            isMisc
+                            isNone
                                 ? null
                                 : Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -154,14 +160,14 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                         final String? newName = await widget
                                             .onShowEditCategoryDialog(
                                               itemContext, // Use context from item builder
-                                              category,
+                                              categoryBackendValue(category),
                                             );
                                         if (newName != null &&
                                             newName.isNotEmpty &&
                                             newName != category) {
                                           HapticFeedback.mediumImpact();
                                           _showFeedback(
-                                            'Category renamed to "$newName"',
+                                            'Category renamed to "${categoryDisplayName(newName)}"',
                                           );
                                         }
                                       },
@@ -180,7 +186,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                         bool confirmed = await widget
                                             .onShowDeleteCategoryConfirmationDialog(
                                               itemContext, // Use context from item builder
-                                              category,
+                                              categoryBackendValue(category),
                                             );
                                         // Add mounted check before using context after await
                                         if (confirmed && itemContext.mounted) {
@@ -188,9 +194,11 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                           // Cubit action is still needed here
                                           itemContext
                                               .read<EntryCubit>()
-                                              .deleteCategory(category);
+                                              .deleteCategory(
+                                                categoryBackendValue(category),
+                                              );
                                           _showFeedback(
-                                            'Category "$category" deleted',
+                                            'Category "${categoryDisplayName(category)}" deleted',
                                           );
                                         }
                                       },

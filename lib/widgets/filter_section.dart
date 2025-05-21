@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../entry/cubit/entry_cubit.dart';
 
+// Helper to map backend 'Misc' to frontend 'None' and vice versa
+String categoryDisplayName(String category) =>
+    category == 'Misc' ? 'None' : category;
+String categoryBackendValue(String displayName) =>
+    displayName == 'None' ? 'Misc' : displayName;
+
 class FilterSection extends StatelessWidget {
   const FilterSection({super.key});
 
@@ -22,12 +28,14 @@ class FilterSection extends StatelessWidget {
             builder: (context, state) {
               final dropdownCategories = [
                 'All Categories',
-                ...List<String>.from(state.categories)..sort(),
+                ...List<String>.from(state.categories.map(categoryDisplayName))
+                  ..sort(),
               ];
 
               // Ensure the current value exists in the list
-              String currentDisplayValue =
-                  state.filterCategory ?? 'All Categories';
+              String currentDisplayValue = categoryDisplayName(
+                state.filterCategory ?? 'All Categories',
+              );
               if (!dropdownCategories.contains(currentDisplayValue)) {
                 currentDisplayValue = 'All Categories';
               }
@@ -84,8 +92,9 @@ class FilterSection extends StatelessWidget {
                         }
                       } else {
                         // If a specific category is selected, set the filter
-                        if (currentFilter != newValue) {
-                          cubit.setFilter(newValue);
+                        final backendValue = categoryBackendValue(newValue);
+                        if (currentFilter != backendValue) {
+                          cubit.setFilter(backendValue);
                         }
                       }
                     },

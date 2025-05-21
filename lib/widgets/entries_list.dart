@@ -26,6 +26,10 @@ class EntriesList extends StatelessWidget {
     required this.onDeletePressed,
   });
 
+  // Helper to map backend 'Misc' to frontend 'None' and vice versa
+  String categoryDisplayName(String category) =>
+      category == 'Misc' ? 'None' : category;
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -133,7 +137,9 @@ class EntriesList extends StatelessWidget {
                               entry,
                             ), // Add key to ActionChip
                             label: Text(
-                              entry.category,
+                              categoryDisplayName(
+                                entry.category,
+                              ), // Show 'None' for 'Misc' in chip
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
