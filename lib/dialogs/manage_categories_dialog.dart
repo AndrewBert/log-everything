@@ -292,6 +292,8 @@ class AddCategoryDialog extends StatelessWidget {
             child: TextField(
               controller: categoryInputController,
               focusNode: categoryFocusNode, // CP: Auto-focus here
+              textCapitalization:
+                  TextCapitalization.words, // CP: Auto-capitalize each word
               decoration: InputDecoration(
                 labelText: 'New Category Name',
                 hintText: 'Enter category to add...',
