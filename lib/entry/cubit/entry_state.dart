@@ -2,16 +2,14 @@ part of 'entry_cubit.dart';
 
 // Extend Equatable
 class EntryState extends Equatable {
-  // Remove entries list from state, repository is source of truth
-  // final List<Entry> entries;
-  final List<String> categories;
+  // Use List<Category> for categories to support descriptions
+  final List<Category> categories;
   final bool isLoading;
   final String? lastErrorMessage;
   final String? filterCategory;
   final List<dynamic> displayListItems;
 
   const EntryState({
-    // this.entries = const [], // Removed
     this.categories = const [],
     this.isLoading = false,
     this.lastErrorMessage,
@@ -31,8 +29,7 @@ class EntryState extends Equatable {
 
   // copyWith remains the same, but without entries
   EntryState copyWith({
-    // List<Entry>? entries, // Removed
-    List<String>? categories,
+    List<Category>? categories,
     bool? isLoading,
     String? lastErrorMessage,
     String? filterCategory,
@@ -41,7 +38,6 @@ class EntryState extends Equatable {
     bool clearFilter = false,
   }) {
     return EntryState(
-      // entries: entries ?? this.entries, // Removed
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
       lastErrorMessage:

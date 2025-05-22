@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:intl/intl.dart';
 import '../entry.dart';
+import '../category.dart'; // CP: Import Category model
 import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
 import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
@@ -12,13 +13,13 @@ class EntryRepository {
   final AiService _aiService;
   final VectorStoreService _vectorStoreService;
   List<Entry> _entries = [];
-  List<String> _categories = [];
+  List<Category> _categories = [];
   // CP: Map to store debounce timers for each month's sync
   final Map<String, Timer> _syncDebounceTimers = {};
   static const _syncDebounceMs = 2000; // CP: 2 second debounce
 
   List<Entry> get currentEntries => List.unmodifiable(_entries);
-  List<String> get currentCategories => List.unmodifiable(_categories);
+  List<Category> get currentCategories => List.unmodifiable(_categories);
 
   EntryRepository({
     required EntryPersistenceService persistenceService,
@@ -107,6 +108,7 @@ class EntryRepository {
     String? serviceError;
 
     try {
+      // CP: Pass List<Category> to AI service for type safety
       extractedData = await _aiService.extractEntries(text, _categories);
     } on AiServiceException catch (e) {
       AppLogger.error(
@@ -138,7 +140,9 @@ class EntryRepository {
           text: data.textSegment,
           timestamp: processingTimestamp,
           category:
-              _categories.contains(data.category) ? data.category : 'Misc',
+              _categories.any((cat) => cat.name == data.category)
+                  ? data.category
+                  : 'Misc',
           isNew: true,
         );
         addedEntries.add(newEntry);
@@ -238,6 +242,7 @@ class EntryRepository {
     List<EntryPrototype> extractedData = [];
     String? serviceError;
     try {
+      // CP: Pass List<Category> to AI service for type safety
       extractedData = await _aiService.extractEntries(
         combinedText,
         _categories,
@@ -284,7 +289,9 @@ class EntryRepository {
           text: data.textSegment,
           timestamp: tempEntryTimestamp,
           category:
-              _categories.contains(data.category) ? data.category : 'Misc',
+              _categories.any((cat) => cat.name == data.category)
+                  ? data.category
+                  : 'Misc',
           isNew: true,
         );
         addedEntries.add(newEntry);
@@ -311,26 +318,46 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<String>> addCustomCategory(String newCategory) async {
+  Future<List<Category>> addCustomCategory(String newCategory) async {
     final trimmedCategory = newCategory.trim();
     if (trimmedCategory.isNotEmpty &&
         trimmedCategory != 'Misc' &&
-        !_categories.contains(trimmedCategory)) {
-      _categories.add(trimmedCategory);
+        !_categories.any((cat) => cat.name == trimmedCategory)) {
+      _categories.add(Category(name: trimmedCategory));
       await _saveCategories();
     }
     return currentCategories;
   }
 
-  Future<({List<Entry> entries, List<String> categories})> deleteCategory(
+  Future<List<Category>> addCustomCategoryWithDescription(
+    String name,
+    String description,
+  ) async {
+    final trimmedName = name.trim();
+    final trimmedDescription = description.trim();
+    if (trimmedName.isNotEmpty &&
+        trimmedName != 'Misc' &&
+        !_categories.any((cat) => cat.name == trimmedName)) {
+      _categories.add(
+        Category(name: trimmedName, description: trimmedDescription),
+      );
+      await _saveCategories();
+    }
+    return currentCategories;
+  }
+
+  Future<({List<Entry> entries, List<Category> categories})> deleteCategory(
     String categoryToDelete,
   ) async {
     if (categoryToDelete == 'Misc') {
       return (entries: currentEntries, categories: currentCategories);
     }
 
-    if (_categories.contains(categoryToDelete)) {
-      _categories.remove(categoryToDelete);
+    final categoryIndex = _categories.indexWhere(
+      (cat) => cat.name == categoryToDelete,
+    );
+    if (categoryIndex != -1) {
+      _categories.removeAt(categoryIndex);
       bool entriesChanged = false;
       final Set<DateTime> affectedDates = {};
       _entries =
@@ -381,42 +408,48 @@ class EntryRepository {
     return false;
   }
 
-  Future<({List<Entry> entries, List<String> categories})> renameCategory(
+  Future<({List<Entry> entries, List<Category> categories})> renameCategory(
     String oldName,
-    String newName,
-  ) async {
+    String newName, {
+    String? description,
+  }) async {
     final trimmedNewName = newName.trim();
-    if (trimmedNewName.isEmpty ||
-        trimmedNewName == oldName ||
-        _categories.contains(trimmedNewName)) {
-      return (entries: currentEntries, categories: currentCategories);
-    }
-
-    final oldCategoryIndex = _categories.indexOf(oldName);
+    final oldCategoryIndex = _categories.indexWhere(
+      (cat) => cat.name == oldName,
+    );
     if (oldCategoryIndex == -1) {
       return (entries: currentEntries, categories: currentCategories);
     }
-
-    _categories[oldCategoryIndex] = trimmedNewName;
-
+    // CP: Allow updating description even if name is unchanged
+    final isNameChanged = trimmedNewName != oldName;
+    final nameExists = _categories.any((cat) => cat.name == trimmedNewName);
+    if (isNameChanged && nameExists) {
+      return (entries: currentEntries, categories: currentCategories);
+    }
+    final oldCategory = _categories[oldCategoryIndex];
+    _categories[oldCategoryIndex] = oldCategory.copyWith(
+      name: trimmedNewName,
+      description: description ?? oldCategory.description,
+    );
     bool entriesChanged = false;
     final Set<DateTime> affectedDates = {};
-    _entries =
-        _entries.map((entry) {
-          if (entry.category == oldName) {
-            entriesChanged = true;
-            affectedDates.add(
-              DateTime(
-                entry.timestamp.year,
-                entry.timestamp.month,
-                entry.timestamp.day,
-              ),
-            );
-            return entry.copyWith(category: trimmedNewName);
-          }
-          return entry;
-        }).toList();
-
+    if (isNameChanged) {
+      _entries =
+          _entries.map((entry) {
+            if (entry.category == oldName) {
+              entriesChanged = true;
+              affectedDates.add(
+                DateTime(
+                  entry.timestamp.year,
+                  entry.timestamp.month,
+                  entry.timestamp.day,
+                ),
+              );
+              return entry.copyWith(category: trimmedNewName);
+            }
+            return entry;
+          }).toList();
+    }
     await _saveCategories();
     if (entriesChanged) {
       await _saveEntries();

@@ -26,15 +26,17 @@ class FilterSection extends StatelessWidget {
         children: [
           BlocBuilder<EntryCubit, EntryState>(
             builder: (context, state) {
-              // Place 'None' first, then all other categories sorted
-              final sortedCategories =
-                  List<String>.from(state.categories)
-                    ..remove('Misc')
-                    ..sort();
+              // CP: Ensure 'None' is only present once and is always below 'All Categories'
+              final List<String> filterCategories =
+                  state.categories
+                      .map((cat) => categoryDisplayName(cat.name))
+                      .toSet()
+                      .toList();
+              filterCategories.remove('None');
               final dropdownCategories = [
                 'All Categories',
                 'None',
-                ...sortedCategories.map(categoryDisplayName),
+                ...filterCategories..sort(),
               ];
 
               // Ensure the current value exists in the list

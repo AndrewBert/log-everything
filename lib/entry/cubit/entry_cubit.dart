@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
+import 'package:myapp/entry/category.dart';
 
 import '../entry.dart';
 import '../../utils/logger.dart';
@@ -103,10 +104,10 @@ class EntryCubit extends Cubit<EntryState> {
 
   // --- UI State Update Helpers ---
 
-  // Update _updateStateFromRepository to remove logging
+  // CP: Update _updateStateFromRepository to use List<Category>
   void _updateStateFromRepository({
     required List<Entry> updatedEntries,
-    List<String>? updatedCategories,
+    List<Category>? updatedCategories,
     bool? clearFilter,
     String? newFilterCategory,
   }) {
@@ -306,6 +307,24 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
+  Future<void> addCustomCategoryWithDescription(
+    String name,
+    String description,
+  ) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedCategories = await _entryRepository
+          .addCustomCategoryWithDescription(name, description);
+      emit(state.copyWith(categories: updatedCategories));
+    } catch (e) {
+      AppLogger.error(
+        "Cubit: Error adding category with description via repository",
+        error: e,
+      );
+      emit(state.copyWith(lastErrorMessage: "Failed to add category."));
+    }
+  }
+
   Future<void> deleteCategory(String categoryToDelete) async {
     if (categoryToDelete == 'Misc') return;
     emit(state.copyWith(clearLastError: true));
@@ -325,10 +344,18 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  Future<void> renameCategory(String oldName, String newName) async {
+  Future<void> renameCategory(
+    String oldName,
+    String newName, {
+    String? description,
+  }) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final result = await _entryRepository.renameCategory(oldName, newName);
+      final result = await _entryRepository.renameCategory(
+        oldName,
+        newName,
+        description: description,
+      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,

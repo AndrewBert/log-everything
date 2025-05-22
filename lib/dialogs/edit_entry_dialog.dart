@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
+import '../entry/category.dart'; // CP: Import Category model from correct barrel file
 import '../entry/entry.dart';
 import '../utils/widget_keys.dart'; // Import keys
 
@@ -16,7 +18,7 @@ class EditEntryDialog extends StatefulWidget {
 class _EditEntryDialogState extends State<EditEntryDialog> {
   late final TextEditingController _editController;
   late String _selectedCategory;
-  late List<String> _availableCategories;
+  late List<Category> _availableCategories; // Use Category model
   final _formKey = GlobalKey<FormState>(); // Add form key for validation
 
   @override
@@ -25,12 +27,13 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
     _editController = TextEditingController(text: widget.originalEntry.text);
     _selectedCategory = widget.originalEntry.category;
 
-    // Get categories from cubit
+    // Get categories from cubit as List<Category>
     final currentState = context.read<EntryCubit>().state;
-    _availableCategories = List<String>.from(currentState.categories)..sort();
+    _availableCategories = List<Category>.from(currentState.categories)
+      ..sort((a, b) => a.name.compareTo(b.name));
 
     // Ensure the current category is valid, default to Misc if not
-    if (!_availableCategories.contains(_selectedCategory)) {
+    if (!_availableCategories.any((cat) => cat.name == _selectedCategory)) {
       _selectedCategory = 'Misc';
     }
   }
@@ -105,10 +108,10 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
                 ),
               ),
               items:
-                  _availableCategories.map((String category) {
+                  _availableCategories.map((Category category) {
                     return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(category),
+                      value: category.name,
+                      child: Text(category.name),
                     );
                   }).toList(),
               onChanged: (String? newValue) {

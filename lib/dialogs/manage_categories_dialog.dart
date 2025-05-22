@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
 
 // Define callback types for clarity
@@ -34,69 +35,57 @@ class ManageCategoriesDialog extends StatefulWidget {
 class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
     with TickerProviderStateMixin {
   final _categoryInputController = TextEditingController();
-  String _feedbackMessage = '';
-  Timer? _feedbackTimer;
-  late AnimationController _feedbackAnimationController;
-  late Animation<double> _feedbackScaleAnimation;
+  final _descriptionInputController =
+      TextEditingController(); // Controller for new category description
 
   @override
   void initState() {
     super.initState();
-    _feedbackAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _feedbackScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _feedbackAnimationController,
-        curve: Curves.easeOutBack,
-      ),
-    );
   }
 
   @override
   void dispose() {
     _categoryInputController.dispose();
-    _feedbackTimer?.cancel();
-    _feedbackAnimationController.dispose();
+    _descriptionInputController.dispose();
     super.dispose();
-  }
-
-  void _showFeedback(String message) {
-    _feedbackTimer?.cancel();
-    if (mounted) {
-      setState(() {
-        _feedbackMessage = message;
-      });
-      _feedbackAnimationController.forward(from: 0.0);
-      _feedbackTimer = Timer(const Duration(seconds: 2, milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _feedbackMessage = '';
-          });
-        }
-      });
-    }
-  }
-
-  void _addCategory() {
-    final newCategory = _categoryInputController.text.trim();
-    if (newCategory.isNotEmpty) {
-      HapticFeedback.mediumImpact();
-      // Use context.read here as it's inside a method
-      context.read<EntryCubit>().addCustomCategory(newCategory);
-      _categoryInputController.clear();
-      _showFeedback('Category "$newCategory" added');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // No need for StatefulBuilder here, the dialog itself is stateful
-    // No need for BlocProvider.value, assuming EntryCubit is provided above this dialog
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Manage Categories'),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Manage Categories'),
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add Category',
+            onPressed: () async {
+              final entryCubit =
+                  context.read<EntryCubit>(); // CP: Get cubit before async
+              final rootNavigator = Navigator.of(
+                context,
+                rootNavigator: true,
+              ); // CP: Get navigator before async
+              final result = await showDialog<Map<String, String>?>(
+                context: context,
+                builder: (dialogContext) => const AddCategoryDialog(),
+              );
+              if (!mounted) return; // CP: Guard context after async gap
+              if (result != null && result['name'] != null) {
+                entryCubit.addCustomCategoryWithDescription(
+                  result['name']!,
+                  result['description'] ?? '',
+                );
+                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                  SnackBar(content: Text('Category "${result['name']}" added')),
+                );
+              }
+            },
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -111,6 +100,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
               ),
             ),
             Flexible(
+              fit: FlexFit.loose,
               child: BlocBuilder<EntryCubit, EntryState>(
                 builder: (listBuilderContext, state) {
                   if (state.categories.isEmpty) {
@@ -121,9 +111,10 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                       ),
                     );
                   }
-                  // Sort categories: Most recent first, None last
                   final List<String> displayCategories = List<String>.from(
-                    state.categories.map(categoryDisplayName),
+                    state.categories.map(
+                      (cat) => categoryDisplayName(cat.name),
+                    ),
                   );
                   displayCategories.remove('None');
                   final sortedCategories = displayCategories.reversed.toList();
@@ -135,11 +126,30 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                     itemBuilder: (itemContext, index) {
                       final category = sortedCategories[index];
                       final bool isNone = category == 'None';
+                      final Category catObj = state.categories.firstWhere(
+                        (cat) => categoryDisplayName(cat.name) == category,
+                        orElse: () => Category(name: category),
+                      );
                       return ListTile(
                         title: Text(
                           category,
                           style: TextStyle(color: isNone ? Colors.grey : null),
                         ),
+                        subtitle:
+                            (catObj.description.isNotEmpty && !isNone)
+                                ? Tooltip(
+                                  message: catObj.description,
+                                  child: Text(
+                                    catObj.description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                )
+                                : null,
                         dense: true,
                         trailing:
                             isNone
@@ -156,18 +166,33 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
                                       onPressed: () async {
-                                        // Use the callback passed to the widget
-                                        final String? newName = await widget
-                                            .onShowEditCategoryDialog(
-                                              itemContext, // Use context from item builder
+                                        final onShowEditCategoryDialog =
+                                            widget.onShowEditCategoryDialog;
+                                        final rootNavigator = Navigator.of(
+                                          context,
+                                          rootNavigator: true,
+                                        ); // CP: Get navigator before async
+                                        final result =
+                                            await onShowEditCategoryDialog(
+                                              itemContext,
                                               categoryBackendValue(category),
                                             );
+                                        if (!mounted) {
+                                          return; // CP: Guard context after async gap
+                                        }
+                                        final newName = result;
                                         if (newName != null &&
                                             newName.isNotEmpty &&
                                             newName != category) {
                                           HapticFeedback.mediumImpact();
-                                          _showFeedback(
-                                            'Category renamed to "${categoryDisplayName(newName)}"',
+                                          ScaffoldMessenger.of(
+                                            rootNavigator.context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Category renamed to "${categoryDisplayName(newName)}"',
+                                              ),
+                                            ),
                                           );
                                         }
                                       },
@@ -182,23 +207,39 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
                                       onPressed: () async {
-                                        // Use the callback passed to the widget
-                                        bool confirmed = await widget
-                                            .onShowDeleteCategoryConfirmationDialog(
-                                              itemContext, // Use context from item builder
+                                        final entryCubit =
+                                            itemContext
+                                                .read<
+                                                  EntryCubit
+                                                >(); // CP: Get cubit before async
+                                        final onShowDeleteCategoryConfirmationDialog =
+                                            widget
+                                                .onShowDeleteCategoryConfirmationDialog;
+                                        final rootNavigator = Navigator.of(
+                                          context,
+                                          rootNavigator: true,
+                                        ); // CP: Get navigator before async
+                                        final confirmed =
+                                            await onShowDeleteCategoryConfirmationDialog(
+                                              itemContext,
                                               categoryBackendValue(category),
                                             );
-                                        // Add mounted check before using context after await
+                                        if (!mounted) {
+                                          return; // CP: Guard context after async gap
+                                        }
                                         if (confirmed && itemContext.mounted) {
                                           HapticFeedback.mediumImpact();
-                                          // Cubit action is still needed here
-                                          itemContext
-                                              .read<EntryCubit>()
-                                              .deleteCategory(
-                                                categoryBackendValue(category),
-                                              );
-                                          _showFeedback(
-                                            'Category "${categoryDisplayName(category)}" deleted',
+                                          entryCubit.deleteCategory(
+                                            categoryBackendValue(category),
+                                          );
+                                          ScaffoldMessenger.of(
+                                            rootNavigator.context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Category "${categoryDisplayName(category)}" deleted',
+                                              ),
+                                            ),
                                           );
                                         }
                                       },
@@ -211,41 +252,6 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                 },
               ),
             ),
-            const Divider(height: 24),
-            if (_feedbackMessage.isNotEmpty)
-              ScaleTransition(
-                scale: _feedbackScaleAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10.0, top: 4.0),
-                  child: Text(
-                    _feedbackMessage,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: TextField(
-                controller: _categoryInputController,
-                decoration: InputDecoration(
-                  labelText: 'New Category Name',
-                  hintText: 'Enter category to add...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-                onSubmitted: (value) => _addCategory(),
-              ),
-            ),
           ],
         ),
       ),
@@ -254,9 +260,88 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
           child: const Text('Done'),
           onPressed: () => Navigator.of(context).pop(),
         ),
+      ],
+    );
+  }
+}
+
+class AddCategoryDialog extends StatelessWidget {
+  const AddCategoryDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // CP: Remove leading underscores from local variables
+    final categoryInputController = TextEditingController();
+    final descriptionInputController = TextEditingController();
+    // CP: FocusNode to auto-focus the category name field
+    final categoryFocusNode = FocusNode();
+
+    // CP: Request focus when the dialog is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      categoryFocusNode.requestFocus();
+    });
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Add Category'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: TextField(
+              controller: categoryInputController,
+              focusNode: categoryFocusNode, // CP: Auto-focus here
+              decoration: InputDecoration(
+                labelText: 'New Category Name',
+                hintText: 'Enter category to add...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: TextField(
+              controller: descriptionInputController,
+              decoration: InputDecoration(
+                labelText: 'Description (optional)',
+                hintText:
+                    'Describe this category for better auto-categorization',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+              maxLines: 2,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          child: const Text('Cancel'),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         FilledButton(
-          onPressed: _addCategory,
-          child: const Text('Add Category'),
+          onPressed: () {
+            final name = categoryInputController.text.trim();
+            final description = descriptionInputController.text.trim();
+            if (name.isNotEmpty) {
+              Navigator.of(
+                context,
+              ).pop({'name': name, 'description': description});
+            }
+          },
+          child: const Text('Add'),
         ),
       ],
     );

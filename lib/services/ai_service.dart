@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/entry/category.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Added SharedPreferences
 import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
@@ -17,7 +18,7 @@ abstract class AiService {
   /// Throws an [AiServiceException] if the process fails.
   Future<List<EntryPrototype>> extractEntries(
     String text,
-    List<String> categories,
+    List<Category> categories, // CP: Use Category model for type safety
   );
 
   /// Gets a chat response from the AI model based on the provided message history
@@ -61,7 +62,11 @@ class OpenAiService implements AiService {
   final String _apiKey =
       dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/responses';
-  final String _modelId = 'gpt-4o-mini';
+  static const fourOMini = 'gpt-4o-mini';
+  static const fourPoint1 = 'gpt-4.1-2025-04-14';
+  static const fourPoint1Mini = 'gpt-4.1-mini-2025-04-14';
+  final String _chatModelId = fourPoint1Mini;
+  final String _defaultModelId = fourOMini;
   final SharedPreferences _prefs; // CP: Added SharedPreferences field
 
   // CP: Updated constructor to accept SharedPreferences
@@ -71,7 +76,7 @@ class OpenAiService implements AiService {
   @override
   Future<List<EntryPrototype>> extractEntries(
     String text,
-    List<String> categories,
+    List<Category> categories, // CP: Use Category model for type safety
   ) async {
     // 1. Pre-flight checks
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
@@ -81,11 +86,19 @@ class OpenAiService implements AiService {
       throw AiServiceException('No categories provided for classification.');
     }
 
+    // CP: Log categories sent to AI (with descriptions)
+    AppLogger.info('CP: Categories sent to AI:');
+    for (final cat in categories) {
+      AppLogger.info('CP: ${cat.name} - ${cat.description}');
+    }
+
     // 2. Prepare API Call
     AppLogger.info(
-      "Calling OpenAI API ($_modelId) to extract entries for text: '$text'",
+      "Calling OpenAI API ($_defaultModelId) to extract entries for text: '$text'",
     );
 
+    // CP: Build enum list and schema for OpenAI using only the name field
+    final categoryNames = categories.map((cat) => cat.name).toList();
     final schema = {
       "type": "object",
       "properties": {
@@ -103,8 +116,9 @@ class OpenAiService implements AiService {
               },
               "category": {
                 "type": "string",
-                "description": "The category assigned to this text segment.",
-                "enum": categories, // Use provided categories
+                "description":
+                    "The category assigned to this text segment. Use only the category name from the provided list, not the description.",
+                "enum": categoryNames, // Use only names
               },
             },
             "required": ["text_segment", "category"],
@@ -116,14 +130,23 @@ class OpenAiService implements AiService {
       "additionalProperties": false,
     };
 
+    // CP: Build a string listing all categories and their descriptions for the AI
+    final categoriesListString = categories
+        .map(
+          (cat) =>
+              cat.description.trim().isNotEmpty
+                  ? '- ${cat.name}: ${cat.description}'
+                  : '- ${cat.name}',
+        )
+        .join('\n');
+
+    final systemPrompt =
+        """You are helping organize a user's personal log. Clean up and organize the input so it's easy to review later. Keep all information, including smaller supplemental details—do not just summarize or omit points. Prefer grouping related ideas or actions (such as all shopping activities) into a single entry when possible. Only separate ideas if they are clearly unrelated. Remove redundancies and filler.\n\nHere are the available categories:\n$categoriesListString\n\nWhen deciding which category to use, consider both the name and the description for the best fit. When returning your answer, use only the category name from the provided list, not the description. Respond with a JSON object containing an \"entries\" array of these improved points.""";
+
     final requestBody = {
-      'model': _modelId,
+      'model': _defaultModelId, // CP: Use GPT-4o mini for extraction
       'input': [
-        {
-          "role": "system",
-          "content":
-              """You are helping organize a user's personal log. Clean up and organize the input so it's easy to review later. Keep all information, including smaller supplemental details—do not just summarize or omit points. Prefer grouping related ideas or actions (such as all shopping activities) into a single entry when possible. Only separate ideas if they are clearly unrelated. Remove redundancies and filler. Assign each entry the best category from the list, or "Misc" if none fit. Respond with a JSON object containing an "entries" array of these improved points.""",
-        },
+        {"role": "system", "content": systemPrompt},
         {"role": "user", "content": text},
       ],
       'text': {
@@ -197,7 +220,7 @@ class OpenAiService implements AiService {
                     String segment = item['text_segment']; // Read from JSON key
                     String category = item['category'];
 
-                    if (categories.contains(category)) {
+                    if (categoryNames.contains(category)) {
                       // Assign to the renamed typedef field
                       extractedEntries.add((
                         textSegment: segment,
@@ -266,7 +289,7 @@ class OpenAiService implements AiService {
         String errorMessage;
         if (response.statusCode == 400) {
           errorMessage =
-              'OpenAI API error (Code: 400). Check model compatibility ($_modelId) with structured output.';
+              'OpenAI API error (Code: 400). Check model compatibility ($_defaultModelId) with structured output.';
         } else if (response.statusCode == 401) {
           errorMessage = 'Invalid OpenAI API Key.';
         } else if (response.statusCode == 429) {
@@ -302,6 +325,15 @@ class OpenAiService implements AiService {
     }
   }
 
+  String _buildSystemInstructions(DateTime? currentDate) {
+    // CP: Helper to build system instructions for chat
+    final dateString =
+        currentDate != null
+            ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
+            : "";
+    return "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString";
+  }
+
   @override
   Future<(String text, String? responseId)> getChatResponse({
     required List<ChatMessage> messages,
@@ -319,8 +351,11 @@ class OpenAiService implements AiService {
     }
 
     AppLogger.info(
-      "Calling OpenAI API ($_modelId) for chat response. Message count: ${messages.length}",
+      "Calling OpenAI API ($_chatModelId) for chat response. Message count: ${messages.length}",
     );
+
+    // CP: Log start time for chat response
+    final chatStartTime = DateTime.now();
 
     // CP: Retrieve vector_store_id from SharedPreferences
     final String? vectorStoreId = _prefs.getString('openai_vector_store_id');
@@ -341,12 +376,11 @@ class OpenAiService implements AiService {
             };
           },
         ).toList(); // CP: Updated system instructions for File Search with temporal context
-    final String systemInstructions =
-        currentDate != null
-            ? "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files. Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
-            : "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files."; // CP: Prepare the request body, including system instructions as the first message
+    final String systemInstructions = _buildSystemInstructions(
+      currentDate,
+    ); // CP: Prepare the request body, including system instructions as the first message
     final Map<String, dynamic> requestBody = {
-      'model': _modelId,
+      'model': _chatModelId,
       'input': [
         {"role": "system", "content": systemInstructions},
         ...inputMessages, // Spread the rest of the messages
@@ -369,10 +403,6 @@ class OpenAiService implements AiService {
       ];
       // CP: As per OpenAI documentation, when 'tools' are used, 'instructions' parameter should not be used.
       // The system message is now part of the 'input' array.
-    } else {
-      // CP: If no vector store, ensure the 'input' still contains the system message.
-      // This is already handled by the structure above.
-      // The 'instructions' parameter is not used in this new structure.
     }
 
     try {
@@ -383,6 +413,12 @@ class OpenAiService implements AiService {
           'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode(requestBody),
+      );
+
+      // CP: Log chat response duration
+      final chatDuration = DateTime.now().difference(chatStartTime);
+      AppLogger.info(
+        'CP: Chat response took ${chatDuration.inMilliseconds} ms',
       );
 
       if (response.statusCode == 200) {
@@ -424,8 +460,13 @@ class OpenAiService implements AiService {
               }
 
               if (aiResponseText != null) {
+                // CP: Limit logged chat response to first 200 characters for brevity
+                final preview =
+                    aiResponseText.length > 200
+                        ? '${aiResponseText.substring(0, 200)}...'
+                        : aiResponseText;
                 AppLogger.info(
-                  "Received chat response from OpenAI: '$aiResponseText'",
+                  "Received chat response from OpenAI (preview): '$preview'",
                 );
                 return (aiResponseText, responseBody['id'] as String?);
               } else {
@@ -493,7 +534,7 @@ class OpenAiService implements AiService {
         String errorMessage;
         if (response.statusCode == 400) {
           errorMessage =
-              'OpenAI API error (Code: 400) for chat. Check request format or model: $_modelId.';
+              'OpenAI API error (Code: 400) for chat. Check request format or model: $_chatModelId.';
         } else if (response.statusCode == 401) {
           errorMessage = 'Invalid OpenAI API Key for chat.';
         } else if (response.statusCode == 429) {

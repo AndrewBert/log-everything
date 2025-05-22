@@ -122,16 +122,9 @@ class HomePage extends StatelessWidget {
           BlocListener<HomePageCubit, HomePageState>(
             // Keep null check for snackBarMessage as it IS nullable
             listenWhen: (prev, current) {
-              // CP: Log listenWhen for snackBarMessage
-              AppLogger.info(
-                '[HomePage] SnackBar listenWhen: prev.snackBarMessage: ${prev.snackBarMessage}, current.snackBarMessage: ${current.snackBarMessage}',
-              );
               final condition =
                   prev.snackBarMessage != current.snackBarMessage &&
                   current.snackBarMessage != null;
-              AppLogger.info(
-                '[HomePage] SnackBar listenWhen condition result: $condition',
-              );
               return condition;
             },
             listener: (context, state) {
@@ -371,14 +364,19 @@ class HomePage extends StatelessWidget {
     HapticFeedback.lightImpact();
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        return ManageCategoriesDialog(
-          onShowEditCategoryDialog:
-              (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
-          onShowDeleteCategoryConfirmationDialog:
-              (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
-        );
-      },
+      builder:
+          (context) => Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(
+              child: ManageCategoriesDialog(
+                onShowEditCategoryDialog:
+                    (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
+                onShowDeleteCategoryConfirmationDialog:
+                    (ctx, cat) =>
+                        _showDeleteCategoryConfirmationDialog(ctx, cat),
+              ),
+            ),
+          ),
     );
   }
 
@@ -422,8 +420,8 @@ class HomePage extends StatelessWidget {
     Entry entry,
   ) async {
     final entryCubit = context.read<EntryCubit>();
-    final availableCategories = List<String>.from(entryCubit.state.categories)
-      ..sort();
+    final availableCategories =
+        entryCubit.state.categories.map((cat) => cat.name).toList()..sort();
     String? selectedCategory = entry.category;
 
     if (!availableCategories.contains(selectedCategory)) {
@@ -447,7 +445,7 @@ class HomePage extends StatelessWidget {
         _showFloatingSnackBar(
           context,
           content: Text('Category changed to "$newCategory"'),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 1),
         );
       }
     }
