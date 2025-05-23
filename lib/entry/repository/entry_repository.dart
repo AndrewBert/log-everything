@@ -63,7 +63,7 @@ class EntryRepository {
   Future<void> _loadCategories() async {
     try {
       _categories = await _persistenceService.loadCategories();
-      AppLogger.info("Repository: Loaded Categories: $_categories");
+      // AppLogger.info("Repository: Loaded Categories: $_categories");
     } catch (e) {
       AppLogger.error("Repository: Error loading categories", error: e);
       _categories = [];
@@ -85,7 +85,7 @@ class EntryRepository {
   Future<void> _saveCategories() async {
     try {
       await _persistenceService.saveCategories(_categories);
-      AppLogger.info("Repository: Saved Categories: $_categories");
+      // AppLogger.info("Repository: Saved Categories: $_categories");
     } catch (e) {
       AppLogger.error("Repository: Error saving categories", error: e);
     }

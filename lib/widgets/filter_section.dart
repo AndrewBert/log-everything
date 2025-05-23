@@ -21,21 +21,24 @@ class FilterSection extends StatelessWidget {
               previous.filterCategory != current.filterCategory ||
               previous.recentCategories != current.recentCategories,
       builder: (context, state) {
-        final List<String> filterCategories =
+        // Get all categories in display format
+        final List<String> allCategories =
             state.categories
                 .map((cat) => categoryDisplayName(cat.name))
-                .toSet()
                 .toList()
-              ..remove('None');
-        final List<String> otherCategories =
-            ['None', ...filterCategories..sort()]
-                .where(
-                  (cat) =>
-                      !state.recentCategories.contains(
-                        categoryBackendValue(cat),
-                      ),
-                )
-                .toList();
+              ..remove('None')
+              ..sort();
+
+        // Convert recent categories to display format
+        final recentDisplayCategories =
+            state.recentCategories.map(categoryDisplayName).toList();
+
+        // Filter out recent categories from main list
+        final otherCategories =
+            [
+              'None',
+              ...allCategories,
+            ].where((cat) => !recentDisplayCategories.contains(cat)).toList();
 
         return Container(
           height: 48,
@@ -72,17 +75,13 @@ class FilterSection extends StatelessWidget {
                   child: Row(
                     children: [
                       // CP: Recently used categories
-                      if (state.recentCategories.isNotEmpty) ...[
-                        for (final category in state.recentCategories)
+                      if (recentDisplayCategories.isNotEmpty) ...[
+                        for (final category in recentDisplayCategories)
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4.0,
                             ),
-                            child: _buildChip(
-                              context,
-                              categoryDisplayName(category),
-                              state,
-                            ),
+                            child: _buildChip(context, category, state),
                           ),
                         // CP: Visual separator between recent and other categories
                         if (otherCategories.isNotEmpty)

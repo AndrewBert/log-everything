@@ -86,12 +86,6 @@ class OpenAiService implements AiService {
       throw AiServiceException('No categories provided for classification.');
     }
 
-    // CP: Log categories sent to AI (with descriptions)
-    AppLogger.info('CP: Categories sent to AI:');
-    for (final cat in categories) {
-      AppLogger.info('CP: ${cat.name} - ${cat.description}');
-    }
-
     // 2. Prepare API Call
     AppLogger.info(
       "Calling OpenAI API ($_defaultModelId) to extract entries for text: '$text'",

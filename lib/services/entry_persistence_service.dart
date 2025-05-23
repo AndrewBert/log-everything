@@ -130,7 +130,7 @@ class SharedPreferencesEntryPersistenceService
         if (!loaded.any((cat) => cat.name == 'Misc')) {
           loaded.add(Category(name: 'Misc'));
         }
-        AppLogger.info('Persistence: Loaded Categories: $loaded');
+        // AppLogger.info('Persistence: Loaded Categories: $loaded');
         return loaded;
       }
     } catch (e) {
@@ -146,7 +146,7 @@ class SharedPreferencesEntryPersistenceService
       final jsonList =
           categories.map((cat) => jsonEncode(cat.toJson())).toList();
       await prefs.setStringList(_categoriesKey, jsonList);
-      AppLogger.info('Persistence: Saved Categories: $categories');
+      // AppLogger.info('Persistence: Saved Categories: $categories');
     } catch (e) {
       AppLogger.error('Persistence: Error saving categories', error: e);
       throw Exception('Failed to save categories.');

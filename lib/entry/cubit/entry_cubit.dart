@@ -146,32 +146,32 @@ class EntryCubit extends Cubit<EntryState> {
     );
   }
 
-  // CP: Update recent categories based on entry addition
-  void _updateRecentCategories(List<Entry> newEntries) {
-    if (newEntries.isEmpty) return;
-
-    final categoryCount = <String, int>{};
-    // Only count non-Misc categories
-    for (var entry in newEntries) {
-      if (entry.category != 'Misc') {
-        categoryCount[entry.category] =
-            (categoryCount[entry.category] ?? 0) + 1;
-      }
+  // CP: Update recent categories based on entry timestamps
+  void _updateRecentCategories(List<Entry> entries) {
+    if (entries.isEmpty) {
+      AppLogger.info('[Recent Categories] No entries to process');
+      return;
     }
 
-    if (categoryCount.isEmpty) return;
+    // Sort entries by timestamp, most recent first
+    final sortedEntries = List<Entry>.from(entries)
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    // Sort by count and take top 3
-    final sortedCategories =
-        categoryCount.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+    // Get unique categories from most recent entries (including Misc)
+    final recentCats =
+        sortedEntries.map((e) => e.category).toSet().take(3).toList();
 
-    final recentCats = sortedCategories.take(3).map((e) => e.key).toList();
+    AppLogger.info(
+      '[Recent Categories] Updated recent categories to: $recentCats',
+    );
     emit(state.copyWith(recentCategories: recentCats));
   }
 
   // Re-add: Method to finalize state after background processing
   void finalizeProcessing(List<Entry> finalEntries) {
+    AppLogger.info(
+      '[Recent Categories] Processing ${finalEntries.length} entries',
+    );
     final finalCategories = _entryRepository.currentCategories;
     final finalDisplayList = _buildDisplayList(
       finalEntries,
@@ -179,7 +179,7 @@ class EntryCubit extends Cubit<EntryState> {
     );
 
     // CP: Update recent categories when finalizing entries
-    _updateRecentCategories(finalEntries);
+    _updateRecentCategories(_entryRepository.currentEntries);
 
     emit(
       state.copyWith(
