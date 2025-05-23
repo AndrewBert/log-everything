@@ -58,6 +58,25 @@ class EntryRepository {
         stackTrace: stackTrace,
       );
     });
+
+    // CP: Trigger automatic cleanup of duplicate vector store files in background
+    AppLogger.info(
+      "Repository: Triggering vector store cleanup check (background).",
+    );
+    _vectorStoreService
+        .cleanupDuplicateFiles()
+        .then((_) {
+          AppLogger.info(
+            "Repository: Vector store cleanup process completed (background).",
+          );
+        })
+        .catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Vector store cleanup failed (background)",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
   }
 
   Future<void> _loadCategories() async {

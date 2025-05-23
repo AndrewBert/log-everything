@@ -146,16 +146,33 @@ class VectorStoreService {
   }
 
   Future<Map<String, String>> _getMonthlyLogFileIds() async {
-    final String? jsonString = _prefs.getString(
-      _monthlyLogFileIdsKey, // CP: Use new monthly key
-    );
-    if (jsonString != null && jsonString.isNotEmpty) {
-      try {
-        return Map<String, String>.from(jsonDecode(jsonString) as Map);
-      } catch (e) {
-        AppLogger.error(
-          '[VectorStoreService] Error decoding monthly_log_file_ids from JSON: $e. Returning empty map.', // CP: Updated log
-        );
+    // CP: Add retry logic for SharedPreferences reads to handle potential corruption
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final String? jsonString = _prefs.getString(
+        _monthlyLogFileIdsKey, // CP: Use new monthly key
+      );
+      if (jsonString != null && jsonString.isNotEmpty) {
+        try {
+          final decoded = Map<String, String>.from(
+            jsonDecode(jsonString) as Map,
+          );
+          return decoded;
+        } catch (e) {
+          AppLogger.error(
+            '[VectorStoreService] Error decoding monthly_log_file_ids from JSON (attempt ${attempt + 1}): $e', // CP: Updated log
+          );
+          if (attempt == 2) {
+            // CP: On final attempt, clear corrupted data and return empty map
+            AppLogger.warn(
+              '[VectorStoreService] Clearing corrupted monthly_log_file_ids after 3 failed attempts.',
+            );
+            await _prefs.remove(_monthlyLogFileIdsKey);
+            return {};
+          }
+          // CP: Wait a bit before retrying
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      } else {
         return {};
       }
     }
@@ -163,14 +180,28 @@ class VectorStoreService {
   }
 
   Future<void> _saveMonthlyLogFileIds(Map<String, String> ids) async {
+    // CP: Add atomic save operation with verification
+    final jsonString = jsonEncode(ids);
     try {
       await _prefs.setString(
         _monthlyLogFileIdsKey, // CP: Use new monthly key
-        jsonEncode(ids),
+        jsonString,
+      );
+
+      // CP: Verify the save was successful by reading back
+      final savedJson = _prefs.getString(_monthlyLogFileIdsKey);
+      if (savedJson != jsonString) {
+        throw VectorStoreSyncException(
+          'SharedPreferences save verification failed - data corruption detected',
+        );
+      }
+
+      AppLogger.info(
+        '[VectorStoreService] Successfully saved monthly_log_file_ids with ${ids.length} entries.',
       );
     } catch (e) {
       AppLogger.error(
-        '[VectorStoreService] Error encoding monthly_log_file_ids to JSON: $e', // CP: Updated log
+        '[VectorStoreService] Error saving monthly_log_file_ids to SharedPreferences: $e', // CP: Updated log
       );
       throw VectorStoreSyncException(
         'Failed to save monthly log file IDs to SharedPreferences', // CP: Updated message
@@ -453,12 +484,29 @@ class VectorStoreService {
     }
   }
 
-  // CP: Method to acquire sync lock for a month
+  // CP: Method to acquire sync lock for a month with improved cleanup
   Future<T> _withMonthSyncLock<T>(
     String monthKey,
     Future<T> Function() action,
   ) async {
-    // Wait for any existing sync to complete
+    // CP: Use a persistent lock mechanism via SharedPreferences to prevent
+    // CP: concurrent operations across app restarts/multiple instances
+    final lockKey = 'vector_store_sync_lock_$monthKey';
+    final lockTimestamp = _prefs.getInt(lockKey);
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // CP: If lock exists and is less than 10 minutes old, wait
+    if (lockTimestamp != null && (now - lockTimestamp) < 600000) {
+      AppLogger.info(
+        '[VectorStoreService] Month $monthKey is locked by another operation. Waiting...',
+      );
+      // CP: Wait a bit and check again
+      await Future.delayed(const Duration(seconds: 2));
+      // CP: Recursive call to check lock again
+      return _withMonthSyncLock(monthKey, action);
+    }
+
+    // Wait for any existing in-memory sync to complete
     while (_monthSyncLocks.containsKey(monthKey)) {
       try {
         await _monthSyncLocks[monthKey];
@@ -466,6 +514,9 @@ class VectorStoreService {
         // Previous sync failed, but we still want to continue with new sync
       }
     }
+
+    // CP: Set persistent lock
+    await _prefs.setInt(lockKey, now);
 
     // Create new sync future
     final completer = Completer<void>();
@@ -480,6 +531,8 @@ class VectorStoreService {
       rethrow;
     } finally {
       _monthSyncLocks.remove(monthKey);
+      // CP: Clear persistent lock
+      await _prefs.remove(lockKey);
     }
   }
 
@@ -868,5 +921,207 @@ class VectorStoreService {
       headers['Content-Type'] = 'application/json';
     }
     return headers;
+  }
+
+  // CP: Helper method to clean up duplicate files in vector store
+  Future<void> cleanupDuplicateFiles() async {
+    AppLogger.info('[VectorStoreService] Starting cleanup of duplicate files.');
+
+    try {
+      final vectorStoreId = await getOrCreateVectorStoreId();
+      if (vectorStoreId == null) {
+        AppLogger.error(
+          '[VectorStoreService] Cannot cleanup - no vector store ID available.',
+        );
+        return;
+      }
+
+      // CP: Get all files in the vector store
+      final response = await _httpClient.get(
+        Uri.parse('$_openAIBaseUrl/vector_stores/$vectorStoreId/files'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode != 200) {
+        AppLogger.error(
+          '[VectorStoreService] Failed to list vector store files: ${response.statusCode}',
+        );
+        return;
+      }
+
+      final responseBody = jsonDecode(response.body);
+      final files = responseBody['data'] as List<dynamic>;
+
+      AppLogger.info(
+        '[VectorStoreService] Found ${files.length} files in vector store.',
+      );
+
+      // CP: Group files by month based on filename pattern
+      final Map<String, List<Map<String, dynamic>>> filesByMonth = {};
+
+      // CP: For each file, get its filename from the files API
+      for (final file in files) {
+        final fileId = file['id'] as String;
+
+        try {
+          // CP: Get file details including filename from files API
+          final fileResponse = await _httpClient.get(
+            Uri.parse('$_openAIBaseUrl/files/$fileId'),
+            headers: _getHeaders(),
+          );
+
+          if (fileResponse.statusCode == 200) {
+            final fileData = jsonDecode(fileResponse.body);
+            final filename = fileData['filename'] as String? ?? '';
+
+            if (filename.startsWith('logs_') && filename.endsWith('.txt')) {
+              // CP: Extract month from filename (e.g., "logs_2025-05.txt" -> "2025-05")
+              final monthMatch = RegExp(
+                r'logs_(\d{4}-\d{2})\.txt',
+              ).firstMatch(filename);
+              if (monthMatch != null) {
+                final month = monthMatch.group(1)!;
+                if (!filesByMonth.containsKey(month)) {
+                  filesByMonth[month] = [];
+                }
+                // CP: Add both vector store file info and filename
+                final fileWithName = Map<String, dynamic>.from(file);
+                fileWithName['filename'] = filename;
+                filesByMonth[month]!.add(fileWithName);
+              }
+            }
+          } else {
+            AppLogger.warn(
+              '[VectorStoreService] Failed to get filename for file $fileId: ${fileResponse.statusCode}',
+            );
+          }
+        } catch (e) {
+          AppLogger.warn(
+            '[VectorStoreService] Error getting filename for file $fileId: $e',
+          );
+        }
+      }
+
+      AppLogger.info(
+        '[VectorStoreService] Grouped files into ${filesByMonth.length} months for duplicate checking.',
+      );
+
+      // CP: Find and remove duplicates (keep the most recent)
+      for (final month in filesByMonth.keys) {
+        final monthFiles = filesByMonth[month]!;
+        if (monthFiles.length > 1) {
+          AppLogger.warn(
+            '[VectorStoreService] Found ${monthFiles.length} duplicate files for month $month',
+          );
+
+          // CP: Sort by created_at timestamp, keep the newest
+          monthFiles.sort((a, b) {
+            final aCreated = a['created_at'] as int;
+            final bCreated = b['created_at'] as int;
+            return bCreated.compareTo(aCreated); // Newest first
+          });
+
+          final keepFile = monthFiles.first;
+          final deleteFiles = monthFiles.skip(1).toList();
+
+          AppLogger.info(
+            '[VectorStoreService] Keeping file ${keepFile['id']} (${keepFile['filename']}) for month $month, deleting ${deleteFiles.length} duplicates',
+          );
+
+          for (final fileToDelete in deleteFiles) {
+            final fileId = fileToDelete['id'] as String;
+            final filename = fileToDelete['filename'] as String;
+            try {
+              await _deleteFileFromVectorStore(vectorStoreId, fileId);
+              await _deleteOpenAIFile(fileId);
+              AppLogger.info(
+                '[VectorStoreService] Deleted duplicate file $fileId ($filename) for month $month',
+              );
+            } catch (e) {
+              AppLogger.error(
+                '[VectorStoreService] Failed to delete duplicate file $fileId ($filename): $e',
+              );
+            }
+          }
+
+          // CP: Update our local storage to reflect the kept file
+          final monthlyLogFileIds = await _getMonthlyLogFileIds();
+          monthlyLogFileIds[month] = keepFile['id'] as String;
+          await _saveMonthlyLogFileIds(monthlyLogFileIds);
+        }
+      }
+
+      AppLogger.info('[VectorStoreService] Cleanup completed.');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[VectorStoreService] Error during cleanup: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  // CP: Debug method to list all files in vector store
+  Future<void> debugListVectorStoreFiles() async {
+    try {
+      final vectorStoreId = await getOrCreateVectorStoreId();
+      if (vectorStoreId == null) {
+        AppLogger.info(
+          '[VectorStoreService] No vector store ID available for debugging.',
+        );
+        return;
+      }
+
+      final response = await _httpClient.get(
+        Uri.parse('$_openAIBaseUrl/vector_stores/$vectorStoreId/files'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        final files = responseBody['data'] as List<dynamic>;
+
+        AppLogger.info(
+          '[VectorStoreService] DEBUG: Vector store contains ${files.length} files:',
+        );
+
+        // CP: For each file, get its filename from the files API
+        for (final file in files) {
+          final fileId = file['id'] as String;
+          final createdAt = file['created_at'] as int;
+          final createdDate = DateTime.fromMillisecondsSinceEpoch(
+            createdAt * 1000,
+          );
+
+          try {
+            // CP: Get file details including filename from files API
+            final fileResponse = await _httpClient.get(
+              Uri.parse('$_openAIBaseUrl/files/$fileId'),
+              headers: _getHeaders(),
+            );
+
+            String filename = 'unknown';
+            if (fileResponse.statusCode == 200) {
+              final fileData = jsonDecode(fileResponse.body);
+              filename = fileData['filename'] as String? ?? 'unknown';
+            }
+
+            AppLogger.info(
+              '[VectorStoreService] DEBUG: - $filename (ID: $fileId, Created: $createdDate)',
+            );
+          } catch (e) {
+            AppLogger.info(
+              '[VectorStoreService] DEBUG: - unknown filename (ID: $fileId, Created: $createdDate) - Error getting filename: $e',
+            );
+          }
+        }
+      } else {
+        AppLogger.error(
+          '[VectorStoreService] DEBUG: Failed to list files: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      AppLogger.error('[VectorStoreService] DEBUG: Error listing files: $e');
+    }
   }
 }
