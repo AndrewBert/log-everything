@@ -146,23 +146,49 @@ class EntryCubit extends Cubit<EntryState> {
     );
   }
 
+  // CP: Update recent categories based on entry addition
+  void _updateRecentCategories(List<Entry> newEntries) {
+    if (newEntries.isEmpty) return;
+
+    final categoryCount = <String, int>{};
+    // Only count non-Misc categories
+    for (var entry in newEntries) {
+      if (entry.category != 'Misc') {
+        categoryCount[entry.category] =
+            (categoryCount[entry.category] ?? 0) + 1;
+      }
+    }
+
+    if (categoryCount.isEmpty) return;
+
+    // Sort by count and take top 3
+    final sortedCategories =
+        categoryCount.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    final recentCats = sortedCategories.take(3).map((e) => e.key).toList();
+    emit(state.copyWith(recentCategories: recentCats));
+  }
+
   // Re-add: Method to finalize state after background processing
   void finalizeProcessing(List<Entry> finalEntries) {
-    final finalCategories =
-        _entryRepository.currentCategories; // Get latest categories
+    final finalCategories = _entryRepository.currentCategories;
     final finalDisplayList = _buildDisplayList(
       finalEntries,
       state.filterCategory,
     );
+
+    // CP: Update recent categories when finalizing entries
+    _updateRecentCategories(finalEntries);
+
     emit(
       state.copyWith(
-        isLoading: false, // Processing finished
+        isLoading: false,
         displayListItems: finalDisplayList,
         categories: finalCategories,
-        clearLastError: true, // Assume success if this is called
+        clearLastError: true,
       ),
     );
-    // Start timers for any new entries added during processing
     finalEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
   }
 

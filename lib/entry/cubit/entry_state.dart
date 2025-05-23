@@ -8,6 +8,8 @@ class EntryState extends Equatable {
   final String? lastErrorMessage;
   final String? filterCategory;
   final List<dynamic> displayListItems;
+  // Add recentCategories based on entry usage
+  final List<String> recentCategories;
 
   const EntryState({
     this.categories = const [],
@@ -15,6 +17,7 @@ class EntryState extends Equatable {
     this.lastErrorMessage,
     this.filterCategory,
     this.displayListItems = const [],
+    this.recentCategories = const [],
   });
 
   // Implement props getter
@@ -25,6 +28,7 @@ class EntryState extends Equatable {
     lastErrorMessage,
     filterCategory,
     displayListItems,
+    recentCategories,
   ];
 
   // copyWith remains the same, but without entries
@@ -34,6 +38,7 @@ class EntryState extends Equatable {
     String? lastErrorMessage,
     String? filterCategory,
     List<dynamic>? displayListItems,
+    List<String>? recentCategories,
     bool clearLastError = false,
     bool clearFilter = false,
   }) {
@@ -45,6 +50,7 @@ class EntryState extends Equatable {
       filterCategory:
           clearFilter ? null : (filterCategory ?? this.filterCategory),
       displayListItems: displayListItems ?? this.displayListItems,
+      recentCategories: recentCategories ?? this.recentCategories,
     );
   }
 }
