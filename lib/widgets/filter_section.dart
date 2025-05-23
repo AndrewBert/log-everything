@@ -20,68 +20,84 @@ class FilterSection extends StatelessWidget {
               previous.categories != current.categories ||
               previous.filterCategory != current.filterCategory,
       builder: (context, state) {
-        // CP: Create filter chips list including 'All' and properly formatted categories
         final List<String> filterCategories =
             state.categories
                 .map((cat) => categoryDisplayName(cat.name))
                 .toSet()
                 .toList()
               ..remove('None');
-        final chips = ['All', 'None', ...filterCategories..sort()];
+        final chips = ['None', ...filterCategories..sort()];
 
-        return Container(
-          height: 48,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final category in chips)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: FilterChip(
-                      selected:
-                          category == 'All'
-                              ? state.filterCategory == null
-                              : state.filterCategory ==
+        return Row(
+          children: [
+            // CP: Sticky "All" chip
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+              child: AnimatedScale(
+                scale: state.filterCategory == null ? 1.05 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: FilterChip(
+                  selected: state.filterCategory == null,
+                  label: const Text('All'),
+                  backgroundColor: Colors.grey.withValues(alpha: 0.12),
+                  selectedColor: Colors.grey,
+                  labelStyle: TextStyle(
+                    color:
+                        state.filterCategory == null
+                            ? Colors.white
+                            : Colors.black87,
+                  ),
+                  onSelected: (_) => context.read<EntryCubit>().setFilter(null),
+                ),
+              ),
+            ),
+            // CP: Scrollable category chips
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Row(
+                  children: [
+                    for (final category in chips)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: AnimatedScale(
+                          scale:
+                              state.filterCategory ==
+                                      categoryBackendValue(category)
+                                  ? 1.05
+                                  : 1.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: FilterChip(
+                            selected:
+                                state.filterCategory ==
+                                categoryBackendValue(category),
+                            label: Text(category),
+                            labelStyle: TextStyle(
+                              color:
+                                  state.filterCategory ==
+                                          categoryBackendValue(category)
+                                      ? Colors.white
+                                      : Colors.black87,
+                            ),
+                            backgroundColor: CategoryColors.getColorForCategory(
+                              categoryBackendValue(category),
+                            ).withValues(alpha: 0.12),
+                            selectedColor: CategoryColors.getColorForCategory(
+                              categoryBackendValue(category),
+                            ),
+                            onSelected:
+                                (_) => context.read<EntryCubit>().setFilter(
                                   categoryBackendValue(category),
-                      label: Text(
-                        category,
-                        style: TextStyle(
-                          color:
-                              (category == 'All'
-                                      ? state.filterCategory == null
-                                      : state.filterCategory ==
-                                          categoryBackendValue(category))
-                                  ? Colors.white
-                                  : Colors.black87,
+                                ),
+                          ),
                         ),
                       ),
-                      backgroundColor:
-                          category == 'All'
-                              ? Colors.grey.withValues(alpha: 0.12)
-                              : CategoryColors.getColorForCategory(
-                                categoryBackendValue(category),
-                              ).withValues(alpha: 0.12),
-                      selectedColor:
-                          category == 'All'
-                              ? Colors.grey
-                              : CategoryColors.getColorForCategory(
-                                categoryBackendValue(category),
-                              ),
-                      onSelected: (_) {
-                        final cubit = context.read<EntryCubit>();
-                        if (category == 'All') {
-                          cubit.setFilter(null);
-                        } else {
-                          cubit.setFilter(categoryBackendValue(category));
-                        }
-                      },
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );
