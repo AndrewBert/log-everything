@@ -165,128 +165,185 @@ class _EntryCard extends StatefulWidget {
 }
 
 class _EntryCardState extends State<_EntryCard> {
+  // CP: Random emoji selection for the peeping feature
+  static const List<String> _peepingEmojis = [
+    '👀',
+    '🫣',
+    '👻',
+    '🤫',
+    '🤪',
+    '🦄',
+  ];
+  late final bool _showPeepingEmoji;
+  late final String _selectedEmoji;
+  late final double _horizontalOffset;
+
+  @override
+  void initState() {
+    super.initState();
+    // CP: 1% chance to show a peeping emoji (rare easter egg)
+    _showPeepingEmoji = (DateTime.now().millisecondsSinceEpoch % 100) < 1;
+    _selectedEmoji =
+        _peepingEmojis[DateTime.now().millisecondsSinceEpoch %
+            _peepingEmojis.length];
+    _horizontalOffset = 20.0 + (DateTime.now().millisecondsSinceEpoch % 60);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      key: entryCardKey(widget.entry),
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          stops: const [0.01, 0.01],
-          colors: [
-            widget.categoryColor.withValues(alpha: 0.8),
-            widget.isNew
-                ? theme.cardColor.withValues(alpha: 0.96)
-                : theme.cardColor,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color:
-                widget.isNew
-                    ? theme.colorScheme.primary.withValues(alpha: 0.24)
-                    : Colors.black.withValues(alpha: 0.04),
-            blurRadius: widget.isNew ? 8.0 : 4.0,
-            spreadRadius: widget.isNew ? 1.0 : 0.0,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Padding(
+      padding: const EdgeInsets.only(top: 20.0), // CP: Make room for emoji
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // CP: Expandable text section
-                _ExpandableText(
-                  text: widget.entry.text,
-                  style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
-                  maxLines: 3,
+          if (_showPeepingEmoji)
+            Positioned(
+              left: _horizontalOffset,
+              top: -15, // CP: Position to peek over the card
+              child: Transform.rotate(
+                angle: -0.2 + (DateTime.now().millisecondsSinceEpoch % 4) * 0.1,
+                child: Text(
+                  _selectedEmoji,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    height:
+                        1, // CP: Adjust text height to prevent layout issues
+                  ),
                 ),
-                const SizedBox(height: 12.0),
-                // Bottom row with timestamp and category
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Timestamp with icon for better visual grouping
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 14.0,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4.0),
-                        Text(
-                          widget.timeFormatter.format(widget.entry.timestamp),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+              ),
+            ),
+          Container(
+            key: entryCardKey(widget.entry),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                stops: const [0.01, 0.01],
+                colors: [
+                  widget.categoryColor.withValues(alpha: 0.8),
+                  widget.isNew
+                      ? theme.cardColor.withValues(alpha: 0.96)
+                      : theme.cardColor,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      widget.isNew
+                          ? theme.colorScheme.primary.withValues(alpha: 0.24)
+                          : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: widget.isNew ? 8.0 : 4.0,
+                  spreadRadius: widget.isNew ? 1.0 : 0.0,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // CP: Expandable text section
+                      _ExpandableText(
+                        text: widget.entry.text,
+                        style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 12.0),
+                      // Bottom row with timestamp and category
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Timestamp with icon for better visual grouping
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 14.0,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4.0),
+                              Text(
+                                widget.timeFormatter.format(
+                                  widget.entry.timestamp,
+                                ),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    // Row for category chip and action buttons
-                    Row(
-                      children: [
-                        // Category chip without icon/avatar
-                        ActionChip(
-                          key: entryCategoryChipKey(widget.entry),
-                          label: Text(
-                            widget.categoryDisplayName(widget.entry.category),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color:
-                                  widget.isProcessing
-                                      ? Colors.orange[900]
-                                      : CategoryColors.getTextColorForCategory(
-                                        widget.entry.category,
-                                      ),
-                            ),
+                          // Row for category chip and action buttons
+                          Row(
+                            children: [
+                              // Category chip without icon/avatar
+                              ActionChip(
+                                key: entryCategoryChipKey(widget.entry),
+                                label: Text(
+                                  widget.categoryDisplayName(
+                                    widget.entry.category,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color:
+                                        widget.isProcessing
+                                            ? Colors.orange[900]
+                                            : CategoryColors.getTextColorForCategory(
+                                              widget.entry.category,
+                                            ),
+                                  ),
+                                ),
+                                backgroundColor:
+                                    widget.isProcessing
+                                        ? Colors.orange.shade100.withValues(
+                                          alpha: 0.8,
+                                        )
+                                        : widget.categoryColor.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                side: BorderSide.none,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4.0,
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                onPressed:
+                                    widget.isProcessing
+                                        ? null
+                                        : () {
+                                          HapticFeedback.lightImpact();
+                                          widget.onChangeCategoryPressed(
+                                            widget.entry,
+                                          );
+                                        },
+                                tooltip:
+                                    widget.isProcessing
+                                        ? null
+                                        : 'Change Category',
+                              ),
+                              const SizedBox(width: 8.0),
+                              EntryActions(
+                                key: entryActionsWidgetKey(widget.entry),
+                                entry: widget.entry,
+                                isProcessing: widget.isProcessing,
+                                onEditPressed:
+                                    () => widget.onEditPressed(widget.entry),
+                                onDeletePressed:
+                                    () => widget.onDeletePressed(widget.entry),
+                              ),
+                            ],
                           ),
-                          backgroundColor:
-                              widget.isProcessing
-                                  ? Colors.orange.shade100.withValues(
-                                    alpha: 0.8,
-                                  )
-                                  : widget.categoryColor.withValues(alpha: 0.2),
-                          side: BorderSide.none,
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          onPressed:
-                              widget.isProcessing
-                                  ? null
-                                  : () {
-                                    HapticFeedback.lightImpact();
-                                    widget.onChangeCategoryPressed(
-                                      widget.entry,
-                                    );
-                                  },
-                          tooltip:
-                              widget.isProcessing ? null : 'Change Category',
-                        ),
-                        const SizedBox(width: 8.0),
-                        EntryActions(
-                          key: entryActionsWidgetKey(widget.entry),
-                          entry: widget.entry,
-                          isProcessing: widget.isProcessing,
-                          onEditPressed:
-                              () => widget.onEditPressed(widget.entry),
-                          onDeletePressed:
-                              () => widget.onDeletePressed(widget.entry),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
