@@ -165,8 +165,6 @@ class _EntryCard extends StatefulWidget {
 }
 
 class _EntryCardState extends State<_EntryCard> {
-  bool _isExpanded = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -206,64 +204,10 @@ class _EntryCardState extends State<_EntryCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // CP: Expandable text section
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final textSpan = TextSpan(
-                      text: widget.entry.text,
-                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
-                    );
-                    final textPainter = TextPainter(
-                      text: textSpan,
-                      textDirection: ui.TextDirection.ltr,
-                      maxLines: 3,
-                    )..layout(maxWidth: constraints.maxWidth);
-
-                    final bool hasTextOverflow = textPainter.didExceedMaxLines;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedCrossFade(
-                          firstChild: Text(
-                            widget.entry.text,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              height: 1.4,
-                            ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          secondChild: Text(
-                            widget.entry.text,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              height: 1.4,
-                            ),
-                          ),
-                          crossFadeState:
-                              _isExpanded
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                          duration: const Duration(milliseconds: 200),
-                        ),
-                        if (hasTextOverflow)
-                          GestureDetector(
-                            onTap:
-                                () =>
-                                    setState(() => _isExpanded = !_isExpanded),
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                _isExpanded ? 'Show less' : 'Show more',
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                _ExpandableText(
+                  text: widget.entry.text,
+                  style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
+                  maxLines: 3,
                 ),
                 const SizedBox(height: 12.0),
                 // Bottom row with timestamp and category
@@ -349,6 +293,85 @@ class _EntryCardState extends State<_EntryCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ExpandableText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final int maxLines;
+
+  const _ExpandableText({required this.text, this.style, this.maxLines = 3});
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  bool _isExpanded = false;
+  bool? _hasTextOverflow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_hasTextOverflow == null) {
+          final textSpan = TextSpan(text: widget.text, style: widget.style);
+          final textPainter = TextPainter(
+            text: textSpan,
+            textDirection: ui.TextDirection.ltr,
+            maxLines: widget.maxLines,
+          )..layout(maxWidth: constraints.maxWidth);
+
+          _hasTextOverflow = textPainter.didExceedMaxLines;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedCrossFade(
+              firstChild: Text(
+                widget.text,
+                style: widget.style,
+                maxLines: widget.maxLines,
+                overflow: TextOverflow.ellipsis,
+              ),
+              secondChild: Text(widget.text, style: widget.style),
+              crossFadeState:
+                  _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+            if (_hasTextOverflow ?? false)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: TextButton(
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4.0,
+                      horizontal: 4.0,
+                    ), // CP: Increased tap target
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _isExpanded ? 'Show less' : 'Show more',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
