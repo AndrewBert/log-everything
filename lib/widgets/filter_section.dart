@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../entry/cubit/entry_cubit.dart';
+import '../utils/category_colors.dart';
 
 // Helper to map backend 'Misc' to frontend 'None' and vice versa
 String categoryDisplayName(String category) =>
@@ -13,106 +14,76 @@ class FilterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: 4.0,
-        bottom: 4.0,
-        left: 16.0,
-        right: 16.0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          BlocBuilder<EntryCubit, EntryState>(
-            builder: (context, state) {
-              // CP: Ensure 'None' is only present once and is always below 'All Categories'
-              final List<String> filterCategories =
-                  state.categories
-                      .map((cat) => categoryDisplayName(cat.name))
-                      .toSet()
-                      .toList();
-              filterCategories.remove('None');
-              final dropdownCategories = [
-                'All Categories',
-                'None',
-                ...filterCategories..sort(),
-              ];
+    return BlocBuilder<EntryCubit, EntryState>(
+      buildWhen:
+          (previous, current) =>
+              previous.categories != current.categories ||
+              previous.filterCategory != current.filterCategory,
+      builder: (context, state) {
+        // CP: Create filter chips list including 'All' and properly formatted categories
+        final List<String> filterCategories =
+            state.categories
+                .map((cat) => categoryDisplayName(cat.name))
+                .toSet()
+                .toList()
+              ..remove('None');
+        final chips = ['All', 'None', ...filterCategories..sort()];
 
-              // Ensure the current value exists in the list
-              String currentDisplayValue = categoryDisplayName(
-                state.filterCategory ?? 'All Categories',
-              );
-              if (!dropdownCategories.contains(currentDisplayValue)) {
-                currentDisplayValue = 'All Categories';
-              }
-
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12.0,
-                  vertical: 0,
-                ),
-                decoration: BoxDecoration(
-                  // Replace deprecated surfaceVariant
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest // Use replacement
-                      // Replace deprecated withOpacity
-                      .withAlpha((255 * 0.4).round()),
-                  borderRadius: BorderRadius.circular(20.0),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: currentDisplayValue,
-                    icon: const Icon(Icons.filter_list_alt, size: 20),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                    items:
-                        dropdownCategories.map((String category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                fontWeight:
-                                    category == currentDisplayValue
-                                        ? FontWeight
-                                            .bold // Make selected bold
-                                        : FontWeight.normal,
+        return Container(
+          height: 48,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final category in chips)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FilterChip(
+                      selected:
+                          category == 'All'
+                              ? state.filterCategory == null
+                              : state.filterCategory ==
+                                  categoryBackendValue(category),
+                      label: Text(
+                        category,
+                        style: TextStyle(
+                          color:
+                              (category == 'All'
+                                      ? state.filterCategory == null
+                                      : state.filterCategory ==
+                                          categoryBackendValue(category))
+                                  ? Colors.white
+                                  : Colors.black87,
+                        ),
+                      ),
+                      backgroundColor:
+                          category == 'All'
+                              ? Colors.grey.withValues(alpha: 0.12)
+                              : CategoryColors.getColorForCategory(
+                                categoryBackendValue(category),
+                              ).withValues(alpha: 0.12),
+                      selectedColor:
+                          category == 'All'
+                              ? Colors.grey
+                              : CategoryColors.getColorForCategory(
+                                categoryBackendValue(category),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue == null) return;
-
-                      final cubit = context.read<EntryCubit>();
-                      final currentFilter = state.filterCategory;
-
-                      if (newValue == 'All Categories') {
-                        // If 'All Categories' is selected, clear the filter
-                        if (currentFilter != null) {
+                      onSelected: (_) {
+                        final cubit = context.read<EntryCubit>();
+                        if (category == 'All') {
                           cubit.setFilter(null);
+                        } else {
+                          cubit.setFilter(categoryBackendValue(category));
                         }
-                      } else {
-                        // If a specific category is selected, set the filter
-                        final backendValue = categoryBackendValue(newValue);
-                        if (currentFilter != backendValue) {
-                          cubit.setFilter(backendValue);
-                        }
-                      }
-                    },
-                    isDense: true,
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
