@@ -55,7 +55,8 @@ class FilterSection extends StatelessWidget {
                     selected: state.filterCategory == null,
                     label: const Text('All'),
                     backgroundColor: Colors.grey.withValues(alpha: 0.12),
-                    selectedColor: Colors.grey,
+                    // CP: Use primary color for selectedColor to match app bar 'Log'
+                    selectedColor: Theme.of(context).colorScheme.primary,
                     labelStyle: TextStyle(
                       color:
                           state.filterCategory == null
