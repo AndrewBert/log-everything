@@ -144,130 +144,111 @@ class EntriesList extends StatelessWidget {
       key: entryCardKey(entry),
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        gradient: LinearGradient(
+          stops: const [
+            0.01,
+            0.01,
+          ], // Reduced from 0.02 to 0.01 for thinner border
+          colors: [
+            categoryColor.withValues(alpha: 0.8),
+            isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
+          ],
+        ),
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(isNew ? 20 : 10),
-            blurRadius: isNew ? 6.0 : 3.0,
+            color:
+                isNew
+                    ? theme.colorScheme.primary.withValues(alpha: 0.24)
+                    : Colors.black.withValues(alpha: 0.04),
+            blurRadius: isNew ? 8.0 : 4.0,
+            spreadRadius: isNew ? 1.0 : 0.0,
             offset: const Offset(0, 2),
           ),
         ],
-        border:
-            isNew
-                ? Border.all(color: theme.colorScheme.primary, width: 1.5)
-                : null,
       ),
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Category color indicator strip on the left
-            Container(
-              width: 4.0,
-              decoration: BoxDecoration(
-                color: categoryColor.withAlpha(180),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12.0),
-                  bottomLeft: Radius.circular(12.0),
-                ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Entry text with improved styling
+              Text(
+                entry.text,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Entry text with improved styling
-                    Text(
-                      entry.text,
-                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
-                    ),
-                    const SizedBox(height: 8.0),
-                    // Bottom row with timestamp and category
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Timestamp with icon for better visual grouping
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 14.0,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4.0),
-                            Text(
-                              timeFormatter.format(entry.timestamp),
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+              const SizedBox(height: 12.0),
+              // Bottom row with timestamp and category
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Timestamp with icon for better visual grouping
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14.0,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4.0),
+                      Text(
+                        timeFormatter.format(entry.timestamp),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  // Row for category chip and action buttons
+                  Row(
+                    children: [
+                      // Category chip without icon/avatar
+                      ActionChip(
+                        key: entryCategoryChipKey(entry),
+                        label: Text(
+                          categoryDisplayName(entry.category),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                isProcessing
+                                    ? Colors.orange[900]
+                                    : CategoryColors.getTextColorForCategory(
+                                      entry.category,
+                                    ),
+                          ),
                         ),
-                        // Row for category chip and action buttons
-                        Row(
-                          children: [
-                            // Category chip without icon/avatar
-                            ActionChip(
-                              key: entryCategoryChipKey(entry),
-                              label: Text(
-                                categoryDisplayName(entry.category),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color:
-                                      isProcessing
-                                          ? Colors.orange[900]
-                                          : CategoryColors.getTextColorForCategory(
-                                            entry.category,
-                                          ),
-                                ),
-                              ),
-                              backgroundColor:
-                                  isProcessing
-                                      ? Colors.orange.shade100.withAlpha(
-                                        (255 * 0.8).round(),
-                                      )
-                                      : categoryColor.withAlpha(
-                                        (255 * 0.2).round(),
-                                      ),
-                              side: BorderSide.none,
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4.0,
-                              ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              onPressed:
-                                  isProcessing
-                                      ? null
-                                      : () {
-                                        HapticFeedback.lightImpact();
-                                        onChangeCategoryPressed(entry);
-                                      },
-                              tooltip: isProcessing ? null : 'Change Category',
-                            ),
-                            const SizedBox(width: 8.0),
-                            // Actions buttons moved to the right side
-                            EntryActions(
-                              key: entryActionsWidgetKey(entry),
-                              entry: entry,
-                              isProcessing: isProcessing,
-                              onEditPressed: () => onEditPressed(entry),
-                              onDeletePressed: () => onDeletePressed(entry),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                        backgroundColor:
+                            isProcessing
+                                ? Colors.orange.shade100.withValues(alpha: 0.8)
+                                : categoryColor.withValues(alpha: 0.2),
+                        side: BorderSide.none,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onPressed:
+                            isProcessing
+                                ? null
+                                : () {
+                                  HapticFeedback.lightImpact();
+                                  onChangeCategoryPressed(entry);
+                                },
+                        tooltip: isProcessing ? null : 'Change Category',
+                      ),
+                      const SizedBox(width: 8.0),
+                      // Actions buttons moved to the right side
+                      EntryActions(
+                        key: entryActionsWidgetKey(entry),
+                        entry: entry,
+                        isProcessing: isProcessing,
+                        onEditPressed: () => onEditPressed(entry),
+                        onDeletePressed: () => onDeletePressed(entry),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
