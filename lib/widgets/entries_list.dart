@@ -79,10 +79,14 @@ class EntriesList extends StatelessWidget {
                         ? listItems[index + 1]
                         : null;
                 if (currentItem is Entry && nextItem is Entry) {
-                  return const SizedBox(height: 8.0);
+                  return const SizedBox(
+                    height: 12.0,
+                  ); // Increased spacing between entries
                 }
                 if (currentItem is DateTime && nextItem is Entry) {
-                  return const SizedBox(height: 4.0);
+                  return const SizedBox(
+                    height: 8.0,
+                  ); // Increased spacing after date header
                 }
                 return const SizedBox.shrink();
               },
@@ -90,8 +94,9 @@ class EntriesList extends StatelessWidget {
                 final item = listItems[index];
 
                 if (item is DateTime) {
+                  // Enhanced date header styling
                   return Padding(
-                    padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                     child: Text(
                       formatDateHeader(item),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -106,34 +111,93 @@ class EntriesList extends StatelessWidget {
                   bool isProcessing = entry.category == 'Processing...';
                   bool isNew = entry.isNew;
                   Color categoryColor = getCategoryColor(entry.category);
-                  // todo pull out into private widget
-                  return Card(
-                    key: entryCardKey(entry), // Add key to Card
-                    elevation: isNew ? 4.0 : 1.0,
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 4.0,
-                      horizontal: 0,
+
+                  // Enhanced card with better visual design
+                  return _buildEntryCard(
+                    context,
+                    entry,
+                    isNew,
+                    isProcessing,
+                    categoryColor,
+                  );
+                }
+                return Container();
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Extracted entry card widget for better organization and readability
+  Widget _buildEntryCard(
+    BuildContext context,
+    Entry entry,
+    bool isNew,
+    bool isProcessing,
+    Color categoryColor,
+  ) {
+    final theme = Theme.of(context);
+
+    return Container(
+      key: entryCardKey(entry),
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isNew ? 20 : 10),
+            blurRadius: isNew ? 6.0 : 3.0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border:
+            isNew
+                ? Border.all(color: theme.colorScheme.primary, width: 1.5)
+                : null,
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Category color indicator strip on the left
+            Container(
+              width: 4.0,
+              decoration: BoxDecoration(
+                color: categoryColor.withAlpha(180),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12.0),
+                  bottomLeft: Radius.circular(12.0),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Entry text with improved styling
+                    Text(
+                      entry.text,
+                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      side:
-                          isNew
-                              ? BorderSide(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 1.5,
-                              )
-                              : BorderSide.none,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-                      child: ListTile(
-                        title: Padding(
-                          padding: const EdgeInsets.only(bottom: 6.0),
-                          child: Text(entry.text),
-                        ),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: 8.0),
+                    // Bottom row with timestamp and category
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Timestamp with icon for better visual grouping
+                        Row(
                           children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 14.0,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4.0),
                             Text(
                               timeFormatter.format(entry.timestamp),
                               style: TextStyle(
@@ -141,14 +205,26 @@ class EntriesList extends StatelessWidget {
                                 fontSize: 12,
                               ),
                             ),
+                          ],
+                        ),
+                        // Row for category chip and action buttons
+                        Row(
+                          children: [
+                            // Improved category chip
                             ActionChip(
-                              key: entryCategoryChipKey(
-                                entry,
-                              ), // Add key to ActionChip
+                              key: entryCategoryChipKey(entry),
+                              avatar: Icon(
+                                Icons.label_outline,
+                                size: 12,
+                                color:
+                                    isProcessing
+                                        ? Colors.orange[900]
+                                        : CategoryColors.getTextColorForCategory(
+                                          entry.category,
+                                        ),
+                              ),
                               label: Text(
-                                categoryDisplayName(
-                                  entry.category,
-                                ), // Show 'None' for 'Misc' in chip
+                                categoryDisplayName(entry.category),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
@@ -162,7 +238,6 @@ class EntriesList extends StatelessWidget {
                               ),
                               backgroundColor:
                                   isProcessing
-                                      // Replace deprecated withOpacity
                                       ? Colors.orange.shade100.withAlpha(
                                         (255 * 0.8).round(),
                                       )
@@ -172,7 +247,7 @@ class EntriesList extends StatelessWidget {
                               side: BorderSide.none,
                               visualDensity: VisualDensity.compact,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6.0,
+                                horizontal: 4.0,
                               ),
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
@@ -185,27 +260,25 @@ class EntriesList extends StatelessWidget {
                                       },
                               tooltip: isProcessing ? null : 'Change Category',
                             ),
+                            const SizedBox(width: 8.0),
+                            // Actions buttons moved to the right side
+                            EntryActions(
+                              key: entryActionsWidgetKey(entry),
+                              entry: entry,
+                              isProcessing: isProcessing,
+                              onEditPressed: () => onEditPressed(entry),
+                              onDeletePressed: () => onDeletePressed(entry),
+                            ),
                           ],
                         ),
-                        trailing: EntryActions(
-                          key: entryActionsWidgetKey(
-                            entry,
-                          ), // Add key to EntryActions
-                          entry: entry,
-                          isProcessing: isProcessing,
-                          onEditPressed: () => onEditPressed(entry),
-                          onDeletePressed: () => onDeletePressed(entry),
-                        ),
-                        dense: true,
-                      ),
+                      ],
                     ),
-                  );
-                }
-                return Container();
-              },
+                  ],
+                ),
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
