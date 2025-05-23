@@ -210,19 +210,9 @@ class EntriesList extends StatelessWidget {
                         // Row for category chip and action buttons
                         Row(
                           children: [
-                            // Improved category chip
+                            // Category chip without icon/avatar
                             ActionChip(
                               key: entryCategoryChipKey(entry),
-                              avatar: Icon(
-                                Icons.label_outline,
-                                size: 12,
-                                color:
-                                    isProcessing
-                                        ? Colors.orange[900]
-                                        : CategoryColors.getTextColorForCategory(
-                                          entry.category,
-                                        ),
-                              ),
                               label: Text(
                                 categoryDisplayName(entry.category),
                                 style: TextStyle(
