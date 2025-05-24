@@ -81,7 +81,9 @@ class EntryRepository {
 
   Future<void> _loadCategories() async {
     try {
-      _categories = await _persistenceService.loadCategories();
+      final loadedCategories = await _persistenceService.loadCategories();
+      // CP: Ensure we have a modifiable list to avoid "unmodifiable list" errors
+      _categories = List<Category>.from(loadedCategories);
       // AppLogger.info("Repository: Loaded Categories: $_categories");
     } catch (e) {
       AppLogger.error("Repository: Error loading categories", error: e);

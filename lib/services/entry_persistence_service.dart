@@ -19,19 +19,8 @@ class SharedPreferencesEntryPersistenceService
   static const String _entriesKey = 'saved_entries_v3_categorized';
   static const String _categoriesKey = 'custom_categories_v1';
 
-  // Default categories moved here for loading fallback
-  final List<Category> _defaultCategories = const [
-    Category(name: 'Misc'),
-    Category(name: 'Work'),
-    Category(name: 'Personal'),
-    Category(name: 'Ideas'),
-    Category(name: 'To-Do'),
-    Category(name: 'Journal'),
-    Category(name: 'Learning'),
-    Category(name: 'Health'),
-    Category(name: 'Finance'),
-    Category(name: 'Goals'),
-  ];
+  // CP: Only keep essential Misc category - no more default categories for new users
+  final List<Category> _essentialCategories = const [Category(name: 'Misc')];
 
   @override
   Future<List<Entry>> loadEntries() async {
@@ -103,9 +92,11 @@ class SharedPreferencesEntryPersistenceService
       final prefs = await SharedPreferences.getInstance();
       final savedCategoriesJson = prefs.getStringList(_categoriesKey);
       if (savedCategoriesJson == null || savedCategoriesJson.isEmpty) {
-        AppLogger.info('Persistence: No categories found, saving defaults.');
-        await saveCategories(_defaultCategories);
-        return _defaultCategories;
+        AppLogger.info(
+          'Persistence: No categories found, creating only essential Misc category.',
+        );
+        await saveCategories(_essentialCategories);
+        return _essentialCategories;
       } else {
         final List<Category> loaded =
             savedCategoriesJson
@@ -135,7 +126,7 @@ class SharedPreferencesEntryPersistenceService
       }
     } catch (e) {
       AppLogger.error('Persistence: Error loading categories', error: e);
-      return _defaultCategories;
+      return _essentialCategories;
     }
   }
 

@@ -356,11 +356,21 @@ class EntryCubit extends Cubit<EntryState> {
     emit(state.copyWith(clearLastError: true));
     try {
       final result = await _entryRepository.deleteCategory(categoryToDelete);
+
+      // CP: Remove deleted category from recent categories list
+      final updatedRecentCategories =
+          state.recentCategories
+              .where((category) => category != categoryToDelete)
+              .toList();
+
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
         clearFilter: state.filterCategory == categoryToDelete,
       );
+
+      // CP: Update recent categories after state update
+      emit(state.copyWith(recentCategories: updatedRecentCategories));
     } catch (e) {
       AppLogger.error(
         "Cubit: Error deleting category via repository",
