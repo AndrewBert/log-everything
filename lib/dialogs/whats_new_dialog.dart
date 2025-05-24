@@ -11,20 +11,16 @@ class WhatsNewDialog extends StatelessWidget {
     // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '💬 Feature: Chat',
-        '''Ask questions about your logs and get insights. Basically a virtual girlfriend that can help you with your logs. You're welcome.''',
+        '🎯 Streamlined Onboarding',
+        '''The onboarding flow has been simplified and improved! We've removed redundant steps and updated the chat instructions to help you get started faster.''',
       ),
       _buildChangeItem(
-        '🤖 Log Splitting Improvements',
-        '''No more annoying log splitting! I have fine-tuned it so it splits less and overall doesn't suck. This is experimental and I welcome your feedback.''',
+        '🎨 UI Refresh',
+        '''Fresh new look for entry cards with improved spacing, better typography, and cleaner visual hierarchy. The interface now feels more modern and polished.''',
       ),
       _buildChangeItem(
-        '📝 Category Descriptions',
-        'Have two similar categories? Despise when your entry gets misplaced? Despise no more! You can now add descriptions to your categories.',
-      ),
-      _buildChangeItem(
-        '🔧 Bug Fixes',
-        'Various bug fixes and performance improvements to enhance your experience.',
+        '🏷️ Enhanced Filter Chips',
+        '''Filter chips now have a sleek new design with better visual feedback and improved readability. Finding your entries has never looked this good!''',
       ),
     ];
     // --- End of What's New content ---

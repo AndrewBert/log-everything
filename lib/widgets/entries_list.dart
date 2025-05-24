@@ -114,16 +114,19 @@ class EntriesList extends StatelessWidget {
                   Color categoryColor = getCategoryColor(entry.category);
 
                   // Enhanced card with better visual design
-                  return _EntryCard(
-                    entry: entry,
-                    isNew: isNew,
-                    isProcessing: isProcessing,
-                    categoryColor: categoryColor,
-                    timeFormatter: timeFormatter,
-                    categoryDisplayName: categoryDisplayName,
-                    onChangeCategoryPressed: onChangeCategoryPressed,
-                    onEditPressed: onEditPressed,
-                    onDeletePressed: onDeletePressed,
+                  return AnimatedSlideCard(
+                    key: entryCardKey(entry),
+                    child: _EntryCard(
+                      entry: entry,
+                      isNew: isNew,
+                      isProcessing: isProcessing,
+                      categoryColor: categoryColor,
+                      timeFormatter: timeFormatter,
+                      categoryDisplayName: categoryDisplayName,
+                      onChangeCategoryPressed: onChangeCategoryPressed,
+                      onEditPressed: onEditPressed,
+                      onDeletePressed: onDeletePressed,
+                    ),
                   );
                 }
                 return Container();
@@ -132,6 +135,66 @@ class EntriesList extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// CP: Animated card widget for smooth entry animations
+class AnimatedSlideCard extends StatefulWidget {
+  final Widget child;
+
+  const AnimatedSlideCard({super.key, required this.child});
+
+  @override
+  State<AnimatedSlideCard> createState() => _AnimatedSlideCardState();
+}
+
+class _AnimatedSlideCardState extends State<AnimatedSlideCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(
+        milliseconds: 200,
+      ), // CP: Reduced from 400ms to make it faster
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(
+        0.0,
+        0.05,
+      ), // CP: Much more subtle slide - reduced from 0.3 to 0.05
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
+    ); // CP: Changed curve for smoother animation
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.7, // CP: Start more visible - changed from 0.0 to 0.7
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    // CP: Start animation immediately when widget is created
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(opacity: _fadeAnimation, child: widget.child),
     );
   }
 }
