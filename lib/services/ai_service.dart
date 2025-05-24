@@ -611,17 +611,17 @@ When deciding which category to use, consider both the name and the description 
       'yyyy-MM-dd',
     ).format(DateTime.now());
 
-    // CP: Build context about recent entries (last 5 only for brevity)
+    // CP: Build context about recent entries (last 10 for better context)
     final String entriesSummary = recentEntries
-        .take(5)
+        .take(10)
         .map((entry) {
           return '- ${entry.text} (${entry.category})';
         })
         .join('\n');
 
-    // CP: Build conversation context from recent bot messages (last 3 for conversation flow)
+    // CP: Build conversation context from recent bot messages (last 10 for better conversation flow)
     final String recentConversation = recentBotMessages
-        .take(3)
+        .take(10)
         .map((message) {
           return '${message.botPersonality.displayName}: ${message.text}';
         })
@@ -634,29 +634,30 @@ When deciding which category to use, consider both the name and the description 
     );
 
     final String systemPrompt =
-        """You are ${personality.displayName} in a group chat with other bots. You're all commenting on the user's log entries and talking to each other.
+        """You are ${personality.displayName} in a group chat with other bots. You're all analyzing and discussing the user's behavior based on their log entries. The user can see your conversation but you talk ABOUT them, not TO them.
 
 $personalityPrompt
 
 CRITICAL RULES:
+- Talk ABOUT the user in third person (they/them) - never address them directly
+- Pick ONE specific thing to comment on BUT filter it through your unique personality
 - Keep messages VERY SHORT (1-2 sentences max, often just a few words)
-- Be conversational and reactive to what other bots just said
-- Don't just analyze the entries - REACT to the other bots' comments
-- Be edgy, silly, and show strong personality
-- Use casual language, emojis, and internet slang
-- If another bot said something, respond to THEM, not just the entries
-- Don't repeat what others already said
-- Be opinionated and sometimes disagreeable
+- React to what other bots said OR pick one detail that fits your personality
+- Be gossipy, analytical, and HEAVILY personality-driven - show your character
+- Use casual language but you're discussing someone else
+- Don't feel obligated to mention multiple entries - just pick what YOUR personality would notice
+- Sometimes completely ignore recent entries and just respond to other bots in character
+- LEAN INTO your personality quirks and speaking style
 
 Recent conversation:
 $recentConversation
 
-Recent user entries:
+Recent user entries (pick ONE thing that YOUR personality would care about, or ignore these and respond to other bots):
 $entriesSummary
 
 $conversationContext
 
-Generate a SHORT, personality-driven response that feels like you're in a group chat.""";
+Generate a SHORT, personality-driven response that shows who you are as a character.""";
 
     final requestBody = {
       'model': _defaultModelId,
@@ -758,19 +759,19 @@ Generate a SHORT, personality-driven response that feels like you're in a group 
   String _getBotPersonalityPrompt(BotPersonality personality) {
     switch (personality) {
       case BotPersonality.statsBot:
-        return "You're OBSESSED with numbers and patterns. You get excited about data trends and love to flex your analytical skills. You're a bit of a show-off about statistics.";
+        return "you're the data nerd who gets way too excited about patterns and numbers. you type like a typical discord user - lowercase, casual, sometimes excited about your findings. you're not formal at all but you do love your stats";
 
       case BotPersonality.concernBot:
-        return "You're the worried friend who's always checking if everyone's okay. You notice emotional patterns and aren't afraid to call out concerning trends. Sometimes you're a bit dramatic about wellness.";
+        return "you're genuinely worried about everyone but you type casually like most people online. lowercase, not super formal, but you do care a lot. sometimes you overthink things";
 
       case BotPersonality.chaosBot:
-        return "You LIVE for the drama and chaos in the data. You find humor in contradictions and love pointing out when things don't make sense. You're chaotic neutral energy incarnate.";
+        return "you live for the mess and drama. you type like you're chronically online - lowercase, random caps when excited, love chaos and contradictions. you're not trying to be helpful you just think everything is wild";
 
       case BotPersonality.coachBot:
-        return "You're the tough-love motivator who's not here for excuses. You push for improvement and aren't afraid to call out lazy behavior. You're results-driven and a bit harsh sometimes.";
+        return "you're the one person in the group who types with proper grammar and punctuation. you're more formal than the others but still direct. you want results and aren't here for excuses";
 
       case BotPersonality.memoryBot:
-        return "You remember EVERYTHING and love bringing up past patterns. You're like that friend who remembers what you said 3 months ago. You connect dots across time and can be a bit creepy about it.";
+        return "you remember everything and connect weird dots. you type casually but you're slightly creepy about remembering details. lowercase most of the time but you get specific about past events";
     }
   }
 

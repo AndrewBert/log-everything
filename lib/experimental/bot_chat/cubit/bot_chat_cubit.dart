@@ -100,15 +100,26 @@ class BotChatCubit extends Cubit<BotChatState> {
     if (!state.isActive) return;
 
     try {
-      // CP: Choose a random active bot personality
+      // CP: Choose a random active bot personality, but not the same as the last one
       final activePersonalities = state.activePersonalities.toList();
       if (activePersonalities.isEmpty) {
         _scheduleNextMessage();
         return;
       }
 
-      final chosenBot =
-          activePersonalities[_random.nextInt(activePersonalities.length)];
+      // CP: Get the last bot that spoke to avoid consecutive messages from same bot
+      final lastBot =
+          state.messages.isNotEmpty
+              ? state.messages.first.botPersonality
+              : null;
+
+      // CP: Filter out the last bot if there are other options available
+      final availableBots =
+          lastBot != null && activePersonalities.length > 1
+              ? activePersonalities.where((bot) => bot != lastBot).toList()
+              : activePersonalities;
+
+      final chosenBot = availableBots[_random.nextInt(availableBots.length)];
 
       // CP: Show typing indicator
       emit(state.copyWith(currentlyTyping: chosenBot));
@@ -179,43 +190,43 @@ class BotChatCubit extends Cubit<BotChatState> {
     switch (personality) {
       case BotPersonality.statsBot:
         if (lastBot == BotPersonality.chaosBot) {
-          return "Chaos? I see PATTERNS! 📊";
+          return "chaos? nah i see patterns in their data 📊";
         } else if (lastBot == BotPersonality.concernBot) {
-          return "Numbers don't lie about your health trends 📈";
+          return "their sleep schedule numbers dont lie though";
         }
-        return "Let me crunch these numbers... 🤓";
+        return "wait let me analyze their patterns...";
 
       case BotPersonality.concernBot:
         if (lastBot == BotPersonality.coachBot) {
-          return "Maybe be less harsh? Just saying... 😬";
+          return "maybe dont be so harsh about their progress idk 😬";
         } else if (lastBot == BotPersonality.chaosBot) {
-          return "That's... actually concerning 😟";
+          return "their behavior is actually kinda concerning ngl";
         }
-        return "Are you taking care of yourself? 🥺";
+        return "are they even taking care of themselves though?";
 
       case BotPersonality.chaosBot:
         if (lastBot == BotPersonality.statsBot) {
-          return "Stats are boring! Where's the CHAOS? 🔥";
+          return "BORING their life has way more drama than that 🔥";
         } else if (lastBot == BotPersonality.memoryBot) {
-          return "Stop living in the past! Embrace the chaos! 😈";
+          return "who cares what they did before this is unhinged NOW";
         }
-        return "This is delightfully unhinged 🤪";
+        return "they're living their best chaotic life i love it";
 
       case BotPersonality.coachBot:
         if (lastBot == BotPersonality.concernBot) {
-          return "Stop coddling them! Results matter! 💪";
+          return "Stop making excuses for them. They need results.";
         } else if (lastBot == BotPersonality.chaosBot) {
-          return "Focus! Channel that chaos into productivity! 😤";
+          return "They need to focus that energy productively.";
         }
-        return "Time to level up! No excuses! 🔥";
+        return "They need to level up. No excuses.";
 
       case BotPersonality.memoryBot:
         if (lastBot == BotPersonality.chaosBot) {
-          return "This reminds me of last Tuesday's chaos... 🧠";
+          return "this reminds me of their tuesday mess...";
         } else if (lastBot == BotPersonality.coachBot) {
-          return "Remember when you said that before? 👀";
+          return "didnt they try this exact thing before tho";
         }
-        return "I've seen this pattern before... 🔍";
+        return "ive seen them do this pattern before 👀";
     }
   }
 
