@@ -67,6 +67,12 @@ Future<void> configureDependencies() async {
   // CP: Note: Following project guidelines, Cubits are provided at widget tree level
   // CP: This registration is for when we need to create the cubit programmatically
   getIt.registerFactory<BotChatCubit>(
-    () => BotChatCubit(aiService: getIt<AiService>()),
+    () => BotChatCubit(
+      aiService: getIt<AiService>(),
+      entryRepository:
+          getIt<
+            EntryRepository
+          >(), // CP: Add required entryRepository parameter
+    ),
   );
 }

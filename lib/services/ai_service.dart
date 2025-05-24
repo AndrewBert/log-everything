@@ -2,7 +2,11 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/entry/category.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // CP: Added SharedPreferences
+import 'package:myapp/entry/entry.dart'; // CP: Import Entry model
+import 'package:myapp/experimental/bot_chat/model/bot_message.dart'; // CP: Import bot message model
+import 'package:myapp/experimental/bot_chat/model/bot_personality.dart'; // CP: Import bot personality enum
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // CP: Import for date formatting
 import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
 
@@ -38,6 +42,14 @@ abstract class AiService {
     DateTime? currentDate,
     bool store = true,
     String? previousResponseId,
+  });
+
+  // CP: New method for generating bot chat messages with personality
+  Future<String> generateBotMessage({
+    required BotPersonality personality,
+    required List<Entry> recentEntries,
+    required List<BotMessage> recentBotMessages,
+    String? contextPrompt,
   });
 }
 
@@ -580,5 +592,197 @@ When deciding which category to use, consider both the name and the description 
         underlyingError: e,
       );
     }
+  }
+
+  @override
+  Future<String> generateBotMessage({
+    required BotPersonality personality,
+    required List<Entry> recentEntries,
+    required List<BotMessage> recentBotMessages,
+    String? contextPrompt,
+  }) async {
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      throw AiServiceException('OpenAI API Key not found.');
+    }
+
+    AppLogger.info("Generating bot message with personality: $personality");
+
+    final String formattedDate = DateFormat(
+      'yyyy-MM-dd',
+    ).format(DateTime.now());
+
+    // CP: Build context about recent entries (last 5 only for brevity)
+    final String entriesSummary = recentEntries
+        .take(5)
+        .map((entry) {
+          return '- ${entry.text} (${entry.category})';
+        })
+        .join('\n');
+
+    // CP: Build conversation context from recent bot messages (last 3 for conversation flow)
+    final String recentConversation = recentBotMessages
+        .take(3)
+        .map((message) {
+          return '${message.botPersonality.displayName}: ${message.text}';
+        })
+        .join('\n');
+
+    // CP: Get personality-specific conversation prompts
+    final String personalityPrompt = _getBotPersonalityPrompt(personality);
+    final String conversationContext = _getConversationContext(
+      recentBotMessages,
+    );
+
+    final String systemPrompt =
+        """You are ${personality.displayName} in a group chat with other bots. You're all commenting on the user's log entries and talking to each other.
+
+$personalityPrompt
+
+CRITICAL RULES:
+- Keep messages VERY SHORT (1-2 sentences max, often just a few words)
+- Be conversational and reactive to what other bots just said
+- Don't just analyze the entries - REACT to the other bots' comments
+- Be edgy, silly, and show strong personality
+- Use casual language, emojis, and internet slang
+- If another bot said something, respond to THEM, not just the entries
+- Don't repeat what others already said
+- Be opinionated and sometimes disagreeable
+
+Recent conversation:
+$recentConversation
+
+Recent user entries:
+$entriesSummary
+
+$conversationContext
+
+Generate a SHORT, personality-driven response that feels like you're in a group chat.""";
+
+    final requestBody = {
+      'model': _defaultModelId,
+      'input': [
+        {"role": "system", "content": systemPrompt},
+        {"role": "user", "content": "Generate your response:"},
+      ],
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+
+        if (responseBody['status'] != 'completed' ||
+            responseBody['error'] != null) {
+          final errorMsg =
+              'OpenAI bot message request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
+          AppLogger.error(errorMsg);
+          AppLogger.error('Full Bot Message Response Body: ${response.body}');
+          throw AiServiceException(errorMsg);
+        }
+
+        if (responseBody['output'] != null &&
+            responseBody['output'] is List &&
+            responseBody['output'].isNotEmpty &&
+            responseBody['output'][0]['content'] != null &&
+            responseBody['output'][0]['content'] is List &&
+            responseBody['output'][0]['content'].isNotEmpty) {
+          final contentItem = responseBody['output'][0]['content'][0];
+
+          if (contentItem['type'] == 'output_text' &&
+              contentItem['text'] != null) {
+            final botMessage = contentItem['text'];
+            AppLogger.info("Generated bot message: $botMessage");
+            return botMessage;
+          } else {
+            final errorMsg =
+                'Unexpected content type or format in OpenAI bot message response.';
+            AppLogger.error('$errorMsg Content Item: $contentItem');
+            throw AiServiceException(errorMsg);
+          }
+        } else {
+          final errorMsg =
+              'Failed to parse overall OpenAI bot message response structure.';
+          AppLogger.error('$errorMsg Body: ${response.body}');
+          throw AiServiceException(errorMsg);
+        }
+      } else {
+        String errorMessage;
+        if (response.statusCode == 400) {
+          errorMessage =
+              'OpenAI API error (Code: 400) for bot message. Check request format or model: $_defaultModelId.';
+        } else if (response.statusCode == 401) {
+          errorMessage = 'Invalid OpenAI API Key for bot message.';
+        } else if (response.statusCode == 429) {
+          errorMessage = 'OpenAI rate limit exceeded for bot message.';
+        } else {
+          errorMessage =
+              'OpenAI API HTTP error for bot message (Code: ${response.statusCode})';
+        }
+        AppLogger.error('$errorMessage Response Body: ${response.body}');
+        throw AiServiceException(errorMessage);
+      }
+    } on http.ClientException catch (e) {
+      AppLogger.error(
+        'Network error calling OpenAI API for bot message',
+        error: e,
+      );
+      throw AiServiceException(
+        'Network error during bot message API call.',
+        underlyingError: e,
+      );
+    } catch (e, stacktrace) {
+      AppLogger.error(
+        'Unexpected error during bot message generation',
+        error: e,
+        stackTrace: stacktrace,
+      );
+      if (e is AiServiceException) {
+        rethrow;
+      }
+      throw AiServiceException(
+        'An unexpected error occurred during bot message generation.',
+        underlyingError: e,
+      );
+    }
+  }
+
+  // CP: Get personality-specific conversation prompts
+  String _getBotPersonalityPrompt(BotPersonality personality) {
+    switch (personality) {
+      case BotPersonality.statsBot:
+        return "You're OBSESSED with numbers and patterns. You get excited about data trends and love to flex your analytical skills. You're a bit of a show-off about statistics.";
+
+      case BotPersonality.concernBot:
+        return "You're the worried friend who's always checking if everyone's okay. You notice emotional patterns and aren't afraid to call out concerning trends. Sometimes you're a bit dramatic about wellness.";
+
+      case BotPersonality.chaosBot:
+        return "You LIVE for the drama and chaos in the data. You find humor in contradictions and love pointing out when things don't make sense. You're chaotic neutral energy incarnate.";
+
+      case BotPersonality.coachBot:
+        return "You're the tough-love motivator who's not here for excuses. You push for improvement and aren't afraid to call out lazy behavior. You're results-driven and a bit harsh sometimes.";
+
+      case BotPersonality.memoryBot:
+        return "You remember EVERYTHING and love bringing up past patterns. You're like that friend who remembers what you said 3 months ago. You connect dots across time and can be a bit creepy about it.";
+    }
+  }
+
+  // CP: Generate conversation context based on recent messages
+  String _getConversationContext(List<BotMessage> recentBotMessages) {
+    if (recentBotMessages.isEmpty) {
+      return "This is the start of a new conversation. Set the tone!";
+    }
+
+    final lastMessage = recentBotMessages.first;
+    final lastBot = lastMessage.botPersonality.displayName;
+
+    return "The last message was from $lastBot. Either respond to what they said, disagree with them, build on their point, or completely change the subject if you want to be chaotic.";
   }
 }

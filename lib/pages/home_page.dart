@@ -332,6 +332,11 @@ class HomePage extends StatelessWidget {
     final homePageCubit =
         context.read<HomePageCubit>(); // CP: Get HomePageCubit
     final chatCubit = context.read<ChatCubit>(); // CP: Get ChatCubit
+    final botChatCubit =
+        context
+            .read<
+              BotChatCubit
+            >(); // CP: Get BotChatCubit for entry notifications
 
     if (homePageCubit.state.isChatOpen) {
       // CP: Check if chat is open
@@ -371,6 +376,8 @@ class HomePage extends StatelessWidget {
 
     if (currentText.isNotEmpty) {
       entryCubit.addEntry(currentText);
+      // CP: Notify bot chat cubit about new entry
+      botChatCubit.onEntryAdded();
     }
   }
 

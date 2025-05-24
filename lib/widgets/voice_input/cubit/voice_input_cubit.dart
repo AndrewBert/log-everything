@@ -16,6 +16,7 @@ import '../../../entry/repository/entry_repository.dart';
 import '../../../locator.dart';
 import '../../../entry/entry.dart';
 import '../../../services/audio_recorder_service.dart'; // Import the service
+import '../../../experimental/bot_chat/cubit/bot_chat_cubit.dart'; // CP: Import BotChatCubit
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   // Change type to the service abstraction
@@ -24,19 +25,25 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   final EntryRepository _entryRepository;
   final EntryCubit _entryCubit;
   final PermissionService _permissionService;
+  final BotChatCubit?
+  _botChatCubit; // CP: Optional bot chat cubit for notifications
 
   Timer? _recordingTimer;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
-  VoiceInputCubit({required EntryCubit entryCubit})
+  VoiceInputCubit({
+    required EntryCubit entryCubit,
+    BotChatCubit? botChatCubit, // CP: Add optional bot chat cubit parameter
+  })
     // Fetch the service implementation from the locator
     : _audioRecorderService = getIt<AudioRecorderService>(),
-      _speechService = getIt<SpeechService>(),
-      _entryRepository = getIt<EntryRepository>(),
-      _permissionService = getIt<PermissionService>(),
-      _entryCubit = entryCubit,
-      super(const VoiceInputState()) {
+       _speechService = getIt<SpeechService>(),
+       _entryRepository = getIt<EntryRepository>(),
+       _permissionService = getIt<PermissionService>(),
+       _entryCubit = entryCubit,
+       _botChatCubit = botChatCubit, // CP: Initialize bot chat cubit
+       super(const VoiceInputState()) {
     _initialize();
   }
 
@@ -269,6 +276,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             processingTimestamp,
           );
           _entryCubit.finalizeProcessing(finalEntries);
+          // CP: Notify bot chat cubit about new voice entry
+          _botChatCubit?.onEntryAdded();
         } catch (e) {
           AppLogger.error(
             "Error processing combined entry in repository",

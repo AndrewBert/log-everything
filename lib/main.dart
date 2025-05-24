@@ -47,16 +47,22 @@ class MyApp extends StatelessWidget {
               (context) =>
                   EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
-        BlocProvider<VoiceInputCubit>(
-          create:
-              (context) =>
-                  VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
-        ),
         BlocProvider<ChatCubit>(
           create: (context) => ChatCubit(aiService: getIt<AiService>()),
         ),
         BlocProvider<BotChatCubit>(
-          create: (context) => BotChatCubit(aiService: getIt<AiService>()),
+          create:
+              (context) => BotChatCubit(
+                aiService: getIt<AiService>(),
+                entryRepository: getIt<EntryRepository>(),
+              ),
+        ),
+        BlocProvider<VoiceInputCubit>(
+          create:
+              (context) => VoiceInputCubit(
+                entryCubit: context.read<EntryCubit>(),
+                botChatCubit: context.read<BotChatCubit>(),
+              ),
         ),
         BlocProvider<HomePageCubit>(
           create:

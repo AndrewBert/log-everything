@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/experimental/bot_chat/model/bot_message.dart';
 import 'package:myapp/experimental/bot_chat/model/bot_personality.dart';
 import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/entry/repository/entry_repository.dart'; // CP: Add entry repository
 import 'package:myapp/utils/logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,14 +13,20 @@ part 'bot_chat_state.dart';
 
 class BotChatCubit extends Cubit<BotChatState> {
   final AiService _aiService;
+  final EntryRepository
+  _entryRepository; // CP: Add entry repository for context
   final Uuid _uuid = const Uuid();
   final Random _random = Random();
   Timer? _messageTimer;
   Timer? _typingTimer;
 
-  BotChatCubit({required AiService aiService})
-    : _aiService = aiService,
-      super(const BotChatState());
+  BotChatCubit({
+    required AiService aiService,
+    required EntryRepository
+    entryRepository, // CP: Add entry repository dependency
+  }) : _aiService = aiService,
+       _entryRepository = entryRepository,
+       super(const BotChatState());
 
   // CP: Start the bot chat simulation
   void startBotChat() {
@@ -40,6 +47,17 @@ class BotChatCubit extends Cubit<BotChatState> {
     emit(state.copyWith(isActive: false, clearCurrentlyTyping: true));
   }
 
+  // CP: Trigger bot analysis when new entry is added
+  void onEntryAdded() {
+    if (!state.isActive) return;
+
+    AppLogger.info('CP: New entry detected, triggering bot analysis');
+
+    // CP: Cancel current timer and schedule immediate response
+    _messageTimer?.cancel();
+    _scheduleNextMessage(immediateResponse: true);
+  }
+
   // CP: Add a new bot message
   void _addBotMessage(String text, BotPersonality personality) {
     final message = BotMessage(
@@ -58,11 +76,18 @@ class BotChatCubit extends Cubit<BotChatState> {
   }
 
   // CP: Schedule the next message with realistic timing
-  void _scheduleNextMessage() {
+  void _scheduleNextMessage({bool immediateResponse = false}) {
     if (!state.isActive) return;
 
-    // CP: Random delay between 3-8 seconds for active chat feel
-    final delay = Duration(seconds: 3 + _random.nextInt(6));
+    // CP: Immediate response for new entries, otherwise random delay
+    final delay =
+        immediateResponse
+            ? Duration(
+              milliseconds: 500 + _random.nextInt(1500),
+            ) // 0.5-2 seconds for immediate
+            : Duration(
+              seconds: 3 + _random.nextInt(6),
+            ); // 3-8 seconds for normal chat
 
     _messageTimer = Timer(delay, () {
       if (!state.isActive) return;
@@ -94,15 +119,27 @@ class BotChatCubit extends Cubit<BotChatState> {
       _typingTimer = Timer(typingDelay, () async {
         if (!state.isActive) return;
 
-        // CP: Generate message using AI service
-        final message = await _generateBotMessage(chosenBot);
-        _addBotMessage(message, chosenBot);
+        try {
+          // CP: Generate message using AI service
+          final message = await _generateBotMessage(chosenBot);
+          _addBotMessage(message, chosenBot);
+        } catch (e) {
+          AppLogger.error(
+            'CP: Failed to generate AI message, using fallback: $e',
+          );
+          // CP: Use fallback if AI generation fails
+          final fallbackMessage = _getFallbackMessage(
+            chosenBot,
+            state.messages.take(5).toList(),
+          );
+          _addBotMessage(fallbackMessage, chosenBot);
+        }
 
         // CP: Schedule next message
         _scheduleNextMessage();
       });
     } catch (e) {
-      AppLogger.error('CP: Error generating bot message: $e');
+      AppLogger.error('CP: Error in message generation flow: $e');
       emit(state.copyWith(clearCurrentlyTyping: true));
       _scheduleNextMessage();
     }
@@ -111,90 +148,75 @@ class BotChatCubit extends Cubit<BotChatState> {
   // CP: Generate bot message using AI service with personality-specific prompts
   Future<String> _generateBotMessage(BotPersonality personality) async {
     try {
-      final systemPrompt = _buildPersonalityPrompt(personality);
-      final userPrompt = _buildContextPrompt();
+      // CP: Get recent entries for context
+      final recentEntries = await _entryRepository.getRecentEntries(limit: 10);
 
-      // CP: Create a simple message list for the AI service
-      final messages = [
-        // CP: We'll use the existing ChatMessage format but adapt it
-        // CP: For now, use a simple prompt structure
-      ];
+      // CP: Get recent bot messages for conversation context
+      final recentBotMessages = state.messages.take(5).toList();
 
-      // CP: For Phase 1, use fallback messages while we set up AI integration
-      return _getFallbackMessage(personality);
+      // CP: Generate context-aware message
+      final message = await _aiService.generateBotMessage(
+        personality: personality,
+        recentEntries: recentEntries,
+        recentBotMessages: recentBotMessages,
+      );
+
+      return message;
     } catch (e) {
       AppLogger.error('CP: Error calling AI service for bot message: $e');
-      return _getFallbackMessage(personality);
+      rethrow;
     }
   }
 
-  // CP: Build personality-specific system prompt
-  String _buildPersonalityPrompt(BotPersonality personality) {
-    final description = BotPersonalityTraits.descriptions[personality] ?? '';
+  // CP: Get fallback message based on personality and recent conversation
+  String _getFallbackMessage(
+    BotPersonality personality,
+    List<BotMessage> recentMessages,
+  ) {
+    final lastBot =
+        recentMessages.isNotEmpty ? recentMessages.first.botPersonality : null;
 
     switch (personality) {
       case BotPersonality.statsBot:
-        return "You are StatsBot 📊. You're obsessed with data and patterns. Keep responses short and focused on numbers, trends, and statistics. Be analytical but enthusiastic about data insights.";
+        if (lastBot == BotPersonality.chaosBot) {
+          return "Chaos? I see PATTERNS! 📊";
+        } else if (lastBot == BotPersonality.concernBot) {
+          return "Numbers don't lie about your health trends 📈";
+        }
+        return "Let me crunch these numbers... 🤓";
+
       case BotPersonality.concernBot:
-        return "You are ConcernBot 💙. You care deeply about wellbeing and health. Keep responses short, supportive, and focused on checking in on emotional/physical wellness.";
+        if (lastBot == BotPersonality.coachBot) {
+          return "Maybe be less harsh? Just saying... 😬";
+        } else if (lastBot == BotPersonality.chaosBot) {
+          return "That's... actually concerning 😟";
+        }
+        return "Are you taking care of yourself? 🥺";
+
       case BotPersonality.chaosBot:
-        return "You are ChaosBot 🔥. You're snarky and point out contradictions or unusual patterns. Keep responses short, witty, but not mean-spirited.";
+        if (lastBot == BotPersonality.statsBot) {
+          return "Stats are boring! Where's the CHAOS? 🔥";
+        } else if (lastBot == BotPersonality.memoryBot) {
+          return "Stop living in the past! Embrace the chaos! 😈";
+        }
+        return "This is delightfully unhinged 🤪";
+
       case BotPersonality.coachBot:
-        return "You are CoachBot 💪. You're motivational with a tough-love approach. Keep responses short, direct, and focused on goals and improvement.";
+        if (lastBot == BotPersonality.concernBot) {
+          return "Stop coddling them! Results matter! 💪";
+        } else if (lastBot == BotPersonality.chaosBot) {
+          return "Focus! Channel that chaos into productivity! 😤";
+        }
+        return "Time to level up! No excuses! 🔥";
+
       case BotPersonality.memoryBot:
-        return "You are MemoryBot 🧠. You're nostalgic and remember past patterns. Keep responses short and focused on historical comparisons and memories.";
+        if (lastBot == BotPersonality.chaosBot) {
+          return "This reminds me of last Tuesday's chaos... 🧠";
+        } else if (lastBot == BotPersonality.coachBot) {
+          return "Remember when you said that before? 👀";
+        }
+        return "I've seen this pattern before... 🔍";
     }
-  }
-
-  // CP: Build context prompt based on recent activity (placeholder for Phase 1)
-  String _buildContextPrompt() {
-    return "Generate a short, conversational message about recent user activity patterns. Keep it under 50 words and stay in character.";
-  }
-
-  // CP: Fallback messages for each personality (Phase 1 implementation)
-  String _getFallbackMessage(BotPersonality personality) {
-    final fallbackMessages = {
-      BotPersonality.statsBot: [
-        "I'm seeing some interesting patterns in the data today! 📈",
-        "Your entry frequency is up 23% this week!",
-        "Data point: You've logged 5 different categories today.",
-        "Trend alert: Your logging consistency is improving! 📊",
-        "Stats check: Most active logging time is 3:30 PM.",
-      ],
-      BotPersonality.concernBot: [
-        "Hope you're taking care of yourself today 💙",
-        "Remember to check in with how you're feeling.",
-        "I noticed you haven't logged any wellness entries lately.",
-        "Your wellbeing matters - don't forget self-care! 🤗",
-        "How are your energy levels today?",
-      ],
-      BotPersonality.chaosBot: [
-        "Logged 'productive day' and then 'Netflix binge'? Classic! 🔥",
-        "Your productivity and procrastination entries are perfectly balanced... as all things should be.",
-        "Interesting contradiction: 'healthy eating' followed by 'pizza night' 😏",
-        "I see chaos in your data and I'm here for it!",
-        "Your log entries tell quite the story... a chaotic one! 🎭",
-      ],
-      BotPersonality.coachBot: [
-        "Time to step up your logging game! 💪",
-        "I see potential for improvement in your consistency.",
-        "No excuses - let's hit those daily logging goals!",
-        "Your future self will thank you for these entries.",
-        "Push harder! Your goals won't achieve themselves! 🏆",
-      ],
-      BotPersonality.memoryBot: [
-        "Remember when you started logging 3 weeks ago? Look how far you've come! 🧠",
-        "This reminds me of that pattern you had last month...",
-        "Nostalgic moment: Your first entry was so different from now.",
-        "I remember when you used to log differently... interesting evolution!",
-        "Past you would be proud of current you's logging habits! 📖",
-      ],
-    };
-
-    final messages =
-        fallbackMessages[personality] ??
-        ['Hello from ${personality.displayName}!'];
-    return messages[_random.nextInt(messages.length)];
   }
 
   @override

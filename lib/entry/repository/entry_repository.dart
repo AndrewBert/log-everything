@@ -579,4 +579,9 @@ class EntryRepository {
     final dateFormat = DateFormat('yyyy-MM-dd');
     return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   }
+
+  // CP: New method to get recent entries for bot chat context
+  Future<List<Entry>> getRecentEntries({int limit = 10}) async {
+    return _entries.take(limit).toList();
+  }
 }
