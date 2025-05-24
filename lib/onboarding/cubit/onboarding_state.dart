@@ -4,7 +4,6 @@ enum OnboardingStep {
   welcome,
   appOverview,
   categoriesSetup,
-  firstEntry,
   chatDemo,
   completed,
 }

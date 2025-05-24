@@ -160,7 +160,7 @@ class ChatDemoStep extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Look for the chat icon in the bottom-right corner of your home screen. Tap it to start chatting with your logs!',
+            'Look for the chat icon in the bottom-left corner of your home screen. Tap it to start chatting with your logs!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[700],
               height: 1.4,

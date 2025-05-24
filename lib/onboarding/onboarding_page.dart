@@ -4,7 +4,6 @@ import 'cubit/onboarding_cubit.dart';
 import 'widgets/welcome_step.dart';
 import 'widgets/app_overview_step.dart';
 import 'widgets/categories_setup_step.dart';
-import 'widgets/first_entry_step.dart';
 import 'widgets/chat_demo_step.dart';
 
 class OnboardingPage extends StatelessWidget {
@@ -75,8 +74,6 @@ class OnboardingPage extends StatelessWidget {
         return const AppOverviewStep();
       case OnboardingStep.categoriesSetup:
         return const CategoriesSetupStep();
-      case OnboardingStep.firstEntry:
-        return const FirstEntryStep();
       case OnboardingStep.chatDemo:
         return const ChatDemoStep();
       case OnboardingStep.completed:
