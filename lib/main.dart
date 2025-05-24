@@ -13,6 +13,7 @@ import 'chat/chat.dart';
 import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
 import 'onboarding/onboarding.dart';
+import 'experimental/bot_chat/bot_chat.dart';
 import 'locator.dart';
 
 // Make main async
@@ -53,6 +54,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ChatCubit>(
           create: (context) => ChatCubit(aiService: getIt<AiService>()),
+        ),
+        BlocProvider<BotChatCubit>(
+          create: (context) => BotChatCubit(aiService: getIt<AiService>()),
         ),
         BlocProvider<HomePageCubit>(
           create:

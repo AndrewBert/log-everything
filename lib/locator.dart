@@ -6,6 +6,7 @@ import 'package:myapp/speech_service.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/permission_service.dart';
 import 'package:myapp/services/audio_recorder_service.dart';
+import 'package:myapp/experimental/bot_chat/bot_chat.dart'; // CP: Import bot chat
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/services/vector_store_service.dart'; // CP: Corrected package name
@@ -60,5 +61,12 @@ Future<void> configureDependencies() async {
       vectorStoreService:
           getIt<VectorStoreService>(), // CP: Injected VectorStoreService
     ),
+  );
+
+  // CP: Register BotChatCubit as a factory since it will be provided at widget level
+  // CP: Note: Following project guidelines, Cubits are provided at widget tree level
+  // CP: This registration is for when we need to create the cubit programmatically
+  getIt.registerFactory<BotChatCubit>(
+    () => BotChatCubit(aiService: getIt<AiService>()),
   );
 }

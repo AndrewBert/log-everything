@@ -24,6 +24,7 @@ import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart';
 import '../dialogs/edit_category_dialog.dart';
 import '../chat/chat.dart'; // CP: Import chat features
+import '../experimental/bot_chat/bot_chat.dart'; // CP: Import experimental bot chat
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
@@ -104,6 +105,16 @@ class HomePage extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
+      // CP: Add floating action button for experimental bot chat
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showBotChatBottomSheet(context),
+        icon: const Icon(Icons.psychology),
+        label: const Text('Bot Chat'),
+        tooltip: 'Experimental Bot Chat',
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        foregroundColor: Theme.of(context).colorScheme.onSecondary,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: MultiBlocListener(
         listeners: [
           BlocListener<HomePageCubit, HomePageState>(
@@ -213,6 +224,22 @@ class HomePage extends StatelessWidget {
   }
 
   // --- Helper Methods Below Build ---
+
+  // CP: Show experimental bot chat as a modal bottom sheet
+  void _showBotChatBottomSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return BlocProvider.value(
+          value: BlocProvider.of<BotChatCubit>(context),
+          child: const BotChatWidget(),
+        );
+      },
+    );
+  }
 
   Widget _buildEntriesList(BuildContext context) {
     return EntriesList(
