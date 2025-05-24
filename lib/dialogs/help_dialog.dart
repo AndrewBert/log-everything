@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Added for onboarding access
+import '../onboarding/onboarding.dart'; // Added for onboarding access
 
 class HelpDialog extends StatelessWidget {
   final VoidCallback onShowWhatsNewPressed;
@@ -61,10 +63,51 @@ class HelpDialog extends StatelessWidget {
           child: const Text("What's New"),
         ),
         TextButton(
+          onPressed: () {
+            _showResetOnboardingConfirmation(context);
+          },
+          child: const Text('Reset Onboarding'),
+        ),
+        TextButton(
           child: const Text('Close'),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ],
+    );
+  }
+
+  void _showResetOnboardingConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Reset Onboarding'),
+          content: const Text(
+            'This will reset your onboarding progress and show the setup screens again. '
+            'Your entries and categories will not be affected.\n\n'
+            'Are you sure you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+              ),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Close confirmation
+                Navigator.of(context).pop(); // Close help dialog
+
+                final onboardingCubit = context.read<OnboardingCubit>();
+                await onboardingCubit.resetOnboarding();
+              },
+              child: const Text('Reset'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -8,9 +8,11 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'chat/chat.dart';
 import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
+import 'onboarding/onboarding.dart';
 import 'locator.dart';
 
 // Make main async
@@ -18,7 +20,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: ".env");
-    AppLogger.info('Environment variables loaded successfully.');    await configureDependencies();
+    AppLogger.info('Environment variables loaded successfully.');
+    await configureDependencies();
     AppLogger.info('Dependencies configured.');
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
@@ -44,22 +47,23 @@ class MyApp extends StatelessWidget {
                   EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
-          // CP: Get EntryCubit from context and pass it to constructor
           create:
               (context) =>
                   VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
-        // CP: Provide ChatCubit with AiService and EntryRepository dependencies
         BlocProvider<ChatCubit>(
-          create:
-              (context) => ChatCubit(
-                aiService: getIt<AiService>(),
-                // CP: Removed entryRepository as it's no longer a dependency
-              ),
+          create: (context) => ChatCubit(aiService: getIt<AiService>()),
         ),
         BlocProvider<HomePageCubit>(
           create:
               (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
+        ),
+        BlocProvider<OnboardingCubit>(
+          create:
+              (context) => OnboardingCubit(
+                sharedPreferences: getIt<SharedPreferences>(),
+                entryCubit: context.read<EntryCubit>(),
+              ),
         ),
       ],
       child: MaterialApp(
@@ -68,7 +72,35 @@ class MyApp extends StatelessWidget {
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
           useMaterial3: true,
         ),
-        home: HomePage(),
+        home: const AppRoot(),
+      ),
+    );
+  }
+}
+
+class AppRoot extends StatelessWidget {
+  const AppRoot({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<OnboardingCubit, OnboardingState>(
+      listenWhen:
+          (prev, current) =>
+              prev.currentStep != OnboardingStep.completed &&
+              current.currentStep == OnboardingStep.completed,
+      listener: (context, state) {
+        AppLogger.info('[AppRoot] Onboarding completed, showing home page');
+      },
+      child: BlocBuilder<OnboardingCubit, OnboardingState>(
+        builder: (context, state) {
+          final onboardingCubit = context.read<OnboardingCubit>();
+
+          if (onboardingCubit.isOnboardingCompleted()) {
+            return HomePage();
+          } else {
+            return const OnboardingPage();
+          }
+        },
       ),
     );
   }
