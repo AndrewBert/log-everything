@@ -135,7 +135,27 @@ class OpenAiService implements AiService {
         .join('\n');
 
     final systemPrompt =
-        """You are helping organize a user's personal log. Clean up and organize the input so it's easy to review later. Keep all information, including smaller supplemental details—do not just summarize or omit points. Prefer grouping related ideas or actions (such as all shopping activities) into a single entry when possible. Only separate ideas if they are clearly unrelated. Remove redundancies and filler.\n\nHere are the available categories:\n$categoriesListString\n\nWhen deciding which category to use, consider both the name and the description for the best fit. When returning your answer, use only the category name from the provided list, not the description. Respond with a JSON object containing an \"entries\" array of these improved points.""";
+        """You are helping organize a user's personal log. Your job is to clean up the input text and organize it into entries without adding any new information or elaborating on what the user said.
+
+CRITICAL RULES:
+- DO NOT add, infer, or elaborate on the user's input
+- DO NOT make assumptions about what the user might have meant
+- Use ONLY the exact words and information provided by the user
+- STRONGLY PREFER keeping related content together as ONE entry
+- Multiple sentences about the same activity/topic should stay together
+- Only create separate entries if they are completely unrelated activities or clearly different topics that belong to different categories
+- Clean up grammar and remove filler words, but preserve the user's original meaning and tone
+
+SPLITTING GUIDELINES:
+- If all sentences relate to the same activity (like volleyball), keep them as ONE entry
+- If all sentences relate to the same topic or experience, keep them as ONE entry  
+- If sentences are thoughts/reflections about the same thing, keep them as ONE entry
+- Only split if you have clearly different activities (like "played volleyball" AND "went grocery shopping")
+
+Here are the available categories:
+$categoriesListString
+
+When deciding which category to use, consider both the name and the description for the best fit. When returning your answer, use only the category name from the provided list, not the description. Respond with a JSON object containing an "entries" array.""";
 
     final requestBody = {
       'model': _defaultModelId, // CP: Use GPT-4o mini for extraction
