@@ -59,8 +59,7 @@ class AiServiceException implements Exception {
 
 // Concrete implementation using OpenAI
 class OpenAiService implements AiService {
-  final String _apiKey =
-      dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
+  final String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/responses';
   static const fourOMini = 'gpt-4o-mini';
   static const fourPoint1 = 'gpt-4.1-2025-04-14';
@@ -70,8 +69,7 @@ class OpenAiService implements AiService {
   final SharedPreferences _prefs; // CP: Added SharedPreferences field
 
   // CP: Updated constructor to accept SharedPreferences
-  OpenAiService({required SharedPreferences sharedPreferences})
-    : _prefs = sharedPreferences;
+  OpenAiService({required SharedPreferences sharedPreferences}) : _prefs = sharedPreferences;
 
   @override
   Future<List<EntryPrototype>> extractEntries(
@@ -98,15 +96,13 @@ class OpenAiService implements AiService {
       "properties": {
         "entries": {
           "type": "array",
-          "description":
-              "An array of text segments extracted from the input, each assigned a category.",
+          "description": "An array of text segments extracted from the input, each assigned a category.",
           "items": {
             "type": "object",
             "properties": {
               "text_segment": {
                 "type": "string",
-                "description":
-                    "The specific portion of the input text relevant to this entry.",
+                "description": "The specific portion of the input text relevant to this entry.",
               },
               "category": {
                 "type": "string",
@@ -127,10 +123,7 @@ class OpenAiService implements AiService {
     // CP: Build a string listing all categories and their descriptions for the AI
     final categoriesListString = categories
         .map(
-          (cat) =>
-              cat.description.trim().isNotEmpty
-                  ? '- ${cat.name}: ${cat.description}'
-                  : '- ${cat.name}',
+          (cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}',
         )
         .join('\n');
 
@@ -171,6 +164,15 @@ When deciding which category to use, consider both the name and the description 
           'strict': true,
         },
       },
+      // CP: Add metadata to help track and organize requests in OpenAI dashboard
+      'metadata': {
+        'request_type': 'entry_extraction',
+        'app_name': 'log-everything',
+        'category_count': categories.length.toString(),
+        'input_length': text.length.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _defaultModelId,
+      },
       // 'temperature': 0.2,
     };
 
@@ -189,8 +191,7 @@ When deciding which category to use, consider both the name and the description 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
 
-        if (responseBody['status'] != 'completed' ||
-            responseBody['error'] != null) {
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
           final errorMsg =
               'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
           AppLogger.error(errorMsg);
@@ -206,8 +207,7 @@ When deciding which category to use, consider both the name and the description 
             responseBody['output'][0]['content'].isNotEmpty) {
           final contentItem = responseBody['output'][0]['content'][0];
 
-          if (contentItem['type'] == 'output_text' &&
-              contentItem['text'] != null) {
+          if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
             final jsonOutputString = contentItem['text'];
             AppLogger.info(
               "Received JSON string from OpenAI: $jsonOutputString",
@@ -218,8 +218,7 @@ When deciding which category to use, consider both the name and the description 
                 jsonOutputString,
               );
 
-              if (parsedJson.containsKey('entries') &&
-                  parsedJson['entries'] is List) {
+              if (parsedJson.containsKey('entries') && parsedJson['entries'] is List) {
                 final List<dynamic> entriesListJson = parsedJson['entries'];
                 final List<EntryPrototype> extractedEntries = [];
                 bool formatErrorOccurred = false;
@@ -271,8 +270,7 @@ When deciding which category to use, consider both the name and the description 
                 );
                 return extractedEntries;
               } else {
-                final errorMsg =
-                    'Parsed JSON from OpenAI does not contain a valid "entries" key or it\'s not a list.';
+                final errorMsg = 'Parsed JSON from OpenAI does not contain a valid "entries" key or it\'s not a list.';
                 AppLogger.error('$errorMsg JSON: $parsedJson');
                 throw AiServiceException(errorMsg);
               }
@@ -281,15 +279,12 @@ When deciding which category to use, consider both the name and the description 
               AppLogger.error(errorMsg, error: e);
               throw AiServiceException(errorMsg, underlyingError: e);
             }
-          } else if (contentItem['type'] == 'refusal' &&
-              contentItem['refusal'] != null) {
-            final errorMsg =
-                'OpenAI refused the request: ${contentItem['refusal']}';
+          } else if (contentItem['type'] == 'refusal' && contentItem['refusal'] != null) {
+            final errorMsg = 'OpenAI refused the request: ${contentItem['refusal']}';
             AppLogger.error(errorMsg);
             throw AiServiceException(errorMsg);
           } else {
-            final errorMsg =
-                'Unexpected content type or format in OpenAI response.';
+            final errorMsg = 'Unexpected content type or format in OpenAI response.';
             AppLogger.error('$errorMsg Content Item: $contentItem');
             throw AiServiceException(errorMsg);
           }
@@ -341,10 +336,7 @@ When deciding which category to use, consider both the name and the description 
 
   String _buildSystemInstructions(DateTime? currentDate) {
     // CP: Helper to build system instructions for chat
-    final dateString =
-        currentDate != null
-            ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
-            : "";
+    final dateString = currentDate != null ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}." : "";
     return "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString";
   }
 
@@ -400,6 +392,16 @@ When deciding which category to use, consider both the name and the description 
         ...inputMessages, // Spread the rest of the messages
       ],
       'store': store, // CP: Control whether to store the response
+      // CP: Add metadata to help track and organize chat requests in OpenAI dashboard
+      'metadata': {
+        'request_type': 'chat_response',
+        'app_name': 'log-everything',
+        'message_count': messages.length.toString(),
+        'has_vector_store': vectorStoreId != null && vectorStoreId.isNotEmpty ? 'true' : 'false',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _chatModelId,
+        'has_previous_response': previousResponseId != null ? 'true' : 'false',
+      },
     };
 
     // CP: Add previous response ID if provided
@@ -438,8 +440,7 @@ When deciding which category to use, consider both the name and the description 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
 
-        if (responseBody['status'] != 'completed' ||
-            responseBody['error'] != null) {
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
           final errorMsg =
               'OpenAI chat request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
           AppLogger.error(errorMsg);
@@ -465,9 +466,7 @@ When deciding which category to use, consider both the name and the description 
             if (content != null && content is List && content.isNotEmpty) {
               String? aiResponseText;
               for (final item in content) {
-                if (item is Map<String, dynamic> &&
-                    item['type'] == 'output_text' &&
-                    item['text'] != null) {
+                if (item is Map<String, dynamic> && item['type'] == 'output_text' && item['text'] != null) {
                   aiResponseText = item['text'] as String;
                   break;
                 }
@@ -475,25 +474,20 @@ When deciding which category to use, consider both the name and the description 
 
               if (aiResponseText != null) {
                 // CP: Limit logged chat response to first 200 characters for brevity
-                final preview =
-                    aiResponseText.length > 200
-                        ? '${aiResponseText.substring(0, 200)}...'
-                        : aiResponseText;
+                final preview = aiResponseText.length > 200 ? '${aiResponseText.substring(0, 200)}...' : aiResponseText;
                 AppLogger.info(
                   "Received chat response from OpenAI (preview): '$preview'",
                 );
                 return (aiResponseText, responseBody['id'] as String?);
               } else {
                 // CP: No 'output_text' found in message content
-                final errorMsg =
-                    'AI message content did not contain usable text output.';
+                final errorMsg = 'AI message content did not contain usable text output.';
                 AppLogger.error('$errorMsg Body: ${response.body}');
                 throw AiServiceException(errorMsg);
               }
             } else {
               // CP: Message content is null, not a list, or empty
-              final errorMsg =
-                  'AI message content was missing, malformed, or empty.';
+              final errorMsg = 'AI message content was missing, malformed, or empty.';
               AppLogger.error('$errorMsg Body: ${response.body}');
               throw AiServiceException(errorMsg);
             }
@@ -525,21 +519,18 @@ When deciding which category to use, consider both the name and the description 
             }
             if (refusalOutputElement != null) {
               final refusalMessage = refusalOutputElement['refusal'] as String?;
-              final errorMsg =
-                  'OpenAI refused the chat request: ${refusalMessage ?? "No refusal message provided."}';
+              final errorMsg = 'OpenAI refused the chat request: ${refusalMessage ?? "No refusal message provided."}';
               AppLogger.error(errorMsg);
               throw AiServiceException(errorMsg);
             } else {
-              final errorMsg =
-                  'No usable message or refusal found in OpenAI response output.';
+              final errorMsg = 'No usable message or refusal found in OpenAI response output.';
               AppLogger.error('$errorMsg Body: ${response.body}');
               throw AiServiceException(errorMsg);
             }
           }
         } else {
           // CP: 'output' array is null, not a list, or empty
-          final errorMsg =
-              'Failed to parse chat response: \'output\' array was missing, malformed, or empty.';
+          final errorMsg = 'Failed to parse chat response: \'output\' array was missing, malformed, or empty.';
           AppLogger.error('$errorMsg Body: ${response.body}');
           throw AiServiceException(errorMsg);
         }
@@ -547,15 +538,13 @@ When deciding which category to use, consider both the name and the description 
       } else {
         String errorMessage;
         if (response.statusCode == 400) {
-          errorMessage =
-              'OpenAI API error (Code: 400) for chat. Check request format or model: $_chatModelId.';
+          errorMessage = 'OpenAI API error (Code: 400) for chat. Check request format or model: $_chatModelId.';
         } else if (response.statusCode == 401) {
           errorMessage = 'Invalid OpenAI API Key for chat.';
         } else if (response.statusCode == 429) {
           errorMessage = 'OpenAI rate limit exceeded for chat.';
         } else {
-          errorMessage =
-              'OpenAI API HTTP error for chat (Code: ${response.statusCode})';
+          errorMessage = 'OpenAI API HTTP error for chat (Code: ${response.statusCode})';
         }
         AppLogger.error('$errorMessage Response Body: ${response.body}');
         throw AiServiceException(errorMessage);
