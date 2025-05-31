@@ -7,7 +7,6 @@ import '../entry/entry.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
 import '../utils/widget_keys.dart';
-import 'entry_actions.dart';
 import 'entry_context_menu.dart';
 
 class EntriesList extends StatelessWidget {
@@ -731,21 +730,6 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                                   : 'Change Category',
                                         ),
                                         const SizedBox(width: 8.0),
-                                        EntryActions(
-                                          key: entryActionsWidgetKey(
-                                            widget.entry,
-                                          ),
-                                          entry: widget.entry,
-                                          isProcessing: widget.isProcessing,
-                                          onEditPressed:
-                                              () => widget.onEditPressed(
-                                                widget.entry,
-                                              ),
-                                          onDeletePressed:
-                                              () => widget.onDeletePressed(
-                                                widget.entry,
-                                              ),
-                                        ),
                                       ],
                                     ),
                                   ],
@@ -834,7 +818,6 @@ class _ExpandableTextState extends State<_ExpandableText> {
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
