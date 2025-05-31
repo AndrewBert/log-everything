@@ -344,6 +344,7 @@ class HomePage extends StatelessWidget {
 
   void _showManageCategoriesDialog(BuildContext context) {
     HapticFeedback.lightImpact();
+    final focusScope = FocusScope.of(context);
     showDialog(
       context: context,
       builder:
@@ -356,7 +357,9 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
-    );
+    ).then((_) {
+      focusScope.focusedChild?.unfocus();
+    });
   }
 
   Future<String?> _showEditCategoryDialog(
@@ -408,6 +411,8 @@ class HomePage extends StatelessWidget {
 
   void _showHelpDialog(BuildContext context) {
     HapticFeedback.lightImpact();
+    final focusScope = FocusScope.of(context);
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -415,7 +420,9 @@ class HomePage extends StatelessWidget {
           onShowWhatsNewPressed: () => _showWhatsNewDialog(context),
         );
       },
-    );
+    ).then((_) {
+      focusScope.focusedChild?.unfocus();
+    });
   }
 
   String _formatDateHeader(DateTime date) {

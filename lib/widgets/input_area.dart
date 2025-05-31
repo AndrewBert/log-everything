@@ -61,7 +61,8 @@ class _InputAreaState extends State<InputArea> {
       entryCubit.finishEditingEntry(currentText, editingEntry.category);
       _textController.clear();
       if (_inputFocusNode.hasFocus) {
-        FocusScope.of(context).unfocus();
+        // CP: Use focusedChild?.unfocus() for more reliable behavior
+        FocusScope.of(context).focusedChild?.unfocus();
       }
 
       widget.showSnackBar(
@@ -77,7 +78,8 @@ class _InputAreaState extends State<InputArea> {
     context.read<EntryCubit>().cancelEditingEntry();
     _textController.clear();
     if (_inputFocusNode.hasFocus) {
-      FocusScope.of(context).unfocus();
+      // CP: Use focusedChild?.unfocus() for more reliable behavior
+      FocusScope.of(context).focusedChild?.unfocus();
     }
   }
 
@@ -104,7 +106,8 @@ class _InputAreaState extends State<InputArea> {
 
     _textController.clear();
     if (!homePageCubit.state.isChatOpen && _inputFocusNode.hasFocus) {
-      FocusScope.of(context).unfocus();
+      // CP: Use focusedChild?.unfocus() for more reliable behavior
+      FocusScope.of(context).focusedChild?.unfocus();
     }
   }
 

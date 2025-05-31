@@ -106,6 +106,8 @@ class EntriesList extends StatelessWidget {
         // CP: Clear the context menu entry when dialog is dismissed
         if (context.mounted) {
           context.read<EntryCubit>().clearContextMenuEntry();
+          // CP: Use focusedChild?.unfocus() for more reliable behavior
+          FocusScope.of(context).focusedChild?.unfocus();
         }
       });
     } else {
@@ -139,6 +141,8 @@ class EntriesList extends StatelessWidget {
       ).then((_) {
         if (context.mounted) {
           context.read<EntryCubit>().clearContextMenuEntry();
+          // CP: Use focusedChild?.unfocus() for more reliable behavior
+          FocusScope.of(context).focusedChild?.unfocus();
         }
       });
     }
