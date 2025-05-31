@@ -10,6 +10,9 @@ class EntryState extends Equatable {
   final List<dynamic> displayListItems;
   // Add recentCategories based on entry usage
   final List<String> recentCategories;
+  // CP: Add editing state properties
+  final Entry? editingEntry;
+  final bool isEditingMode;
 
   const EntryState({
     this.categories = const [],
@@ -18,6 +21,8 @@ class EntryState extends Equatable {
     this.filterCategory,
     this.displayListItems = const [],
     this.recentCategories = const [],
+    this.editingEntry,
+    this.isEditingMode = false,
   });
 
   // Implement props getter
@@ -29,6 +34,8 @@ class EntryState extends Equatable {
     filterCategory,
     displayListItems,
     recentCategories,
+    editingEntry,
+    isEditingMode,
   ];
 
   // copyWith remains the same, but without entries
@@ -39,8 +46,11 @@ class EntryState extends Equatable {
     String? filterCategory,
     List<dynamic>? displayListItems,
     List<String>? recentCategories,
+    Entry? editingEntry,
+    bool? isEditingMode,
     bool clearLastError = false,
     bool clearFilter = false,
+    bool clearEditingEntry = false,
   }) {
     return EntryState(
       categories: categories ?? this.categories,
@@ -51,6 +61,9 @@ class EntryState extends Equatable {
           clearFilter ? null : (filterCategory ?? this.filterCategory),
       displayListItems: displayListItems ?? this.displayListItems,
       recentCategories: recentCategories ?? this.recentCategories,
+      editingEntry:
+          clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
+      isEditingMode: isEditingMode ?? this.isEditingMode,
     );
   }
 }

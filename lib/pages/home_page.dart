@@ -16,7 +16,6 @@ import '../utils/category_colors.dart';
 import '../widgets/entries_list.dart';
 import '../widgets/filter_section.dart';
 import '../widgets/input_area.dart';
-import '../dialogs/edit_entry_dialog.dart';
 import '../dialogs/manage_categories_dialog.dart';
 import '../dialogs/change_category_dialog.dart';
 import '../dialogs/help_dialog.dart';
@@ -221,7 +220,7 @@ class HomePage extends StatelessWidget {
       timeFormatter: _timeFormatter,
       onChangeCategoryPressed:
           (entry) => _showChangeCategoryDialog(context, entry),
-      onEditPressed: (entry) => _showEditEntryDialog(context, entry),
+      onEditPressed: (entry) => _handleEditEntry(context, entry),
       onDeletePressed: (entry) => _handleDeleteEntry(context, entry),
     );
   }
@@ -392,29 +391,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Future<void> _showEditEntryDialog(
-    BuildContext context,
-    Entry originalEntry,
-  ) async {
-    final Entry? updatedEntry = await showDialog<Entry?>(
-      context: context,
-      builder: (dialogContext) {
-        return BlocProvider.value(
-          value: BlocProvider.of<EntryCubit>(context),
-          child: EditEntryDialog(originalEntry: originalEntry),
-        );
-      },
-    );
-
-    if (updatedEntry != null && context.mounted) {
-      _showFloatingSnackBar(
-        context,
-        content: const Text('Entry updated'),
-        duration: const Duration(seconds: 1),
-      );
-    }
-  }
-
   Future<void> _showChangeCategoryDialog(
     BuildContext context,
     Entry entry,
@@ -502,5 +478,11 @@ class HomePage extends StatelessWidget {
         ),
       );
     }
+  }
+
+  // CP: New method to handle in-place editing instead of showing dialog
+  void _handleEditEntry(BuildContext context, Entry entry) {
+    HapticFeedback.lightImpact();
+    context.read<EntryCubit>().startEditingEntry(entry);
   }
 }

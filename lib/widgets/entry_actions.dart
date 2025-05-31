@@ -31,14 +31,6 @@ class EntryActions extends StatelessWidget {
             ),
           ),
         IconButton(
-          key: entryEditIconKey(entry), // Add key for edit icon
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          tooltip: 'Edit Entry',
-          visualDensity: VisualDensity.compact,
-          splashRadius: 20,
-          onPressed: isProcessing ? null : onEditPressed,
-        ),
-        IconButton(
           key: entryDeleteIconKey(entry), // Add key for delete icon
           icon: Icon(
             Icons.delete_outline,
