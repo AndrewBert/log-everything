@@ -13,6 +13,8 @@ class EntryState extends Equatable {
   // CP: Add editing state properties
   final Entry? editingEntry;
   final bool isEditingMode;
+  // CP: Add context menu state properties
+  final Entry? contextMenuEntry;
 
   const EntryState({
     this.categories = const [],
@@ -23,6 +25,7 @@ class EntryState extends Equatable {
     this.recentCategories = const [],
     this.editingEntry,
     this.isEditingMode = false,
+    this.contextMenuEntry,
   });
 
   // Implement props getter
@@ -36,6 +39,7 @@ class EntryState extends Equatable {
     recentCategories,
     editingEntry,
     isEditingMode,
+    contextMenuEntry,
   ];
 
   // copyWith remains the same, but without entries
@@ -48,9 +52,11 @@ class EntryState extends Equatable {
     List<String>? recentCategories,
     Entry? editingEntry,
     bool? isEditingMode,
+    Entry? contextMenuEntry,
     bool clearLastError = false,
     bool clearFilter = false,
     bool clearEditingEntry = false,
+    bool clearContextMenuEntry = false,
   }) {
     return EntryState(
       categories: categories ?? this.categories,
@@ -64,6 +70,10 @@ class EntryState extends Equatable {
       editingEntry:
           clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
       isEditingMode: isEditingMode ?? this.isEditingMode,
+      contextMenuEntry:
+          clearContextMenuEntry
+              ? null
+              : (contextMenuEntry ?? this.contextMenuEntry),
     );
   }
 }

@@ -464,4 +464,14 @@ class EntryCubit extends Cubit<EntryState> {
       emit(state.copyWith(clearLastError: true));
     }
   }
+
+  // CP: Set which entry has an open context menu
+  void setContextMenuEntry(Entry entry) {
+    emit(state.copyWith(contextMenuEntry: entry));
+  }
+
+  // CP: Clear the context menu entry when menu is closed
+  void clearContextMenuEntry() {
+    emit(state.copyWith(clearContextMenuEntry: true));
+  }
 }
