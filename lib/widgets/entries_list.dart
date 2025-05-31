@@ -269,17 +269,21 @@ class EntriesList extends StatelessWidget {
 
                   // Enhanced card with better visual design
                   return AnimatedSlideCard(
-                    child: _EntryCard(
+                    child: _SwipeableEntryCard(
                       entry: entry,
-                      isNew: isNew,
-                      isProcessing: isProcessing,
-                      categoryColor: categoryColor,
-                      timeFormatter: timeFormatter,
-                      categoryDisplayName: categoryDisplayName,
-                      onChangeCategoryPressed: onChangeCategoryPressed,
-                      onEditPressed: onEditPressed,
-                      onDeletePressed: onDeletePressed,
-                      onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
+                      onDelete: () => onDeletePressed(entry),
+                      child: _EntryCard(
+                        entry: entry,
+                        isNew: isNew,
+                        isProcessing: isProcessing,
+                        categoryColor: categoryColor,
+                        timeFormatter: timeFormatter,
+                        categoryDisplayName: categoryDisplayName,
+                        onChangeCategoryPressed: onChangeCategoryPressed,
+                        onEditPressed: onEditPressed,
+                        onDeletePressed: onDeletePressed,
+                        onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
+                      ),
                     ),
                   );
                 }
@@ -348,6 +352,134 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with SingleTicker
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(opacity: _fadeAnimation, child: widget.child),
+    );
+  }
+}
+
+// CP: Swipeable wrapper for entry cards with nuke theme
+class _SwipeableEntryCard extends StatefulWidget {
+  final Entry entry;
+  final Widget child;
+  final VoidCallback onDelete;
+
+  const _SwipeableEntryCard({
+    required this.entry,
+    required this.child,
+    required this.onDelete,
+  });
+
+  @override
+  State<_SwipeableEntryCard> createState() => _SwipeableEntryCardState();
+}
+
+class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
+  // CP: Fun nuke-themed emojis for different swipe directions
+  static const List<String> _leftNukeEmojis = ['💥', '🧨', '💣', '🔥', '⚡', '🌪️'];
+  static const List<String> _rightNukeEmojis = ['☢️', '💀', '💥', '🌋', '⚡', '🔥'];
+
+  late final String _leftEmoji;
+  late final String _rightEmoji;
+
+  @override
+  void initState() {
+    super.initState();
+    // CP: Select random emojis for this specific entry card
+    final random = DateTime.now().millisecondsSinceEpoch + widget.entry.text.hashCode;
+    _leftEmoji = _leftNukeEmojis[random % _leftNukeEmojis.length];
+    _rightEmoji = _rightNukeEmojis[(random * 7) % _rightNukeEmojis.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // CP: Don't allow swiping processing entries
+    if (widget.entry.category == 'Processing...') {
+      return widget.child;
+    }
+
+    return Dismissible(
+      // CP: Use the consistent key from widget_keys.dart
+      key: ValueKey('dismissible_${widget.entry.timestamp.toIso8601String()}_${widget.entry.text.hashCode}'),
+      direction: DismissDirection.horizontal, // CP: Allow both directions
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3, // CP: Lower threshold for easier dismissal
+        DismissDirection.endToStart: 0.3,
+      },
+      // CP: Custom background with nuke theme
+      background: _buildNukeBackground(isLeftSwipe: true),
+      secondaryBackground: _buildNukeBackground(isLeftSwipe: false),
+      onDismissed: (direction) {
+        // CP: Immediate deletion with dramatic effects - no confirmation needed!
+        HapticFeedback.heavyImpact(); // CP: Strong feedback for destruction
+        widget.onDelete();
+      },
+      child: widget.child,
+    );
+  }
+
+  Widget _buildNukeBackground({required bool isLeftSwipe}) {
+    final emoji = isLeftSwipe ? _leftEmoji : _rightEmoji;
+    final alignment = isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight;
+    final padding = isLeftSwipe ? const EdgeInsets.only(left: 20) : const EdgeInsets.only(right: 20);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8), // CP: Match card margins
+      decoration: BoxDecoration(
+        // CP: Dramatic gradient based on swipe direction
+        gradient: LinearGradient(
+          begin: isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight,
+          end: isLeftSwipe ? Alignment.centerRight : Alignment.centerLeft,
+          colors: [
+            Colors.red.shade600,
+            Colors.orange.shade500,
+            Colors.yellow.shade400,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        // CP: Subtle glow effect
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.3),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: padding,
+        child: Align(
+          alignment: alignment,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // CP: Large emoji with rotation animation based on swipe direction
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 300),
+                tween: Tween(begin: 0, end: isLeftSwipe ? 0.1 : -0.1),
+                builder: (context, rotation, child) {
+                  return Transform.rotate(
+                    angle: rotation,
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 4),
+              // CP: Action text
+              Text(
+                isLeftSwipe ? 'NUKE!' : 'DESTROY!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
