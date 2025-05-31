@@ -7,7 +7,7 @@ import '../entry/entry.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
 import '../utils/widget_keys.dart';
-import 'entry_actions.dart';
+import 'entry_context_menu.dart';
 
 class EntriesList extends StatelessWidget {
   final String Function(DateTime) formatDateHeader;
@@ -31,11 +31,168 @@ class EntriesList extends StatelessWidget {
   String categoryDisplayName(String category) =>
       category == 'Misc' ? 'None' : category;
 
+  // CP: Show context menu at a consistent position relative to the entry card
+  void _showContextMenu(
+    BuildContext context,
+    Entry entry,
+    Offset globalPosition,
+  ) {
+    // CP: Don't show context menu if entry is processing
+    if (entry.category == 'Processing...') {
+      return;
+    }
+
+    // CP: Add more punchy haptic feedback on long press
+    HapticFeedback.heavyImpact();
+
+    // CP: Set the context menu entry in the cubit to trigger highlighting
+    context.read<EntryCubit>().setContextMenuEntry(entry);
+
+    // CP: Find the entry card widget to get its position and size
+    final entryKey = entryCardKey(entry);
+    final RenderBox? entryBox =
+        entryKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (entryBox != null) {
+      // CP: Get the entry card's position and size
+      final entryPosition = entryBox.localToGlobal(Offset.zero);
+      final entrySize = entryBox.size;
+      final screenSize = MediaQuery.of(context).size;
+
+      // CP: Intelligent positioning based on card location on screen
+      final cardCenterY = entryPosition.dy + (entrySize.height / 2);
+      final isInBottomHalf = cardCenterY > (screenSize.height / 2);
+
+      // CP: Estimate context menu height (3 options + padding + dividers ≈ 140px)
+      const estimatedMenuHeight = 140.0;
+
+      // CP: Position menu relative to the card:
+      // - Horizontally: always centered to the card
+      // - Vertically: well below card if in top half, well above card if in bottom half
+      final menuX = entryPosition.dx + (entrySize.width / 2);
+      final menuY =
+          isInBottomHalf
+              ? entryPosition.dy -
+                  estimatedMenuHeight -
+                  16.0 // CP: Menu height + 16px above the card
+              : entryPosition.dy +
+                  entrySize.height +
+                  16.0; // CP: 16px below the card
+
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierColor:
+            Colors
+                .transparent, // CP: Completely transparent - no dimming effect
+        barrierLabel: 'Entry context menu',
+        pageBuilder:
+            (context, _, __) => EntryContextMenu(
+              entry: entry,
+              position: Offset(
+                menuX,
+                menuY,
+              ), // CP: Use intelligent relative position
+              onEdit: () => onEditPressed(entry),
+              onDelete: () => onDeletePressed(entry),
+              onCopyText: () {
+                Clipboard.setData(ClipboardData(text: entry.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Text copied to clipboard'),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+      ).then((_) {
+        // CP: Clear the context menu entry when dialog is dismissed
+        if (context.mounted) {
+          context.read<EntryCubit>().clearContextMenuEntry();
+        }
+      });
+    } else {
+      // CP: Fallback to original position if card not found
+      final screenSize = MediaQuery.of(context).size;
+      final menuX = screenSize.width / 2;
+      final menuY = screenSize.height * 0.4;
+
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierColor: Colors.transparent,
+        barrierLabel: 'Entry context menu',
+        pageBuilder:
+            (context, _, __) => EntryContextMenu(
+              entry: entry,
+              position: Offset(menuX, menuY),
+              onEdit: () => onEditPressed(entry),
+              onDelete: () => onDeletePressed(entry),
+              onCopyText: () {
+                Clipboard.setData(ClipboardData(text: entry.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Text copied to clipboard'),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<EntryCubit>().clearContextMenuEntry();
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: BlocBuilder<EntryCubit, EntryState>(
         builder: (context, state) {
+          // CP: Show empty background when in editing mode
+          if (state.isEditingMode) {
+            return Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 48,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Editing Entry',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Make your changes in the input field below',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
           final List<dynamic> listItems = state.displayListItems;
           if (state.isLoading && listItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -115,7 +272,6 @@ class EntriesList extends StatelessWidget {
 
                   // Enhanced card with better visual design
                   return AnimatedSlideCard(
-                    key: entryCardKey(entry),
                     child: _EntryCard(
                       entry: entry,
                       isNew: isNew,
@@ -126,6 +282,9 @@ class EntriesList extends StatelessWidget {
                       onChangeCategoryPressed: onChangeCategoryPressed,
                       onEditPressed: onEditPressed,
                       onDeletePressed: onDeletePressed,
+                      onLongPress:
+                          (globalPosition) =>
+                              _showContextMenu(context, entry, globalPosition),
                     ),
                   );
                 }
@@ -210,6 +369,7 @@ class _EntryCard extends StatefulWidget {
   final Function(Entry) onChangeCategoryPressed;
   final Function(Entry) onEditPressed;
   final Function(Entry) onDeletePressed;
+  final Function(Offset) onLongPress;
 
   const _EntryCard({
     required this.entry,
@@ -221,13 +381,14 @@ class _EntryCard extends StatefulWidget {
     required this.onChangeCategoryPressed,
     required this.onEditPressed,
     required this.onDeletePressed,
+    required this.onLongPress,
   });
 
   @override
   State<_EntryCard> createState() => _EntryCardState();
 }
 
-class _EntryCardState extends State<_EntryCard> {
+class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
   // CP: Random emoji selection for the peeping feature
   static const List<String> _peepingEmojis = [
     '👀',
@@ -241,6 +402,13 @@ class _EntryCardState extends State<_EntryCard> {
   late final String _selectedEmoji;
   late final double _horizontalOffset;
 
+  // CP: Animation controller for highlight effects with longer duration for smoothness
+  late AnimationController _highlightController;
+  late Animation<double> _highlightOpacity;
+  late Animation<double> _highlightScale;
+  late Animation<double> _borderOpacity;
+  late Animation<double> _glowIntensity;
+
   @override
   void initState() {
     super.initState();
@@ -250,165 +418,335 @@ class _EntryCardState extends State<_EntryCard> {
         _peepingEmojis[DateTime.now().millisecondsSinceEpoch %
             _peepingEmojis.length];
     _horizontalOffset = 20.0 + (DateTime.now().millisecondsSinceEpoch % 60);
+
+    // CP: Longer duration for smoother animations
+    _highlightController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // CP: Staggered animations for more fluid effect
+    _highlightOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _highlightScale = Tween<double>(begin: 0.98, end: 1.02).animate(
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
+      ),
+    );
+
+    _borderOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.1, 0.8, curve: Curves.easeInOutQuart),
+      ),
+    );
+
+    _glowIntensity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOutExpo),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _highlightController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        if (_showPeepingEmoji)
-          Positioned(
-            left: _horizontalOffset,
-            top: -15, // CP: Position to peek over the card
-            child: Transform.rotate(
-              angle: -0.2 + (DateTime.now().millisecondsSinceEpoch % 4) * 0.1,
-              child: Text(
-                _selectedEmoji,
-                style: const TextStyle(
-                  fontSize: 28,
-                  height: 1, // CP: Adjust text height to prevent layout issues
-                ),
-              ),
-            ),
-          ),
-        Container(
-          key: entryCardKey(widget.entry),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              stops: const [0.01, 0.01],
-              colors: [
-                widget.categoryColor.withValues(alpha: 0.8),
-                widget.isNew
-                    ? theme.cardColor.withValues(alpha: 0.96)
-                    : theme.cardColor,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12.0),
-            boxShadow: [
-              BoxShadow(
-                color:
-                    widget.isNew
-                        ? theme.colorScheme.primary.withValues(alpha: 0.24)
-                        : Colors.black.withValues(alpha: 0.04),
-                blurRadius: widget.isNew ? 8.0 : 4.0,
-                spreadRadius: widget.isNew ? 1.0 : 0.0,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    // CP: Check if this entry is currently being edited or has context menu open
+    return BlocBuilder<EntryCubit, EntryState>(
+      buildWhen:
+          (prev, current) =>
+              prev.editingEntry != current.editingEntry ||
+              prev.isEditingMode != current.isEditingMode ||
+              prev.contextMenuEntry != current.contextMenuEntry,
+      builder: (context, state) {
+        final isBeingEdited =
+            state.isEditingMode && state.editingEntry == widget.entry;
+        final hasContextMenuOpen = state.contextMenuEntry == widget.entry;
+        final shouldHighlight = isBeingEdited || hasContextMenuOpen;
+
+        // CP: Animate highlight when state changes
+        if (shouldHighlight) {
+          _highlightController.forward();
+        } else {
+          _highlightController.reverse();
+        }
+
+        return AnimatedBuilder(
+          animation: _highlightController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: shouldHighlight ? _highlightScale.value : 1.0,
+              child: GestureDetector(
+                onLongPressStart:
+                    (details) => widget.onLongPress(details.globalPosition),
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    // CP: Expandable text section
-                    _ExpandableText(
-                      text: widget.entry.text,
-                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 12.0),
-                    // Bottom row with timestamp and category
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Timestamp with icon for better visual grouping
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 14.0,
-                              color: Colors.grey[600],
+                    if (_showPeepingEmoji)
+                      Positioned(
+                        left: _horizontalOffset,
+                        top: -15, // CP: Position to peek over the card
+                        child: Transform.rotate(
+                          angle:
+                              -0.2 +
+                              (DateTime.now().millisecondsSinceEpoch % 4) * 0.1,
+                          child: Text(
+                            _selectedEmoji,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              height:
+                                  1, // CP: Adjust text height to prevent layout issues
                             ),
-                            const SizedBox(width: 4.0),
-                            Text(
-                              widget.timeFormatter.format(
-                                widget.entry.timestamp,
+                          ),
+                        ),
+                      ),
+                    // CP: Enhanced highlight border overlay with staggered animated effects
+                    if (shouldHighlight)
+                      Positioned.fill(
+                        child: Opacity(
+                          opacity: _borderOpacity.value,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(
+                                color: theme.colorScheme.primary,
+                                width: 3.0,
                               ),
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                              // CP: Animated glow with varying intensity
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.4 * _glowIntensity.value,
+                                  ),
+                                  blurRadius: 12.0 * _glowIntensity.value,
+                                  spreadRadius: 2.0 * _glowIntensity.value,
+                                ),
+                                BoxShadow(
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.2 * _glowIntensity.value,
+                                  ),
+                                  blurRadius: 20.0 * _glowIntensity.value,
+                                  spreadRadius: 4.0 * _glowIntensity.value,
+                                ),
+                              ],
                             ),
+                          ),
+                        ),
+                      ),
+                    // CP: Animated background highlight with smooth opacity transition
+                    if (shouldHighlight)
+                      Positioned.fill(
+                        child: Opacity(
+                          opacity: _highlightOpacity.value * 0.08,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.0),
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Container(
+                      key: entryCardKey(widget.entry),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          stops: const [0.01, 0.01],
+                          colors: [
+                            // CP: Keep original colors regardless of highlight state
+                            widget.categoryColor.withValues(alpha: 0.8),
+                            widget.isNew
+                                ? theme.cardColor.withValues(alpha: 0.96)
+                                : theme.cardColor,
                           ],
                         ),
-                        // Row for category chip and action buttons
-                        Row(
-                          children: [
-                            // Category chip without icon/avatar
-                            ActionChip(
-                              key: entryCategoryChipKey(widget.entry),
-                              label: Text(
-                                widget.categoryDisplayName(
-                                  widget.entry.category,
-                                ),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color:
-                                      widget.isProcessing
-                                          ? Colors.orange[900]
-                                          : CategoryColors.getTextColorForCategory(
-                                            widget.entry.category,
-                                          ),
-                                ),
-                              ),
-                              backgroundColor:
-                                  widget.isProcessing
-                                      ? Colors.orange.shade100.withValues(
-                                        alpha: 0.8,
-                                      )
-                                      : widget.categoryColor.withValues(
-                                        alpha: 0.2,
-                                      ),
-                              side: BorderSide.none,
-                              visualDensity: VisualDensity.compact,
+                        borderRadius: BorderRadius.circular(12.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                widget.isNew
+                                    ? theme.colorScheme.primary.withValues(
+                                      alpha: 0.24,
+                                    )
+                                    : Colors.black.withValues(alpha: 0.04),
+                            blurRadius: widget.isNew ? 8.0 : 4.0,
+                            spreadRadius: widget.isNew ? 1.0 : 0.0,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // CP: Add editing indicator banner at the top
+                          if (isBeingEdited)
+                            Container(
+                              width: double.infinity,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4.0,
+                                vertical: 6.0,
+                                horizontal: 16.0,
                               ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              onPressed:
-                                  widget.isProcessing
-                                      ? null
-                                      : () {
-                                        HapticFeedback.lightImpact();
-                                        widget.onChangeCategoryPressed(
-                                          widget.entry,
-                                        );
-                                      },
-                              tooltip:
-                                  widget.isProcessing
-                                      ? null
-                                      : 'Change Category',
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.9,
+                                ),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12.0),
+                                  topRight: Radius.circular(12.0),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 16.0,
+                                    color: theme.colorScheme.onPrimary,
+                                  ),
+                                  const SizedBox(width: 8.0),
+                                  Text(
+                                    'Editing...',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onPrimary,
+                                      fontSize: 12.0,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 8.0),
-                            EntryActions(
-                              key: entryActionsWidgetKey(widget.entry),
-                              entry: widget.entry,
-                              isProcessing: widget.isProcessing,
-                              onEditPressed:
-                                  () => widget.onEditPressed(widget.entry),
-                              onDeletePressed:
-                                  () => widget.onDeletePressed(widget.entry),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              16.0,
+                              14.0,
+                              16.0,
+                              14.0,
                             ),
-                          ],
-                        ),
-                      ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // CP: Expandable text section
+                                _ExpandableText(
+                                  text: widget.entry.text,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    height: 1.4,
+                                    // CP: Slightly mute text when being edited to indicate it's in input field
+                                    color:
+                                        isBeingEdited
+                                            ? theme.textTheme.bodyLarge?.color
+                                                ?.withValues(alpha: 0.7)
+                                            : null,
+                                  ),
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 12.0),
+                                // Bottom row with timestamp and category
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // Timestamp with icon for better visual grouping
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time,
+                                          size: 14.0,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4.0),
+                                        Text(
+                                          widget.timeFormatter.format(
+                                            widget.entry.timestamp,
+                                          ),
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    // Row for category chip and action buttons
+                                    Row(
+                                      children: [
+                                        // Category chip without icon/avatar
+                                        ActionChip(
+                                          key: entryCategoryChipKey(
+                                            widget.entry,
+                                          ),
+                                          label: Text(
+                                            widget.categoryDisplayName(
+                                              widget.entry.category,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color:
+                                                  widget.isProcessing
+                                                      ? Colors.orange[900]
+                                                      : CategoryColors.getTextColorForCategory(
+                                                        widget.entry.category,
+                                                      ),
+                                            ),
+                                          ),
+                                          backgroundColor:
+                                              widget.isProcessing
+                                                  ? Colors.orange.shade100
+                                                      .withValues(alpha: 0.8)
+                                                  : widget.categoryColor
+                                                      .withValues(alpha: 0.2),
+                                          side: BorderSide.none,
+                                          visualDensity: VisualDensity.compact,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4.0,
+                                          ),
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                          onPressed:
+                                              widget.isProcessing
+                                                  ? null
+                                                  : () {
+                                                    HapticFeedback.lightImpact();
+                                                    widget
+                                                        .onChangeCategoryPressed(
+                                                          widget.entry,
+                                                        );
+                                                  },
+                                          tooltip:
+                                              widget.isProcessing
+                                                  ? null
+                                                  : 'Change Category',
+                                        ),
+                                        const SizedBox(width: 8.0),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -480,7 +818,6 @@ class _ExpandableTextState extends State<_ExpandableText> {
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),

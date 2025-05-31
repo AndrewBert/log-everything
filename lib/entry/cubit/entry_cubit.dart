@@ -421,9 +421,57 @@ class EntryCubit extends Cubit<EntryState> {
     );
   }
 
+  // CP: Add editing methods for the new editing experience
+  void startEditingEntry(Entry entry) {
+    emit(state.copyWith(editingEntry: entry, isEditingMode: true));
+  }
+
+  void cancelEditingEntry() {
+    emit(state.copyWith(clearEditingEntry: true, isEditingMode: false));
+  }
+
+  Future<void> finishEditingEntry(String newText, String newCategory) async {
+    final editingEntry = state.editingEntry;
+    if (editingEntry == null || newText.trim().isEmpty) {
+      cancelEditingEntry();
+      return;
+    }
+
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedEntry = editingEntry.copyWith(
+        text: newText.trim(),
+        category: newCategory,
+      );
+
+      final updatedEntries = await _entryRepository.updateEntry(
+        editingEntry,
+        updatedEntry,
+      );
+
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+
+      // Clear editing state
+      emit(state.copyWith(clearEditingEntry: true, isEditingMode: false));
+    } catch (e) {
+      AppLogger.error("Cubit: Error updating entry via repository", error: e);
+      emit(state.copyWith(lastErrorMessage: "Failed to update entry."));
+    }
+  }
+
   void clearLastError() {
     if (state.lastErrorMessage != null) {
       emit(state.copyWith(clearLastError: true));
     }
+  }
+
+  // CP: Set which entry has an open context menu
+  void setContextMenuEntry(Entry entry) {
+    emit(state.copyWith(contextMenuEntry: entry));
+  }
+
+  // CP: Clear the context menu entry when menu is closed
+  void clearContextMenuEntry() {
+    emit(state.copyWith(clearContextMenuEntry: true));
   }
 }

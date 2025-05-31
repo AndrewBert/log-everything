@@ -392,6 +392,16 @@ When deciding which category to use, consider both the name and the description 
         ...inputMessages, // Spread the rest of the messages
       ],
       'store': store, // CP: Control whether to store the response
+      // CP: Add metadata to help track and organize chat requests in OpenAI dashboard
+      'metadata': {
+        'request_type': 'chat_response',
+        'app_name': 'log-everything',
+        'message_count': messages.length.toString(),
+        'has_vector_store': vectorStoreId != null && vectorStoreId.isNotEmpty ? 'true' : 'false',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _chatModelId,
+        'has_previous_response': previousResponseId != null ? 'true' : 'false',
+      },
     };
 
     // CP: Add previous response ID if provided

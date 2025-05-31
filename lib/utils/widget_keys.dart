@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../entry/entry.dart';
 
+// CP: Global keys map for entry cards to access their render objects
+final Map<String, GlobalKey> _entryCardKeys = <String, GlobalKey>{};
+
+// CP: Function to get or create a GlobalKey for an entry card
+GlobalKey entryCardKey(Entry entry) {
+  final keyString =
+      'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
+  return _entryCardKeys.putIfAbsent(keyString, () => GlobalKey());
+}
+
 // Keys for widgets within the EntriesList item
 // Using unique strings based on entry data to ensure key uniqueness per item
-ValueKey<String> entryCardKey(Entry entry) => ValueKey(
-  'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}',
-);
 ValueKey<String> entryCategoryChipKey(Entry entry) => ValueKey(
   'entryCategoryChip_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}',
 );
