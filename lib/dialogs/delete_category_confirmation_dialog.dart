@@ -6,8 +6,7 @@ class DeleteCategoryConfirmationDialog extends StatelessWidget {
   const DeleteCategoryConfirmationDialog({super.key, required this.category});
 
   // Helper to map backend 'Misc' to frontend 'None'
-  String categoryDisplayName(String category) =>
-      category == 'Misc' ? 'None' : category;
+  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
 
   @override
   Widget build(BuildContext context) {

@@ -40,8 +40,7 @@ class Entry extends Equatable {
   String toJsonString() => jsonEncode(toJson());
 
   // Static helper method to decode a JSON string into an Entry object
-  static Entry fromJsonString(String jsonString) =>
-      Entry.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+  static Entry fromJsonString(String jsonString) => Entry.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
   // Create a copy of this entry with modified properties
   Entry copyWith({

@@ -54,19 +54,11 @@ class VoiceInputState extends Equatable {
   }) {
     return VoiceInputState(
       isRecording: isRecording ?? this.isRecording,
-      recordingStartTime:
-          clearRecordingTime
-              ? null
-              : recordingStartTime ?? this.recordingStartTime,
-      recordingDuration:
-          clearRecordingTime
-              ? Duration.zero
-              : recordingDuration ?? this.recordingDuration,
+      recordingStartTime: clearRecordingTime ? null : recordingStartTime ?? this.recordingStartTime,
+      recordingDuration: clearRecordingTime ? Duration.zero : recordingDuration ?? this.recordingDuration,
       audioPath: clearAudioPath ? null : audioPath ?? this.audioPath,
-      transcribedText:
-          clearTranscribedText ? null : transcribedText ?? this.transcribedText,
-      errorMessage:
-          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
+      transcribedText: clearTranscribedText ? null : transcribedText ?? this.transcribedText,
+      errorMessage: clearErrorMessage ? null : errorMessage ?? this.errorMessage,
       micPermissionStatus: micPermissionStatus ?? this.micPermissionStatus,
       transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
     );

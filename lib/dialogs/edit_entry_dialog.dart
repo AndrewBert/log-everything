@@ -29,8 +29,7 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
 
     // Get categories from cubit as List<Category>
     final currentState = context.read<EntryCubit>().state;
-    _availableCategories = List<Category>.from(currentState.categories)
-      ..sort((a, b) => a.name.compareTo(b.name));
+    _availableCategories = List<Category>.from(currentState.categories)..sort((a, b) => a.name.compareTo(b.name));
 
     // Ensure the current category is valid, default to Misc if not
     if (!_availableCategories.any((cat) => cat.name == _selectedCategory)) {

@@ -6,21 +6,16 @@ import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
 
 // Define callback types for clarity
-typedef ShowEditCategoryDialogCallback =
-    Future<String?> Function(BuildContext context, String oldCategoryName);
-typedef ShowDeleteCategoryConfirmationDialogCallback =
-    Future<bool> Function(BuildContext context, String category);
+typedef ShowEditCategoryDialogCallback = Future<String?> Function(BuildContext context, String oldCategoryName);
+typedef ShowDeleteCategoryConfirmationDialogCallback = Future<bool> Function(BuildContext context, String category);
 
 // Helper to map backend 'Misc' to frontend 'None' and vice versa
-String categoryDisplayName(String category) =>
-    category == 'Misc' ? 'None' : category;
-String categoryBackendValue(String displayName) =>
-    displayName == 'None' ? 'Misc' : displayName;
+String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
+String categoryBackendValue(String displayName) => displayName == 'None' ? 'Misc' : displayName;
 
 class ManageCategoriesDialog extends StatefulWidget {
   final ShowEditCategoryDialogCallback onShowEditCategoryDialog;
-  final ShowDeleteCategoryConfirmationDialogCallback
-  onShowDeleteCategoryConfirmationDialog;
+  final ShowDeleteCategoryConfirmationDialogCallback onShowDeleteCategoryConfirmationDialog;
 
   const ManageCategoriesDialog({
     super.key,
@@ -32,11 +27,9 @@ class ManageCategoriesDialog extends StatefulWidget {
   State<ManageCategoriesDialog> createState() => _ManageCategoriesDialogState();
 }
 
-class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
-    with TickerProviderStateMixin {
+class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with TickerProviderStateMixin {
   final _categoryInputController = TextEditingController();
-  final _descriptionInputController =
-      TextEditingController(); // Controller for new category description
+  final _descriptionInputController = TextEditingController(); // Controller for new category description
 
   @override
   void initState() {
@@ -62,8 +55,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
             icon: const Icon(Icons.add),
             tooltip: 'Add Category',
             onPressed: () async {
-              final entryCubit =
-                  context.read<EntryCubit>(); // CP: Get cubit before async
+              final entryCubit = context.read<EntryCubit>(); // CP: Get cubit before async
               final rootNavigator = Navigator.of(
                 context,
                 rootNavigator: true,
@@ -166,24 +158,20 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
                                       onPressed: () async {
-                                        final onShowEditCategoryDialog =
-                                            widget.onShowEditCategoryDialog;
+                                        final onShowEditCategoryDialog = widget.onShowEditCategoryDialog;
                                         final rootNavigator = Navigator.of(
                                           context,
                                           rootNavigator: true,
                                         ); // CP: Get navigator before async
-                                        final result =
-                                            await onShowEditCategoryDialog(
-                                              itemContext,
-                                              categoryBackendValue(category),
-                                            );
+                                        final result = await onShowEditCategoryDialog(
+                                          itemContext,
+                                          categoryBackendValue(category),
+                                        );
                                         if (!mounted) {
                                           return; // CP: Guard context after async gap
                                         }
                                         final newName = result;
-                                        if (newName != null &&
-                                            newName.isNotEmpty &&
-                                            newName != category) {
+                                        if (newName != null && newName.isNotEmpty && newName != category) {
                                           HapticFeedback.mediumImpact();
                                           ScaffoldMessenger.of(
                                             rootNavigator.context,
@@ -207,23 +195,17 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog>
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
                                       onPressed: () async {
-                                        final entryCubit =
-                                            itemContext
-                                                .read<
-                                                  EntryCubit
-                                                >(); // CP: Get cubit before async
+                                        final entryCubit = itemContext.read<EntryCubit>(); // CP: Get cubit before async
                                         final onShowDeleteCategoryConfirmationDialog =
-                                            widget
-                                                .onShowDeleteCategoryConfirmationDialog;
+                                            widget.onShowDeleteCategoryConfirmationDialog;
                                         final rootNavigator = Navigator.of(
                                           context,
                                           rootNavigator: true,
                                         ); // CP: Get navigator before async
-                                        final confirmed =
-                                            await onShowDeleteCategoryConfirmationDialog(
-                                              itemContext,
-                                              categoryBackendValue(category),
-                                            );
+                                        final confirmed = await onShowDeleteCategoryConfirmationDialog(
+                                          itemContext,
+                                          categoryBackendValue(category),
+                                        );
                                         if (!mounted) {
                                           return; // CP: Guard context after async gap
                                         }
@@ -292,8 +274,7 @@ class AddCategoryDialog extends StatelessWidget {
             child: TextField(
               controller: categoryInputController,
               focusNode: categoryFocusNode, // CP: Auto-focus here
-              textCapitalization:
-                  TextCapitalization.words, // CP: Auto-capitalize each word
+              textCapitalization: TextCapitalization.words, // CP: Auto-capitalize each word
               decoration: InputDecoration(
                 labelText: 'New Category Name',
                 hintText: 'Enter category to add...',
@@ -313,8 +294,7 @@ class AddCategoryDialog extends StatelessWidget {
               controller: descriptionInputController,
               decoration: InputDecoration(
                 labelText: 'Description (optional)',
-                hintText:
-                    'Describe this category for better auto-categorization',
+                hintText: 'Describe this category for better auto-categorization',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

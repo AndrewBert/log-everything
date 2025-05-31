@@ -15,9 +15,7 @@ part 'entry_state.dart';
 class EntryCubit extends Cubit<EntryState> {
   final EntryRepository _entryRepository;
 
-  EntryCubit({required EntryRepository entryRepository})
-    : _entryRepository = entryRepository,
-      super(EntryState()) {
+  EntryCubit({required EntryRepository entryRepository}) : _entryRepository = entryRepository, super(EntryState()) {
     _initialize();
   }
 
@@ -45,9 +43,7 @@ class EntryCubit extends Cubit<EntryState> {
           displayListItems: initialDisplayList,
         ),
       );
-      initialEntries
-          .where((e) => e.isNew)
-          .forEach(_markEntryAsNotNewAfterDelay);
+      initialEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
     } catch (e) {
       AppLogger.error("Cubit: Error initializing repository", error: e);
       emit(
@@ -89,8 +85,7 @@ class EntryCubit extends Cubit<EntryState> {
     );
 
     // Sort dates descending
-    final sortedDates =
-        groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedDates = groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
 
     // Create the final list with headers and entries
     final List<dynamic> listItems = [];
@@ -111,10 +106,7 @@ class EntryCubit extends Cubit<EntryState> {
     bool? clearFilter,
     String? newFilterCategory,
   }) {
-    final filterToUse =
-        (clearFilter ?? false)
-            ? null
-            : (newFilterCategory ?? state.filterCategory);
+    final filterToUse = (clearFilter ?? false) ? null : (newFilterCategory ?? state.filterCategory);
     final newDisplayList = _buildDisplayList(updatedEntries, filterToUse);
 
     emit(
@@ -154,12 +146,10 @@ class EntryCubit extends Cubit<EntryState> {
     }
 
     // Sort entries by timestamp, most recent first
-    final sortedEntries = List<Entry>.from(entries)
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final sortedEntries = List<Entry>.from(entries)..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     // Get unique categories from most recent entries (including Misc)
-    final recentCats =
-        sortedEntries.map((e) => e.category).toSet().take(3).toList();
+    final recentCats = sortedEntries.map((e) => e.category).toSet().take(3).toList();
 
     AppLogger.info(
       '[Recent Categories] Updated recent categories to: $recentCats',
@@ -215,10 +205,7 @@ class EntryCubit extends Cubit<EntryState> {
 
       finalizeProcessing(finalEntries);
 
-      final entriesToStartTimerFor =
-          finalEntries
-              .where((e) => e.isNew && e.timestamp == processingTimestamp)
-              .toList();
+      final entriesToStartTimerFor = finalEntries.where((e) => e.isNew && e.timestamp == processingTimestamp).toList();
 
       entriesToStartTimerFor.forEach(_markEntryAsNotNewAfterDelay);
       HapticFeedback.mediumImpact();
@@ -237,8 +224,7 @@ class EntryCubit extends Cubit<EntryState> {
       emit(
         state.copyWith(
           isLoading: false,
-          lastErrorMessage:
-              "AI processing failed: ${e.message}", // CP: More specific error
+          lastErrorMessage: "AI processing failed: ${e.message}", // CP: More specific error
           displayListItems: revertedDisplayList,
         ),
       );
@@ -339,8 +325,7 @@ class EntryCubit extends Cubit<EntryState> {
   ) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository
-          .addCustomCategoryWithDescription(name, description);
+      final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(name, description);
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error(
@@ -358,10 +343,7 @@ class EntryCubit extends Cubit<EntryState> {
       final result = await _entryRepository.deleteCategory(categoryToDelete);
 
       // CP: Remove deleted category from recent categories list
-      final updatedRecentCategories =
-          state.recentCategories
-              .where((category) => category != categoryToDelete)
-              .toList();
+      final updatedRecentCategories = state.recentCategories.where((category) => category != categoryToDelete).toList();
 
       _updateStateFromRepository(
         updatedEntries: result.entries,
@@ -395,8 +377,7 @@ class EntryCubit extends Cubit<EntryState> {
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
-        newFilterCategory:
-            state.filterCategory == oldName ? newName : state.filterCategory,
+        newFilterCategory: state.filterCategory == oldName ? newName : state.filterCategory,
       );
     } catch (e) {
       AppLogger.error(

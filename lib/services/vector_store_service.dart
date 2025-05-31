@@ -9,10 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/logger.dart';
 
 // CP: Define SharedPreferences keys for backfill state
-const String _backfillLastSuccessfulDateKey =
-    'vector_store_backfill_last_successful_date';
-const String _fullBackfillRunAttemptedKey =
-    'vector_store_full_backfill_run_attempted';
+const String _backfillLastSuccessfulDateKey = 'vector_store_backfill_last_successful_date';
+const String _fullBackfillRunAttemptedKey = 'vector_store_full_backfill_run_attempted';
 
 // CP: Define the base URL for OpenAI API
 const String _openAIBaseUrl = 'https://api.openai.com/v1';
@@ -72,13 +70,11 @@ class VectorStoreService {
     required SharedPreferences sharedPreferences,
     required http.Client httpClient,
     required String apiKey,
-    required EntryPersistenceService
-    entryPersistenceService, // CP: Added to constructor
+    required EntryPersistenceService entryPersistenceService, // CP: Added to constructor
   }) : _prefs = sharedPreferences,
        _httpClient = httpClient,
        _apiKey = apiKey,
-       _entryPersistenceService =
-           entryPersistenceService; // CP: Initialize field
+       _entryPersistenceService = entryPersistenceService; // CP: Initialize field
 
   Future<String?> getOrCreateVectorStoreId() async {
     String? vectorStoreId = _prefs.getString(_vectorStoreIdKey);
@@ -89,8 +85,7 @@ class VectorStoreService {
       );
       try {
         // CP: Generate a more unique name for the vector store
-        final String uniqueSuffix = DateTime.now().millisecondsSinceEpoch
-            .toRadixString(36);
+        final String uniqueSuffix = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
         final String vectorStoreName = 'LogEverythingApp_User_$uniqueSuffix';
         AppLogger.info(
           '[VectorStoreService] Attempting to create vector store with name: $vectorStoreName',
@@ -618,12 +613,10 @@ class VectorStoreService {
         AppLogger.info(
           '[VectorStoreService] Adding new file $newFileId to vector store $vectorStoreId.',
         ); // Get entries for metadata
-        final List<Entry> allEntries =
-            await _entryPersistenceService.loadEntries();
+        final List<Entry> allEntries = await _entryPersistenceService.loadEntries();
         final List<Entry> monthEntries =
             allEntries.where((e) {
-              return e.timestamp.year == date.year &&
-                  e.timestamp.month == date.month;
+              return e.timestamp.year == date.year && e.timestamp.month == date.month;
             }).toList();
         await _addFileToVectorStore(
           vectorStoreId,
@@ -671,8 +664,7 @@ class VectorStoreService {
       "[VectorStoreService] Checking if initial backfill is needed.",
     );
 
-    final bool fullRunPreviouslyAttempted =
-        _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
+    final bool fullRunPreviouslyAttempted = _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
 
     if (fullRunPreviouslyAttempted) {
       AppLogger.info(
@@ -695,8 +687,7 @@ class VectorStoreService {
         return;
       }
 
-      final List<Entry> allEntries =
-          await _entryPersistenceService.loadEntries();
+      final List<Entry> allEntries = await _entryPersistenceService.loadEntries();
       AppLogger.info(
         "[VectorStoreService] Backfill: Loaded ${allEntries.length} total entries for potential backfill.",
       );
@@ -779,8 +770,7 @@ class VectorStoreService {
         // CP: Iterate through months
         // CP: Sort entries within the month by timestamp
         final List<Entry> entriesForMonth =
-            entriesByMonth[monthDate]!
-              ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+            entriesByMonth[monthDate]!..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
         // CP: Format content for the entire month
         final String monthlyLogContent = entriesForMonth
@@ -843,10 +833,8 @@ class VectorStoreService {
       if (failureCount == 0 &&
           (monthsToProcess.isEmpty ||
               (latestSuccessfullyProcessedMonthInThisRun != null &&
-                  latestSuccessfullyProcessedMonthInThisRun.year ==
-                      monthsToProcess.last.year &&
-                  latestSuccessfullyProcessedMonthInThisRun.month ==
-                      monthsToProcess.last.month))) {
+                  latestSuccessfullyProcessedMonthInThisRun.year == monthsToProcess.last.year &&
+                  latestSuccessfullyProcessedMonthInThisRun.month == monthsToProcess.last.month))) {
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         AppLogger.info(
           "[VectorStoreService] Backfill: Successfully processed all pending historical months. Marked full backfill run as attempted.",

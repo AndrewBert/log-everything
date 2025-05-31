@@ -34,10 +34,8 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).colorScheme.primary;
-    final Color? defaultTitleColor =
-        Theme.of(context).appBarTheme.titleTextStyle?.color;
-    final isChatOpen =
-        context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
+    final Color? defaultTitleColor = Theme.of(context).appBarTheme.titleTextStyle?.color;
+    final isChatOpen = context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
 
     return Scaffold(
       appBar: AppBar(
@@ -48,9 +46,7 @@ class HomePage extends StatelessWidget {
           },
           child: RichText(
             text: TextSpan(
-              style:
-                  Theme.of(context).appBarTheme.titleTextStyle ??
-                  Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
               children: <TextSpan>[
                 TextSpan(
                   text: 'Log',
@@ -107,9 +103,7 @@ class HomePage extends StatelessWidget {
         listeners: [
           BlocListener<HomePageCubit, HomePageState>(
             // Remove unnecessary null checks
-            listenWhen:
-                (prev, current) =>
-                    !prev.showWhatsNewDialog && current.showWhatsNewDialog,
+            listenWhen: (prev, current) => !prev.showWhatsNewDialog && current.showWhatsNewDialog,
             listener: (context, state) async {
               // Remove unnecessary null check
               await _showWhatsNewDialog(context, state.appVersion);
@@ -121,9 +115,7 @@ class HomePage extends StatelessWidget {
           BlocListener<HomePageCubit, HomePageState>(
             // Keep null check for snackBarMessage as it IS nullable
             listenWhen: (prev, current) {
-              final condition =
-                  prev.snackBarMessage != current.snackBarMessage &&
-                  current.snackBarMessage != null;
+              final condition = prev.snackBarMessage != current.snackBarMessage && current.snackBarMessage != null;
               return condition;
             },
             listener: (context, state) {
@@ -177,8 +169,7 @@ class HomePage extends StatelessWidget {
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: FractionallySizedBox(
-                          heightFactor:
-                              0.92, // CP: Increased from 0.8 for a taller chat sheet
+                          heightFactor: 0.92, // CP: Increased from 0.8 for a taller chat sheet
                           child: const ChatBottomSheet(),
                         ),
                       ),
@@ -218,8 +209,7 @@ class HomePage extends StatelessWidget {
       formatDateHeader: _formatDateHeader,
       getCategoryColor: _getCategoryColor,
       timeFormatter: _timeFormatter,
-      onChangeCategoryPressed:
-          (entry) => _showChangeCategoryDialog(context, entry),
+      onChangeCategoryPressed: (entry) => _showChangeCategoryDialog(context, entry),
       onEditPressed: (entry) => _handleEditEntry(context, entry),
       onDeletePressed: (entry) => _handleDeleteEntry(context, entry),
     );
@@ -238,9 +228,7 @@ class HomePage extends StatelessWidget {
     final keyboardVisible = MediaQuery.of(targetContext).viewInsets.bottom > 0;
     final bottomPadding = MediaQuery.of(targetContext).padding.bottom;
     final double bottomMargin =
-        keyboardVisible
-            ? MediaQuery.of(targetContext).viewInsets.bottom + 8.0
-            : bottomPadding + 80.0;
+        keyboardVisible ? MediaQuery.of(targetContext).viewInsets.bottom + 8.0 : bottomPadding + 80.0;
 
     messenger.showSnackBar(
       SnackBar(
@@ -293,16 +281,14 @@ class HomePage extends StatelessWidget {
     if (!context.mounted) return;
     await showDialog(
       context: context,
-      builder:
-          (dialogContext) => WhatsNewDialog(currentVersion: displayVersion),
+      builder: (dialogContext) => WhatsNewDialog(currentVersion: displayVersion),
     );
   }
 
   void _handleInput(BuildContext context, String currentText) {
     final voiceCubit = context.read<VoiceInputCubit>();
     final entryCubit = context.read<EntryCubit>();
-    final homePageCubit =
-        context.read<HomePageCubit>(); // CP: Get HomePageCubit
+    final homePageCubit = context.read<HomePageCubit>(); // CP: Get HomePageCubit
     final chatCubit = context.read<ChatCubit>(); // CP: Get ChatCubit
 
     if (homePageCubit.state.isChatOpen) {
@@ -322,10 +308,7 @@ class HomePage extends StatelessWidget {
       // 1. Create temporary entry
       final DateTime processingTimestamp = DateTime.now();
       final tempEntry = Entry(
-        text:
-            currentText.isEmpty
-                ? "Processing voice..."
-                : currentText, // Show initial text if available
+        text: currentText.isEmpty ? "Processing voice..." : currentText, // Show initial text if available
         timestamp: processingTimestamp,
         category: 'Processing...',
         isNew: true,
@@ -368,11 +351,8 @@ class HomePage extends StatelessWidget {
             backgroundColor: Colors.transparent,
             body: Center(
               child: ManageCategoriesDialog(
-                onShowEditCategoryDialog:
-                    (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
-                onShowDeleteCategoryConfirmationDialog:
-                    (ctx, cat) =>
-                        _showDeleteCategoryConfirmationDialog(ctx, cat),
+                onShowEditCategoryDialog: (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
+                onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
               ),
             ),
           ),
@@ -396,8 +376,7 @@ class HomePage extends StatelessWidget {
     Entry entry,
   ) async {
     final entryCubit = context.read<EntryCubit>();
-    final availableCategories =
-        entryCubit.state.categories.map((cat) => cat.name).toList()..sort();
+    final availableCategories = entryCubit.state.categories.map((cat) => cat.name).toList()..sort();
     String? selectedCategory = entry.category;
 
     if (!availableCategories.contains(selectedCategory)) {

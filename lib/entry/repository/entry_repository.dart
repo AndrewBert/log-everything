@@ -160,10 +160,7 @@ class EntryRepository {
         final newEntry = Entry(
           text: data.textSegment,
           timestamp: processingTimestamp,
-          category:
-              _categories.any((cat) => cat.name == data.category)
-                  ? data.category
-                  : 'Misc',
+          category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
         );
         addedEntries.add(newEntry);
@@ -197,9 +194,7 @@ class EntryRepository {
   Future<List<Entry>> deleteEntry(Entry entryToDelete) async {
     final originalLength = _entries.length;
     _entries.removeWhere(
-      (entry) =>
-          entry.timestamp == entryToDelete.timestamp &&
-          entry.text == entryToDelete.text,
+      (entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text,
     );
     if (_entries.length < originalLength) {
       await _saveEntries();
@@ -222,9 +217,7 @@ class EntryRepository {
     Entry updatedEntry,
   ) async {
     final index = _entries.indexWhere(
-      (entry) =>
-          entry.timestamp == originalEntry.timestamp &&
-          entry.text == originalEntry.text,
+      (entry) => entry.timestamp == originalEntry.timestamp && entry.text == originalEntry.text,
     );
     if (index != -1) {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
@@ -253,8 +246,7 @@ class EntryRepository {
     );
     if (combinedText.isEmpty) {
       _entries.removeWhere(
-        (e) =>
-            e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
+        (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
       );
       await _saveEntries();
       return currentEntries;
@@ -309,10 +301,7 @@ class EntryRepository {
         final newEntry = Entry(
           text: data.textSegment,
           timestamp: tempEntryTimestamp,
-          category:
-              _categories.any((cat) => cat.name == data.category)
-                  ? data.category
-                  : 'Misc',
+          category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
         );
         addedEntries.add(newEntry);
@@ -356,9 +345,7 @@ class EntryRepository {
   ) async {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
-    if (trimmedName.isNotEmpty &&
-        trimmedName != 'Misc' &&
-        !_categories.any((cat) => cat.name == trimmedName)) {
+    if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
       _categories.add(
         Category(name: trimmedName, description: trimmedDescription),
       );
@@ -500,8 +487,7 @@ class EntryRepository {
 
   Future<void> _triggerVectorStoreSyncForMonth(DateTime date) async {
     final DateTime monthToSync = DateTime(date.year, date.month, 1);
-    final String monthKeyString =
-        "${monthToSync.year}-${monthToSync.month.toString().padLeft(2, '0')}";
+    final String monthKeyString = "${monthToSync.year}-${monthToSync.month.toString().padLeft(2, '0')}";
 
     // CP: Cancel any existing timer for this month
     _syncDebounceTimers[monthKeyString]?.cancel();
@@ -516,8 +502,7 @@ class EntryRepository {
           "[EntryRepository] Triggering vector store sync for month: $monthKeyString",
         );
         try {
-          final String? vectorStoreId =
-              await _vectorStoreService.getOrCreateVectorStoreId();
+          final String? vectorStoreId = await _vectorStoreService.getOrCreateVectorStoreId();
 
           if (vectorStoreId == null) {
             AppLogger.warn(
@@ -528,8 +513,7 @@ class EntryRepository {
 
           final List<Entry> entriesForMonth =
               _entries.where((entry) {
-                return entry.timestamp.year == monthToSync.year &&
-                    entry.timestamp.month == monthToSync.month;
+                return entry.timestamp.year == monthToSync.year && entry.timestamp.month == monthToSync.month;
               }).toList();
 
           entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));

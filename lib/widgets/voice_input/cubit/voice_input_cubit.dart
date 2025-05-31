@@ -75,8 +75,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     AppLogger.info("[startRecording] Attempting to start recording...");
     HapticFeedback.mediumImpact();
 
-    PermissionStatus currentStatus =
-        await _permissionService.getMicrophoneStatus();
+    PermissionStatus currentStatus = await _permissionService.getMicrophoneStatus();
     if (currentStatus != state.micPermissionStatus) {
       emit(state.copyWith(micPermissionStatus: currentStatus));
     }
@@ -154,8 +153,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           isRecording: false,
           audioPath: path,
           clearRecordingTime: true,
-          errorMessage:
-              isTooShort ? 'Recording too short (less than 1 second)' : null,
+          errorMessage: isTooShort ? 'Recording too short (less than 1 second)' : null,
           clearErrorMessage: !isTooShort,
         ),
       );
@@ -231,9 +229,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           );
           if (transcription != null && transcription.isNotEmpty) {
             AppLogger.info('Transcription successful: "$transcription"');
-            if (combinedText.isNotEmpty &&
-                !combinedText.endsWith(' ') &&
-                !combinedText.endsWith('\n')) {
+            if (combinedText.isNotEmpty && !combinedText.endsWith(' ') && !combinedText.endsWith('\n')) {
               combinedText += ' ';
             }
             combinedText += transcription;
@@ -282,9 +278,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           'Combined text is empty, finalizing state without adding entry.',
         );
         final currentEntries =
-            _entryRepository.currentEntries
-                .where((e) => e.timestamp != processingTimestamp)
-                .toList();
+            _entryRepository.currentEntries.where((e) => e.timestamp != processingTimestamp).toList();
         _entryCubit.finalizeProcessing(currentEntries);
       }
 
@@ -292,10 +286,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     } catch (e) {
       // Handle error stopping recording
       AppLogger.error("Error stopping recording for combine", error: e);
-      final currentEntries =
-          _entryRepository.currentEntries
-              .where((e) => e.timestamp != processingTimestamp)
-              .toList();
+      final currentEntries = _entryRepository.currentEntries.where((e) => e.timestamp != processingTimestamp).toList();
       _entryCubit.finalizeProcessing(currentEntries);
       emit(
         state.copyWith(

@@ -54,16 +54,14 @@ class OnboardingState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       selectedCategories: selectedCategories ?? this.selectedCategories,
       suggestedCategories: suggestedCategories ?? this.suggestedCategories,
-      errorMessage:
-          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       canProceed: canProceed ?? this.canProceed,
     );
   }
 
   bool get isFirstStep => currentStepIndex == 0;
   bool get isLastStep => currentStep == OnboardingStep.completed;
-  int get totalSteps =>
-      OnboardingStep.values.length - 1; // CP: Exclude completed step from total
+  int get totalSteps => OnboardingStep.values.length - 1; // CP: Exclude completed step from total
   double get progress => currentStepIndex / (totalSteps - 1);
 
   @override

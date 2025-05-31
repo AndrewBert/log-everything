@@ -18,8 +18,7 @@ import 'package:myapp/services/vector_store_service.dart' as _i15;
 import 'package:myapp/speech_service.dart' as _i3;
 import 'package:permission_handler/permission_handler.dart' as _i8;
 import 'package:record/record.dart' as _i5;
-import 'package:record_platform_interface/record_platform_interface.dart'
-    as _i2;
+import 'package:record_platform_interface/record_platform_interface.dart' as _i2;
 import 'package:shared_preferences/shared_preferences.dart' as _i16;
 
 // ignore_for_file: type=lint
@@ -37,8 +36,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i16;
 // ignore_for_file: subtype_of_sealed_class
 
 class _FakeAmplitude_0 extends _i1.SmartFake implements _i2.Amplitude {
-  _FakeAmplitude_0(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
+  _FakeAmplitude_0(Object parent, Invocation parentInvocation) : super(parent, parentInvocation);
 }
 
 /// A class which mocks [SpeechService].
@@ -248,8 +246,7 @@ class MockPermissionService extends _i1.Mock implements _i7.PermissionService {
 /// A class which mocks [EntryPersistenceService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockEntryPersistenceService extends _i1.Mock
-    implements _i9.EntryPersistenceService {
+class MockEntryPersistenceService extends _i1.Mock implements _i9.EntryPersistenceService {
   MockEntryPersistenceService() {
     _i1.throwOnMissingStub(this);
   }
@@ -304,10 +301,9 @@ class MockAiService extends _i1.Mock implements _i11.AiService {
   ) =>
       (super.noSuchMethod(
             Invocation.method(#extractEntries, [text, categories]),
-            returnValue:
-                _i4.Future<List<({String category, String textSegment})>>.value(
-                  <({String category, String textSegment})>[],
-                ),
+            returnValue: _i4.Future<List<({String category, String textSegment})>>.value(
+              <({String category, String textSegment})>[],
+            ),
           )
           as _i4.Future<List<({String category, String textSegment})>>);
 
@@ -330,8 +326,7 @@ class MockAiService extends _i1.Mock implements _i11.AiService {
 /// A class which mocks [AudioRecorderService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAudioRecorderService extends _i1.Mock
-    implements _i14.AudioRecorderService {
+class MockAudioRecorderService extends _i1.Mock implements _i14.AudioRecorderService {
   MockAudioRecorderService() {
     _i1.throwOnMissingStub(this);
   }
@@ -392,8 +387,7 @@ class MockAudioRecorderService extends _i1.Mock
 /// A class which mocks [VectorStoreService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVectorStoreService extends _i1.Mock
-    implements _i15.VectorStoreService {
+class MockVectorStoreService extends _i1.Mock implements _i15.VectorStoreService {
   MockVectorStoreService() {
     _i1.throwOnMissingStub(this);
   }
@@ -446,24 +440,19 @@ class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
           as Set<String>);
 
   @override
-  Object? get(String? key) =>
-      (super.noSuchMethod(Invocation.method(#get, [key])) as Object?);
+  Object? get(String? key) => (super.noSuchMethod(Invocation.method(#get, [key])) as Object?);
 
   @override
-  bool? getBool(String? key) =>
-      (super.noSuchMethod(Invocation.method(#getBool, [key])) as bool?);
+  bool? getBool(String? key) => (super.noSuchMethod(Invocation.method(#getBool, [key])) as bool?);
 
   @override
-  int? getInt(String? key) =>
-      (super.noSuchMethod(Invocation.method(#getInt, [key])) as int?);
+  int? getInt(String? key) => (super.noSuchMethod(Invocation.method(#getInt, [key])) as int?);
 
   @override
-  double? getDouble(String? key) =>
-      (super.noSuchMethod(Invocation.method(#getDouble, [key])) as double?);
+  double? getDouble(String? key) => (super.noSuchMethod(Invocation.method(#getDouble, [key])) as double?);
 
   @override
-  String? getString(String? key) =>
-      (super.noSuchMethod(Invocation.method(#getString, [key])) as String?);
+  String? getString(String? key) => (super.noSuchMethod(Invocation.method(#getString, [key])) as String?);
 
   @override
   bool containsKey(String? key) =>
@@ -475,8 +464,7 @@ class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
 
   @override
   List<String>? getStringList(String? key) =>
-      (super.noSuchMethod(Invocation.method(#getStringList, [key]))
-          as List<String>?);
+      (super.noSuchMethod(Invocation.method(#getStringList, [key])) as List<String>?);
 
   @override
   _i4.Future<bool> setBool(String? key, bool? value) =>

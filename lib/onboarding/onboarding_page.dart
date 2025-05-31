@@ -101,10 +101,7 @@ class OnboardingPage extends StatelessWidget {
           Expanded(
             flex: state.isFirstStep ? 1 : 1,
             child: ElevatedButton(
-              onPressed:
-                  state.isLoading || !state.canProceed
-                      ? null
-                      : () => _handleNextButton(context, state),
+              onPressed: state.isLoading || !state.canProceed ? null : () => _handleNextButton(context, state),
               child:
                   state.isLoading
                       ? const SizedBox(

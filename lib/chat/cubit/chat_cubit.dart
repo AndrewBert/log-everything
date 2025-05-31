@@ -14,9 +14,7 @@ class ChatCubit extends Cubit<ChatState> {
   final Uuid _uuid = const Uuid();
 
   // CP: Update constructor to accept AiService
-  ChatCubit({required AiService aiService})
-    : _aiService = aiService,
-      super(const ChatState());
+  ChatCubit({required AiService aiService}) : _aiService = aiService, super(const ChatState());
 
   Future<void> addUserMessage(String text) async {
     // CP: Make method async
@@ -28,8 +26,7 @@ class ChatCubit extends Cubit<ChatState> {
     );
 
     // CP: Add user message and set loading state
-    final messagesWithUser = List<ChatMessage>.from(state.messages)
-      ..add(userMessage);
+    final messagesWithUser = List<ChatMessage>.from(state.messages)..add(userMessage);
     emit(state.copyWith(messages: messagesWithUser, isLoading: true));
 
     try {
@@ -39,8 +36,7 @@ class ChatCubit extends Cubit<ChatState> {
         messages: state.messages,
         currentDate: DateTime.now(),
         store: true, // CP: Store conversations on OpenAI servers
-        previousResponseId:
-            state.lastResponseId, // CP: Chain to previous response
+        previousResponseId: state.lastResponseId, // CP: Chain to previous response
       );
       final String aiResponseText = response.$1;
       final String? newResponseId = response.$2;
@@ -51,8 +47,7 @@ class ChatCubit extends Cubit<ChatState> {
         sender: ChatSender.ai,
         timestamp: DateTime.now(),
       );
-      final messagesWithAi = List<ChatMessage>.from(state.messages)
-        ..add(aiMessage);
+      final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
       emit(
         state.copyWith(
           messages: messagesWithAi,
@@ -71,8 +66,7 @@ class ChatCubit extends Cubit<ChatState> {
         sender: ChatSender.ai, // CP: Error shown as an AI message
         timestamp: DateTime.now(),
       );
-      final messagesWithError = List<ChatMessage>.from(state.messages)
-        ..add(errorMessage);
+      final messagesWithError = List<ChatMessage>.from(state.messages)..add(errorMessage);
       emit(state.copyWith(messages: messagesWithError, isLoading: false));
     } catch (e, stackTrace) {
       AppLogger.error(
@@ -81,13 +75,11 @@ class ChatCubit extends Cubit<ChatState> {
       );
       final errorMessage = ChatMessage(
         id: _uuid.v4(),
-        text:
-            "Sorry, an unexpected error occurred while fetching the chat response.",
+        text: "Sorry, an unexpected error occurred while fetching the chat response.",
         sender: ChatSender.ai,
         timestamp: DateTime.now(),
       );
-      final messagesWithError = List<ChatMessage>.from(state.messages)
-        ..add(errorMessage);
+      final messagesWithError = List<ChatMessage>.from(state.messages)..add(errorMessage);
       emit(state.copyWith(messages: messagesWithError, isLoading: false));
     }
   }

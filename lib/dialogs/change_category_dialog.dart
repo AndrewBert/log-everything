@@ -12,10 +12,8 @@ class ChangeCategoryDialog extends StatelessWidget {
   });
 
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
-  String categoryDisplayName(String category) =>
-      category == 'Misc' ? 'None' : category;
-  String categoryBackendValue(String displayName) =>
-      displayName == 'None' ? 'Misc' : displayName;
+  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
+  String categoryBackendValue(String displayName) => displayName == 'None' ? 'Misc' : displayName;
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +36,8 @@ class ChangeCategoryDialog extends StatelessWidget {
               child: Text(
                 display,
                 style: TextStyle(
-                  fontWeight:
-                      category == currentCategory
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                  color:
-                      category == currentCategory
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                  fontWeight: category == currentCategory ? FontWeight.bold : FontWeight.normal,
+                  color: category == currentCategory ? Theme.of(context).colorScheme.primary : null,
                 ),
               ),
             );

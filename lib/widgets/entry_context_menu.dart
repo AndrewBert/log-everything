@@ -104,8 +104,7 @@ class _MenuOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTextColor =
-        textColor ?? Theme.of(context).colorScheme.onSurface;
+    final effectiveTextColor = textColor ?? Theme.of(context).colorScheme.onSurface;
 
     return InkWell(
       onTap: () {

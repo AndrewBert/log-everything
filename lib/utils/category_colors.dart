@@ -57,9 +57,7 @@ class CategoryColors {
     Color baseColor = getColorForCategory(category);
     // Create a darker version of the color for better text contrast
     HSLColor hslColor = HSLColor.fromColor(baseColor);
-    return hslColor
-        .withLightness((hslColor.lightness - 0.3).clamp(0.0, 1.0))
-        .toColor();
+    return hslColor.withLightness((hslColor.lightness - 0.3).clamp(0.0, 1.0)).toColor();
   }
 
   /// Assign a random color to a category
@@ -101,10 +99,7 @@ class CategoryColors {
     int minUsage = colorUsageCounts.values.reduce(min);
 
     // Return colors with the minimum usage
-    return colorUsageCounts.entries
-        .where((entry) => entry.value == minUsage)
-        .map((entry) => entry.key)
-        .toList();
+    return colorUsageCounts.entries.where((entry) => entry.value == minUsage).map((entry) => entry.key).toList();
   }
 
   /// Manually set a color for a category (for future user customization)

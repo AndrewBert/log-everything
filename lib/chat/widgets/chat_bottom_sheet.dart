@@ -62,8 +62,7 @@ class ChatBottomSheet extends StatelessWidget {
                                 "Unlock insights from your logs!",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -119,8 +118,7 @@ class ChatBottomSheet extends StatelessWidget {
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final message = messages[messages.length - 1 - index];
-                          final isUserMessage =
-                              message.sender == ChatSender.user;
+                          final isUserMessage = message.sender == ChatSender.user;
                           return _buildMessageBubble(
                             context,
                             message,
@@ -163,8 +161,7 @@ class ChatBottomSheet extends StatelessWidget {
     bool isUserMessage,
     DateFormat timeFormatter,
   ) {
-    final CrossAxisAlignment bubbleAlignment =
-        isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final CrossAxisAlignment bubbleAlignment = isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
     if (isUserMessage) {
       final Color bubbleColor = Theme.of(context).colorScheme.primaryContainer;

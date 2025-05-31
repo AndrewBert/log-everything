@@ -31,8 +31,7 @@ class FirstEntryStep extends StatelessWidget {
             _buildExampleCard(
               context,
               title: 'Example Entry',
-              content:
-                  'Had breakfast with mom, went shopping for groceries, called the bank about my account',
+              content: 'Had breakfast with mom, went shopping for groceries, called the bank about my account',
               icon: Icons.lightbulb_outline,
             ),
             const SizedBox(height: 24),
@@ -66,16 +65,10 @@ class FirstEntryStep extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color:
-            isResult
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
-                : Colors.grey[50],
+        color: isResult ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05) : Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              isResult
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
-                  : Colors.grey[200]!,
+          color: isResult ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) : Colors.grey[200]!,
         ),
       ),
       child: Column(
@@ -85,10 +78,7 @@ class FirstEntryStep extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color:
-                    isResult
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.orange,
+                color: isResult ? Theme.of(context).colorScheme.primary : Colors.orange,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -96,10 +86,7 @@ class FirstEntryStep extends StatelessWidget {
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color:
-                      isResult
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.orange[700],
+                  color: isResult ? Theme.of(context).colorScheme.primary : Colors.orange[700],
                 ),
               ),
             ],

@@ -46,9 +46,7 @@ class _InputAreaState extends State<InputArea> {
   }
 
   void _onInputFocusChange() {
-    if (mounted &&
-        context.mounted &&
-        !context.read<HomePageCubit>().state.isChatOpen) {
+    if (mounted && context.mounted && !context.read<HomePageCubit>().state.isChatOpen) {
       context.read<HomePageCubit>().setInputFocus(_inputFocusNode.hasFocus);
     }
   }
@@ -118,8 +116,7 @@ class _InputAreaState extends State<InputArea> {
         BlocListener<EntryCubit, EntryState>(
           listenWhen:
               (prev, current) =>
-                  prev.editingEntry != current.editingEntry ||
-                  prev.isEditingMode != current.isEditingMode,
+                  prev.editingEntry != current.editingEntry || prev.isEditingMode != current.isEditingMode,
           listener: (context, state) {
             if (state.isEditingMode && state.editingEntry != null) {
               // CP: Populate text field with entry text when starting edit mode
@@ -130,8 +127,7 @@ class _InputAreaState extends State<InputArea> {
               }
             } else if (!state.isEditingMode) {
               // CP: Clear text field when exiting edit mode
-              if (_textController.text.isNotEmpty &&
-                  context.read<HomePageCubit>().state.isChatOpen == false) {
+              if (_textController.text.isNotEmpty && context.read<HomePageCubit>().state.isChatOpen == false) {
                 _textController.clear();
               }
             }
@@ -140,15 +136,12 @@ class _InputAreaState extends State<InputArea> {
       ],
       child: BlocBuilder<EntryCubit, EntryState>(
         buildWhen:
-            (prev, current) =>
-                prev.isEditingMode != current.isEditingMode ||
-                prev.editingEntry != current.editingEntry,
+            (prev, current) => prev.isEditingMode != current.isEditingMode || prev.editingEntry != current.editingEntry,
         builder: (context, entryState) {
           return BlocBuilder<HomePageCubit, HomePageState>(
             buildWhen:
                 (prev, current) =>
-                    prev.isInputFocused != current.isInputFocused ||
-                    prev.isChatOpen != current.isChatOpen,
+                    prev.isInputFocused != current.isInputFocused || prev.isChatOpen != current.isChatOpen,
             builder: (context, homeScreenState) {
               final isInputFocused = homeScreenState.isInputFocused;
               final isChatOpen = homeScreenState.isChatOpen;
@@ -166,8 +159,7 @@ class _InputAreaState extends State<InputArea> {
                 labelText = 'Chatting...';
               } else {
                 hintText = 'Log it or else';
-                labelText =
-                    isInputFocused ? 'Enter log entry' : 'What happened?...';
+                labelText = isInputFocused ? 'Enter log entry' : 'What happened?...';
               }
 
               return TextFieldTapRegion(
@@ -185,8 +177,7 @@ class _InputAreaState extends State<InputArea> {
                       // CP: Change background color when editing
                       color:
                           isEditingMode
-                              ? Theme.of(context).colorScheme.primaryContainer
-                                  .withAlpha(77) // 0.3 * 255
+                              ? Theme.of(context).colorScheme.primaryContainer.withAlpha(77) // 0.3 * 255
                               : Theme.of(context).colorScheme.surface,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(20.0),
@@ -221,16 +212,10 @@ class _InputAreaState extends State<InputArea> {
                                             ? Theme.of(
                                               context,
                                             ).colorScheme.primary.withAlpha(25)
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest
-                                                .withAlpha((255 * 0.6).round()),
-                                    labelText:
-                                        (isInputFocused ||
-                                                isChatOpen ||
-                                                isEditingMode)
-                                            ? labelText
-                                            : null,
+                                            : Theme.of(
+                                              context,
+                                            ).colorScheme.surfaceContainerHighest.withAlpha((255 * 0.6).round()),
+                                    labelText: (isInputFocused || isChatOpen || isEditingMode) ? labelText : null,
                                     hintText: hintText,
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(
@@ -256,15 +241,12 @@ class _InputAreaState extends State<InputArea> {
                                   minLines: 1,
                                   maxLines: 5,
                                   onTapOutside: (_) {
-                                    if (_inputFocusNode.hasFocus &&
-                                        !isChatOpen &&
-                                        !isEditingMode) {
+                                    if (_inputFocusNode.hasFocus && !isChatOpen && !isEditingMode) {
                                       FocusScope.of(context).unfocus();
                                     }
                                   },
                                   onTap: () {
-                                    if ((isChatOpen || isEditingMode) &&
-                                        !_inputFocusNode.hasFocus) {
+                                    if ((isChatOpen || isEditingMode) && !_inputFocusNode.hasFocus) {
                                       _inputFocusNode.requestFocus();
                                     }
                                   },
@@ -281,8 +263,7 @@ class _InputAreaState extends State<InputArea> {
                             bottom:
                                 MediaQuery.of(context).viewInsets.bottom > 0
                                     ? 8.0
-                                    : MediaQuery.of(context).padding.bottom +
-                                        8.0,
+                                    : MediaQuery.of(context).padding.bottom + 8.0,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.start,
@@ -293,23 +274,19 @@ class _InputAreaState extends State<InputArea> {
                                   icon: const Icon(Icons.close),
                                   label: const Text('Cancel'),
                                   style: TextButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.error,
+                                    foregroundColor: Theme.of(context).colorScheme.error,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                       vertical: 4.0,
                                     ),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: _handleEditingCancel,
                                 )
                               else ...[
                                 TextButton.icon(
                                   icon: Icon(
-                                    isChatOpen
-                                        ? Icons.forum_rounded
-                                        : Icons.forum_outlined,
+                                    isChatOpen ? Icons.forum_rounded : Icons.forum_outlined,
                                   ),
                                   label: Text(
                                     isChatOpen ? 'Close Chat' : 'Chat',
@@ -327,17 +304,13 @@ class _InputAreaState extends State<InputArea> {
                                       horizontal: 8.0,
                                       vertical: 4.0,
                                     ),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
                                     final shouldOpenChat = !isChatOpen;
-                                    context
-                                        .read<HomePageCubit>()
-                                        .toggleChatOpen();
+                                    context.read<HomePageCubit>().toggleChatOpen();
                                     // CP: Only request focus if opening chat and not already focused
-                                    if (shouldOpenChat &&
-                                        !_inputFocusNode.hasFocus) {
+                                    if (shouldOpenChat && !_inputFocusNode.hasFocus) {
                                       _inputFocusNode.requestFocus();
                                     }
                                     // CP: Do not unfocus when closing chat
@@ -371,14 +344,10 @@ class _InputAreaState extends State<InputArea> {
                                 builder: (context, chatState) {
                                   final isLoading = chatState.isLoading;
                                   final messages = chatState.messages;
-                                  final lastIsUser =
-                                      messages.isNotEmpty &&
-                                      messages.last.sender == ChatSender.user;
+                                  final lastIsUser = messages.isNotEmpty && messages.last.sender == ChatSender.user;
                                   final shouldDisableSend =
-                                      (isChatOpen &&
-                                          (isLoading || lastIsUser)) ||
-                                      (isEditingMode &&
-                                          _textController.text.trim().isEmpty);
+                                      (isChatOpen && (isLoading || lastIsUser)) ||
+                                      (isEditingMode && _textController.text.trim().isEmpty);
 
                                   // CP: Change icon and tooltip based on mode
                                   IconData sendIcon;
@@ -396,10 +365,7 @@ class _InputAreaState extends State<InputArea> {
                                   }
 
                                   return IconButton(
-                                    onPressed:
-                                        shouldDisableSend
-                                            ? null
-                                            : _handleLocalSend,
+                                    onPressed: shouldDisableSend ? null : _handleLocalSend,
                                     icon: Icon(sendIcon),
                                     color:
                                         isEditingMode

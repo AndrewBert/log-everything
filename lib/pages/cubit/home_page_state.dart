@@ -48,8 +48,7 @@ class HomePageState extends Equatable {
       isInputFocused: isInputFocused ?? this.isInputFocused,
       appVersion: appVersion ?? this.appVersion,
       showWhatsNewDialog: showWhatsNewDialog ?? this.showWhatsNewDialog,
-      snackBarMessage:
-          clearSnackBarMessage ? null : snackBarMessage ?? this.snackBarMessage,
+      snackBarMessage: clearSnackBarMessage ? null : snackBarMessage ?? this.snackBarMessage,
       titleTapCount: titleTapCount ?? this.titleTapCount,
       lastSeenVersion: lastSeenVersion ?? this.lastSeenVersion,
       isVersionLoading: isVersionLoading ?? this.isVersionLoading,

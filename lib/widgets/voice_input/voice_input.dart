@@ -34,13 +34,9 @@ class VoiceInput extends StatelessWidget {
     return BlocListener<VoiceInputCubit, VoiceInputState>(
       listenWhen: (previous, current) {
         // Listen for status changes, errors
-        bool permissionChanged =
-            previous.micPermissionStatus != current.micPermissionStatus;
-        bool errorChanged =
-            previous.errorMessage != current.errorMessage &&
-            current.errorMessage != null;
-        bool transcriptionStatusChanged =
-            previous.transcriptionStatus != current.transcriptionStatus;
+        bool permissionChanged = previous.micPermissionStatus != current.micPermissionStatus;
+        bool errorChanged = previous.errorMessage != current.errorMessage && current.errorMessage != null;
+        bool transcriptionStatusChanged = previous.transcriptionStatus != current.transcriptionStatus;
 
         return permissionChanged || errorChanged || transcriptionStatusChanged;
       },
@@ -54,8 +50,7 @@ class VoiceInput extends StatelessWidget {
 
         // Permission Denied while trying to record
         if ((state.micPermissionStatus == PermissionStatus.denied ||
-                state.micPermissionStatus ==
-                    PermissionStatus.permanentlyDenied) &&
+                state.micPermissionStatus == PermissionStatus.permanentlyDenied) &&
             state.isRecording) {
           // Ensure previous snackbars are hidden before showing a new one
           messenger.hideCurrentSnackBar();
@@ -115,8 +110,7 @@ class VoiceInput extends StatelessWidget {
             // Append logic
             if (currentText.isEmpty) {
               combinedText = newText;
-            } else if (currentText.endsWith(' ') ||
-                currentText.endsWith('\n')) {
+            } else if (currentText.endsWith(' ') || currentText.endsWith('\n')) {
               combinedText = currentText + newText;
             } else {
               combinedText = '$currentText $newText';
@@ -148,8 +142,7 @@ class VoiceInput extends StatelessWidget {
           }
 
           // Show hourglass if transcribing (foreground only now)
-          bool isTranscribing =
-              state.transcriptionStatus == TranscriptionStatus.transcribing;
+          bool isTranscribing = state.transcriptionStatus == TranscriptionStatus.transcribing;
 
           return Row(
             mainAxisSize: MainAxisSize.min, // Take minimum horizontal space
@@ -186,16 +179,12 @@ class VoiceInput extends StatelessWidget {
                   color:
                       state.isRecording
                           ? Colors.red
-                          : (isTranscribing
-                              ? Colors.orange.shade700
-                              : Theme.of(context).colorScheme.primary),
+                          : (isTranscribing ? Colors.orange.shade700 : Theme.of(context).colorScheme.primary),
                 ),
                 tooltip:
                     state.isRecording
                         ? 'Stop Recording'
-                        : (isTranscribing
-                            ? 'Processing recording...'
-                            : 'Start Voice Input'),
+                        : (isTranscribing ? 'Processing recording...' : 'Start Voice Input'),
                 iconSize: 30,
                 // Disable button while transcribing
                 onPressed:

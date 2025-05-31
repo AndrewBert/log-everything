@@ -65,10 +65,7 @@ class HomePageCubit extends Cubit<HomePageState> {
       }
     }
 
-    final currentVersion =
-        state.appVersion.startsWith('v')
-            ? state.appVersion.substring(1)
-            : state.appVersion;
+    final currentVersion = state.appVersion.startsWith('v') ? state.appVersion.substring(1) : state.appVersion;
     final lastSeen = state.lastSeenVersion;
 
     if (lastSeen != currentVersion) {
@@ -84,10 +81,7 @@ class HomePageCubit extends Cubit<HomePageState> {
   }
 
   Future<void> markWhatsNewShown() async {
-    final currentVersion =
-        state.appVersion.startsWith('v')
-            ? state.appVersion.substring(1)
-            : state.appVersion;
+    final currentVersion = state.appVersion.startsWith('v') ? state.appVersion.substring(1) : state.appVersion;
 
     if (currentVersion.isEmpty) {
       AppLogger.error(

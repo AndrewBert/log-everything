@@ -23,10 +23,8 @@ Future<void> setupTestDependencies({
   // or MockAudioRecorder if Record is used directly. Adjust as needed.
   required MockAudioRecorderService audioRecorder,
   required MockPermissionService permissionService,
-  required MockVectorStoreService
-  vectorStoreService, // CP: Add vectorStoreService mock
-  required MockSharedPreferences
-  sharedPreferences, // CP: Add SharedPreferences mock
+  required MockVectorStoreService vectorStoreService, // CP: Add vectorStoreService mock
+  required MockSharedPreferences sharedPreferences, // CP: Add SharedPreferences mock
   required MockClient httpClient, // CP: Add http.Client mock
   // Add other mocks as needed
 }) async {
@@ -56,8 +54,7 @@ Future<void> setupTestDependencies({
     EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
       aiService: getIt<AiService>(),
-      vectorStoreService:
-          getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
+      vectorStoreService: getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
     ),
   );
 

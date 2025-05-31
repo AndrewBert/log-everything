@@ -13,8 +13,7 @@ abstract class EntryPersistenceService {
 }
 
 // Implementation using SharedPreferences
-class SharedPreferencesEntryPersistenceService
-    implements EntryPersistenceService {
+class SharedPreferencesEntryPersistenceService implements EntryPersistenceService {
   // Keys moved from EntryCubit
   static const String _entriesKey = 'saved_entries_v3_categorized';
   static const String _categoriesKey = 'custom_categories_v1';
@@ -73,10 +72,8 @@ class SharedPreferencesEntryPersistenceService
     try {
       final prefs = await SharedPreferences.getInstance();
       // Ensure 'isNew' is false before saving
-      final entriesToSave =
-          entries.map((e) => e.copyWith(isNew: false)).toList();
-      final entriesJson =
-          entriesToSave.map((entry) => entry.toJsonString()).toList();
+      final entriesToSave = entries.map((e) => e.copyWith(isNew: false)).toList();
+      final entriesJson = entriesToSave.map((entry) => entry.toJsonString()).toList();
       await prefs.setStringList(_entriesKey, entriesJson);
       AppLogger.info('Persistence: Saved ${entries.length} entries.');
     } catch (e) {
@@ -134,8 +131,7 @@ class SharedPreferencesEntryPersistenceService
   Future<void> saveCategories(List<Category> categories) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonList =
-          categories.map((cat) => jsonEncode(cat.toJson())).toList();
+      final jsonList = categories.map((cat) => jsonEncode(cat.toJson())).toList();
       await prefs.setStringList(_categoriesKey, jsonList);
       // AppLogger.info('Persistence: Saved Categories: $categories');
     } catch (e) {

@@ -14,8 +14,7 @@ final getIt = GetIt.instance;
 
 Future<void> configureDependencies() async {
   // CP: Load the API key from dotenv
-  final String openAIApiKey =
-      dotenv.env['OPENAI_API_KEY'] ?? 'FALLBACK_API_KEY_NOT_FOUND';
+  final String openAIApiKey = dotenv.env['OPENAI_API_KEY'] ?? 'FALLBACK_API_KEY_NOT_FOUND';
 
   // Register services
   getIt.registerSingletonAsync<SharedPreferences>(
@@ -57,8 +56,7 @@ Future<void> configureDependencies() async {
     () => EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
       aiService: getIt<AiService>(),
-      vectorStoreService:
-          getIt<VectorStoreService>(), // CP: Injected VectorStoreService
+      vectorStoreService: getIt<VectorStoreService>(), // CP: Injected VectorStoreService
     ),
   );
 }

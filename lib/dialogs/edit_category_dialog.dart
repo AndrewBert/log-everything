@@ -14,8 +14,7 @@ class EditCategoryDialog extends StatefulWidget {
 
 class _EditCategoryDialogState extends State<EditCategoryDialog> {
   late final TextEditingController _editCategoryController;
-  late final TextEditingController
-  _descriptionController; // Controller for description
+  late final TextEditingController _descriptionController; // Controller for description
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -77,8 +76,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                   return 'Category name cannot be empty.';
                 }
                 // CP: Only block if the new name is different and already exists
-                final existingCategories =
-                    context.read<EntryCubit>().state.categories;
+                final existingCategories = context.read<EntryCubit>().state.categories;
                 final isNameChanged = newName != widget.oldCategoryName;
                 final nameExists = existingCategories.any(
                   (cat) => cat.name.toLowerCase() == newName.toLowerCase(),
@@ -93,8 +91,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             TextFormField(
               decoration: const InputDecoration(
                 labelText: 'Description (optional)',
-                hintText:
-                    'Describe this category for better auto-categorization',
+                hintText: 'Describe this category for better auto-categorization',
               ),
               controller: _descriptionController,
               minLines: 3, // CP: Make the description field larger when editing

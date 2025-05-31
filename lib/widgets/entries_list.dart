@@ -28,8 +28,7 @@ class EntriesList extends StatelessWidget {
   });
 
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
-  String categoryDisplayName(String category) =>
-      category == 'Misc' ? 'None' : category;
+  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
 
   // CP: Show context menu at a consistent position relative to the entry card
   void _showContextMenu(
@@ -50,8 +49,7 @@ class EntriesList extends StatelessWidget {
 
     // CP: Find the entry card widget to get its position and size
     final entryKey = entryCardKey(entry);
-    final RenderBox? entryBox =
-        entryKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? entryBox = entryKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (entryBox != null) {
       // CP: Get the entry card's position and size
@@ -75,16 +73,12 @@ class EntriesList extends StatelessWidget {
               ? entryPosition.dy -
                   estimatedMenuHeight -
                   16.0 // CP: Menu height + 16px above the card
-              : entryPosition.dy +
-                  entrySize.height +
-                  16.0; // CP: 16px below the card
+              : entryPosition.dy + entrySize.height + 16.0; // CP: 16px below the card
 
       showGeneralDialog(
         context: context,
         barrierDismissible: true,
-        barrierColor:
-            Colors
-                .transparent, // CP: Completely transparent - no dimming effect
+        barrierColor: Colors.transparent, // CP: Completely transparent - no dimming effect
         barrierLabel: 'Entry context menu',
         pageBuilder:
             (context, _, __) => EntryContextMenu(
@@ -232,10 +226,7 @@ class EntriesList extends StatelessWidget {
               itemCount: listItems.length,
               separatorBuilder: (context, index) {
                 final currentItem = listItems[index];
-                final nextItem =
-                    (index + 1 < listItems.length)
-                        ? listItems[index + 1]
-                        : null;
+                final nextItem = (index + 1 < listItems.length) ? listItems[index + 1] : null;
                 if (currentItem is Entry && nextItem is Entry) {
                   return const SizedBox(
                     height: 16.0,
@@ -282,9 +273,7 @@ class EntriesList extends StatelessWidget {
                       onChangeCategoryPressed: onChangeCategoryPressed,
                       onEditPressed: onEditPressed,
                       onDeletePressed: onDeletePressed,
-                      onLongPress:
-                          (globalPosition) =>
-                              _showContextMenu(context, entry, globalPosition),
+                      onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
                     ),
                   );
                 }
@@ -308,8 +297,7 @@ class AnimatedSlideCard extends StatefulWidget {
   State<AnimatedSlideCard> createState() => _AnimatedSlideCardState();
 }
 
-class _AnimatedSlideCardState extends State<AnimatedSlideCard>
-    with SingleTickerProviderStateMixin {
+class _AnimatedSlideCardState extends State<AnimatedSlideCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -414,9 +402,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
     super.initState();
     // CP: 1% chance to show a peeping emoji (rare easter egg)
     _showPeepingEmoji = (DateTime.now().millisecondsSinceEpoch % 100) < 1;
-    _selectedEmoji =
-        _peepingEmojis[DateTime.now().millisecondsSinceEpoch %
-            _peepingEmojis.length];
+    _selectedEmoji = _peepingEmojis[DateTime.now().millisecondsSinceEpoch % _peepingEmojis.length];
     _horizontalOffset = 20.0 + (DateTime.now().millisecondsSinceEpoch % 60);
 
     // CP: Longer duration for smoother animations
@@ -473,8 +459,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
               prev.isEditingMode != current.isEditingMode ||
               prev.contextMenuEntry != current.contextMenuEntry,
       builder: (context, state) {
-        final isBeingEdited =
-            state.isEditingMode && state.editingEntry == widget.entry;
+        final isBeingEdited = state.isEditingMode && state.editingEntry == widget.entry;
         final hasContextMenuOpen = state.contextMenuEntry == widget.entry;
         final shouldHighlight = isBeingEdited || hasContextMenuOpen;
 
@@ -491,8 +476,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
             return Transform.scale(
               scale: shouldHighlight ? _highlightScale.value : 1.0,
               child: GestureDetector(
-                onLongPressStart:
-                    (details) => widget.onLongPress(details.globalPosition),
+                onLongPressStart: (details) => widget.onLongPress(details.globalPosition),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -501,15 +485,12 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                         left: _horizontalOffset,
                         top: -15, // CP: Position to peek over the card
                         child: Transform.rotate(
-                          angle:
-                              -0.2 +
-                              (DateTime.now().millisecondsSinceEpoch % 4) * 0.1,
+                          angle: -0.2 + (DateTime.now().millisecondsSinceEpoch % 4) * 0.1,
                           child: Text(
                             _selectedEmoji,
                             style: const TextStyle(
                               fontSize: 28,
-                              height:
-                                  1, // CP: Adjust text height to prevent layout issues
+                              height: 1, // CP: Adjust text height to prevent layout issues
                             ),
                           ),
                         ),
@@ -568,9 +549,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                           colors: [
                             // CP: Keep original colors regardless of highlight state
                             widget.categoryColor.withValues(alpha: 0.8),
-                            widget.isNew
-                                ? theme.cardColor.withValues(alpha: 0.96)
-                                : theme.cardColor,
+                            widget.isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12.0),
@@ -645,18 +624,14 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                     height: 1.4,
                                     // CP: Slightly mute text when being edited to indicate it's in input field
                                     color:
-                                        isBeingEdited
-                                            ? theme.textTheme.bodyLarge?.color
-                                                ?.withValues(alpha: 0.7)
-                                            : null,
+                                        isBeingEdited ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7) : null,
                                   ),
                                   maxLines: 3,
                                 ),
                                 const SizedBox(height: 12.0),
                                 // Bottom row with timestamp and category
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     // Timestamp with icon for better visual grouping
                                     Row(
@@ -703,31 +678,24 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                           ),
                                           backgroundColor:
                                               widget.isProcessing
-                                                  ? Colors.orange.shade100
-                                                      .withValues(alpha: 0.8)
-                                                  : widget.categoryColor
-                                                      .withValues(alpha: 0.2),
+                                                  ? Colors.orange.shade100.withValues(alpha: 0.8)
+                                                  : widget.categoryColor.withValues(alpha: 0.2),
                                           side: BorderSide.none,
                                           visualDensity: VisualDensity.compact,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 4.0,
                                           ),
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           onPressed:
                                               widget.isProcessing
                                                   ? null
                                                   : () {
                                                     HapticFeedback.lightImpact();
-                                                    widget
-                                                        .onChangeCategoryPressed(
-                                                          widget.entry,
-                                                        );
+                                                    widget.onChangeCategoryPressed(
+                                                      widget.entry,
+                                                    );
                                                   },
-                                          tooltip:
-                                              widget.isProcessing
-                                                  ? null
-                                                  : 'Change Category',
+                                          tooltip: widget.isProcessing ? null : 'Change Category',
                                         ),
                                         const SizedBox(width: 8.0),
                                       ],
@@ -794,10 +762,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
                 overflow: TextOverflow.ellipsis,
               ),
               secondChild: Text(widget.text, style: widget.style),
-              crossFadeState:
-                  _isExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
+              crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 200),
             ),
             if (_hasTextOverflow ?? false)

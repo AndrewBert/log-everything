@@ -61,19 +61,13 @@ class EntryState extends Equatable {
     return EntryState(
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
-      lastErrorMessage:
-          clearLastError ? null : (lastErrorMessage ?? this.lastErrorMessage),
-      filterCategory:
-          clearFilter ? null : (filterCategory ?? this.filterCategory),
+      lastErrorMessage: clearLastError ? null : (lastErrorMessage ?? this.lastErrorMessage),
+      filterCategory: clearFilter ? null : (filterCategory ?? this.filterCategory),
       displayListItems: displayListItems ?? this.displayListItems,
       recentCategories: recentCategories ?? this.recentCategories,
-      editingEntry:
-          clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
+      editingEntry: clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
       isEditingMode: isEditingMode ?? this.isEditingMode,
-      contextMenuEntry:
-          clearContextMenuEntry
-              ? null
-              : (contextMenuEntry ?? this.contextMenuEntry),
+      contextMenuEntry: clearContextMenuEntry ? null : (contextMenuEntry ?? this.contextMenuEntry),
     );
   }
 }

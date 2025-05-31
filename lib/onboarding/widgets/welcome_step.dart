@@ -124,13 +124,11 @@ class WelcomeStep extends StatelessWidget {
                       children: [
                         Text(
                           feature['title'] as String,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         Text(
                           feature['description'] as String,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.grey[600]),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                         ),
                       ],
                     ),

@@ -6,8 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/logger.dart';
 
 class SpeechService {
-  final String _apiKey =
-      dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
+  final String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
   final String _apiUrl = 'https://api.openai.com/v1/audio/transcriptions';
 
   // Define characters to consider as "only punctuation/symbols"
@@ -82,8 +81,7 @@ class SpeechService {
               }
 
               // 3. Check for excessive replacement characters
-              final replacementCharCount =
-                  '\uFFFD'.allMatches(trimmedText).length;
+              final replacementCharCount = '\uFFFD'.allMatches(trimmedText).length;
               if (replacementCharCount / trimmedText.length > 0.8) {
                 AppLogger.warn(
                   "Transcription result seems garbled (mostly replacement characters). Returning null.",
@@ -123,16 +121,13 @@ class SpeechService {
       } else {
         AppLogger.error(
           "Transcription API request failed.",
-          error:
-              "Status Code: ${response.statusCode}, Response Body: ${response.body}",
+          error: "Status Code: ${response.statusCode}, Response Body: ${response.body}",
         );
-        if (response.statusCode == 400 &&
-            response.body.contains('model_not_found')) {
+        if (response.statusCode == 400 && response.body.contains('model_not_found')) {
           AppLogger.warn(
             "Ensure the model 'gpt-4o-transcribe' is available for your API key.",
           );
-        } else if (response.statusCode == 400 &&
-            response.body.contains('language')) {
+        } else if (response.statusCode == 400 && response.body.contains('language')) {
           AppLogger.warn("Invalid language code '$language' provided.");
         }
         return null;

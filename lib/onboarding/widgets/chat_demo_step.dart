@@ -47,8 +47,7 @@ class ChatDemoStep extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.blue[50] ?? Colors.blue[100]!,
-            Colors.blue[50]?.withValues(alpha: 0.5) ??
-                Colors.blue[100]!.withValues(alpha: 0.5),
+            Colors.blue[50]?.withValues(alpha: 0.5) ?? Colors.blue[100]!.withValues(alpha: 0.5),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -118,8 +117,7 @@ class ChatDemoStep extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color:
-              isUser ? Theme.of(context).colorScheme.primary : Colors.grey[200],
+          color: isUser ? Theme.of(context).colorScheme.primary : Colors.grey[200],
           borderRadius: BorderRadius.circular(18),
         ),
         child: Text(
@@ -179,8 +177,7 @@ class ChatDemoStep extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.green[50] ?? Colors.green[100]!,
-            Colors.green[50]?.withValues(alpha: 0.5) ??
-                Colors.green[100]!.withValues(alpha: 0.5),
+            Colors.green[50]?.withValues(alpha: 0.5) ?? Colors.green[100]!.withValues(alpha: 0.5),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

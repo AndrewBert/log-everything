@@ -42,21 +42,16 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<EntryCubit>(
-          create:
-              (context) =>
-                  EntryCubit(entryRepository: getIt<EntryRepository>()),
+          create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
-          create:
-              (context) =>
-                  VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
+          create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
         BlocProvider<ChatCubit>(
           create: (context) => ChatCubit(aiService: getIt<AiService>()),
         ),
         BlocProvider<HomePageCubit>(
-          create:
-              (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
+          create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
         ),
         BlocProvider<OnboardingCubit>(
           create:
@@ -86,8 +81,7 @@ class AppRoot extends StatelessWidget {
     return BlocListener<OnboardingCubit, OnboardingState>(
       listenWhen:
           (prev, current) =>
-              prev.currentStep != OnboardingStep.completed &&
-              current.currentStep == OnboardingStep.completed,
+              prev.currentStep != OnboardingStep.completed && current.currentStep == OnboardingStep.completed,
       listener: (context, state) {
         AppLogger.info('[AppRoot] Onboarding completed, showing home page');
       },

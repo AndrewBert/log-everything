@@ -6,8 +6,7 @@ final Map<String, GlobalKey> _entryCardKeys = <String, GlobalKey>{};
 
 // CP: Function to get or create a GlobalKey for an entry card
 GlobalKey entryCardKey(Entry entry) {
-  final keyString =
-      'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
+  final keyString = 'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
   return _entryCardKeys.putIfAbsent(keyString, () => GlobalKey());
 }
 

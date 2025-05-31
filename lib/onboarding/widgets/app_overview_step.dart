@@ -27,8 +27,7 @@ class AppOverviewStep extends StatelessWidget {
               title: 'Log Your Thoughts',
               description:
                   'Type or speak your thoughts, ideas, or daily activities. You can log multiple things at once.',
-              example:
-                  '"Went to the gym, had lunch with Sarah, need to call dentist"',
+              example: '"Went to the gym, had lunch with Sarah, need to call dentist"',
             ),
             const SizedBox(height: 24),
             _buildHowItWorksStep(
@@ -47,10 +46,8 @@ class AppOverviewStep extends StatelessWidget {
               stepNumber: 3,
               icon: Icons.chat,
               title: 'Chat with Your Logs',
-              description:
-                  'Ask questions about your past entries to gain insights and find information quickly.',
-              example:
-                  '"What did I do last week?" or "When was my last dentist appointment?"',
+              description: 'Ask questions about your past entries to gain insights and find information quickly.',
+              example: '"What did I do last week?" or "When was my last dentist appointment?"',
             ),
             const SizedBox(height: 40),
             _buildCallToAction(context),

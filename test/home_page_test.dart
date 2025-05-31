@@ -86,14 +86,10 @@ class HomePageTestScope {
     widgetUnderTest = MultiBlocProvider(
       providers: [
         BlocProvider<EntryCubit>(
-          create:
-              (context) =>
-                  EntryCubit(entryRepository: getIt<EntryRepository>()),
+          create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>()),
         ),
         BlocProvider<VoiceInputCubit>(
-          create:
-              (context) =>
-                  VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
+          create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
         ),
         BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
       ],
@@ -1005,8 +1001,7 @@ void _thenDateHeadersAreCorrect(WidgetTester tester) {
   final todayHeaderOffset = tester.getTopLeft(todayHeaderFinder).dy;
   final firstTodayEntryOffset = tester.getTopLeft(firstTodayEntryFinder).dy;
   final yesterdayHeaderOffset = tester.getTopLeft(yesterdayHeaderFinder).dy;
-  final firstYesterdayEntryOffset =
-      tester.getTopLeft(firstYesterdayEntryFinder).dy;
+  final firstYesterdayEntryOffset = tester.getTopLeft(firstYesterdayEntryFinder).dy;
   final olderHeaderOffset = tester.getTopLeft(olderDateHeaderFinder).dy;
   final firstOlderEntryOffset = tester.getTopLeft(firstOlderEntryFinder).dy;
 
@@ -1035,10 +1030,7 @@ void _thenPersistenceSaveEntriesIsCalledWithNewEntry(
           final bool timestampValid = addedEntry.timestamp.isAfter(
             DateTime(1970),
           );
-          if (!textMatches ||
-              !categoryMatches ||
-              !isNewMatches ||
-              !timestampValid) {
+          if (!textMatches || !categoryMatches || !isNewMatches || !timestampValid) {
             return false;
           }
           final originalEntry1Present = savedList.any(
@@ -1076,17 +1068,14 @@ void _thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(
 
 List<Entry> _getExpectedEntriesAfterDelete(Entry entryToDelete) {
   return List<Entry>.from(HomePageTestScope.rawEntriesList)..removeWhere(
-    (e) =>
-        e.timestamp == entryToDelete.timestamp && e.text == entryToDelete.text,
+    (e) => e.timestamp == entryToDelete.timestamp && e.text == entryToDelete.text,
   );
 }
 
 List<Entry> _getExpectedEntriesAfterUndo(Entry entryToRestore) {
   return List<Entry>.from(HomePageTestScope.rawEntriesList)
     ..removeWhere(
-      (e) =>
-          e.timestamp == entryToRestore.timestamp &&
-          e.text == entryToRestore.text,
+      (e) => e.timestamp == entryToRestore.timestamp && e.text == entryToRestore.text,
     )
     ..add(entryToRestore);
 }
@@ -1177,8 +1166,7 @@ void _thenTemporaryEntryIsDisplayedInList(
   expect(
     found,
     isTrue,
-    reason:
-        'Temporary entry with text "$expectedText" and category "$expectedCategory" should be displayed',
+    reason: 'Temporary entry with text "$expectedText" and category "$expectedCategory" should be displayed',
   );
 }
 
