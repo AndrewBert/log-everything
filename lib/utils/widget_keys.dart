@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import '../entry/entry.dart';
 
-// CP: Global keys map for entry cards to access their render objects
+// CP: Updated approach to handle GlobalKeys with filter context to prevent duplicates
 final Map<String, GlobalKey> _entryCardKeys = <String, GlobalKey>{};
 
-// CP: Function to get or create a GlobalKey for an entry card
-GlobalKey entryCardKey(Entry entry) {
-  final keyString = 'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
+// CP: Function to get or create a GlobalKey for an entry card with filter context
+GlobalKey entryCardKey(Entry entry, {String? filterContext}) {
+  // CP: Include filter context in key to prevent duplicates when filtering
+  final filterSuffix = filterContext != null ? '_filter_$filterContext' : '_all';
+  final keyString = 'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}$filterSuffix';
   return _entryCardKeys.putIfAbsent(keyString, () => GlobalKey());
+}
+
+// CP: Function to cleanup old keys when they're no longer needed (optional, for memory management)
+void cleanupEntryCardKeys() {
+  // CP: Remove keys that might be orphaned - this can be called periodically
+  _entryCardKeys.removeWhere((key, globalKey) {
+    return globalKey.currentContext == null;
+  });
 }
 
 // Keys for widgets within the EntriesList item

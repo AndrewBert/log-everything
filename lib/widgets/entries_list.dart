@@ -48,7 +48,9 @@ class EntriesList extends StatelessWidget {
     context.read<EntryCubit>().setContextMenuEntry(entry);
 
     // CP: Find the entry card widget to get its position and size
-    final entryKey = entryCardKey(entry);
+    // CP: Pass filter context to prevent GlobalKey duplicates
+    final entryState = context.read<EntryCubit>().state;
+    final entryKey = entryCardKey(entry, filterContext: entryState.filterCategory);
     final RenderBox? entryBox = entryKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (entryBox != null) {
@@ -542,7 +544,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                         ),
                       ),
                     Container(
-                      key: entryCardKey(widget.entry),
+                      key: entryCardKey(widget.entry, filterContext: context.read<EntryCubit>().state.filterCategory),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           stops: const [0.01, 0.01],
