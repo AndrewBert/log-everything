@@ -282,57 +282,59 @@ class CategoryCard extends StatelessWidget {
         isNone
             ? Colors.grey.withOpacity(0.3)
             : CategoryColors.getColorForCategory(category.name).withValues(alpha: 0.3);
-
-    final cardContent = Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
+    final cardContent = Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: categoryColor, width: 2.5),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 3))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Row(
-          children: [
-            // CP: Category color indicator dot
-            Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(color: categoryColor.withValues(alpha: 0.8), shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 14),
-
-            // CP: Category info section
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: isNone ? Colors.grey : null,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (category.description.isNotEmpty && !isNone) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      category.description,
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600], height: 1.3),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // CP: Only edit button now (delete handled by swipe)
-            if (!isNone) ...[
-              const SizedBox(width: 8),
-              _ActionButton(icon: Icons.edit_outlined, tooltip: 'Rename Category', onPressed: onEdit),
+        onTap: !isNone && onEdit != null ? onEdit : null, // CP: Make entire card tappable for editing
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: categoryColor, width: 2.5),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 3)),
             ],
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: Row(
+              children: [
+                // CP: Category color indicator dot
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(color: categoryColor.withValues(alpha: 0.8), shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 14),
+
+                // CP: Category info section
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: isNone ? Colors.grey : null,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (category.description.isNotEmpty && !isNone) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          category.description,
+                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600], height: 1.3),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -397,28 +399,6 @@ class CategoryCard extends StatelessWidget {
     }
 
     return cardContent;
-  }
-}
-
-// CP: Custom action button for consistent styling
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  const _ActionButton({required this.icon, required this.tooltip, this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onPressed,
-        child: Padding(padding: const EdgeInsets.all(8.0), child: Icon(icon, size: 20, color: Colors.grey[600])),
-      ),
-    );
   }
 }
 
