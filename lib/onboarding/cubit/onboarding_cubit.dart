@@ -13,29 +13,21 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   static const String _onboardingCompletedKey = 'onboarding_completed';
   static const String _onboardingProgressKey = 'onboarding_progress';
 
-  OnboardingCubit({
-    required SharedPreferences sharedPreferences,
-    required EntryCubit entryCubit,
-  }) : _prefs = sharedPreferences,
-       _entryCubit = entryCubit,
-       super(const OnboardingState()) {
+  OnboardingCubit({required SharedPreferences sharedPreferences, required EntryCubit entryCubit})
+    : _prefs = sharedPreferences,
+      _entryCubit = entryCubit,
+      super(const OnboardingState()) {
     _loadProgress();
   }
 
   void _loadProgress() {
     try {
       final stepIndex = _prefs.getInt(_onboardingProgressKey) ?? 0;
-      final step =
-          OnboardingStep.values[stepIndex.clamp(
-            0,
-            OnboardingStep.values.length - 1,
-          )];
+      final step = OnboardingStep.values[stepIndex.clamp(0, OnboardingStep.values.length - 1)];
 
       emit(state.copyWith(currentStep: step, currentStepIndex: stepIndex));
 
-      AppLogger.info(
-        '[OnboardingCubit] Loaded progress: step $stepIndex ($step)',
-      );
+      AppLogger.info('[OnboardingCubit] Loaded progress: step $stepIndex ($step)');
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error loading progress: $e');
     }
@@ -44,9 +36,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   Future<void> _saveProgress() async {
     try {
       await _prefs.setInt(_onboardingProgressKey, state.currentStepIndex);
-      AppLogger.info(
-        '[OnboardingCubit] Saved progress: step ${state.currentStepIndex}',
-      );
+      AppLogger.info('[OnboardingCubit] Saved progress: step ${state.currentStepIndex}');
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error saving progress: $e');
     }
@@ -62,18 +52,10 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     final nextStepIndex = state.currentStepIndex + 1;
     final nextStep = OnboardingStep.values[nextStepIndex];
 
-    emit(
-      state.copyWith(
-        currentStep: nextStep,
-        currentStepIndex: nextStepIndex,
-        clearErrorMessage: true,
-      ),
-    );
+    emit(state.copyWith(currentStep: nextStep, currentStepIndex: nextStepIndex, clearErrorMessage: true));
 
     await _saveProgress();
-    AppLogger.info(
-      '[OnboardingCubit] Advanced to step $nextStepIndex ($nextStep)',
-    );
+    AppLogger.info('[OnboardingCubit] Advanced to step $nextStepIndex ($nextStep)');
   }
 
   Future<void> previousStep() async {
@@ -82,18 +64,10 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     final prevStepIndex = state.currentStepIndex - 1;
     final prevStep = OnboardingStep.values[prevStepIndex];
 
-    emit(
-      state.copyWith(
-        currentStep: prevStep,
-        currentStepIndex: prevStepIndex,
-        clearErrorMessage: true,
-      ),
-    );
+    emit(state.copyWith(currentStep: prevStep, currentStepIndex: prevStepIndex, clearErrorMessage: true));
 
     await _saveProgress();
-    AppLogger.info(
-      '[OnboardingCubit] Went back to step $prevStepIndex ($prevStep)',
-    );
+    AppLogger.info('[OnboardingCubit] Went back to step $prevStepIndex ($prevStep)');
   }
 
   void toggleCategorySelection(String category) {
@@ -106,9 +80,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     }
 
     emit(state.copyWith(selectedCategories: currentSelected));
-    AppLogger.info(
-      '[OnboardingCubit] Category selection updated: $currentSelected',
-    );
+    AppLogger.info('[OnboardingCubit] Category selection updated: $currentSelected');
   }
 
   Future<void> addCustomCategory(String categoryName) async {
@@ -128,12 +100,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       currentSuggested.add(trimmedName);
     }
 
-    emit(
-      state.copyWith(
-        selectedCategories: currentSelected,
-        suggestedCategories: currentSuggested,
-      ),
-    );
+    emit(state.copyWith(selectedCategories: currentSelected, suggestedCategories: currentSuggested));
 
     AppLogger.info('[OnboardingCubit] Added custom category: $trimmedName');
   }
@@ -151,21 +118,12 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       await _prefs.setBool(_onboardingCompletedKey, true);
       await _prefs.remove(_onboardingProgressKey); // CP: Clear progress
 
-      emit(
-        state.copyWith(currentStep: OnboardingStep.completed, isLoading: false),
-      );
+      emit(state.copyWith(currentStep: OnboardingStep.completed, isLoading: false));
 
-      AppLogger.info(
-        '[OnboardingCubit] Onboarding completed with ${state.selectedCategories.length} categories',
-      );
+      AppLogger.info('[OnboardingCubit] Onboarding completed with ${state.selectedCategories.length} categories');
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error completing onboarding: $e');
-      emit(
-        state.copyWith(
-          isLoading: false,
-          errorMessage: 'Failed to complete onboarding. Please try again.',
-        ),
-      );
+      emit(state.copyWith(isLoading: false, errorMessage: 'Failed to complete onboarding. Please try again.'));
     }
   }
 

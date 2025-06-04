@@ -43,12 +43,7 @@ class Entry extends Equatable {
   static Entry fromJsonString(String jsonString) => Entry.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
   // Create a copy of this entry with modified properties
-  Entry copyWith({
-    String? text,
-    DateTime? timestamp,
-    String? category,
-    bool? isNew,
-  }) {
+  Entry copyWith({String? text, DateTime? timestamp, String? category, bool? isNew}) {
     return Entry(
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,

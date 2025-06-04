@@ -20,9 +20,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
   @override
   void initState() {
     super.initState();
-    _editCategoryController = TextEditingController(
-      text: widget.oldCategoryName,
-    );
+    _editCategoryController = TextEditingController(text: widget.oldCategoryName);
     // Pre-fill with existing description if editing
     final categories = context.read<EntryCubit>().state.categories;
     final existing = categories.firstWhere(
@@ -44,11 +42,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
       final newName = _editCategoryController.text.trim();
       final newDescription = _descriptionController.text.trim();
       // Call cubit method to update name and description
-      context.read<EntryCubit>().renameCategory(
-        widget.oldCategoryName,
-        newName,
-        description: newDescription,
-      );
+      context.read<EntryCubit>().renameCategory(widget.oldCategoryName, newName, description: newDescription);
       Navigator.of(context).pop(newName); // Return the new name
     }
   }
@@ -66,10 +60,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             TextFormField(
               controller: _editCategoryController,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                hintText: 'Enter new name...',
-              ),
+              decoration: const InputDecoration(labelText: 'Category Name', hintText: 'Enter new name...'),
               validator: (value) {
                 final newName = value?.trim() ?? '';
                 if (newName.isEmpty) {
@@ -78,9 +69,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                 // CP: Only block if the new name is different and already exists
                 final existingCategories = context.read<EntryCubit>().state.categories;
                 final isNameChanged = newName != widget.oldCategoryName;
-                final nameExists = existingCategories.any(
-                  (cat) => cat.name.toLowerCase() == newName.toLowerCase(),
-                );
+                final nameExists = existingCategories.any((cat) => cat.name.toLowerCase() == newName.toLowerCase());
                 if (isNameChanged && nameExists) {
                   return 'Category "$newName" already exists.';
                 }

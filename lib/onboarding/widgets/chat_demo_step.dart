@@ -13,18 +13,13 @@ class ChatDemoStep extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               'Chat with Your Logs',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             Text(
               'Once you have some entries, you can chat with your logs to find insights and information quickly.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600], height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
@@ -60,27 +55,18 @@ class ChatDemoStep extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.chat_bubble_outline,
-                color: Colors.blue[700],
-                size: 24,
-              ),
+              Icon(Icons.chat_bubble_outline, color: Colors.blue[700], size: 24),
               const SizedBox(width: 8),
               Text(
                 'Example Chat Conversation',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue[700],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.blue[700]),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          _buildChatBubble(
-            context,
-            'You: "What have I been doing for exercise this month?"',
-            isUser: true,
-          ),
+          _buildChatBubble(context, 'You: "What have I been doing for exercise this month?"', isUser: true),
           const SizedBox(height: 12),
           _buildChatBubble(
             context,
@@ -88,11 +74,7 @@ class ChatDemoStep extends StatelessWidget {
             isUser: false,
           ),
           const SizedBox(height: 12),
-          _buildChatBubble(
-            context,
-            'You: "When did I last see Dr. Smith?"',
-            isUser: true,
-          ),
+          _buildChatBubble(context, 'You: "When did I last see Dr. Smith?"', isUser: true),
           const SizedBox(height: 12),
           _buildChatBubble(
             context,
@@ -104,17 +86,11 @@ class ChatDemoStep extends StatelessWidget {
     );
   }
 
-  Widget _buildChatBubble(
-    BuildContext context,
-    String message, {
-    required bool isUser,
-  }) {
+  Widget _buildChatBubble(BuildContext context, String message, {required bool isUser}) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isUser ? Theme.of(context).colorScheme.primary : Colors.grey[200],
@@ -122,10 +98,9 @@ class ChatDemoStep extends StatelessWidget {
         ),
         child: Text(
           message,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isUser ? Colors.white : Colors.black87,
-            height: 1.3,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: isUser ? Colors.white : Colors.black87, height: 1.3),
         ),
       ),
     );
@@ -137,32 +112,21 @@ class ChatDemoStep extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.touch_app,
-            color: Theme.of(context).colorScheme.primary,
-            size: 32,
-          ),
+          Icon(Icons.touch_app, color: Theme.of(context).colorScheme.primary, size: 32),
           const SizedBox(height: 12),
           Text(
             'How to Access Chat',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Look for the chat icon in the bottom-left corner of your home screen. Tap it to start chatting with your logs!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[700],
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700], height: 1.4),
             textAlign: TextAlign.center,
           ),
         ],
@@ -191,19 +155,15 @@ class ChatDemoStep extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'You\'re All Set!',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.green[700],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.green[700]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'You\'re ready to start using Log Splitter! Begin by logging your first entry and watch the AI work its magic.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.green[700],
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.green[700], height: 1.4),
             textAlign: TextAlign.center,
           ),
         ],

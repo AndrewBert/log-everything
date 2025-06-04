@@ -29,10 +29,7 @@ class HomePageCubit extends Cubit<HomePageState> {
       final lastSeenVersion = prefs.getString(_lastShownVersionKey);
       emit(state.copyWith(lastSeenVersion: lastSeenVersion));
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'Error loading last seen version: $e',
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('Error loading last seen version: $e', stackTrace: stackTrace);
     }
   }
 
@@ -53,14 +50,10 @@ class HomePageCubit extends Cubit<HomePageState> {
 
   Future<void> checkWhatsNew() async {
     if (state.appVersion.isEmpty) {
-      AppLogger.log(
-        'checkWhatsNew called before appVersion was loaded. Retrying after delay.',
-      );
+      AppLogger.log('checkWhatsNew called before appVersion was loaded. Retrying after delay.');
       await Future.delayed(const Duration(milliseconds: 100));
       if (state.appVersion.isEmpty) {
-        AppLogger.error(
-          'checkWhatsNew failed: appVersion still empty after delay.',
-        );
+        AppLogger.error('checkWhatsNew failed: appVersion still empty after delay.');
         return;
       }
     }
@@ -69,9 +62,7 @@ class HomePageCubit extends Cubit<HomePageState> {
     final lastSeen = state.lastSeenVersion;
 
     if (lastSeen != currentVersion) {
-      AppLogger.info(
-        'New version detected ($currentVersion). Triggering What\'s New dialog.',
-      );
+      AppLogger.info('New version detected ($currentVersion). Triggering What\'s New dialog.');
       emit(state.copyWith(showWhatsNewDialog: true));
     } else {
       if (state.showWhatsNewDialog) {
@@ -84,29 +75,17 @@ class HomePageCubit extends Cubit<HomePageState> {
     final currentVersion = state.appVersion.startsWith('v') ? state.appVersion.substring(1) : state.appVersion;
 
     if (currentVersion.isEmpty) {
-      AppLogger.error(
-        'Cannot mark What\'s New shown: currentVersion is empty.',
-      );
+      AppLogger.error('Cannot mark What\'s New shown: currentVersion is empty.');
       return;
     }
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastShownVersionKey, currentVersion);
-      emit(
-        state.copyWith(
-          showWhatsNewDialog: false,
-          lastSeenVersion: currentVersion,
-        ),
-      );
-      AppLogger.info(
-        'Marked What\'s New as shown for version $currentVersion.',
-      );
+      emit(state.copyWith(showWhatsNewDialog: false, lastSeenVersion: currentVersion));
+      AppLogger.info('Marked What\'s New as shown for version $currentVersion.');
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'Error saving last seen version: $e',
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('Error saving last seen version: $e', stackTrace: stackTrace);
       emit(state.copyWith(showWhatsNewDialog: false));
     }
   }
@@ -131,11 +110,7 @@ class HomePageCubit extends Cubit<HomePageState> {
     }
 
     emit(
-      state.copyWith(
-        titleTapCount: newCount,
-        snackBarMessage: snackBarMsg,
-        clearSnackBarMessage: snackBarMsg == null,
-      ),
+      state.copyWith(titleTapCount: newCount, snackBarMessage: snackBarMsg, clearSnackBarMessage: snackBarMsg == null),
     );
   }
 

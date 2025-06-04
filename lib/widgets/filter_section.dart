@@ -30,10 +30,7 @@ class FilterSection extends StatelessWidget {
 
         // Filter out recent categories from main list
         final otherCategories =
-            [
-              'None',
-              ...allCategories,
-            ].where((cat) => !recentDisplayCategories.contains(cat)).toList();
+            ['None', ...allCategories].where((cat) => !recentDisplayCategories.contains(cat)).toList();
 
         return Container(
           height: 48,
@@ -52,9 +49,7 @@ class FilterSection extends StatelessWidget {
                     backgroundColor: Colors.grey.withValues(alpha: 0.12),
                     // CP: Use primary color for selectedColor to match app bar 'Log'
                     selectedColor: Theme.of(context).colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: state.filterCategory == null ? Colors.white : Colors.black87,
-                    ),
+                    labelStyle: TextStyle(color: state.filterCategory == null ? Colors.white : Colors.black87),
                     onSelected: (_) => context.read<EntryCubit>().setFilter(null),
                   ),
                 ),
@@ -70,22 +65,14 @@ class FilterSection extends StatelessWidget {
                       if (recentDisplayCategories.isNotEmpty) ...[
                         for (final category in recentDisplayCategories)
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4.0,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
                             child: _buildChip(context, category, state),
                           ),
                         // CP: Visual separator between recent and other categories
                         if (otherCategories.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                            ),
-                            child: Container(
-                              height: 24,
-                              width: 1,
-                              color: Colors.grey.withValues(alpha: 0.2),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Container(height: 24, width: 1, color: Colors.grey.withValues(alpha: 0.2)),
                           ),
                       ],
                       // CP: Other categories
@@ -112,19 +99,12 @@ class FilterSection extends StatelessWidget {
       child: FilterChip(
         selected: state.filterCategory == categoryBackendValue(category),
         label: Text(category),
-        backgroundColor: CategoryColors.getColorForCategory(
-          categoryBackendValue(category),
-        ).withValues(alpha: 0.12),
-        selectedColor: CategoryColors.getColorForCategory(
-          categoryBackendValue(category),
-        ),
+        backgroundColor: CategoryColors.getColorForCategory(categoryBackendValue(category)).withValues(alpha: 0.12),
+        selectedColor: CategoryColors.getColorForCategory(categoryBackendValue(category)),
         labelStyle: TextStyle(
           color: state.filterCategory == categoryBackendValue(category) ? Colors.white : Colors.black87,
         ),
-        onSelected:
-            (_) => context.read<EntryCubit>().setFilter(
-              categoryBackendValue(category),
-            ),
+        onSelected: (_) => context.read<EntryCubit>().setFilter(categoryBackendValue(category)),
       ),
     );
   }

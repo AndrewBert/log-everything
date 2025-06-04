@@ -25,10 +25,7 @@ class EntryContextMenu extends StatelessWidget {
       children: [
         // CP: Transparent background to dismiss menu when tapped
         Positioned.fill(
-          child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(color: Colors.transparent),
-          ),
+          child: GestureDetector(onTap: () => Navigator.of(context).pop(), child: Container(color: Colors.transparent)),
         ),
         // CP: Context menu positioned near tap location
         Positioned(
@@ -41,11 +38,7 @@ class EntryContextMenu extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: Theme.of(context).colorScheme.surface,
-                border: Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outline.withValues(alpha: 0.2),
-                ),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
               ),
               child: IntrinsicWidth(
                 child: Column(
@@ -95,12 +88,7 @@ class _MenuOption extends StatelessWidget {
   final VoidCallback onTap;
   final Color? textColor;
 
-  const _MenuOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.textColor,
-  });
+  const _MenuOption({required this.icon, required this.label, required this.onTap, this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -119,14 +107,7 @@ class _MenuOption extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: effectiveTextColor),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: effectiveTextColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label, style: TextStyle(color: effectiveTextColor, fontSize: 16, fontWeight: FontWeight.w500)),
           ],
         ),
       ),

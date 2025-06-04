@@ -8,12 +8,7 @@ class ChatMessage extends Equatable {
   final ChatSender sender;
   final DateTime timestamp;
 
-  const ChatMessage({
-    required this.id,
-    required this.text,
-    required this.sender,
-    required this.timestamp,
-  });
+  const ChatMessage({required this.id, required this.text, required this.sender, required this.timestamp});
 
   @override
   List<Object?> get props => [id, text, sender, timestamp];

@@ -14,9 +14,7 @@ class AppOverviewStep extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               'How Log Splitter Works',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -80,11 +78,7 @@ class AppOverviewStep extends StatelessWidget {
           child: Center(
             child: Text(
               stepNumber.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ),
         ),
@@ -96,41 +90,25 @@ class AppOverviewStep extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    icon,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
-                  ),
+                  Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[700],
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700], height: 1.4),
               ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
                 child: Text(
                   example,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[600],
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.grey[600]),
                 ),
               ),
             ],
@@ -149,25 +127,17 @@ class AppOverviewStep extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.lightbulb_outline,
-            color: Theme.of(context).colorScheme.primary,
-            size: 32,
-          ),
+          Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary, size: 32),
           const SizedBox(height: 12),
           Text(
             'Ready to get started?',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Let\'s set up your categories so the AI knows how to organize your entries.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
             textAlign: TextAlign.center,
           ),
         ],

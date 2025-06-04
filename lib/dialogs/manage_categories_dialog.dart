@@ -56,23 +56,17 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
             tooltip: 'Add Category',
             onPressed: () async {
               final entryCubit = context.read<EntryCubit>(); // CP: Get cubit before async
-              final rootNavigator = Navigator.of(
-                context,
-                rootNavigator: true,
-              ); // CP: Get navigator before async
+              final rootNavigator = Navigator.of(context, rootNavigator: true); // CP: Get navigator before async
               final result = await showDialog<Map<String, String>?>(
                 context: context,
                 builder: (dialogContext) => const AddCategoryDialog(),
               );
               if (!mounted) return; // CP: Guard context after async gap
               if (result != null && result['name'] != null) {
-                entryCubit.addCustomCategoryWithDescription(
-                  result['name']!,
-                  result['description'] ?? '',
-                );
-                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                  SnackBar(content: Text('Category "${result['name']}" added')),
-                );
+                entryCubit.addCustomCategoryWithDescription(result['name']!, result['description'] ?? '');
+                ScaffoldMessenger.of(
+                  rootNavigator.context,
+                ).showSnackBar(SnackBar(content: Text('Category "${result['name']}" added')));
               }
             },
           ),
@@ -104,9 +98,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                     );
                   }
                   final List<String> displayCategories = List<String>.from(
-                    state.categories.map(
-                      (cat) => categoryDisplayName(cat.name),
-                    ),
+                    state.categories.map((cat) => categoryDisplayName(cat.name)),
                   );
                   displayCategories.remove('None');
                   final sortedCategories = displayCategories.reversed.toList();
@@ -123,10 +115,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                         orElse: () => Category(name: category),
                       );
                       return ListTile(
-                        title: Text(
-                          category,
-                          style: TextStyle(color: isNone ? Colors.grey : null),
-                        ),
+                        title: Text(category, style: TextStyle(color: isNone ? Colors.grey : null)),
                         subtitle:
                             (catObj.description.isNotEmpty && !isNone)
                                 ? Tooltip(
@@ -135,10 +124,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                     catObj.description,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                    ),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                                   ),
                                 )
                                 : null,
@@ -150,10 +136,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(
-                                        Icons.edit_outlined,
-                                        size: 20,
-                                      ),
+                                      icon: const Icon(Icons.edit_outlined, size: 20),
                                       tooltip: 'Rename Category',
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
@@ -173,24 +156,16 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                         final newName = result;
                                         if (newName != null && newName.isNotEmpty && newName != category) {
                                           HapticFeedback.mediumImpact();
-                                          ScaffoldMessenger.of(
-                                            rootNavigator.context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
                                             SnackBar(
-                                              content: Text(
-                                                'Category renamed to "${categoryDisplayName(newName)}"',
-                                              ),
+                                              content: Text('Category renamed to "${categoryDisplayName(newName)}"'),
                                             ),
                                           );
                                         }
                                       },
                                     ),
                                     IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.redAccent[100],
-                                        size: 20,
-                                      ),
+                                      icon: Icon(Icons.delete_outline, color: Colors.redAccent[100], size: 20),
                                       tooltip: 'Delete Category',
                                       visualDensity: VisualDensity.compact,
                                       splashRadius: 20,
@@ -211,16 +186,10 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                         }
                                         if (confirmed && itemContext.mounted) {
                                           HapticFeedback.mediumImpact();
-                                          entryCubit.deleteCategory(
-                                            categoryBackendValue(category),
-                                          );
-                                          ScaffoldMessenger.of(
-                                            rootNavigator.context,
-                                          ).showSnackBar(
+                                          entryCubit.deleteCategory(categoryBackendValue(category));
+                                          ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
                                             SnackBar(
-                                              content: Text(
-                                                'Category "${categoryDisplayName(category)}" deleted',
-                                              ),
+                                              content: Text('Category "${categoryDisplayName(category)}" deleted'),
                                             ),
                                           );
                                         }
@@ -237,12 +206,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          child: const Text('Done'),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ],
+      actions: [TextButton(child: const Text('Done'), onPressed: () => Navigator.of(context).pop())],
     );
   }
 }
@@ -278,13 +242,8 @@ class AddCategoryDialog extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: 'New Category Name',
                 hintText: 'Enter category to add...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
           ),
@@ -295,13 +254,8 @@ class AddCategoryDialog extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: 'Description (optional)',
                 hintText: 'Describe this category for better auto-categorization',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               maxLines: 2,
             ),
@@ -309,18 +263,13 @@ class AddCategoryDialog extends StatelessWidget {
         ],
       ),
       actions: [
-        TextButton(
-          child: const Text('Cancel'),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(context).pop()),
         FilledButton(
           onPressed: () {
             final name = categoryInputController.text.trim();
             final description = descriptionInputController.text.trim();
             if (name.isNotEmpty) {
-              Navigator.of(
-                context,
-              ).pop({'name': name, 'description': description});
+              Navigator.of(context).pop({'name': name, 'description': description});
             }
           },
           child: const Text('Add'),

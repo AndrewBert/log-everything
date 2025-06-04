@@ -13,10 +13,8 @@ class DeleteCategoryConfirmationDialog extends StatelessWidget {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Confirm Delete Category'),
-      content: Text(
-        '''Are you sure you want to delete the category "${categoryDisplayName(category)}"?
-Entries using this category will be moved to "None".''',
-      ),
+      content: Text('''Are you sure you want to delete the category "${categoryDisplayName(category)}"?
+Entries using this category will be moved to "None".'''),
       actions: <Widget>[
         TextButton(
           child: const Text('Cancel'),

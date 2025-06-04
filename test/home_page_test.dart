@@ -63,12 +63,7 @@ class HomePageTestScope {
     category: 'Misc',
   );
 
-  static final rawEntriesList = [
-    entryToday1,
-    entryToday2,
-    entryYesterday,
-    entryOlder,
-  ];
+  static final rawEntriesList = [entryToday1, entryToday2, entryYesterday, entryOlder];
   static final categoriesList = ['Misc', 'Work', 'Personal'];
 
   late Widget widgetUnderTest;
@@ -78,19 +73,13 @@ class HomePageTestScope {
     mockAiService = MockAiService();
     mockSpeechService = MockSpeechService();
     mockAudioRecorderService = MockAudioRecorderService();
-    when(
-      mockAudioRecorderService.onStateChanged(),
-    ).thenAnswer((_) => Stream<RecordState>.empty());
+    when(mockAudioRecorderService.onStateChanged()).thenAnswer((_) => Stream<RecordState>.empty());
     mockPermissionService = MockPermissionService();
 
     widgetUnderTest = MultiBlocProvider(
       providers: [
-        BlocProvider<EntryCubit>(
-          create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>()),
-        ),
-        BlocProvider<VoiceInputCubit>(
-          create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
-        ),
+        BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
+        BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
         BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
       ],
       child: MaterialApp(home: HomePage()),
@@ -98,42 +87,26 @@ class HomePageTestScope {
   }
 
   void stubPersistenceWithInitialEntries() {
-    when(
-      mockPersistenceService.loadEntries(),
-    ).thenAnswer((_) async => List.from(rawEntriesList));
-    when(
-      mockPersistenceService.loadCategories(),
-    ).thenAnswer((_) async => List.from(categoriesList));
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => List.from(rawEntriesList));
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => List.from(categoriesList));
     when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
     when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
   }
 
   void stubPermissionGranted() {
-    when(
-      mockPermissionService.getMicrophoneStatus(),
-    ).thenAnswer((_) async => PermissionStatus.granted);
-    when(
-      mockPermissionService.requestMicrophonePermission(),
-    ).thenAnswer((_) async => PermissionStatus.granted);
+    when(mockPermissionService.getMicrophoneStatus()).thenAnswer((_) async => PermissionStatus.granted);
+    when(mockPermissionService.requestMicrophonePermission()).thenAnswer((_) async => PermissionStatus.granted);
   }
 
   void stubStartRecordingSuccess() {
-    when(
-      mockAudioRecorderService.generateRecordingPath(),
-    ).thenAnswer((_) async => 'fake/path/recording.m4a');
-    when(
-      mockAudioRecorderService.start(any, path: anyNamed('path')),
-    ).thenAnswer((_) async => Future.value());
+    when(mockAudioRecorderService.generateRecordingPath()).thenAnswer((_) async => 'fake/path/recording.m4a');
+    when(mockAudioRecorderService.start(any, path: anyNamed('path'))).thenAnswer((_) async => Future.value());
     when(mockAudioRecorderService.isRecording()).thenAnswer((_) async => true);
-    when(
-      mockAudioRecorderService.stop(),
-    ).thenAnswer((_) async => 'fake/path/recording.m4a');
+    when(mockAudioRecorderService.stop()).thenAnswer((_) async => 'fake/path/recording.m4a');
   }
 
   void stubTranscriptionSuccess(String resultText) {
-    when(
-      mockSpeechService.transcribeAudio(any, language: anyNamed('language')),
-    ).thenAnswer((_) async => resultText);
+    when(mockSpeechService.transcribeAudio(any, language: anyNamed('language'))).thenAnswer((_) async => resultText);
   }
 
   Future<void> dispose() async {}
@@ -180,9 +153,7 @@ void main() {
 
   group('HomePage Widget Tests', () {
     group('Initialization and Display', () {
-      testWidgets('should display initial UI elements correctly', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should display initial UI elements correctly', (WidgetTester tester) async {
         // GIVEN
         await _givenHomePageIsDisplayed(tester, scope);
 
@@ -190,38 +161,18 @@ void main() {
         _thenInitialUiElementsAreDisplayed(tester);
       });
 
-      testWidgets('should display entries with correct text and time', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should display entries with correct text and time', (WidgetTester tester) async {
         // GIVEN
         await _givenHomePageIsDisplayed(tester, scope);
 
         // THEN
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryToday1.text,
-          '2:30 PM',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryToday2.text,
-          '10:15 AM',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryYesterday.text,
-          '4:00 PM',
-        );
-        _thenEntryIsDisplayed(
-          tester,
-          HomePageTestScope.entryOlder.text,
-          '9:00 AM',
-        );
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entryToday1.text, '2:30 PM');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entryToday2.text, '10:15 AM');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entryYesterday.text, '4:00 PM');
+        _thenEntryIsDisplayed(tester, HomePageTestScope.entryOlder.text, '9:00 AM');
       });
 
-      testWidgets('should display correct date headers', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should display correct date headers', (WidgetTester tester) async {
         // GIVEN
         await _givenHomePageIsDisplayed(tester, scope);
 
@@ -239,9 +190,7 @@ void main() {
     });
 
     group('Text Entry Input', () {
-      testWidgets('should add entry and save via persistence', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should add entry and save via persistence', (WidgetTester tester) async {
         // GIVEN
         scope.stubTranscriptionSuccess('transcribed text');
         await _givenHomePageIsDisplayed(tester, scope);
@@ -255,16 +204,10 @@ void main() {
         // THEN
         await _thenEntryIsDisplayedInList(tester, newEntryText);
         _thenTextFieldIsCleared(tester);
-        _thenPersistenceSaveEntriesIsCalledWithNewEntry(
-          scope,
-          newEntryText,
-          initialListLength,
-        );
+        _thenPersistenceSaveEntriesIsCalledWithNewEntry(scope, newEntryText, initialListLength);
       });
 
-      testWidgets('should not add entry or call save if input is empty', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should not add entry or call save if input is empty', (WidgetTester tester) async {
         // GIVEN
         await _givenHomePageIsDisplayed(tester, scope);
         final initialListLength = HomePageTestScope.rawEntriesList.length;
@@ -278,18 +221,13 @@ void main() {
         verifyNever(scope.mockPersistenceService.saveEntries(any));
 
         final entriesListFinder = find.byType(EntriesList);
-        final entryItemFinder = find.descendant(
-          of: entriesListFinder,
-          matching: find.byType(ListTile),
-        );
+        final entryItemFinder = find.descendant(of: entriesListFinder, matching: find.byType(ListTile));
         expect(entryItemFinder, findsNWidgets(initialListLength));
       });
     });
 
     group('Voice Input', () {
-      testWidgets('should show stop_circle icon when mic button is tapped', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should show stop_circle icon when mic button is tapped', (WidgetTester tester) async {
         // GIVEN
         scope.stubStartRecordingSuccess();
         await _givenHomePageIsDisplayed(tester, scope, settle: false);
@@ -303,31 +241,28 @@ void main() {
         _thenAudioRecordingServicesAreCalledForStart(scope);
       });
 
-      testWidgets(
-        'should call stop and transcribe when stop button is tapped',
-        (WidgetTester tester) async {
-          // GIVEN
-          scope.stubStartRecordingSuccess();
-          const transcribedText = 'This is the transcribed text';
-          scope.stubTranscriptionSuccess(transcribedText);
-          await _givenHomePageIsDisplayed(tester, scope, settle: false);
-          await tester.pump(); // Allow cubit init
+      testWidgets('should call stop and transcribe when stop button is tapped', (WidgetTester tester) async {
+        // GIVEN
+        scope.stubStartRecordingSuccess();
+        const transcribedText = 'This is the transcribed text';
+        scope.stubTranscriptionSuccess(transcribedText);
+        await _givenHomePageIsDisplayed(tester, scope, settle: false);
+        await tester.pump(); // Allow cubit init
 
-          // WHEN
-          await runFakeAsync((async) async {
-            await _whenMicButtonIsTapped(tester, settle: false);
-            async.elapse(const Duration(seconds: 3));
-            await _whenStopButtonIsTapped(tester);
-            async.elapse(Duration.zero); // Allow transcription to process
-          });
-          await tester.pumpAndSettle();
+        // WHEN
+        await runFakeAsync((async) async {
+          await _whenMicButtonIsTapped(tester, settle: false);
+          async.elapse(const Duration(seconds: 3));
+          await _whenStopButtonIsTapped(tester);
+          async.elapse(Duration.zero); // Allow transcription to process
+        });
+        await tester.pumpAndSettle();
 
-          // THEN
-          _thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(scope);
-          _thenMicIconIsDisplayed(tester);
-          _thenTextFieldContains(tester, transcribedText);
-        },
-      );
+        // THEN
+        _thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(scope);
+        _thenMicIconIsDisplayed(tester);
+        _thenTextFieldContains(tester, transcribedText);
+      });
 
       // group('Voice Input with Temporary UI Update', () {
       //   testWidgets(
@@ -404,17 +339,13 @@ void main() {
 
     group('Entry List Interactions', () {
       group('Delete', () {
-        testWidgets('should delete entry and save via persistence', (
-          WidgetTester tester,
-        ) async {
+        testWidgets('should delete entry and save via persistence', (WidgetTester tester) async {
           // GIVEN
           await _givenHomePageIsDisplayed(tester, scope);
           final entryToDelete = HomePageTestScope.entryToday1;
           _thenEntryIsDisplayed(tester, entryToDelete.text, '2:30 PM');
 
-          final expectedEntriesAfterDelete = _getExpectedEntriesAfterDelete(
-            entryToDelete,
-          );
+          final expectedEntriesAfterDelete = _getExpectedEntriesAfterDelete(entryToDelete);
 
           // WHEN
           await _whenDeleteIconIsTappedForEntry(tester, entryToDelete.text);
@@ -423,42 +354,29 @@ void main() {
           _thenEntryIsNotDisplayed(tester, entryToDelete.text);
           _thenSnackbarIsDisplayedWithMessage(tester, 'Entry deleted');
           _thenSnackbarHasAction(tester, 'Undo');
-          _thenPersistenceSaveEntriesIsCalledWithList(
-            scope,
-            expectedEntriesAfterDelete,
-          );
+          _thenPersistenceSaveEntriesIsCalledWithList(scope, expectedEntriesAfterDelete);
         });
 
-        testWidgets(
-          'should restore entry and save via persistence when Undo is tapped',
-          (WidgetTester tester) async {
-            // GIVEN
-            await _givenHomePageIsDisplayed(tester, scope);
-            final entryToRestore = HomePageTestScope.entryToday1;
-            await _whenDeleteIconIsTappedForEntry(tester, entryToRestore.text);
-            _thenSnackbarIsDisplayedWithMessage(tester, 'Entry deleted');
-            clearInteractions(scope.mockPersistenceService);
-            final expectedEntriesAfterUndo = _getExpectedEntriesAfterUndo(
-              entryToRestore,
-            );
+        testWidgets('should restore entry and save via persistence when Undo is tapped', (WidgetTester tester) async {
+          // GIVEN
+          await _givenHomePageIsDisplayed(tester, scope);
+          final entryToRestore = HomePageTestScope.entryToday1;
+          await _whenDeleteIconIsTappedForEntry(tester, entryToRestore.text);
+          _thenSnackbarIsDisplayedWithMessage(tester, 'Entry deleted');
+          clearInteractions(scope.mockPersistenceService);
+          final expectedEntriesAfterUndo = _getExpectedEntriesAfterUndo(entryToRestore);
 
-            // WHEN
-            await _whenSnackbarActionIsTapped(tester, 'Undo');
+          // WHEN
+          await _whenSnackbarActionIsTapped(tester, 'Undo');
 
-            // THEN
-            await _thenEntryIsDisplayedInList(tester, entryToRestore.text);
-            _thenPersistenceSaveEntriesIsCalledWithList(
-              scope,
-              expectedEntriesAfterUndo,
-            );
-          },
-        );
+          // THEN
+          await _thenEntryIsDisplayedInList(tester, entryToRestore.text);
+          _thenPersistenceSaveEntriesIsCalledWithList(scope, expectedEntriesAfterUndo);
+        });
       });
 
       group('Edit Entry', () {
-        testWidgets('should open EditEntryDialog when edit icon is tapped', (
-          WidgetTester tester,
-        ) async {
+        testWidgets('should open EditEntryDialog when edit icon is tapped', (WidgetTester tester) async {
           // GIVEN
           await _givenHomePageIsDisplayed(tester, scope);
           final entryToEditText = HomePageTestScope.entryToday1.text;
@@ -470,42 +388,27 @@ void main() {
           _thenEditEntryDialogIsDisplayed(tester);
         });
 
-        testWidgets(
-          'should update entry and save when EditEntryDialog confirms',
-          (WidgetTester tester) async {
-            // GIVEN
-            await _givenHomePageIsDisplayed(tester, scope);
-            final entryToEdit = HomePageTestScope.entryToday1;
-            const updatedText = 'Updated entry text';
-            await _whenEditIconIsTappedForEntry(tester, entryToEdit.text);
-            _thenEditEntryDialogIsDisplayed(tester);
-            clearInteractions(scope.mockPersistenceService);
-            final expectedEntriesAfterUpdate = _getExpectedEntriesAfterEdit(
-              entryToEdit,
-              updatedText,
-            );
+        testWidgets('should update entry and save when EditEntryDialog confirms', (WidgetTester tester) async {
+          // GIVEN
+          await _givenHomePageIsDisplayed(tester, scope);
+          final entryToEdit = HomePageTestScope.entryToday1;
+          const updatedText = 'Updated entry text';
+          await _whenEditIconIsTappedForEntry(tester, entryToEdit.text);
+          _thenEditEntryDialogIsDisplayed(tester);
+          clearInteractions(scope.mockPersistenceService);
+          final expectedEntriesAfterUpdate = _getExpectedEntriesAfterEdit(entryToEdit, updatedText);
 
-            // WHEN
-            await _whenDialogTextFieldIsEdited(tester, updatedText);
-            await _whenDialogButtonIsTapped(tester, 'Save');
+          // WHEN
+          await _whenDialogTextFieldIsEdited(tester, updatedText);
+          await _whenDialogButtonIsTapped(tester, 'Save');
 
-            // THEN
-            _thenEditEntryDialogIsNotDisplayed(tester);
-            await _thenEntryTextIsUpdatedInList(
-              tester,
-              entryToEdit.text,
-              updatedText,
-            );
-            _thenPersistenceSaveEntriesIsCalledWithList(
-              scope,
-              expectedEntriesAfterUpdate,
-            );
-          },
-        );
+          // THEN
+          _thenEditEntryDialogIsNotDisplayed(tester);
+          await _thenEntryTextIsUpdatedInList(tester, entryToEdit.text, updatedText);
+          _thenPersistenceSaveEntriesIsCalledWithList(scope, expectedEntriesAfterUpdate);
+        });
 
-        testWidgets('should not update entry if EditEntryDialog is cancelled', (
-          WidgetTester tester,
-        ) async {
+        testWidgets('should not update entry if EditEntryDialog is cancelled', (WidgetTester tester) async {
           // GIVEN
           await _givenHomePageIsDisplayed(tester, scope);
           final entryToEdit = HomePageTestScope.entryToday1;
@@ -516,10 +419,7 @@ void main() {
           clearInteractions(scope.mockPersistenceService);
 
           // WHEN
-          await _whenDialogTextFieldIsEdited(
-            tester,
-            'Some new text that won\'t be saved',
-          );
+          await _whenDialogTextFieldIsEdited(tester, 'Some new text that won\'t be saved');
           await _whenDialogButtonIsTapped(tester, 'Cancel');
 
           // THEN
@@ -531,9 +431,7 @@ void main() {
     });
 
     group('AppBar Interactions', () {
-      testWidgets('should show HelpDialog when help button is tapped', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should show HelpDialog when help button is tapped', (WidgetTester tester) async {
         // GIVEN
         await _givenHomePageIsDisplayed(tester, scope);
 
@@ -544,43 +442,37 @@ void main() {
         _thenHelpDialogIsDisplayed(tester);
       });
 
-      testWidgets(
-        'should show ManageCategoriesDialog when manage categories button is tapped',
-        (WidgetTester tester) async {
-          // GIVEN
-          await _givenHomePageIsDisplayed(tester, scope);
+      testWidgets('should show ManageCategoriesDialog when manage categories button is tapped', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN
+        await _givenHomePageIsDisplayed(tester, scope);
 
-          // WHEN
-          await _whenManageCategoriesButtonIsTapped(tester);
+        // WHEN
+        await _whenManageCategoriesButtonIsTapped(tester);
 
-          // THEN
-          _thenManageCategoriesDialogIsDisplayed(tester);
-        },
-      );
+        // THEN
+        _thenManageCategoriesDialogIsDisplayed(tester);
+      });
 
-      testWidgets(
-        'should increment title tap count in HomePageCubit when title is tapped',
-        (WidgetTester tester) async {
-          // GIVEN
-          await _givenHomePageIsDisplayed(tester, scope);
-          final homePageCubit = BlocProvider.of<HomePageCubit>(
-            tester.element(find.byType(HomePage)),
-          );
-          final initialTapCount = homePageCubit.state.titleTapCount;
+      testWidgets('should increment title tap count in HomePageCubit when title is tapped', (
+        WidgetTester tester,
+      ) async {
+        // GIVEN
+        await _givenHomePageIsDisplayed(tester, scope);
+        final homePageCubit = BlocProvider.of<HomePageCubit>(tester.element(find.byType(HomePage)));
+        final initialTapCount = homePageCubit.state.titleTapCount;
 
-          // WHEN
-          await _whenAppBarTitleIsTapped(tester);
+        // WHEN
+        await _whenAppBarTitleIsTapped(tester);
 
-          // THEN
-          _thenTitleTapCountIsIncremented(homePageCubit, initialTapCount);
-        },
-      );
+        // THEN
+        _thenTitleTapCountIsIncremented(homePageCubit, initialTapCount);
+      });
     });
 
     group('HomePageCubit State Changes', () {
-      testWidgets('should display app version from HomePageCubit state', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should display app version from HomePageCubit state', (WidgetTester tester) async {
         // GIVEN
         const testVersionString = 'v1.2.3 (42)';
         PackageInfo.setMockInitialValues(
@@ -598,9 +490,7 @@ void main() {
         _thenAppVersionIsDisplayed(tester, testVersionString);
       });
 
-      testWidgets('should show What\'s New dialog when state indicates', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('should show What\'s New dialog when state indicates', (WidgetTester tester) async {
         // GIVEN
         PackageInfo.setMockInitialValues(
           appName: 'LogSplitter',
@@ -609,16 +499,12 @@ void main() {
           buildNumber: '10',
           buildSignature: '',
         );
-        SharedPreferences.setMockInitialValues({
-          'last_shown_whats_new_version': 'v1.0.0 (1)',
-        });
+        SharedPreferences.setMockInitialValues({'last_shown_whats_new_version': 'v1.0.0 (1)'});
 
         await _givenHomePageIsDisplayed(tester, scope, settle: false);
         await tester.pumpAndSettle();
 
-        final homePageCubit = BlocProvider.of<HomePageCubit>(
-          tester.element(find.byType(HomePage)),
-        );
+        final homePageCubit = BlocProvider.of<HomePageCubit>(tester.element(find.byType(HomePage)));
         expect(
           homePageCubit.state.showWhatsNewDialog,
           isTrue,
@@ -633,11 +519,7 @@ void main() {
 }
 
 // --- GIVEN ---
-Future<void> _givenHomePageIsDisplayed(
-  WidgetTester tester,
-  HomePageTestScope scope, {
-  bool settle = true,
-}) async {
+Future<void> _givenHomePageIsDisplayed(WidgetTester tester, HomePageTestScope scope, {bool settle = true}) async {
   await tester.pumpWidget(scope.widgetUnderTest);
   if (settle) {
     await tester.pumpAndSettle();
@@ -659,10 +541,7 @@ Future<void> _whenSendButtonIsTapped(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _whenMicButtonIsTapped(
-  WidgetTester tester, {
-  bool settle = true,
-}) async {
+Future<void> _whenMicButtonIsTapped(WidgetTester tester, {bool settle = true}) async {
   final micButtonFinder = find.byIcon(Icons.mic);
   expect(micButtonFinder, findsOneWidget);
   await tester.tap(micButtonFinder);
@@ -680,54 +559,29 @@ Future<void> _whenStopButtonIsTapped(WidgetTester tester) async {
   await tester.pump();
 }
 
-Future<void> _whenDeleteIconIsTappedForEntry(
-  WidgetTester tester,
-  String entryText,
-) async {
+Future<void> _whenDeleteIconIsTappedForEntry(WidgetTester tester, String entryText) async {
   final entry = HomePageTestScope.rawEntriesList.firstWhere(
     (e) => e.text == entryText,
-    orElse:
-        () =>
-            throw StateError(
-              'Entry with text "$entryText" not found in rawEntriesList for delete icon lookup',
-            ),
+    orElse: () => throw StateError('Entry with text "$entryText" not found in rawEntriesList for delete icon lookup'),
   );
   final deleteIconFinder = find.byKey(entryDeleteIconKey(entry));
-  expect(
-    deleteIconFinder,
-    findsOneWidget,
-    reason: 'Could not find delete icon for entry "$entryText"',
-  );
+  expect(deleteIconFinder, findsOneWidget, reason: 'Could not find delete icon for entry "$entryText"');
   await tester.tap(deleteIconFinder);
   await tester.pumpAndSettle();
 }
 
-Future<void> _whenEditIconIsTappedForEntry(
-  WidgetTester tester,
-  String entryText,
-) async {
+Future<void> _whenEditIconIsTappedForEntry(WidgetTester tester, String entryText) async {
   final entry = HomePageTestScope.rawEntriesList.firstWhere(
     (e) => e.text == entryText,
-    orElse:
-        () =>
-            throw StateError(
-              'Entry with text "$entryText" not found in rawEntriesList for edit icon lookup',
-            ),
+    orElse: () => throw StateError('Entry with text "$entryText" not found in rawEntriesList for edit icon lookup'),
   );
   final editIconFinder = find.byKey(entryEditIconKey(entry));
-  expect(
-    editIconFinder,
-    findsOneWidget,
-    reason: 'Could not find edit icon for entry "$entryText"',
-  );
+  expect(editIconFinder, findsOneWidget, reason: 'Could not find edit icon for entry "$entryText"');
   await tester.tap(editIconFinder);
   await tester.pumpAndSettle();
 }
 
-Future<void> _whenSnackbarActionIsTapped(
-  WidgetTester tester,
-  String actionLabel,
-) async {
+Future<void> _whenSnackbarActionIsTapped(WidgetTester tester, String actionLabel) async {
   final snackBarFinder = find.byType(SnackBar);
   expect(snackBarFinder, findsOneWidget);
 
@@ -738,20 +592,14 @@ Future<void> _whenSnackbarActionIsTapped(
   await tester.pumpAndSettle();
 }
 
-Future<void> _whenDialogTextFieldIsEdited(
-  WidgetTester tester,
-  String newText,
-) async {
+Future<void> _whenDialogTextFieldIsEdited(WidgetTester tester, String newText) async {
   final textFieldFinder = find.byKey(editEntryDialogTextField);
   expect(textFieldFinder, findsOneWidget);
   await tester.enterText(textFieldFinder, newText);
   await tester.pump();
 }
 
-Future<void> _whenDialogButtonIsTapped(
-  WidgetTester tester,
-  String buttonText,
-) async {
+Future<void> _whenDialogButtonIsTapped(WidgetTester tester, String buttonText) async {
   late Key buttonKey;
   if (buttonText == 'Update' || buttonText == 'Save') {
     buttonKey = editEntryDialogSaveButton;
@@ -761,11 +609,7 @@ Future<void> _whenDialogButtonIsTapped(
     throw ArgumentError('Unsupported dialog button text: $buttonText');
   }
   final buttonFinder = find.byKey(buttonKey);
-  expect(
-    buttonFinder,
-    findsOneWidget,
-    reason: 'Could not find "$buttonText" button in dialog',
-  );
+  expect(buttonFinder, findsOneWidget, reason: 'Could not find "$buttonText" button in dialog');
   await tester.tap(buttonFinder);
   await tester.pumpAndSettle();
 }
@@ -793,10 +637,7 @@ Future<void> _whenAppBarTitleIsTapped(WidgetTester tester) async {
 }
 
 // --- THEN ---
-Future<void> _thenEntryIsDisplayedInList(
-  WidgetTester tester,
-  String text,
-) async {
+Future<void> _thenEntryIsDisplayedInList(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
   final listFinder = find.byType(EntriesList);
   expect(listFinder, findsOneWidget);
@@ -829,136 +670,67 @@ void _thenTextFieldContains(WidgetTester tester, String text) {
 void _thenEntryIsDisplayed(WidgetTester tester, String text, String time) {
   final entryTextFinder = find.text(text);
   final entryTimeFinder = find.text(time);
-  final entryListTileFinder = find.ancestor(
-    of: entryTextFinder,
-    matching: find.byType(ListTile),
-  );
+  final entryListTileFinder = find.ancestor(of: entryTextFinder, matching: find.byType(ListTile));
   expect(entryTextFinder, findsOneWidget);
-  expect(
-    find.descendant(of: entryListTileFinder, matching: entryTimeFinder),
-    findsOneWidget,
-  );
+  expect(find.descendant(of: entryListTileFinder, matching: entryTimeFinder), findsOneWidget);
 }
 
 void _thenSnackbarIsDisplayedWithMessage(WidgetTester tester, String message) {
   final snackBarFinder = find.byType(SnackBar);
   expect(snackBarFinder, findsOneWidget);
-  final messageFinder = find.descendant(
-    of: snackBarFinder,
-    matching: find.text(message),
-  );
-  expect(
-    messageFinder,
-    findsOneWidget,
-    reason: 'Snackbar should contain the message "$message"',
-  );
+  final messageFinder = find.descendant(of: snackBarFinder, matching: find.text(message));
+  expect(messageFinder, findsOneWidget, reason: 'Snackbar should contain the message "$message"');
 }
 
 void _thenSnackbarHasAction(WidgetTester tester, String actionLabel) {
   final snackBarFinder = find.byType(SnackBar);
   expect(snackBarFinder, findsOneWidget);
   final actionFinder = find.widgetWithText(SnackBarAction, actionLabel);
-  expect(
-    actionFinder,
-    findsOneWidget,
-    reason: 'Snackbar should have an action button labeled "$actionLabel"',
-  );
+  expect(actionFinder, findsOneWidget, reason: 'Snackbar should have an action button labeled "$actionLabel"');
 }
 
 void _thenEditEntryDialogIsDisplayed(WidgetTester tester) {
   final dialogFinder = find.byKey(editEntryDialog);
-  expect(
-    dialogFinder,
-    findsOneWidget,
-    reason: 'EditEntryDialog should be displayed',
-  );
+  expect(dialogFinder, findsOneWidget, reason: 'EditEntryDialog should be displayed');
 }
 
 void _thenEditEntryDialogIsNotDisplayed(WidgetTester tester) {
   final dialogFinder = find.byKey(editEntryDialog);
-  expect(
-    dialogFinder,
-    findsNothing,
-    reason: 'EditEntryDialog should not be displayed',
-  );
+  expect(dialogFinder, findsNothing, reason: 'EditEntryDialog should not be displayed');
 }
 
-Future<void> _thenEntryTextIsUpdatedInList(
-  WidgetTester tester,
-  String oldText,
-  String newText,
-) async {
+Future<void> _thenEntryTextIsUpdatedInList(WidgetTester tester, String oldText, String newText) async {
   await tester.pumpAndSettle();
   final listFinder = find.byType(EntriesList);
   expect(listFinder, findsOneWidget);
-  final oldTextFinder = find.descendant(
-    of: listFinder,
-    matching: find.text(oldText),
-  );
-  final newTextFinder = find.descendant(
-    of: listFinder,
-    matching: find.text(newText),
-  );
-  expect(
-    oldTextFinder,
-    findsNothing,
-    reason: 'Old entry text "$oldText" should not be found',
-  );
-  expect(
-    newTextFinder,
-    findsOneWidget,
-    reason: 'New entry text "$newText" should be found',
-  );
+  final oldTextFinder = find.descendant(of: listFinder, matching: find.text(oldText));
+  final newTextFinder = find.descendant(of: listFinder, matching: find.text(newText));
+  expect(oldTextFinder, findsNothing, reason: 'Old entry text "$oldText" should not be found');
+  expect(newTextFinder, findsOneWidget, reason: 'New entry text "$newText" should be found');
 }
 
-Future<void> _thenEntryTextIsUnchangedInList(
-  WidgetTester tester,
-  String expectedText,
-) async {
+Future<void> _thenEntryTextIsUnchangedInList(WidgetTester tester, String expectedText) async {
   await tester.pumpAndSettle();
   final listFinder = find.byType(EntriesList);
   expect(listFinder, findsOneWidget);
-  final textFinder = find.descendant(
-    of: listFinder,
-    matching: find.text(expectedText),
-  );
-  expect(
-    textFinder,
-    findsOneWidget,
-    reason: 'Entry text "$expectedText" should still be found in the list',
-  );
+  final textFinder = find.descendant(of: listFinder, matching: find.text(expectedText));
+  expect(textFinder, findsOneWidget, reason: 'Entry text "$expectedText" should still be found in the list');
 }
 
 void _thenHelpDialogIsDisplayed(WidgetTester tester) {
-  expect(
-    find.byType(HelpDialog),
-    findsOneWidget,
-    reason: 'HelpDialog should be displayed',
-  );
+  expect(find.byType(HelpDialog), findsOneWidget, reason: 'HelpDialog should be displayed');
 }
 
 void _thenManageCategoriesDialogIsDisplayed(WidgetTester tester) {
-  expect(
-    find.byType(ManageCategoriesDialog),
-    findsOneWidget,
-    reason: 'ManageCategoriesDialog should be displayed',
-  );
+  expect(find.byType(ManageCategoriesDialog), findsOneWidget, reason: 'ManageCategoriesDialog should be displayed');
 }
 
 void _thenFilterSectionIsDisplayed(WidgetTester tester) {
-  expect(
-    find.byType(FilterSection),
-    findsOneWidget,
-    reason: 'FilterSection should be displayed',
-  );
+  expect(find.byType(FilterSection), findsOneWidget, reason: 'FilterSection should be displayed');
 }
 
 void _thenTitleTapCountIsIncremented(HomePageCubit cubit, int initialTapCount) {
-  expect(
-    cubit.state.titleTapCount,
-    initialTapCount + 1,
-    reason: 'Title tap count should have incremented',
-  );
+  expect(cubit.state.titleTapCount, initialTapCount + 1, reason: 'Title tap count should have incremented');
 }
 
 void _thenInitialUiElementsAreDisplayed(WidgetTester tester) {
@@ -967,28 +739,16 @@ void _thenInitialUiElementsAreDisplayed(WidgetTester tester) {
     findsOneWidget,
     reason: 'First initial entry text should be displayed',
   );
-  expect(
-    find.byType(TextField),
-    findsOneWidget,
-    reason: 'Input TextField should be present',
-  );
-  expect(
-    find.byIcon(Icons.mic),
-    findsOneWidget,
-    reason: 'Mic button should be present initially',
-  );
+  expect(find.byType(TextField), findsOneWidget, reason: 'Input TextField should be present');
+  expect(find.byIcon(Icons.mic), findsOneWidget, reason: 'Mic button should be present initially');
 }
 
 void _thenDateHeadersAreCorrect(WidgetTester tester) {
   final todayHeaderFinder = find.text('Today');
   final yesterdayHeaderFinder = find.text('Yesterday');
-  final olderDateHeaderFinder = find.text(
-    DateFormat.yMMMd().format(HomePageTestScope.entryOlder.timestamp),
-  );
+  final olderDateHeaderFinder = find.text(DateFormat.yMMMd().format(HomePageTestScope.entryOlder.timestamp));
   final firstTodayEntryFinder = find.text(HomePageTestScope.entryToday1.text);
-  final firstYesterdayEntryFinder = find.text(
-    HomePageTestScope.entryYesterday.text,
-  );
+  final firstYesterdayEntryFinder = find.text(HomePageTestScope.entryYesterday.text);
   final firstOlderEntryFinder = find.text(HomePageTestScope.entryOlder.text);
 
   expect(todayHeaderFinder, findsOneWidget);
@@ -1027,15 +787,11 @@ void _thenPersistenceSaveEntriesIsCalledWithNewEntry(
           final bool textMatches = addedEntry.text == newEntryText;
           final bool categoryMatches = addedEntry.category == 'Misc';
           final bool isNewMatches = addedEntry.isNew == true;
-          final bool timestampValid = addedEntry.timestamp.isAfter(
-            DateTime(1970),
-          );
+          final bool timestampValid = addedEntry.timestamp.isAfter(DateTime(1970));
           if (!textMatches || !categoryMatches || !isNewMatches || !timestampValid) {
             return false;
           }
-          final originalEntry1Present = savedList.any(
-            (e) => e.text == HomePageTestScope.entryToday1.text,
-          );
+          final originalEntry1Present = savedList.any((e) => e.text == HomePageTestScope.entryToday1.text);
           return originalEntry1Present;
         }),
       ),
@@ -1045,45 +801,29 @@ void _thenPersistenceSaveEntriesIsCalledWithNewEntry(
 
 void _thenAudioRecordingServicesAreCalledForStart(HomePageTestScope scope) {
   verify(scope.mockAudioRecorderService.generateRecordingPath()).called(1);
-  verify(
-    scope.mockAudioRecorderService.start(any, path: anyNamed('path')),
-  ).called(1);
-  verify(
-    scope.mockPermissionService.getMicrophoneStatus(),
-  ).called(greaterThanOrEqualTo(1));
+  verify(scope.mockAudioRecorderService.start(any, path: anyNamed('path'))).called(1);
+  verify(scope.mockPermissionService.getMicrophoneStatus()).called(greaterThanOrEqualTo(1));
 }
 
-void _thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(
-  HomePageTestScope scope,
-) {
+void _thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(HomePageTestScope scope) {
   verify(scope.mockAudioRecorderService.generateRecordingPath()).called(1);
-  verify(
-    scope.mockAudioRecorderService.start(any, path: anyNamed('path')),
-  ).called(1);
+  verify(scope.mockAudioRecorderService.start(any, path: anyNamed('path'))).called(1);
   verify(scope.mockAudioRecorderService.stop()).called(1);
-  verify(
-    scope.mockSpeechService.transcribeAudio(any, language: 'en'),
-  ).called(1);
+  verify(scope.mockSpeechService.transcribeAudio(any, language: 'en')).called(1);
 }
 
 List<Entry> _getExpectedEntriesAfterDelete(Entry entryToDelete) {
-  return List<Entry>.from(HomePageTestScope.rawEntriesList)..removeWhere(
-    (e) => e.timestamp == entryToDelete.timestamp && e.text == entryToDelete.text,
-  );
+  return List<Entry>.from(HomePageTestScope.rawEntriesList)
+    ..removeWhere((e) => e.timestamp == entryToDelete.timestamp && e.text == entryToDelete.text);
 }
 
 List<Entry> _getExpectedEntriesAfterUndo(Entry entryToRestore) {
   return List<Entry>.from(HomePageTestScope.rawEntriesList)
-    ..removeWhere(
-      (e) => e.timestamp == entryToRestore.timestamp && e.text == entryToRestore.text,
-    )
+    ..removeWhere((e) => e.timestamp == entryToRestore.timestamp && e.text == entryToRestore.text)
     ..add(entryToRestore);
 }
 
-List<Entry> _getExpectedEntriesAfterEdit(
-  Entry entryToEdit,
-  String updatedText,
-) {
+List<Entry> _getExpectedEntriesAfterEdit(Entry entryToEdit, String updatedText) {
   final expectedList = List<Entry>.from(HomePageTestScope.rawEntriesList);
   final indexToUpdate = expectedList.indexWhere(
     (e) => e.timestamp == entryToEdit.timestamp && e.text == entryToEdit.text,
@@ -1094,13 +834,8 @@ List<Entry> _getExpectedEntriesAfterEdit(
   return expectedList;
 }
 
-void _thenPersistenceSaveEntriesIsCalledWithList(
-  HomePageTestScope scope,
-  List<Entry> expectedList,
-) {
-  verify(
-    scope.mockPersistenceService.saveEntries(argThat(equals(expectedList))),
-  ).called(1);
+void _thenPersistenceSaveEntriesIsCalledWithList(HomePageTestScope scope, List<Entry> expectedList) {
+  verify(scope.mockPersistenceService.saveEntries(argThat(equals(expectedList)))).called(1);
 }
 
 void _thenEntryIsNotDisplayed(WidgetTester tester, String text) {
@@ -1110,28 +845,13 @@ void _thenEntryIsNotDisplayed(WidgetTester tester, String text) {
 void _thenAppVersionIsDisplayed(WidgetTester tester, String version) {
   final appBarFinder = find.byType(AppBar);
   expect(appBarFinder, findsOneWidget);
-  final versionTextFinder = find.descendant(
-    of: appBarFinder,
-    matching: find.text(version),
-  );
-  expect(
-    versionTextFinder,
-    findsOneWidget,
-    reason: 'App version "$version" should be displayed in the AppBar',
-  );
+  final versionTextFinder = find.descendant(of: appBarFinder, matching: find.text(version));
+  expect(versionTextFinder, findsOneWidget, reason: 'App version "$version" should be displayed in the AppBar');
 }
 
-void _thenTemporaryEntryIsDisplayedInList(
-  WidgetTester tester,
-  String expectedText,
-  String expectedCategory,
-) {
+void _thenTemporaryEntryIsDisplayedInList(WidgetTester tester, String expectedText, String expectedCategory) {
   final entryListFinder = find.byType(EntriesList);
-  expect(
-    entryListFinder,
-    findsOneWidget,
-    reason: 'EntriesList should be present',
-  );
+  expect(entryListFinder, findsOneWidget, reason: 'EntriesList should be present');
 
   final entryWidgets = tester.widgetList<ListTile>(
     find.descendant(of: entryListFinder, matching: find.byType(ListTile)),
@@ -1139,10 +859,7 @@ void _thenTemporaryEntryIsDisplayedInList(
 
   bool found = false;
   for (final tile in entryWidgets) {
-    final textFindersInTile = find.descendant(
-      of: find.byWidget(tile),
-      matching: find.byType(Text),
-    );
+    final textFindersInTile = find.descendant(of: find.byWidget(tile), matching: find.byType(Text));
 
     bool textMatch = false;
     bool categoryMatch = false;
@@ -1171,9 +888,5 @@ void _thenTemporaryEntryIsDisplayedInList(
 }
 
 void _thenWhatsNewDialogIsDisplayed(WidgetTester tester) {
-  expect(
-    find.byType(WhatsNewDialog),
-    findsOneWidget,
-    reason: 'WhatsNewDialog should be displayed',
-  );
+  expect(find.byType(WhatsNewDialog), findsOneWidget, reason: 'WhatsNewDialog should be displayed');
 }

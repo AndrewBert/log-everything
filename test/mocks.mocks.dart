@@ -48,16 +48,9 @@ class MockSpeechService extends _i1.Mock implements _i3.SpeechService {
   }
 
   @override
-  _i4.Future<String?> transcribeAudio(
-    String? filePath, {
-    String? language = 'en',
-  }) =>
+  _i4.Future<String?> transcribeAudio(String? filePath, {String? language = 'en'}) =>
       (super.noSuchMethod(
-            Invocation.method(
-              #transcribeAudio,
-              [filePath],
-              {#language: language},
-            ),
+            Invocation.method(#transcribeAudio, [filePath], {#language: language}),
             returnValue: _i4.Future<String?>.value(),
           )
           as _i4.Future<String?>);
@@ -84,18 +77,13 @@ class MockAudioRecorder extends _i1.Mock implements _i5.AudioRecorder {
   _i4.Future<_i4.Stream<_i6.Uint8List>> startStream(_i2.RecordConfig? config) =>
       (super.noSuchMethod(
             Invocation.method(#startStream, [config]),
-            returnValue: _i4.Future<_i4.Stream<_i6.Uint8List>>.value(
-              _i4.Stream<_i6.Uint8List>.empty(),
-            ),
+            returnValue: _i4.Future<_i4.Stream<_i6.Uint8List>>.value(_i4.Stream<_i6.Uint8List>.empty()),
           )
           as _i4.Future<_i4.Stream<_i6.Uint8List>>);
 
   @override
   _i4.Future<String?> stop() =>
-      (super.noSuchMethod(
-            Invocation.method(#stop, []),
-            returnValue: _i4.Future<String?>.value(),
-          )
+      (super.noSuchMethod(Invocation.method(#stop, []), returnValue: _i4.Future<String?>.value())
           as _i4.Future<String?>);
 
   @override
@@ -127,35 +115,24 @@ class MockAudioRecorder extends _i1.Mock implements _i5.AudioRecorder {
 
   @override
   _i4.Future<bool> isRecording() =>
-      (super.noSuchMethod(
-            Invocation.method(#isRecording, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#isRecording, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> isPaused() =>
-      (super.noSuchMethod(
-            Invocation.method(#isPaused, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#isPaused, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> hasPermission() =>
-      (super.noSuchMethod(
-            Invocation.method(#hasPermission, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#hasPermission, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<List<_i2.InputDevice>> listInputDevices() =>
       (super.noSuchMethod(
             Invocation.method(#listInputDevices, []),
-            returnValue: _i4.Future<List<_i2.InputDevice>>.value(
-              <_i2.InputDevice>[],
-            ),
+            returnValue: _i4.Future<List<_i2.InputDevice>>.value(<_i2.InputDevice>[]),
           )
           as _i4.Future<List<_i2.InputDevice>>);
 
@@ -163,18 +140,13 @@ class MockAudioRecorder extends _i1.Mock implements _i5.AudioRecorder {
   _i4.Future<_i2.Amplitude> getAmplitude() =>
       (super.noSuchMethod(
             Invocation.method(#getAmplitude, []),
-            returnValue: _i4.Future<_i2.Amplitude>.value(
-              _FakeAmplitude_0(this, Invocation.method(#getAmplitude, [])),
-            ),
+            returnValue: _i4.Future<_i2.Amplitude>.value(_FakeAmplitude_0(this, Invocation.method(#getAmplitude, []))),
           )
           as _i4.Future<_i2.Amplitude>);
 
   @override
   _i4.Future<bool> isEncoderSupported(_i2.AudioEncoder? encoder) =>
-      (super.noSuchMethod(
-            Invocation.method(#isEncoderSupported, [encoder]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#isEncoderSupported, [encoder]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
@@ -188,10 +160,7 @@ class MockAudioRecorder extends _i1.Mock implements _i5.AudioRecorder {
 
   @override
   _i4.Stream<_i2.RecordState> onStateChanged() =>
-      (super.noSuchMethod(
-            Invocation.method(#onStateChanged, []),
-            returnValue: _i4.Stream<_i2.RecordState>.empty(),
-          )
+      (super.noSuchMethod(Invocation.method(#onStateChanged, []), returnValue: _i4.Stream<_i2.RecordState>.empty())
           as _i4.Stream<_i2.RecordState>);
 
   @override
@@ -203,15 +172,8 @@ class MockAudioRecorder extends _i1.Mock implements _i5.AudioRecorder {
           as _i4.Stream<_i2.Amplitude>);
 
   @override
-  List<int> convertBytesToInt16(
-    _i6.Uint8List? bytes, [
-    dynamic endian = _i6.Endian.little,
-  ]) =>
-      (super.noSuchMethod(
-            Invocation.method(#convertBytesToInt16, [bytes, endian]),
-            returnValue: <int>[],
-          )
-          as List<int>);
+  List<int> convertBytesToInt16(_i6.Uint8List? bytes, [dynamic endian = _i6.Endian.little]) =>
+      (super.noSuchMethod(Invocation.method(#convertBytesToInt16, [bytes, endian]), returnValue: <int>[]) as List<int>);
 }
 
 /// A class which mocks [PermissionService].
@@ -226,9 +188,7 @@ class MockPermissionService extends _i1.Mock implements _i7.PermissionService {
   _i4.Future<_i8.PermissionStatus> getMicrophoneStatus() =>
       (super.noSuchMethod(
             Invocation.method(#getMicrophoneStatus, []),
-            returnValue: _i4.Future<_i8.PermissionStatus>.value(
-              _i8.PermissionStatus.denied,
-            ),
+            returnValue: _i4.Future<_i8.PermissionStatus>.value(_i8.PermissionStatus.denied),
           )
           as _i4.Future<_i8.PermissionStatus>);
 
@@ -236,9 +196,7 @@ class MockPermissionService extends _i1.Mock implements _i7.PermissionService {
   _i4.Future<_i8.PermissionStatus> requestMicrophonePermission() =>
       (super.noSuchMethod(
             Invocation.method(#requestMicrophonePermission, []),
-            returnValue: _i4.Future<_i8.PermissionStatus>.value(
-              _i8.PermissionStatus.denied,
-            ),
+            returnValue: _i4.Future<_i8.PermissionStatus>.value(_i8.PermissionStatus.denied),
           )
           as _i4.Future<_i8.PermissionStatus>);
 }
@@ -295,10 +253,7 @@ class MockAiService extends _i1.Mock implements _i11.AiService {
   }
 
   @override
-  _i4.Future<List<({String category, String textSegment})>> extractEntries(
-    String? text,
-    List<String>? categories,
-  ) =>
+  _i4.Future<List<({String category, String textSegment})>> extractEntries(String? text, List<String>? categories) =>
       (super.noSuchMethod(
             Invocation.method(#extractEntries, [text, categories]),
             returnValue: _i4.Future<List<({String category, String textSegment})>>.value(
@@ -308,16 +263,11 @@ class MockAiService extends _i1.Mock implements _i11.AiService {
           as _i4.Future<List<({String category, String textSegment})>>);
 
   @override
-  _i4.Future<String> getChatResponse({
-    required List<_i12.ChatMessage>? messages,
-  }) =>
+  _i4.Future<String> getChatResponse({required List<_i12.ChatMessage>? messages}) =>
       (super.noSuchMethod(
             Invocation.method(#getChatResponse, [], {#messages: messages}),
             returnValue: _i4.Future<String>.value(
-              _i13.dummyValue<String>(
-                this,
-                Invocation.method(#getChatResponse, [], {#messages: messages}),
-              ),
+              _i13.dummyValue<String>(this, Invocation.method(#getChatResponse, [], {#messages: messages})),
             ),
           )
           as _i4.Future<String>);
@@ -342,43 +292,28 @@ class MockAudioRecorderService extends _i1.Mock implements _i14.AudioRecorderSer
 
   @override
   _i4.Future<String?> stop() =>
-      (super.noSuchMethod(
-            Invocation.method(#stop, []),
-            returnValue: _i4.Future<String?>.value(),
-          )
+      (super.noSuchMethod(Invocation.method(#stop, []), returnValue: _i4.Future<String?>.value())
           as _i4.Future<String?>);
 
   @override
   _i4.Future<bool> isRecording() =>
-      (super.noSuchMethod(
-            Invocation.method(#isRecording, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#isRecording, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Stream<_i2.RecordState> onStateChanged() =>
-      (super.noSuchMethod(
-            Invocation.method(#onStateChanged, []),
-            returnValue: _i4.Stream<_i2.RecordState>.empty(),
-          )
+      (super.noSuchMethod(Invocation.method(#onStateChanged, []), returnValue: _i4.Stream<_i2.RecordState>.empty())
           as _i4.Stream<_i2.RecordState>);
 
   @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
+  void dispose() => super.noSuchMethod(Invocation.method(#dispose, []), returnValueForMissingStub: null);
 
   @override
   _i4.Future<String> generateRecordingPath() =>
       (super.noSuchMethod(
             Invocation.method(#generateRecordingPath, []),
             returnValue: _i4.Future<String>.value(
-              _i13.dummyValue<String>(
-                this,
-                Invocation.method(#generateRecordingPath, []),
-              ),
+              _i13.dummyValue<String>(this, Invocation.method(#generateRecordingPath, [])),
             ),
           )
           as _i4.Future<String>);
@@ -397,26 +332,15 @@ class MockVectorStoreService extends _i1.Mock implements _i15.VectorStoreService
       (super.noSuchMethod(
             Invocation.method(#getOrCreateVectorStoreId, []),
             returnValue: _i4.Future<String>.value(
-              _i13.dummyValue<String>(
-                this,
-                Invocation.method(#getOrCreateVectorStoreId, []),
-              ),
+              _i13.dummyValue<String>(this, Invocation.method(#getOrCreateVectorStoreId, [])),
             ),
           )
           as _i4.Future<String>);
 
   @override
-  _i4.Future<void> synchronizeDailyLogFile(
-    String? vectorStoreId,
-    DateTime? date,
-    String? formattedDailyLogContent,
-  ) =>
+  _i4.Future<void> synchronizeDailyLogFile(String? vectorStoreId, DateTime? date, String? formattedDailyLogContent) =>
       (super.noSuchMethod(
-            Invocation.method(#synchronizeDailyLogFile, [
-              vectorStoreId,
-              date,
-              formattedDailyLogContent,
-            ]),
+            Invocation.method(#synchronizeDailyLogFile, [vectorStoreId, date, formattedDailyLogContent]),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
@@ -433,11 +357,7 @@ class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
 
   @override
   Set<String> getKeys() =>
-      (super.noSuchMethod(
-            Invocation.method(#getKeys, []),
-            returnValue: <String>{},
-          )
-          as Set<String>);
+      (super.noSuchMethod(Invocation.method(#getKeys, []), returnValue: <String>{}) as Set<String>);
 
   @override
   Object? get(String? key) => (super.noSuchMethod(Invocation.method(#get, [key])) as Object?);
@@ -456,11 +376,7 @@ class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
 
   @override
   bool containsKey(String? key) =>
-      (super.noSuchMethod(
-            Invocation.method(#containsKey, [key]),
-            returnValue: false,
-          )
-          as bool);
+      (super.noSuchMethod(Invocation.method(#containsKey, [key]), returnValue: false) as bool);
 
   @override
   List<String>? getStringList(String? key) =>
@@ -468,66 +384,42 @@ class MockSharedPreferences extends _i1.Mock implements _i16.SharedPreferences {
 
   @override
   _i4.Future<bool> setBool(String? key, bool? value) =>
-      (super.noSuchMethod(
-            Invocation.method(#setBool, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#setBool, [key, value]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> setInt(String? key, int? value) =>
-      (super.noSuchMethod(
-            Invocation.method(#setInt, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#setInt, [key, value]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> setDouble(String? key, double? value) =>
-      (super.noSuchMethod(
-            Invocation.method(#setDouble, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#setDouble, [key, value]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> setString(String? key, String? value) =>
-      (super.noSuchMethod(
-            Invocation.method(#setString, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#setString, [key, value]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> setStringList(String? key, List<String>? value) =>
-      (super.noSuchMethod(
-            Invocation.method(#setStringList, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#setStringList, [key, value]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> remove(String? key) =>
-      (super.noSuchMethod(
-            Invocation.method(#remove, [key]),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#remove, [key]), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> commit() =>
-      (super.noSuchMethod(
-            Invocation.method(#commit, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#commit, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override
   _i4.Future<bool> clear() =>
-      (super.noSuchMethod(
-            Invocation.method(#clear, []),
-            returnValue: _i4.Future<bool>.value(false),
-          )
+      (super.noSuchMethod(Invocation.method(#clear, []), returnValue: _i4.Future<bool>.value(false))
           as _i4.Future<bool>);
 
   @override

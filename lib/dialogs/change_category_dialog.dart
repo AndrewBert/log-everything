@@ -5,11 +5,7 @@ class ChangeCategoryDialog extends StatelessWidget {
   final String? currentCategory;
   final List<String> availableCategories;
 
-  const ChangeCategoryDialog({
-    super.key,
-    required this.currentCategory,
-    required this.availableCategories,
-  });
+  const ChangeCategoryDialog({super.key, required this.currentCategory, required this.availableCategories});
 
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
   String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
@@ -22,9 +18,7 @@ class ChangeCategoryDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       children:
           availableCategories.map((category) {
-            final display = categoryDisplayName(
-              category,
-            ); // Show 'None' for 'Misc'
+            final display = categoryDisplayName(category); // Show 'None' for 'Misc'
             return SimpleDialogOption(
               onPressed: () {
                 HapticFeedback.selectionClick();

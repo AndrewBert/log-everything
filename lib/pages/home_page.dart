@@ -48,17 +48,8 @@ class HomePage extends StatelessWidget {
             text: TextSpan(
               style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
               children: <TextSpan>[
-                TextSpan(
-                  text: 'Log',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextSpan(
-                  text: ' Splitter',
-                  style: TextStyle(color: defaultTitleColor),
-                ),
+                TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                TextSpan(text: ' Splitter', style: TextStyle(color: defaultTitleColor)),
               ],
             ),
           ),
@@ -90,9 +81,7 @@ class HomePage extends StatelessWidget {
             onPressed: () => _showHelpDialog(context),
           ),
           IconButton(
-            icon: const Icon(
-              Icons.tune,
-            ), // CP: Changed from category_outlined to tune for clarity
+            icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
             tooltip: 'Manage Categories',
             onPressed: () => _showManageCategoriesDialog(context),
           ),
@@ -120,9 +109,7 @@ class HomePage extends StatelessWidget {
             },
             listener: (context, state) {
               // CP: Log listener invocation for snackBarMessage
-              AppLogger.info(
-                '[HomePage] SnackBar listener called. state.snackBarMessage: ${state.snackBarMessage}',
-              );
+              AppLogger.info('[HomePage] SnackBar listener called. state.snackBarMessage: ${state.snackBarMessage}');
               _showFloatingSnackBar(
                 context,
                 content: Text(state.snackBarMessage!), // Keep !
@@ -132,14 +119,10 @@ class HomePage extends StatelessWidget {
                         : const Duration(milliseconds: 800),
               );
               // CP: Log before calling clearSnackBarMessage in addPostFrameCallback
-              AppLogger.info(
-                '[HomePage] Scheduling clearSnackBarMessage via addPostFrameCallback.',
-              );
+              AppLogger.info('[HomePage] Scheduling clearSnackBarMessage via addPostFrameCallback.');
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 // CP: Log inside addPostFrameCallback before clearing
-                AppLogger.info(
-                  '[HomePage] addPostFrameCallback: Clearing SnackBar message.',
-                );
+                AppLogger.info('[HomePage] addPostFrameCallback: Clearing SnackBar message.');
                 if (context.mounted) {
                   context.read<HomePageCubit>().clearSnackBarMessage();
                 }
@@ -159,10 +142,7 @@ class HomePage extends StatelessWidget {
                     // CP: Base layer (Filter and EntriesList)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const FilterSection(),
-                        _buildEntriesList(context),
-                      ],
+                      children: <Widget>[const FilterSection(), _buildEntriesList(context)],
                     ),
                     // CP: Overlay layer (ChatBottomSheet)
                     if (isChatOpen)
@@ -179,13 +159,7 @@ class HomePage extends StatelessWidget {
               InputArea(
                 // CP: InputArea remains at the bottom
                 onSendPressed: (text) => _handleInput(context, text),
-                showSnackBar: ({
-                  required context,
-                  required content,
-                  Duration? duration,
-                  action,
-                  backgroundColor,
-                }) {
+                showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
                   _showFloatingSnackBar(
                     context,
                     content: content,
@@ -238,27 +212,19 @@ class HomePage extends StatelessWidget {
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       ),
     );
   }
 
-  Future<void> _showWhatsNewDialog(
-    BuildContext context, [
-    String? version,
-  ]) async {
+  Future<void> _showWhatsNewDialog(BuildContext context, [String? version]) async {
     String currentVersion = version ?? '';
     if (currentVersion.isEmpty) {
       try {
         final packageInfo = await PackageInfo.fromPlatform();
         currentVersion = 'v${packageInfo.version} (${packageInfo.buildNumber})';
       } catch (e, stackTrace) {
-        AppLogger.error(
-          'Error getting package info for What\'s New dialog: $e',
-          stackTrace: stackTrace,
-        );
+        AppLogger.error('Error getting package info for What\'s New dialog: $e', stackTrace: stackTrace);
         // Check context is still valid if async gap occurred
         if (!context.mounted) return;
         _showFloatingSnackBar(
@@ -271,18 +237,13 @@ class HomePage extends StatelessWidget {
     }
 
     String displayVersion = currentVersion;
-    final versionMatch = RegExp(
-      r'v([0-9]+\.[0-9]+\.[0-9]+)',
-    ).firstMatch(currentVersion);
+    final versionMatch = RegExp(r'v([0-9]+\.[0-9]+\.[0-9]+)').firstMatch(currentVersion);
     if (versionMatch != null) {
       displayVersion = versionMatch.group(1) ?? currentVersion;
     }
 
     if (!context.mounted) return;
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => WhatsNewDialog(currentVersion: displayVersion),
-    );
+    await showDialog(context: context, builder: (dialogContext) => WhatsNewDialog(currentVersion: displayVersion));
   }
 
   void _handleInput(BuildContext context, String currentText) {
@@ -300,9 +261,7 @@ class HomePage extends StatelessWidget {
     }
 
     if (voiceCubit.state.isRecording) {
-      AppLogger.info(
-        'Send tapped during recording. Stopping and combining text with transcription.',
-      );
+      AppLogger.info('Send tapped during recording. Stopping and combining text with transcription.');
       HapticFeedback.mediumImpact();
 
       // 1. Create temporary entry
@@ -329,10 +288,7 @@ class HomePage extends StatelessWidget {
     }
   }
 
-  Future<bool> _showDeleteCategoryConfirmationDialog(
-    BuildContext context,
-    String category,
-  ) async {
+  Future<bool> _showDeleteCategoryConfirmationDialog(BuildContext context, String category) async {
     return await showDialog<bool>(
           context: context,
           builder: (BuildContext dialogContext) {
@@ -362,10 +318,7 @@ class HomePage extends StatelessWidget {
     });
   }
 
-  Future<String?> _showEditCategoryDialog(
-    BuildContext context,
-    String oldCategoryName,
-  ) async {
+  Future<String?> _showEditCategoryDialog(BuildContext context, String oldCategoryName) async {
     return await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
@@ -374,10 +327,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Future<void> _showChangeCategoryDialog(
-    BuildContext context,
-    Entry entry,
-  ) async {
+  Future<void> _showChangeCategoryDialog(BuildContext context, Entry entry) async {
     final entryCubit = context.read<EntryCubit>();
     final availableCategories = entryCubit.state.categories.map((cat) => cat.name).toList()..sort();
     String? selectedCategory = entry.category;
@@ -389,10 +339,7 @@ class HomePage extends StatelessWidget {
     final String? newCategory = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
-        return ChangeCategoryDialog(
-          currentCategory: selectedCategory,
-          availableCategories: availableCategories,
-        );
+        return ChangeCategoryDialog(currentCategory: selectedCategory, availableCategories: availableCategories);
       },
     );
 
@@ -416,9 +363,7 @@ class HomePage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return HelpDialog(
-          onShowWhatsNewPressed: () => _showWhatsNewDialog(context),
-        );
+        return HelpDialog(onShowWhatsNewPressed: () => _showWhatsNewDialog(context));
       },
     ).then((_) {
       focusScope.focusedChild?.unfocus();

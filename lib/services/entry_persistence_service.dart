@@ -42,24 +42,16 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
                 .whereType<Entry>()
                 .toList(); // Filter out nulls
       }
-      AppLogger.info(
-        'Persistence: Successfully loaded ${loadedEntries.length} entries.',
-      );
+      AppLogger.info('Persistence: Successfully loaded ${loadedEntries.length} entries.');
       return loadedEntries;
     } catch (e) {
-      AppLogger.error(
-        'Persistence: Error loading entries. Clearing potentially incompatible data.',
-        error: e,
-      );
+      AppLogger.error('Persistence: Error loading entries. Clearing potentially incompatible data.', error: e);
       // Attempt to clear bad data
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_entriesKey);
       } catch (clearError) {
-        AppLogger.error(
-          'Persistence: Failed to clear entries after load error.',
-          error: clearError,
-        );
+        AppLogger.error('Persistence: Failed to clear entries after load error.', error: clearError);
       }
       // Re-throw or return empty list? Returning empty list might be safer.
       // throw Exception("Failed to load entries, data cleared.");
@@ -89,9 +81,7 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
       final prefs = await SharedPreferences.getInstance();
       final savedCategoriesJson = prefs.getStringList(_categoriesKey);
       if (savedCategoriesJson == null || savedCategoriesJson.isEmpty) {
-        AppLogger.info(
-          'Persistence: No categories found, creating only essential Misc category.',
-        );
+        AppLogger.info('Persistence: No categories found, creating only essential Misc category.');
         await saveCategories(_essentialCategories);
         return _essentialCategories;
       } else {

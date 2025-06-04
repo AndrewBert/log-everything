@@ -36,22 +36,11 @@ class EntryCubit extends Cubit<EntryState> {
       final initialEntries = _entryRepository.currentEntries;
       final initialCategories = _entryRepository.currentCategories;
       final initialDisplayList = _buildDisplayList(initialEntries, null);
-      emit(
-        state.copyWith(
-          isLoading: false,
-          categories: initialCategories,
-          displayListItems: initialDisplayList,
-        ),
-      );
+      emit(state.copyWith(isLoading: false, categories: initialCategories, displayListItems: initialDisplayList));
       initialEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
     } catch (e) {
       AppLogger.error("Cubit: Error initializing repository", error: e);
-      emit(
-        state.copyWith(
-          isLoading: false,
-          lastErrorMessage: "Failed to load initial data.",
-        ),
-      );
+      emit(state.copyWith(isLoading: false, lastErrorMessage: "Failed to load initial data."));
     }
   }
 
@@ -77,11 +66,7 @@ class EntryCubit extends Cubit<EntryState> {
     // Group entries by date
     final groupedEntries = groupBy<Entry, DateTime>(
       filteredEntries,
-      (entry) => DateTime(
-        entry.timestamp.year,
-        entry.timestamp.month,
-        entry.timestamp.day,
-      ),
+      (entry) => DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day),
     );
 
     // Sort dates descending
@@ -125,10 +110,7 @@ class EntryCubit extends Cubit<EntryState> {
     final currentEntries = _entryRepository.currentEntries;
     // Create a temporary list for display purposes only
     final tempEntriesList = [tempEntry, ...currentEntries];
-    final tempDisplayList = _buildDisplayList(
-      tempEntriesList,
-      state.filterCategory,
-    );
+    final tempDisplayList = _buildDisplayList(tempEntriesList, state.filterCategory);
     emit(
       state.copyWith(
         isLoading: true, // Indicate processing
@@ -151,22 +133,15 @@ class EntryCubit extends Cubit<EntryState> {
     // Get unique categories from most recent entries (including Misc)
     final recentCats = sortedEntries.map((e) => e.category).toSet().take(3).toList();
 
-    AppLogger.info(
-      '[Recent Categories] Updated recent categories to: $recentCats',
-    );
+    AppLogger.info('[Recent Categories] Updated recent categories to: $recentCats');
     emit(state.copyWith(recentCategories: recentCats));
   }
 
   // Re-add: Method to finalize state after background processing
   void finalizeProcessing(List<Entry> finalEntries) {
-    AppLogger.info(
-      '[Recent Categories] Processing ${finalEntries.length} entries',
-    );
+    AppLogger.info('[Recent Categories] Processing ${finalEntries.length} entries');
     final finalCategories = _entryRepository.currentCategories;
-    final finalDisplayList = _buildDisplayList(
-      finalEntries,
-      state.filterCategory,
-    );
+    final finalDisplayList = _buildDisplayList(finalEntries, state.filterCategory);
 
     // CP: Update recent categories when finalizing entries
     _updateRecentCategories(_entryRepository.currentEntries);
@@ -189,12 +164,7 @@ class EntryCubit extends Cubit<EntryState> {
     if (text.isEmpty) return;
 
     final DateTime processingTimestamp = DateTime.now();
-    final tempEntry = Entry(
-      text: text,
-      timestamp: processingTimestamp,
-      category: 'Processing...',
-      isNew: true,
-    );
+    final tempEntry = Entry(text: text, timestamp: processingTimestamp, category: 'Processing...', isNew: true);
 
     // Use the helper to show temporary state
     showTemporaryEntry(tempEntry);
@@ -211,16 +181,10 @@ class EntryCubit extends Cubit<EntryState> {
       HapticFeedback.mediumImpact();
     } on AiServiceException catch (e) {
       // CP: Catch AiServiceException specifically
-      AppLogger.error(
-        "Cubit: AiServiceException adding entry: ${e.message}",
-        error: e.underlyingError,
-      );
+      AppLogger.error("Cubit: AiServiceException adding entry: ${e.message}", error: e.underlyingError);
       // Revert UI state
       final currentEntries = _entryRepository.currentEntries;
-      final revertedDisplayList = _buildDisplayList(
-        currentEntries,
-        state.filterCategory,
-      );
+      final revertedDisplayList = _buildDisplayList(currentEntries, state.filterCategory);
       emit(
         state.copyWith(
           isLoading: false,
@@ -232,10 +196,7 @@ class EntryCubit extends Cubit<EntryState> {
       AppLogger.error("Cubit: Error adding entry via repository", error: e);
       // Revert UI state
       final currentEntries = _entryRepository.currentEntries;
-      final revertedDisplayList = _buildDisplayList(
-        currentEntries,
-        state.filterCategory,
-      );
+      final revertedDisplayList = _buildDisplayList(currentEntries, state.filterCategory);
       emit(
         state.copyWith(
           isLoading: false,
@@ -252,10 +213,7 @@ class EntryCubit extends Cubit<EntryState> {
       final updatedEntries = await _entryRepository.addEntryObject(entryToAdd);
       _updateStateFromRepository(updatedEntries: updatedEntries);
     } catch (e) {
-      AppLogger.error(
-        "Cubit: Error adding entry object via repository",
-        error: e,
-      );
+      AppLogger.error("Cubit: Error adding entry object via repository", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to add entry."));
     }
   }
@@ -274,10 +232,7 @@ class EntryCubit extends Cubit<EntryState> {
   Future<void> updateEntry(Entry originalEntry, Entry updatedEntry) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedEntries = await _entryRepository.updateEntry(
-        originalEntry,
-        updatedEntry,
-      );
+      final updatedEntries = await _entryRepository.updateEntry(originalEntry, updatedEntry);
       _updateStateFromRepository(updatedEntries: updatedEntries);
     } catch (e) {
       AppLogger.error("Cubit: Error updating entry via repository", error: e);
@@ -288,30 +243,22 @@ class EntryCubit extends Cubit<EntryState> {
   // Update _markEntryAsNotNewAfterDelay to remove logging
   void _markEntryAsNotNewAfterDelay(Entry entry) {
     _newEntryTimers[entry.timestamp]?.cancel();
-    _newEntryTimers[entry.timestamp] = Timer(
-      _newEntryHighlightDuration,
-      () async {
-        if (!isClosed) {
-          bool updated = await _entryRepository.markEntryAsNotNew(
-            entry.timestamp,
-            entry.text,
-          );
-          if (updated) {
-            final currentEntries = _entryRepository.currentEntries;
-            _updateStateFromRepository(updatedEntries: currentEntries);
-          }
-          _newEntryTimers.remove(entry.timestamp);
+    _newEntryTimers[entry.timestamp] = Timer(_newEntryHighlightDuration, () async {
+      if (!isClosed) {
+        bool updated = await _entryRepository.markEntryAsNotNew(entry.timestamp, entry.text);
+        if (updated) {
+          final currentEntries = _entryRepository.currentEntries;
+          _updateStateFromRepository(updatedEntries: currentEntries);
         }
-      },
-    );
+        _newEntryTimers.remove(entry.timestamp);
+      }
+    });
   }
 
   Future<void> addCustomCategory(String newCategory) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository.addCustomCategory(
-        newCategory,
-      );
+      final updatedCategories = await _entryRepository.addCustomCategory(newCategory);
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category via repository", error: e);
@@ -319,19 +266,13 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  Future<void> addCustomCategoryWithDescription(
-    String name,
-    String description,
-  ) async {
+  Future<void> addCustomCategoryWithDescription(String name, String description) async {
     emit(state.copyWith(clearLastError: true));
     try {
       final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(name, description);
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
-      AppLogger.error(
-        "Cubit: Error adding category with description via repository",
-        error: e,
-      );
+      AppLogger.error("Cubit: Error adding category with description via repository", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to add category."));
     }
   }
@@ -354,36 +295,22 @@ class EntryCubit extends Cubit<EntryState> {
       // CP: Update recent categories after state update
       emit(state.copyWith(recentCategories: updatedRecentCategories));
     } catch (e) {
-      AppLogger.error(
-        "Cubit: Error deleting category via repository",
-        error: e,
-      );
+      AppLogger.error("Cubit: Error deleting category via repository", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to delete category."));
     }
   }
 
-  Future<void> renameCategory(
-    String oldName,
-    String newName, {
-    String? description,
-  }) async {
+  Future<void> renameCategory(String oldName, String newName, {String? description}) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final result = await _entryRepository.renameCategory(
-        oldName,
-        newName,
-        description: description,
-      );
+      final result = await _entryRepository.renameCategory(oldName, newName, description: description);
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
         newFilterCategory: state.filterCategory == oldName ? newName : state.filterCategory,
       );
     } catch (e) {
-      AppLogger.error(
-        "Cubit: Error renaming category via repository",
-        error: e,
-      );
+      AppLogger.error("Cubit: Error renaming category via repository", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to rename category."));
     }
   }
@@ -420,15 +347,9 @@ class EntryCubit extends Cubit<EntryState> {
 
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedEntry = editingEntry.copyWith(
-        text: newText.trim(),
-        category: newCategory,
-      );
+      final updatedEntry = editingEntry.copyWith(text: newText.trim(), category: newCategory);
 
-      final updatedEntries = await _entryRepository.updateEntry(
-        editingEntry,
-        updatedEntry,
-      );
+      final updatedEntries = await _entryRepository.updateEntry(editingEntry, updatedEntry);
 
       _updateStateFromRepository(updatedEntries: updatedEntries);
 

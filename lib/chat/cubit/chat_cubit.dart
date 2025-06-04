@@ -18,12 +18,7 @@ class ChatCubit extends Cubit<ChatState> {
 
   Future<void> addUserMessage(String text) async {
     // CP: Make method async
-    final userMessage = ChatMessage(
-      id: _uuid.v4(),
-      text: text,
-      sender: ChatSender.user,
-      timestamp: DateTime.now(),
-    );
+    final userMessage = ChatMessage(id: _uuid.v4(), text: text, sender: ChatSender.user, timestamp: DateTime.now());
 
     // CP: Add user message and set loading state
     final messagesWithUser = List<ChatMessage>.from(state.messages)..add(userMessage);
@@ -48,18 +43,9 @@ class ChatCubit extends Cubit<ChatState> {
         timestamp: DateTime.now(),
       );
       final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
-      emit(
-        state.copyWith(
-          messages: messagesWithAi,
-          isLoading: false,
-          lastResponseId: newResponseId,
-        ),
-      );
+      emit(state.copyWith(messages: messagesWithAi, isLoading: false, lastResponseId: newResponseId));
     } on AiServiceException catch (e) {
-      AppLogger.error(
-        'AiServiceException in ChatCubit: ${e.message}',
-        error: e.underlyingError,
-      );
+      AppLogger.error('AiServiceException in ChatCubit: ${e.message}', error: e.underlyingError);
       final errorMessage = ChatMessage(
         id: _uuid.v4(),
         text: "Sorry, I couldn't get a response. Error: ${e.message}",
@@ -69,10 +55,7 @@ class ChatCubit extends Cubit<ChatState> {
       final messagesWithError = List<ChatMessage>.from(state.messages)..add(errorMessage);
       emit(state.copyWith(messages: messagesWithError, isLoading: false));
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'Unexpected error in ChatCubit: $e',
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('Unexpected error in ChatCubit: $e', stackTrace: stackTrace);
       final errorMessage = ChatMessage(
         id: _uuid.v4(),
         text: "Sorry, an unexpected error occurred while fetching the chat response.",

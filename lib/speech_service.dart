@@ -13,10 +13,7 @@ class SpeechService {
   // This can be expanded if needed
   static final _punctuationOnlyRegex = RegExp(r'^[\.,\?!;\s]*$');
 
-  Future<String?> transcribeAudio(
-    String filePath, {
-    String language = 'en',
-  }) async {
+  Future<String?> transcribeAudio(String filePath, {String language = 'en'}) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       AppLogger.error("OpenAI API Key not found.");
       return null;
@@ -34,9 +31,7 @@ class SpeechService {
     }
     AppLogger.info("Audio file size: $fileLength bytes");
 
-    AppLogger.info(
-      "Attempting to transcribe audio file: $filePath using gpt-4o-transcribe (Language: $language)",
-    );
+    AppLogger.info("Attempting to transcribe audio file: $filePath using gpt-4o-transcribe (Language: $language)");
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
@@ -96,10 +91,7 @@ class SpeechService {
               );
               return trimmedText;
             } else {
-              AppLogger.error(
-                "'text' field is not a String.",
-                error: "Found type: ${transcribedText.runtimeType}",
-              );
+              AppLogger.error("'text' field is not a String.", error: "Found type: ${transcribedText.runtimeType}");
               return null;
             }
           } else {
@@ -110,11 +102,7 @@ class SpeechService {
             return null;
           }
         } catch (e, stackTrace) {
-          AppLogger.error(
-            "Error decoding JSON response from transcription API.",
-            error: e,
-            stackTrace: stackTrace,
-          );
+          AppLogger.error("Error decoding JSON response from transcription API.", error: e, stackTrace: stackTrace);
           AppLogger.error("Raw response body was: ${response.body}");
           return null;
         }
@@ -124,20 +112,14 @@ class SpeechService {
           error: "Status Code: ${response.statusCode}, Response Body: ${response.body}",
         );
         if (response.statusCode == 400 && response.body.contains('model_not_found')) {
-          AppLogger.warn(
-            "Ensure the model 'gpt-4o-transcribe' is available for your API key.",
-          );
+          AppLogger.warn("Ensure the model 'gpt-4o-transcribe' is available for your API key.");
         } else if (response.statusCode == 400 && response.body.contains('language')) {
           AppLogger.warn("Invalid language code '$language' provided.");
         }
         return null;
       }
     } catch (e, stackTrace) {
-      AppLogger.error(
-        "Exception during transcription request",
-        error: e,
-        stackTrace: stackTrace,
-      );
+      AppLogger.error("Exception during transcription request", error: e, stackTrace: stackTrace);
       return null;
     }
   }

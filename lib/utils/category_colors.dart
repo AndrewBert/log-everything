@@ -64,10 +64,7 @@ class CategoryColors {
   static void _assignColorToCategory(String category) {
     // Choose a color that's not already heavily used
     final unusedOrLeastUsedColors = _getLeastUsedColors();
-    final color =
-        unusedOrLeastUsedColors[_random.nextInt(
-          unusedOrLeastUsedColors.length,
-        )];
+    final color = unusedOrLeastUsedColors[_random.nextInt(unusedOrLeastUsedColors.length)];
 
     // Assign and save
     _categoryColors[category] = color;
@@ -132,9 +129,7 @@ class CategoryColors {
               );
             }
           }
-          AppLogger.info(
-            'Successfully loaded ${loadedColors.length} category colors from preferences.',
-          );
+          AppLogger.info('Successfully loaded ${loadedColors.length} category colors from preferences.');
         } catch (e) {
           // Error decoding the main JSON string
           AppLogger.error('Error decoding category colors JSON', error: e);
@@ -145,10 +140,7 @@ class CategoryColors {
       }
     } catch (e) {
       // Catch errors related to SharedPreferences access itself
-      AppLogger.error(
-        'Error accessing SharedPreferences for category colors',
-        error: e,
-      );
+      AppLogger.error('Error accessing SharedPreferences for category colors', error: e);
     }
     // Assign the successfully loaded colors (or empty map) to the static variable
     _categoryColors = loadedColors;
@@ -161,9 +153,7 @@ class CategoryColors {
 
       // Convert colors to hex strings for storage
       final Map<String, String> colorHexMap = Map.fromEntries(
-        _categoryColors.entries.map(
-          (entry) => MapEntry(entry.key, _colorToHex(entry.value)),
-        ),
+        _categoryColors.entries.map((entry) => MapEntry(entry.key, _colorToHex(entry.value))),
       );
 
       await prefs.setString(_prefsKey, jsonEncode(colorHexMap));

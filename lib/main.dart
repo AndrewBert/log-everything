@@ -41,18 +41,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<EntryCubit>(
-          create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>()),
-        ),
-        BlocProvider<VoiceInputCubit>(
-          create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>()),
-        ),
-        BlocProvider<ChatCubit>(
-          create: (context) => ChatCubit(aiService: getIt<AiService>()),
-        ),
-        BlocProvider<HomePageCubit>(
-          create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>()),
-        ),
+        BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
+        BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
+        BlocProvider<ChatCubit>(create: (context) => ChatCubit(aiService: getIt<AiService>())),
+        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())),
         BlocProvider<OnboardingCubit>(
           create:
               (context) => OnboardingCubit(

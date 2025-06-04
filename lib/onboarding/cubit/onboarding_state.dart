@@ -1,12 +1,6 @@
 part of 'onboarding_cubit.dart';
 
-enum OnboardingStep {
-  welcome,
-  appOverview,
-  categoriesSetup,
-  chatDemo,
-  completed,
-}
+enum OnboardingStep { welcome, appOverview, categoriesSetup, chatDemo, completed }
 
 class OnboardingState extends Equatable {
   final OnboardingStep currentStep;

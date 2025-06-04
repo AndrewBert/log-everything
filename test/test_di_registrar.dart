@@ -38,15 +38,9 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<SpeechService>(speechService);
   getIt.registerSingleton<AudioRecorderService>(audioRecorder);
   getIt.registerSingleton<PermissionService>(permissionService);
-  getIt.registerSingleton<VectorStoreService>(
-    vectorStoreService,
-  ); // CP: Register VectorStoreService mock
-  getIt.registerSingleton<SharedPreferences>(
-    sharedPreferences,
-  ); // CP: Register SharedPreferences mock
-  getIt.registerSingleton<http.Client>(
-    httpClient,
-  ); // CP: Register http.Client mock
+  getIt.registerSingleton<VectorStoreService>(vectorStoreService); // CP: Register VectorStoreService mock
+  getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
+  getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
 
   // --- Register REAL EntryRepository ---
   // It depends on the mocked services registered above.

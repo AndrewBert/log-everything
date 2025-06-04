@@ -51,16 +51,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     final status = await _permissionService.requestMicrophonePermission();
     emit(state.copyWith(micPermissionStatus: status));
     if (status.isPermanentlyDenied) {
-      AppLogger.warn(
-        '[requestMicrophonePermission] Microphone permission permanently denied.',
-      );
+      AppLogger.warn('[requestMicrophonePermission] Microphone permission permanently denied.');
     }
   }
 
   Future<void> toggleRecording() async {
-    AppLogger.info(
-      "[toggleRecording] Called. Current state isRecording: ${state.isRecording}",
-    );
+    AppLogger.info("[toggleRecording] Called. Current state isRecording: ${state.isRecording}");
     if (state.isRecording) {
       AppLogger.info("[toggleRecording] Calling stopRecording...");
       await stopRecording();
@@ -91,12 +87,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         AppLogger.warn(
           "[startRecording] Microphone permission still not granted ($currentStatus). Cannot start recording.",
         );
-        emit(
-          state.copyWith(
-            isRecording: false,
-            errorMessage: 'Microphone permission required.',
-          ),
-        );
+        emit(state.copyWith(isRecording: false, errorMessage: 'Microphone permission required.'));
         return;
       }
     }
@@ -123,12 +114,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       _startRecordingTimer();
     } catch (e) {
       AppLogger.error("Error starting recording", error: e);
-      emit(
-        state.copyWith(
-          errorMessage: 'Error starting recording: $e',
-          isRecording: false,
-        ),
-      );
+      emit(state.copyWith(errorMessage: 'Error starting recording: $e', isRecording: false));
     }
     AppLogger.info("[startRecording] Finished.");
   }
@@ -167,12 +153,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           AppLogger.error("Failed to save recording, path is null.");
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
-        emit(
-          state.copyWith(
-            clearAudioPath: true,
-            transcriptionStatus: TranscriptionStatus.idle,
-          ),
-        );
+        emit(state.copyWith(clearAudioPath: true, transcriptionStatus: TranscriptionStatus.idle));
       }
     } catch (e) {
       AppLogger.error("Error stopping recording", error: e);
@@ -189,13 +170,8 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     AppLogger.info("[stopRecording] Finished.");
   }
 
-  Future<void> stopRecordingAndCombine(
-    String initialText,
-    DateTime processingTimestamp,
-  ) async {
-    AppLogger.info(
-      "Stopping recording to combine with initial text: '$initialText'",
-    );
+  Future<void> stopRecordingAndCombine(String initialText, DateTime processingTimestamp) async {
+    AppLogger.info("Stopping recording to combine with initial text: '$initialText'");
     if (!state.isRecording) return;
     HapticFeedback.lightImpact();
 
@@ -209,24 +185,14 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       audioPath = await _audioRecorderService.stop();
       AppLogger.info("Recording stopped for combine, audio path: $audioPath");
 
-      emit(
-        state.copyWith(
-          isRecording: false,
-          clearRecordingTime: true,
-          audioPath: audioPath,
-          clearErrorMessage: true,
-        ),
-      );
+      emit(state.copyWith(isRecording: false, clearRecordingTime: true, audioPath: audioPath, clearErrorMessage: true));
 
       List<Entry> finalEntries = [];
       String combinedText = initialText;
 
       if (!isTooShort && audioPath != null) {
         try {
-          final transcription = await _speechService.transcribeAudio(
-            audioPath,
-            language: 'en',
-          );
+          final transcription = await _speechService.transcribeAudio(audioPath, language: 'en');
           if (transcription != null && transcription.isNotEmpty) {
             AppLogger.info('Transcription successful: "$transcription"');
             if (combinedText.isNotEmpty && !combinedText.endsWith(' ') && !combinedText.endsWith('\n')) {
@@ -234,9 +200,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
             }
             combinedText += transcription;
           } else {
-            AppLogger.warn(
-              'Transcription failed or returned empty text. Using only initial text.',
-            );
+            AppLogger.warn('Transcription failed or returned empty text. Using only initial text.');
           }
         } catch (e) {
           AppLogger.error("Transcription error during combine", error: e);
@@ -244,13 +208,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         }
       } else {
         if (isTooShort) {
-          AppLogger.info(
-            "Skipping transcription for combine: recording too short.",
-          );
+          AppLogger.info("Skipping transcription for combine: recording too short.");
         } else {
-          AppLogger.error(
-            "Failed to save recording for combine, path is null.",
-          );
+          AppLogger.error("Failed to save recording for combine, path is null.");
           emit(state.copyWith(errorMessage: 'Failed to save recording.'));
         }
       }
@@ -260,23 +220,15 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           'Calling repository to process combined entry: "$combinedText" (Timestamp: $processingTimestamp)',
         );
         try {
-          finalEntries = await _entryRepository.processCombinedEntry(
-            combinedText,
-            processingTimestamp,
-          );
+          finalEntries = await _entryRepository.processCombinedEntry(combinedText, processingTimestamp);
           _entryCubit.finalizeProcessing(finalEntries);
         } catch (e) {
-          AppLogger.error(
-            "Error processing combined entry in repository",
-            error: e,
-          );
+          AppLogger.error("Error processing combined entry in repository", error: e);
           _entryCubit.finalizeProcessing([]);
           emit(state.copyWith(errorMessage: 'Failed to process entry.'));
         }
       } else {
-        AppLogger.warn(
-          'Combined text is empty, finalizing state without adding entry.',
-        );
+        AppLogger.warn('Combined text is empty, finalizing state without adding entry.');
         final currentEntries =
             _entryRepository.currentEntries.where((e) => e.timestamp != processingTimestamp).toList();
         _entryCubit.finalizeProcessing(currentEntries);
@@ -316,10 +268,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
 
     try {
-      final transcription = await _speechService.transcribeAudio(
-        state.audioPath!,
-        language: 'en',
-      );
+      final transcription = await _speechService.transcribeAudio(state.audioPath!, language: 'en');
 
       if (transcription != null && transcription.isNotEmpty) {
         AppLogger.info('Foreground transcription successful: "$transcription"');
@@ -332,9 +281,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           ),
         );
       } else {
-        AppLogger.error(
-          'Foreground transcription failed or returned empty text.',
-        );
+        AppLogger.error('Foreground transcription failed or returned empty text.');
         emit(
           state.copyWith(
             transcriptionStatus: TranscriptionStatus.error,
@@ -370,9 +317,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
       emit(state.copyWith(recordingDuration: duration));
 
       if (duration >= _maxRecordingDuration) {
-        AppLogger.info(
-          "Max recording duration reached. Stopping automatically.",
-        );
+        AppLogger.info("Max recording duration reached. Stopping automatically.");
         stopRecording();
       }
     });

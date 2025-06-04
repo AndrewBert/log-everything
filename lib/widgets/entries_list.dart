@@ -31,11 +31,7 @@ class EntriesList extends StatelessWidget {
   String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
 
   // CP: Show context menu at a consistent position relative to the entry card
-  void _showContextMenu(
-    BuildContext context,
-    Entry entry,
-    Offset globalPosition,
-  ) {
+  void _showContextMenu(BuildContext context, Entry entry, Offset globalPosition) {
     // CP: Don't show context menu if entry is processing
     if (entry.category == 'Processing...') {
       return;
@@ -85,10 +81,7 @@ class EntriesList extends StatelessWidget {
         pageBuilder:
             (context, _, __) => EntryContextMenu(
               entry: entry,
-              position: Offset(
-                menuX,
-                menuY,
-              ), // CP: Use intelligent relative position
+              position: Offset(menuX, menuY), // CP: Use intelligent relative position
               onEdit: () => onEditPressed(entry),
               onDelete: () => onDeletePressed(entry),
               onCopyText: () {
@@ -166,9 +159,7 @@ class EntriesList extends StatelessWidget {
                       Icon(
                         Icons.edit_outlined,
                         size: 48,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.6),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -181,9 +172,7 @@ class EntriesList extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Make your changes in the input field below',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -209,9 +198,7 @@ class EntriesList extends StatelessWidget {
                     state.filterCategory != null
                         ? 'No entries found for category: "${state.filterCategory}"'
                         : 'No entries yet.\nType or use the mic below!',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -223,25 +210,16 @@ class EntriesList extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: ListView.separated(
               key: ValueKey<String>(state.filterCategory ?? 'all'),
-              padding: const EdgeInsets.only(
-                bottom: 150.0,
-                left: 16.0,
-                right: 16.0,
-                top: 8.0,
-              ),
+              padding: const EdgeInsets.only(bottom: 150.0, left: 16.0, right: 16.0, top: 8.0),
               itemCount: listItems.length,
               separatorBuilder: (context, index) {
                 final currentItem = listItems[index];
                 final nextItem = (index + 1 < listItems.length) ? listItems[index + 1] : null;
                 if (currentItem is Entry && nextItem is Entry) {
-                  return const SizedBox(
-                    height: 16.0,
-                  ); // Increased spacing between entries
+                  return const SizedBox(height: 16.0); // Increased spacing between entries
                 }
                 if (currentItem is DateTime && nextItem is Entry) {
-                  return const SizedBox(
-                    height: 8.0,
-                  ); // Increased spacing after date header
+                  return const SizedBox(height: 8.0); // Increased spacing after date header
                 }
                 return const SizedBox.shrink();
               },
@@ -316,17 +294,12 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with SingleTicker
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(
-        milliseconds: 200,
-      ), // CP: Reduced from 400ms to make it faster
+      duration: const Duration(milliseconds: 200), // CP: Reduced from 400ms to make it faster
       vsync: this,
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(
-        0.0,
-        0.05,
-      ), // CP: Much more subtle slide - reduced from 0.3 to 0.05
+      begin: const Offset(0.0, 0.05), // CP: Much more subtle slide - reduced from 0.3 to 0.05
       end: Offset.zero,
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
@@ -362,11 +335,7 @@ class _SwipeableEntryCard extends StatefulWidget {
   final Widget child;
   final VoidCallback onDelete;
 
-  const _SwipeableEntryCard({
-    required this.entry,
-    required this.child,
-    required this.onDelete,
-  });
+  const _SwipeableEntryCard({required this.entry, required this.child, required this.onDelete});
 
   @override
   State<_SwipeableEntryCard> createState() => _SwipeableEntryCardState();
@@ -428,21 +397,11 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
         gradient: LinearGradient(
           begin: isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight,
           end: isLeftSwipe ? Alignment.centerRight : Alignment.centerLeft,
-          colors: [
-            Colors.red.shade600,
-            Colors.orange.shade500,
-            Colors.yellow.shade400,
-          ],
+          colors: [Colors.red.shade600, Colors.orange.shade500, Colors.yellow.shade400],
         ),
         borderRadius: BorderRadius.circular(12),
         // CP: Subtle glow effect
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withValues(alpha: 0.3),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2)],
       ),
       child: Padding(
         padding: padding,
@@ -456,13 +415,7 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
                 duration: const Duration(milliseconds: 300),
                 tween: Tween(begin: 0, end: isLeftSwipe ? 0.1 : -0.1),
                 builder: (context, rotation, child) {
-                  return Transform.rotate(
-                    angle: rotation,
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 32),
-                    ),
-                  );
+                  return Transform.rotate(angle: rotation, child: Text(emoji, style: const TextStyle(fontSize: 32)));
                 },
               ),
               const SizedBox(height: 4),
@@ -516,14 +469,7 @@ class _EntryCard extends StatefulWidget {
 
 class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
   // CP: Random emoji selection for the peeping feature
-  static const List<String> _peepingEmojis = [
-    '👀',
-    '🫣',
-    '👻',
-    '🤫',
-    '🤪',
-    '🦄',
-  ];
+  static const List<String> _peepingEmojis = ['👀', '🫣', '👻', '🤫', '🤪', '🦄'];
   late final bool _showPeepingEmoji;
   late final String _selectedEmoji;
   late final double _horizontalOffset;
@@ -544,38 +490,24 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
     _horizontalOffset = 20.0 + (DateTime.now().millisecondsSinceEpoch % 60);
 
     // CP: Longer duration for smoother animations
-    _highlightController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
+    _highlightController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
     // CP: Staggered animations for more fluid effect
     _highlightOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _highlightController,
-        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
-      ),
+      CurvedAnimation(parent: _highlightController, curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic)),
     );
 
-    _highlightScale = Tween<double>(begin: 0.98, end: 1.02).animate(
-      CurvedAnimation(
-        parent: _highlightController,
-        curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
-      ),
-    );
+    _highlightScale = Tween<double>(
+      begin: 0.98,
+      end: 1.02,
+    ).animate(CurvedAnimation(parent: _highlightController, curve: const Interval(0.2, 1.0, curve: Curves.elasticOut)));
 
     _borderOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _highlightController,
-        curve: const Interval(0.1, 0.8, curve: Curves.easeInOutQuart),
-      ),
+      CurvedAnimation(parent: _highlightController, curve: const Interval(0.1, 0.8, curve: Curves.easeInOutQuart)),
     );
 
     _glowIntensity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _highlightController,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOutExpo),
-      ),
+      CurvedAnimation(parent: _highlightController, curve: const Interval(0.3, 1.0, curve: Curves.easeOutExpo)),
     );
   }
 
@@ -641,23 +573,16 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12.0),
-                              border: Border.all(
-                                color: theme.colorScheme.primary,
-                                width: 3.0,
-                              ),
+                              border: Border.all(color: theme.colorScheme.primary, width: 3.0),
                               // CP: Animated glow with varying intensity
                               boxShadow: [
                                 BoxShadow(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.4 * _glowIntensity.value,
-                                  ),
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.4 * _glowIntensity.value),
                                   blurRadius: 12.0 * _glowIntensity.value,
                                   spreadRadius: 2.0 * _glowIntensity.value,
                                 ),
                                 BoxShadow(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.2 * _glowIntensity.value,
-                                  ),
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.2 * _glowIntensity.value),
                                   blurRadius: 20.0 * _glowIntensity.value,
                                   spreadRadius: 4.0 * _glowIntensity.value,
                                 ),
@@ -695,9 +620,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                           BoxShadow(
                             color:
                                 widget.isNew
-                                    ? theme.colorScheme.primary.withValues(
-                                      alpha: 0.24,
-                                    )
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.24)
                                     : Colors.black.withValues(alpha: 0.04),
                             blurRadius: widget.isNew ? 8.0 : 4.0,
                             spreadRadius: widget.isNew ? 1.0 : 0.0,
@@ -712,14 +635,9 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                           if (isBeingEdited)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 6.0,
-                                horizontal: 16.0,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.9,
-                                ),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.9),
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(12.0),
                                   topRight: Radius.circular(12.0),
@@ -728,11 +646,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.edit_outlined,
-                                    size: 16.0,
-                                    color: theme.colorScheme.onPrimary,
-                                  ),
+                                  Icon(Icons.edit_outlined, size: 16.0, color: theme.colorScheme.onPrimary),
                                   const SizedBox(width: 8.0),
                                   Text(
                                     'Editing...',
@@ -746,12 +660,7 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                               ),
                             ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              16.0,
-                              14.0,
-                              16.0,
-                              14.0,
-                            ),
+                            padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -774,20 +683,11 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                     // Timestamp with icon for better visual grouping
                                     Row(
                                       children: [
-                                        Icon(
-                                          Icons.access_time,
-                                          size: 14.0,
-                                          color: Colors.grey[600],
-                                        ),
+                                        Icon(Icons.access_time, size: 14.0, color: Colors.grey[600]),
                                         const SizedBox(width: 4.0),
                                         Text(
-                                          widget.timeFormatter.format(
-                                            widget.entry.timestamp,
-                                          ),
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 12,
-                                          ),
+                                          widget.timeFormatter.format(widget.entry.timestamp),
+                                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -796,22 +696,16 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                       children: [
                                         // Category chip without icon/avatar
                                         ActionChip(
-                                          key: entryCategoryChipKey(
-                                            widget.entry,
-                                          ),
+                                          key: entryCategoryChipKey(widget.entry),
                                           label: Text(
-                                            widget.categoryDisplayName(
-                                              widget.entry.category,
-                                            ),
+                                            widget.categoryDisplayName(widget.entry.category),
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w500,
                                               color:
                                                   widget.isProcessing
                                                       ? Colors.orange[900]
-                                                      : CategoryColors.getTextColorForCategory(
-                                                        widget.entry.category,
-                                                      ),
+                                                      : CategoryColors.getTextColorForCategory(widget.entry.category),
                                             ),
                                           ),
                                           backgroundColor:
@@ -820,18 +714,14 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                                   : widget.categoryColor.withValues(alpha: 0.2),
                                           side: BorderSide.none,
                                           visualDensity: VisualDensity.compact,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4.0,
-                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           onPressed:
                                               widget.isProcessing
                                                   ? null
                                                   : () {
                                                     HapticFeedback.lightImpact();
-                                                    widget.onChangeCategoryPressed(
-                                                      widget.entry,
-                                                    );
+                                                    widget.onChangeCategoryPressed(widget.entry);
                                                   },
                                           tooltip: widget.isProcessing ? null : 'Change Category',
                                         ),
@@ -910,18 +800,12 @@ class _ExpandableTextState extends State<_ExpandableText> {
                   onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   style: TextButton.styleFrom(
                     minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 4.0,
-                      horizontal: 4.0,
-                    ), // CP: Increased tap target
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0), // CP: Increased tap target
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
                     _isExpanded ? 'Show less' : 'Show more',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
                   ),
                 ),
               ),

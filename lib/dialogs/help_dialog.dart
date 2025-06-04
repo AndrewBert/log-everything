@@ -11,13 +11,7 @@ class HelpDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
-        children: [
-          Icon(Icons.info_outline),
-          SizedBox(width: 8),
-          Text('About Log Splitter'),
-        ],
-      ),
+      title: const Row(children: [Icon(Icons.info_outline), SizedBox(width: 8), Text('About Log Splitter')]),
       content: const SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -29,10 +23,7 @@ class HelpDialog extends StatelessWidget {
               'This app helps you quickly capture thoughts, tasks, or events using voice or text, automatically categorizing them for easy review later.',
             ),
             SizedBox(height: 12),
-            Text(
-              'Purpose & Key Features:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text('Purpose & Key Features:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text(
               '- Log entries via text input or voice dictation.\n'
@@ -68,10 +59,7 @@ class HelpDialog extends StatelessWidget {
           },
           child: const Text('Reset Onboarding'),
         ),
-        TextButton(
-          child: const Text('Close'),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        TextButton(child: const Text('Close'), onPressed: () => Navigator.of(context).pop()),
       ],
     );
   }
@@ -88,14 +76,9 @@ class HelpDialog extends StatelessWidget {
             'Are you sure you want to continue?',
           ),
           actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.primary),
               onPressed: () async {
                 Navigator.of(dialogContext).pop(); // Close confirmation
                 Navigator.of(context).pop(); // Close help dialog

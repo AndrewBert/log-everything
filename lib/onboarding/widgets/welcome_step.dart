@@ -17,16 +17,10 @@ class WelcomeStep extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(60),
               ),
-              child: Icon(
-                Icons.edit_note,
-                size: 60,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              child: Icon(Icons.edit_note, size: 60, color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(height: 32),
             // CP: Welcome title
@@ -37,22 +31,15 @@ class WelcomeStep extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: 'Welcome to ',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.headlineMedium?.color,
-                    ),
+                    style: TextStyle(color: Theme.of(context).textTheme.headlineMedium?.color),
                   ),
                   TextSpan(
                     text: 'Log',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
                     text: ' Splitter',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.headlineMedium?.color,
-                    ),
+                    style: TextStyle(color: Theme.of(context).textTheme.headlineMedium?.color),
                   ),
                 ],
               ),
@@ -61,10 +48,7 @@ class WelcomeStep extends StatelessWidget {
             // CP: Welcome description
             Text(
               'Your intelligent logging companion that helps you capture thoughts, organize them automatically, and chat with your memories.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600], height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 48),
@@ -88,11 +72,7 @@ class WelcomeStep extends StatelessWidget {
         'title': 'Chat with Logs',
         'description': 'Ask questions about your past entries',
       },
-      {
-        'icon': Icons.category_outlined,
-        'title': 'Custom Categories',
-        'description': 'Organize entries your way',
-      },
+      {'icon': Icons.category_outlined, 'title': 'Custom Categories', 'description': 'Organize entries your way'},
     ];
 
     return Column(
@@ -106,16 +86,10 @@ class WelcomeStep extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      feature['icon'] as IconData,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 24,
-                    ),
+                    child: Icon(feature['icon'] as IconData, color: Theme.of(context).colorScheme.primary, size: 24),
                   ),
                   const SizedBox(width: 16),
                   Expanded(

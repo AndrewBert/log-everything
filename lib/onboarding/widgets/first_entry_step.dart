@@ -13,18 +13,13 @@ class FirstEntryStep extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               'Try Your First Entry',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             Text(
               'Let\'s see the AI in action! Try logging something with multiple activities.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600], height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
@@ -76,11 +71,7 @@ class FirstEntryStep extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                color: isResult ? Theme.of(context).colorScheme.primary : Colors.orange,
-                size: 20,
-              ),
+              Icon(icon, color: isResult ? Theme.of(context).colorScheme.primary : Colors.orange, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -94,10 +85,9 @@ class FirstEntryStep extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             content,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              height: 1.4,
-              fontStyle: isResult ? FontStyle.normal : FontStyle.italic,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.4, fontStyle: isResult ? FontStyle.normal : FontStyle.italic),
           ),
         ],
       ),
@@ -120,26 +110,17 @@ class FirstEntryStep extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.edit_note,
-            size: 48,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          Icon(Icons.edit_note, size: 48, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
           Text(
             'Ready to try it?',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'After completing setup, you\'ll see the input area at the bottom of your home screen. Just start typing or tap the microphone!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[700],
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700], height: 1.4),
             textAlign: TextAlign.center,
           ),
         ],
@@ -150,10 +131,7 @@ class FirstEntryStep extends StatelessWidget {
   Widget _buildHelpText(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
           Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
@@ -161,9 +139,7 @@ class FirstEntryStep extends StatelessWidget {
           Expanded(
             child: Text(
               'Pro tip: You can log multiple activities in one entry and the AI will split them automatically!',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.blue[700]),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue[700]),
             ),
           ),
         ],

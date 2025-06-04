@@ -63,9 +63,7 @@ class AudioRecorderServiceImpl implements AudioRecorderService {
     // Get the application documents directory.
     final Directory directory = await getApplicationDocumentsDirectory();
     // Format the current timestamp.
-    final String timestamp = DateFormat(
-      'yyyyMMdd_HHmmss',
-    ).format(DateTime.now());
+    final String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     // Construct the path correctly using the path package for cross-platform compatibility
     // and interpolating the actual directory path and timestamp string.
     // Using m4a as it's common for voice recordings on mobile

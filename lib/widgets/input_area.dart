@@ -17,11 +17,7 @@ class InputArea extends StatefulWidget {
   })
   showSnackBar;
 
-  const InputArea({
-    super.key,
-    required this.onSendPressed,
-    required this.showSnackBar,
-  });
+  const InputArea({super.key, required this.onSendPressed, required this.showSnackBar});
 
   @override
   State<InputArea> createState() => _InputAreaState();
@@ -65,11 +61,7 @@ class _InputAreaState extends State<InputArea> {
         FocusScope.of(context).focusedChild?.unfocus();
       }
 
-      widget.showSnackBar(
-        context: context,
-        content: const Text('Entry updated'),
-        duration: const Duration(seconds: 1),
-      );
+      widget.showSnackBar(context: context, content: const Text('Entry updated'), duration: const Duration(seconds: 1));
     }
   }
 
@@ -170,10 +162,7 @@ class _InputAreaState extends State<InputArea> {
                 child: Material(
                   elevation: 8.0,
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20.0),
-                      topRight: Radius.circular(20.0),
-                    ),
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(20.0), topRight: Radius.circular(20.0)),
                   ),
                   child: Container(
                     decoration: BoxDecoration(
@@ -191,12 +180,7 @@ class _InputAreaState extends State<InputArea> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Padding(
-                          padding: EdgeInsets.only(
-                            left: 16,
-                            right: 8,
-                            top: 8,
-                            bottom: 4.0,
-                          ),
+                          padding: EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 4.0),
                           child: Row(
                             children: [
                               Expanded(
@@ -212,28 +196,20 @@ class _InputAreaState extends State<InputArea> {
                                     // CP: Different fill color when editing
                                     fillColor:
                                         isEditingMode
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary.withAlpha(25)
+                                            ? Theme.of(context).colorScheme.primary.withAlpha(25)
                                             : Theme.of(
                                               context,
                                             ).colorScheme.surfaceContainerHighest.withAlpha((255 * 0.6).round()),
                                     labelText: (isInputFocused || isChatOpen || isEditingMode) ? labelText : null,
                                     hintText: hintText,
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                     // CP: Show editing indicator with icon
                                     prefixIcon:
                                         isEditingMode
                                             ? Icon(
                                               Icons.edit_outlined,
-                                              color:
-                                                  Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary,
+                                              color: Theme.of(context).colorScheme.primary,
                                               size: 20,
                                             )
                                             : null,
@@ -278,35 +254,21 @@ class _InputAreaState extends State<InputArea> {
                                   label: const Text('Cancel'),
                                   style: TextButton.styleFrom(
                                     foregroundColor: Theme.of(context).colorScheme.error,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                      vertical: 4.0,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: _handleEditingCancel,
                                 )
                               else ...[
                                 TextButton.icon(
-                                  icon: Icon(
-                                    isChatOpen ? Icons.forum_rounded : Icons.forum_outlined,
-                                  ),
-                                  label: Text(
-                                    isChatOpen ? 'Close Chat' : 'Chat',
-                                  ),
+                                  icon: Icon(isChatOpen ? Icons.forum_rounded : Icons.forum_outlined),
+                                  label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
                                   style: TextButton.styleFrom(
                                     foregroundColor:
                                         isChatOpen
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                            : Theme.of(
-                                              context,
-                                            ).colorScheme.onSurfaceVariant,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                      vertical: 4.0,
-                                    ),
+                                            ? Theme.of(context).colorScheme.primary
+                                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
@@ -372,12 +334,8 @@ class _InputAreaState extends State<InputArea> {
                                     icon: Icon(sendIcon),
                                     color:
                                         isEditingMode
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                            : Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
+                                            ? Theme.of(context).colorScheme.primary
+                                            : Theme.of(context).colorScheme.primary,
                                     iconSize: 28,
                                     tooltip: tooltip,
                                   );

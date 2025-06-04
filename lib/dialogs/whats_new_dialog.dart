@@ -44,12 +44,7 @@ class WhatsNewDialog extends StatelessWidget {
           ),
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          child: const Text('Got it!'),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ],
+      actions: <Widget>[TextButton(child: const Text('Got it!'), onPressed: () => Navigator.of(context).pop())],
     );
   }
 
@@ -59,15 +54,9 @@ class WhatsNewDialog extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 3),
-          Text(
-            description,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
-          ),
+          Text(description, style: const TextStyle(fontSize: 14, color: Colors.black87)),
         ],
       ),
     );

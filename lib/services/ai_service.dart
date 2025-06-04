@@ -85,9 +85,7 @@ class OpenAiService implements AiService {
     }
 
     // 2. Prepare API Call
-    AppLogger.info(
-      "Calling OpenAI API ($_defaultModelId) to extract entries for text: '$text'",
-    );
+    AppLogger.info("Calling OpenAI API ($_defaultModelId) to extract entries for text: '$text'");
 
     // CP: Build enum list and schema for OpenAI using only the name field
     final categoryNames = categories.map((cat) => cat.name).toList();
@@ -122,9 +120,7 @@ class OpenAiService implements AiService {
 
     // CP: Build a string listing all categories and their descriptions for the AI
     final categoriesListString = categories
-        .map(
-          (cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}',
-        )
+        .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
 
     final systemPrompt =
@@ -157,12 +153,7 @@ When deciding which category to use, consider both the name and the description 
         {"role": "user", "content": text},
       ],
       'text': {
-        'format': {
-          'type': 'json_schema',
-          'name': 'multiple_entry_extraction',
-          'schema': schema,
-          'strict': true,
-        },
+        'format': {'type': 'json_schema', 'name': 'multiple_entry_extraction', 'schema': schema, 'strict': true},
       },
       // CP: Add metadata to help track and organize requests in OpenAI dashboard
       'metadata': {
@@ -180,10 +171,7 @@ When deciding which category to use, consider both the name and the description 
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_apiKey'},
         body: jsonEncode(requestBody),
       );
 
@@ -209,14 +197,10 @@ When deciding which category to use, consider both the name and the description 
 
           if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
             final jsonOutputString = contentItem['text'];
-            AppLogger.info(
-              "Received JSON string from OpenAI: $jsonOutputString",
-            );
+            AppLogger.info("Received JSON string from OpenAI: $jsonOutputString");
 
             try {
-              final Map<String, dynamic> parsedJson = jsonDecode(
-                jsonOutputString,
-              );
+              final Map<String, dynamic> parsedJson = jsonDecode(jsonOutputString);
 
               if (parsedJson.containsKey('entries') && parsedJson['entries'] is List) {
                 final List<dynamic> entriesListJson = parsedJson['entries'];
@@ -235,39 +219,25 @@ When deciding which category to use, consider both the name and the description 
 
                     if (categoryNames.contains(category)) {
                       // Assign to the renamed typedef field
-                      extractedEntries.add((
-                        textSegment: segment,
-                        category: category,
-                      ));
+                      extractedEntries.add((textSegment: segment, category: category));
                     } else {
-                      AppLogger.warn(
-                        "OpenAI category ('$category') not in allowed list. Using 'Misc' for: '$segment'",
-                      );
+                      AppLogger.warn("OpenAI category ('$category') not in allowed list. Using 'Misc' for: '$segment'");
                       // Assign to the renamed typedef field
-                      extractedEntries.add((
-                        textSegment: segment,
-                        category: 'Misc',
-                      ));
+                      extractedEntries.add((textSegment: segment, category: 'Misc'));
                     }
                   } else {
-                    AppLogger.warn(
-                      "Invalid item format in 'entries' array: $item",
-                    );
+                    AppLogger.warn("Invalid item format in 'entries' array: $item");
                     formatErrorOccurred = true;
                   }
                 }
 
                 if (formatErrorOccurred) {
                   // Decide if partial success is acceptable or throw an error
-                  throw AiServiceException(
-                    "Invalid item format received in OpenAI response.",
-                  );
+                  throw AiServiceException("Invalid item format received in OpenAI response.");
                   // Or return extractedEntries; if partial results are okay
                 }
 
-                AppLogger.info(
-                  "Successfully extracted ${extractedEntries.length} entries.",
-                );
+                AppLogger.info("Successfully extracted ${extractedEntries.length} entries.");
                 return extractedEntries;
               } else {
                 final errorMsg = 'Parsed JSON from OpenAI does not contain a valid "entries" key or it\'s not a list.';
@@ -312,25 +282,15 @@ When deciding which category to use, consider both the name and the description 
       // --- End of Moved Response Parsing Logic ---
     } on http.ClientException catch (e) {
       AppLogger.error('Network error calling OpenAI API', error: e);
-      throw AiServiceException(
-        'Network error during API call.',
-        underlyingError: e,
-      );
+      throw AiServiceException('Network error during API call.', underlyingError: e);
     } catch (e, stacktrace) {
       // Catch other exceptions (like JSON parsing, etc.)
-      AppLogger.error(
-        'Unexpected error during AI categorization',
-        error: e,
-        stackTrace: stacktrace,
-      );
+      AppLogger.error('Unexpected error during AI categorization', error: e, stackTrace: stacktrace);
       // Re-throw specific exception or a generic one
       if (e is AiServiceException) {
         rethrow; // Re-throw if it's already our specific type
       }
-      throw AiServiceException(
-        'An unexpected error occurred during categorization.',
-        underlyingError: e,
-      );
+      throw AiServiceException('An unexpected error occurred during categorization.', underlyingError: e);
     }
   }
 
@@ -351,14 +311,10 @@ When deciding which category to use, consider both the name and the description 
       throw AiServiceException('OpenAI API Key not found.');
     }
     if (messages.isEmpty) {
-      throw AiServiceException(
-        'Cannot get chat response for an empty message list.',
-      );
+      throw AiServiceException('Cannot get chat response for an empty message list.');
     }
 
-    AppLogger.info(
-      "Calling OpenAI API ($_chatModelId) for chat response. Message count: ${messages.length}",
-    );
+    AppLogger.info("Calling OpenAI API ($_chatModelId) for chat response. Message count: ${messages.length}");
 
     // CP: Log start time for chat response
     final chatStartTime = DateTime.now();
@@ -368,20 +324,13 @@ When deciding which category to use, consider both the name and the description 
     if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
       AppLogger.info("Using Vector Store ID: $vectorStoreId for File Search.");
     } else {
-      AppLogger.warn(
-        "No Vector Store ID found. File Search will not be enabled.",
-      );
+      AppLogger.warn("No Vector Store ID found. File Search will not be enabled.");
     }
 
     final List<Map<String, dynamic>> inputMessages =
-        messages.map(
-          (msg) {
-            return {
-              "role": msg.sender == ChatSender.user ? "user" : "assistant",
-              "content": msg.text,
-            };
-          },
-        ).toList(); // CP: Updated system instructions for File Search with temporal context
+        messages.map((msg) {
+          return {"role": msg.sender == ChatSender.user ? "user" : "assistant", "content": msg.text};
+        }).toList(); // CP: Updated system instructions for File Search with temporal context
     final String systemInstructions = _buildSystemInstructions(
       currentDate,
     ); // CP: Prepare the request body, including system instructions as the first message
@@ -424,18 +373,13 @@ When deciding which category to use, consider both the name and the description 
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_apiKey'},
         body: jsonEncode(requestBody),
       );
 
       // CP: Log chat response duration
       final chatDuration = DateTime.now().difference(chatStartTime);
-      AppLogger.info(
-        'CP: Chat response took ${chatDuration.inMilliseconds} ms',
-      );
+      AppLogger.info('CP: Chat response took ${chatDuration.inMilliseconds} ms');
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -475,9 +419,7 @@ When deciding which category to use, consider both the name and the description 
               if (aiResponseText != null) {
                 // CP: Limit logged chat response to first 200 characters for brevity
                 final preview = aiResponseText.length > 200 ? '${aiResponseText.substring(0, 200)}...' : aiResponseText;
-                AppLogger.info(
-                  "Received chat response from OpenAI (preview): '$preview'",
-                );
+                AppLogger.info("Received chat response from OpenAI (preview): '$preview'");
                 return (aiResponseText, responseBody['id'] as String?);
               } else {
                 // CP: No 'output_text' found in message content
@@ -551,23 +493,13 @@ When deciding which category to use, consider both the name and the description 
       }
     } on http.ClientException catch (e) {
       AppLogger.error('Network error calling OpenAI API for chat', error: e);
-      throw AiServiceException(
-        'Network error during chat API call.',
-        underlyingError: e,
-      );
+      throw AiServiceException('Network error during chat API call.', underlyingError: e);
     } catch (e, stacktrace) {
-      AppLogger.error(
-        'Unexpected error during AI chat processing',
-        error: e,
-        stackTrace: stacktrace,
-      );
+      AppLogger.error('Unexpected error during AI chat processing', error: e, stackTrace: stacktrace);
       if (e is AiServiceException) {
         rethrow;
       }
-      throw AiServiceException(
-        'An unexpected error occurred during chat processing.',
-        underlyingError: e,
-      );
+      throw AiServiceException('An unexpected error occurred during chat processing.', underlyingError: e);
     }
   }
 }

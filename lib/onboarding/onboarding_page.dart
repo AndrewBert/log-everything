@@ -41,15 +41,11 @@ class OnboardingPage extends StatelessWidget {
             children: [
               Text(
                 'Step ${state.currentStepIndex + 1} of ${state.totalSteps}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
               Text(
                 '${(state.progress * 100).round()}%',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -57,9 +53,7 @@ class OnboardingPage extends StatelessWidget {
           LinearProgressIndicator(
             value: state.progress,
             backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).colorScheme.primary,
-            ),
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
           ),
         ],
       ),
@@ -104,11 +98,7 @@ class OnboardingPage extends StatelessWidget {
               onPressed: state.isLoading || !state.canProceed ? null : () => _handleNextButton(context, state),
               child:
                   state.isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : Text(_getNextButtonText(state)),
             ),
           ),

@@ -54,22 +54,13 @@ class VoiceInput extends StatelessWidget {
             state.isRecording) {
           // Ensure previous snackbars are hidden before showing a new one
           messenger.hideCurrentSnackBar();
-          showSnackBar(
-            context,
-            content: const Text(
-              'Microphone permission is required for voice input.',
-            ),
-          );
+          showSnackBar(context, content: const Text('Microphone permission is required for voice input.'));
         }
 
         // Handle errors
         if (state.errorMessage != null) {
           messenger.hideCurrentSnackBar();
-          showSnackBar(
-            context,
-            content: Text(state.errorMessage!),
-            backgroundColor: Colors.red,
-          );
+          showSnackBar(context, content: Text(state.errorMessage!), backgroundColor: Colors.red);
           // Clear the error state in the cubit after showing it
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) {
@@ -85,11 +76,7 @@ class VoiceInput extends StatelessWidget {
             context,
             content: const Row(
               children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
                 SizedBox(width: 15),
                 Text('Transcribing audio...'),
               ],
@@ -118,9 +105,7 @@ class VoiceInput extends StatelessWidget {
             // Directly update the text controller
             textController.text = combinedText;
             // Move cursor to the end
-            textController.selection = TextSelection.fromPosition(
-              TextPosition(offset: textController.text.length),
-            );
+            textController.selection = TextSelection.fromPosition(TextPosition(offset: textController.text.length));
             // Clear the transcribed text from the cubit state after using it
             context.read<VoiceInputCubit>().clearTranscribedText();
           });
@@ -133,10 +118,7 @@ class VoiceInput extends StatelessWidget {
           if (state.isRecording) {
             final duration = state.recordingDuration;
             final minutes = duration.inMinutes.toString().padLeft(2, '0');
-            final seconds = (duration.inSeconds % 60).toString().padLeft(
-              2,
-              '0',
-            );
+            final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
             recordingTimeDisplay = '$minutes:$seconds';
             approachingLimit = duration.inSeconds > 270; // 4:30
           }
@@ -150,10 +132,7 @@ class VoiceInput extends StatelessWidget {
               // Show timer when recording
               if (state.isRecording)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical: 2.0,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
                   margin: const EdgeInsets.only(right: 8.0), // Add spacing
                   decoration: BoxDecoration(
                     color:

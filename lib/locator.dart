@@ -17,9 +17,7 @@ Future<void> configureDependencies() async {
   final String openAIApiKey = dotenv.env['OPENAI_API_KEY'] ?? 'FALLBACK_API_KEY_NOT_FOUND';
 
   // Register services
-  getIt.registerSingletonAsync<SharedPreferences>(
-    () => SharedPreferences.getInstance(),
-  );
+  getIt.registerSingletonAsync<SharedPreferences>(() => SharedPreferences.getInstance());
   await getIt.isReady<SharedPreferences>(); // Ensure SharedPreferences is ready
 
   // CP: Register http.Client
@@ -41,16 +39,12 @@ Future<void> configureDependencies() async {
     ),
   );
 
-  getIt.registerLazySingleton<EntryPersistenceService>(
-    () => SharedPreferencesEntryPersistenceService(),
-  );
+  getIt.registerLazySingleton<EntryPersistenceService>(() => SharedPreferencesEntryPersistenceService());
   getIt.registerLazySingleton<SpeechService>(() => SpeechService());
 
   getIt.registerLazySingleton<PermissionService>(() => PermissionServiceImpl());
 
-  getIt.registerLazySingleton<AudioRecorderService>(
-    () => AudioRecorderServiceImpl(),
-  );
+  getIt.registerLazySingleton<AudioRecorderService>(() => AudioRecorderServiceImpl());
 
   getIt.registerLazySingleton(
     () => EntryRepository(

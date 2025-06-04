@@ -33,15 +33,11 @@ class EntryRepository {
     await _loadCategories();
     await _loadEntries();
 
-    AppLogger.info(
-      "Repository: Triggering initial vector store backfill check (background).",
-    );
+    AppLogger.info("Repository: Triggering initial vector store backfill check (background).");
     _vectorStoreService
         .performInitialBackfillIfNeeded()
         .then((_) {
-          AppLogger.info(
-            "Repository: Initial vector store backfill process completed (background).",
-          );
+          AppLogger.info("Repository: Initial vector store backfill process completed (background).");
         })
         .catchError((e, stackTrace) {
           AppLogger.error(
@@ -60,22 +56,14 @@ class EntryRepository {
     });
 
     // CP: Trigger automatic cleanup of duplicate vector store files in background
-    AppLogger.info(
-      "Repository: Triggering vector store cleanup check (background).",
-    );
+    AppLogger.info("Repository: Triggering vector store cleanup check (background).");
     _vectorStoreService
         .cleanupDuplicateFiles()
         .then((_) {
-          AppLogger.info(
-            "Repository: Vector store cleanup process completed (background).",
-          );
+          AppLogger.info("Repository: Vector store cleanup process completed (background).");
         })
         .catchError((e, stackTrace) {
-          AppLogger.error(
-            "Repository: Vector store cleanup failed (background)",
-            error: e,
-            stackTrace: stackTrace,
-          );
+          AppLogger.error("Repository: Vector store cleanup failed (background)", error: e, stackTrace: stackTrace);
         });
   }
 
@@ -94,9 +82,7 @@ class EntryRepository {
   Future<void> _loadEntries() async {
     try {
       _entries = await _persistenceService.loadEntries();
-      AppLogger.info(
-        'Repository: Successfully loaded ${_entries.length} entries.',
-      );
+      AppLogger.info('Repository: Successfully loaded ${_entries.length} entries.');
     } catch (e) {
       AppLogger.error('Repository: Error loading entries.', error: e);
       _entries = [];
@@ -132,28 +118,16 @@ class EntryRepository {
       // CP: Pass List<Category> to AI service for type safety
       extractedData = await _aiService.extractEntries(text, _categories);
     } on AiServiceException catch (e) {
-      AppLogger.error(
-        "Repository: AI Service failed: ${e.message}",
-        error: e.underlyingError,
-      );
+      AppLogger.error("Repository: AI Service failed: ${e.message}", error: e.underlyingError);
       serviceError = e.message;
     } catch (e, stacktrace) {
-      AppLogger.error(
-        "Repository: Unexpected error calling AI Service",
-        error: e,
-        stackTrace: stacktrace,
-      );
+      AppLogger.error("Repository: Unexpected error calling AI Service", error: e, stackTrace: stacktrace);
       serviceError = "An unexpected error occurred during categorization.";
     }
 
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(
-        text: text,
-        timestamp: processingTimestamp,
-        category: 'Misc',
-        isNew: true,
-      );
+      final fallbackEntry = Entry(text: text, timestamp: processingTimestamp, category: 'Misc', isNew: true);
       addedEntries.add(fallbackEntry);
     } else {
       for (var data in extractedData) {
@@ -170,15 +144,8 @@ class EntryRepository {
     _entries.insertAll(0, addedEntries);
     await _saveEntries();
 
-    _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((
-      e,
-      stackTrace,
-    ) {
-      AppLogger.error(
-        "Repository: Background vector store sync failed for addEntry",
-        error: e,
-        stackTrace: stackTrace,
-      );
+    _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
+      AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
     });
 
     return currentEntries;
@@ -193,15 +160,10 @@ class EntryRepository {
 
   Future<List<Entry>> deleteEntry(Entry entryToDelete) async {
     final originalLength = _entries.length;
-    _entries.removeWhere(
-      (entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text,
-    );
+    _entries.removeWhere((entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text);
     if (_entries.length < originalLength) {
       await _saveEntries();
-      _triggerVectorStoreSyncForMonth(entryToDelete.timestamp).catchError((
-        e,
-        stackTrace,
-      ) {
+      _triggerVectorStoreSyncForMonth(entryToDelete.timestamp).catchError((e, stackTrace) {
         AppLogger.error(
           "Repository: Background vector store sync failed for deleteEntry",
           error: e,
@@ -212,10 +174,7 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<Entry>> updateEntry(
-    Entry originalEntry,
-    Entry updatedEntry,
-  ) async {
+  Future<List<Entry>> updateEntry(Entry originalEntry, Entry updatedEntry) async {
     final index = _entries.indexWhere(
       (entry) => entry.timestamp == originalEntry.timestamp && entry.text == originalEntry.text,
     );
@@ -223,10 +182,7 @@ class EntryRepository {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
       await _saveEntries();
-      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((
-        e,
-        stackTrace,
-      ) {
+      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
         AppLogger.error(
           "Repository: Background vector store sync failed for updateEntry",
           error: e,
@@ -237,17 +193,12 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<Entry>> processCombinedEntry(
-    String combinedText,
-    DateTime tempEntryTimestamp,
-  ) async {
+  Future<List<Entry>> processCombinedEntry(String combinedText, DateTime tempEntryTimestamp) async {
     AppLogger.info(
       '[Repo.processCombinedEntry] Processing combined text: "$combinedText" for temp timestamp: $tempEntryTimestamp',
     );
     if (combinedText.isEmpty) {
-      _entries.removeWhere(
-        (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
-      );
+      _entries.removeWhere((e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...');
       await _saveEntries();
       return currentEntries;
     }
@@ -256,15 +207,9 @@ class EntryRepository {
     String? serviceError;
     try {
       // CP: Pass List<Category> to AI service for type safety
-      extractedData = await _aiService.extractEntries(
-        combinedText,
-        _categories,
-      );
+      extractedData = await _aiService.extractEntries(combinedText, _categories);
     } on AiServiceException catch (e) {
-      AppLogger.error(
-        "Repository: AI Service failed for combined entry: ${e.message}",
-        error: e.underlyingError,
-      );
+      AppLogger.error("Repository: AI Service failed for combined entry: ${e.message}", error: e.underlyingError);
       serviceError = e.message;
     } catch (e, stacktrace) {
       AppLogger.error(
@@ -275,26 +220,17 @@ class EntryRepository {
       serviceError = "An unexpected error occurred during categorization.";
     }
 
-    int tempIndex = _entries.indexWhere(
-      (e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...',
-    );
+    int tempIndex = _entries.indexWhere((e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...');
     if (tempIndex != -1) {
       _entries.removeAt(tempIndex);
     } else {
-      AppLogger.warn(
-        '[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!',
-      );
+      AppLogger.warn('[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!');
       tempIndex = 0;
     }
 
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(
-        text: combinedText,
-        timestamp: tempEntryTimestamp,
-        category: 'Misc',
-        isNew: true,
-      );
+      final fallbackEntry = Entry(text: combinedText, timestamp: tempEntryTimestamp, category: 'Misc', isNew: true);
       addedEntries.add(fallbackEntry);
     } else {
       for (var data in extractedData) {
@@ -315,10 +251,7 @@ class EntryRepository {
     }
 
     await _saveEntries();
-    _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((
-      e,
-      stackTrace,
-    ) {
+    _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((e, stackTrace) {
       AppLogger.error(
         "Repository: Background vector store sync failed for processCombinedEntry",
         error: e,
@@ -339,31 +272,22 @@ class EntryRepository {
     return currentCategories;
   }
 
-  Future<List<Category>> addCustomCategoryWithDescription(
-    String name,
-    String description,
-  ) async {
+  Future<List<Category>> addCustomCategoryWithDescription(String name, String description) async {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
     if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
-      _categories.add(
-        Category(name: trimmedName, description: trimmedDescription),
-      );
+      _categories.add(Category(name: trimmedName, description: trimmedDescription));
       await _saveCategories();
     }
     return currentCategories;
   }
 
-  Future<({List<Entry> entries, List<Category> categories})> deleteCategory(
-    String categoryToDelete,
-  ) async {
+  Future<({List<Entry> entries, List<Category> categories})> deleteCategory(String categoryToDelete) async {
     if (categoryToDelete == 'Misc') {
       return (entries: currentEntries, categories: currentCategories);
     }
 
-    final categoryIndex = _categories.indexWhere(
-      (cat) => cat.name == categoryToDelete,
-    );
+    final categoryIndex = _categories.indexWhere((cat) => cat.name == categoryToDelete);
     if (categoryIndex != -1) {
       _categories.removeAt(categoryIndex);
       bool entriesChanged = false;
@@ -372,13 +296,7 @@ class EntryRepository {
           _entries.map((entry) {
             if (entry.category == categoryToDelete) {
               entriesChanged = true;
-              affectedDates.add(
-                DateTime(
-                  entry.timestamp.year,
-                  entry.timestamp.month,
-                  entry.timestamp.day,
-                ),
-              );
+              affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
               return entry.copyWith(category: 'Misc');
             }
             return entry;
@@ -422,9 +340,7 @@ class EntryRepository {
     String? description,
   }) async {
     final trimmedNewName = newName.trim();
-    final oldCategoryIndex = _categories.indexWhere(
-      (cat) => cat.name == oldName,
-    );
+    final oldCategoryIndex = _categories.indexWhere((cat) => cat.name == oldName);
     if (oldCategoryIndex == -1) {
       return (entries: currentEntries, categories: currentCategories);
     }
@@ -446,13 +362,7 @@ class EntryRepository {
           _entries.map((entry) {
             if (entry.category == oldName) {
               entriesChanged = true;
-              affectedDates.add(
-                DateTime(
-                  entry.timestamp.year,
-                  entry.timestamp.month,
-                  entry.timestamp.day,
-                ),
-              );
+              affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
               return entry.copyWith(category: trimmedNewName);
             }
             return entry;
@@ -493,69 +403,54 @@ class EntryRepository {
     _syncDebounceTimers[monthKeyString]?.cancel();
 
     // CP: Create a new timer that will trigger the sync after the debounce period
-    _syncDebounceTimers[monthKeyString] = Timer(
-      Duration(milliseconds: _syncDebounceMs),
-      () async {
-        _syncDebounceTimers.remove(monthKeyString);
+    _syncDebounceTimers[monthKeyString] = Timer(Duration(milliseconds: _syncDebounceMs), () async {
+      _syncDebounceTimers.remove(monthKeyString);
 
-        AppLogger.info(
-          "[EntryRepository] Triggering vector store sync for month: $monthKeyString",
-        );
-        try {
-          final String? vectorStoreId = await _vectorStoreService.getOrCreateVectorStoreId();
+      AppLogger.info("[EntryRepository] Triggering vector store sync for month: $monthKeyString");
+      try {
+        final String? vectorStoreId = await _vectorStoreService.getOrCreateVectorStoreId();
 
-          if (vectorStoreId == null) {
-            AppLogger.warn(
-              "[EntryRepository] Vector store ID is null. Skipping sync for month: $monthKeyString",
-            );
-            return;
-          }
-
-          final List<Entry> entriesForMonth =
-              _entries.where((entry) {
-                return entry.timestamp.year == monthToSync.year && entry.timestamp.month == monthToSync.month;
-              }).toList();
-
-          entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-          String formattedContent = "";
-          if (entriesForMonth.isNotEmpty) {
-            formattedContent = entriesForMonth
-                .map((entry) {
-                  final String timestampStr = _formatTimestampForLogEntry(
-                    entry.timestamp,
-                  );
-                  return "[$timestampStr] (${entry.category}): ${entry.text}";
-                })
-                .join('\n---\n');
-          }
-          AppLogger.info(
-            "[EntryRepository] Content for $monthKeyString (first 100 chars): ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
-          );
-
-          await _vectorStoreService.synchronizeMonthlyLogFile(
-            vectorStoreId,
-            monthToSync,
-            formattedContent,
-          );
-          AppLogger.info(
-            "[EntryRepository] Vector store sync for month $monthKeyString completed successfully.",
-          );
-        } on VectorStoreSyncException catch (e, stackTrace) {
-          AppLogger.error(
-            "[EntryRepository] VectorStoreService sync failed for month $monthKeyString",
-            error: e.message,
-            stackTrace: stackTrace,
-          );
-        } catch (e, stackTrace) {
-          AppLogger.error(
-            "[EntryRepository] Unexpected error during vector store sync for month $monthKeyString",
-            error: e,
-            stackTrace: stackTrace,
-          );
+        if (vectorStoreId == null) {
+          AppLogger.warn("[EntryRepository] Vector store ID is null. Skipping sync for month: $monthKeyString");
+          return;
         }
-      },
-    );
+
+        final List<Entry> entriesForMonth =
+            _entries.where((entry) {
+              return entry.timestamp.year == monthToSync.year && entry.timestamp.month == monthToSync.month;
+            }).toList();
+
+        entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        String formattedContent = "";
+        if (entriesForMonth.isNotEmpty) {
+          formattedContent = entriesForMonth
+              .map((entry) {
+                final String timestampStr = _formatTimestampForLogEntry(entry.timestamp);
+                return "[$timestampStr] (${entry.category}): ${entry.text}";
+              })
+              .join('\n---\n');
+        }
+        AppLogger.info(
+          "[EntryRepository] Content for $monthKeyString (first 100 chars): ${formattedContent.substring(0, (formattedContent.length > 100) ? 100 : formattedContent.length)}...",
+        );
+
+        await _vectorStoreService.synchronizeMonthlyLogFile(vectorStoreId, monthToSync, formattedContent);
+        AppLogger.info("[EntryRepository] Vector store sync for month $monthKeyString completed successfully.");
+      } on VectorStoreSyncException catch (e, stackTrace) {
+        AppLogger.error(
+          "[EntryRepository] VectorStoreService sync failed for month $monthKeyString",
+          error: e.message,
+          stackTrace: stackTrace,
+        );
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          "[EntryRepository] Unexpected error during vector store sync for month $monthKeyString",
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    });
   }
 
   String _formatTimestampForLogEntry(DateTime timestamp) {
