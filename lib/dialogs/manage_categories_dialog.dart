@@ -78,7 +78,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                   );
                   displayCategories.remove('None');
                   final sortedCategories = displayCategories.reversed.toList();
-                  sortedCategories.add('None');
+                  // CP: Hide 'None' category from the manage categories list
                   return ListView.builder(
                     itemCount: sortedCategories.length,
                     itemBuilder: (itemContext, index) {
@@ -90,51 +90,57 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                       );
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
-                        child: CategoryCard(
-                          category: catObj,
-                          displayName: category,
-                          isNone: isNone,
-                          onEdit: () async {
-                            final onShowEditCategoryDialog = widget.onShowEditCategoryDialog;
-                            final rootNavigator = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            ); // CP: Get navigator before async
-                            final result = await onShowEditCategoryDialog(itemContext, categoryBackendValue(category));
-                            if (!mounted) {
-                              return; // CP: Guard context after async gap
-                            }
-                            final newName = result;
-                            if (newName != null && newName.isNotEmpty && newName != category) {
-                              HapticFeedback.mediumImpact();
-                              ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                SnackBar(content: Text('Category renamed to "${categoryDisplayName(newName)}"')),
+                        child: AnimatedCategoryCard(
+                          index: index, // CP: Pass index for animation
+                          child: CategoryCard(
+                            category: catObj,
+                            displayName: category,
+                            isNone: isNone,
+                            onEdit: () async {
+                              final onShowEditCategoryDialog = widget.onShowEditCategoryDialog;
+                              final rootNavigator = Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ); // CP: Get navigator before async
+                              final result = await onShowEditCategoryDialog(
+                                itemContext,
+                                categoryBackendValue(category),
                               );
-                            }
-                          },
-                          onDelete: () async {
-                            final entryCubit = itemContext.read<EntryCubit>(); // CP: Get cubit before async
-                            final onShowDeleteCategoryConfirmationDialog =
-                                widget.onShowDeleteCategoryConfirmationDialog;
-                            final rootNavigator = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            ); // CP: Get navigator before async
-                            final confirmed = await onShowDeleteCategoryConfirmationDialog(
-                              itemContext,
-                              categoryBackendValue(category),
-                            );
-                            if (!mounted) {
-                              return; // CP: Guard context after async gap
-                            }
-                            if (confirmed && itemContext.mounted) {
-                              HapticFeedback.mediumImpact();
-                              entryCubit.deleteCategory(categoryBackendValue(category));
-                              ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
+                              if (!mounted) {
+                                return; // CP: Guard context after async gap
+                              }
+                              final newName = result;
+                              if (newName != null && newName.isNotEmpty && newName != category) {
+                                HapticFeedback.mediumImpact();
+                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                                  SnackBar(content: Text('Category renamed to "${categoryDisplayName(newName)}"')),
+                                );
+                              }
+                            },
+                            onDelete: () async {
+                              final entryCubit = itemContext.read<EntryCubit>(); // CP: Get cubit before async
+                              final onShowDeleteCategoryConfirmationDialog =
+                                  widget.onShowDeleteCategoryConfirmationDialog;
+                              final rootNavigator = Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ); // CP: Get navigator before async
+                              final confirmed = await onShowDeleteCategoryConfirmationDialog(
+                                itemContext,
+                                categoryBackendValue(category),
                               );
-                            }
-                          },
+                              if (!mounted) {
+                                return; // CP: Guard context after async gap
+                              }
+                              if (confirmed && itemContext.mounted) {
+                                HapticFeedback.mediumImpact();
+                                entryCubit.deleteCategory(categoryBackendValue(category));
+                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                                  SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
+                                );
+                              }
+                            },
+                          ),
                         ),
                       );
                     },
@@ -166,8 +172,10 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                   icon: const Icon(Icons.add),
                   label: const Text('Add New Category'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6), width: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -307,11 +315,10 @@ class CategoryCard extends StatelessWidget {
                   ),
                   if (category.description.isNotEmpty && !isNone) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      category.description,
+                    AnimatedExpandableText(
+                      text: category.description,
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -358,6 +365,196 @@ class _ActionButton extends StatelessWidget {
           child: Icon(icon, size: 20, color: color ?? Colors.grey[600]),
         ),
       ),
+    );
+  }
+}
+
+// CP: Animated wrapper for category cards with entrance effects
+class AnimatedCategoryCard extends StatefulWidget {
+  final Widget child;
+  final int index;
+
+  const AnimatedCategoryCard({super.key, required this.child, required this.index});
+
+  @override
+  State<AnimatedCategoryCard> createState() => _AnimatedCategoryCardState();
+}
+
+class _AnimatedCategoryCardState extends State<AnimatedCategoryCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
+
+    // CP: Staggered entrance based on index
+    final delay = widget.index * 80; // 80ms delay between each card
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.1), // CP: Subtle slide from below
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(
+          delay / 1000.0, // Convert to percentage
+          1.0,
+          curve: Curves.easeOutCubic,
+        ),
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Interval(delay / 1000.0, 1.0, curve: Curves.easeOut)));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.95, // CP: Subtle scale effect
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Interval(delay / 1000.0, 1.0, curve: Curves.easeOutBack)));
+
+    // CP: Start animation immediately when widget is created
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
+      ),
+    );
+  }
+}
+
+// CP: Expandable text widget with smooth animations for category descriptions
+class AnimatedExpandableText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final int maxLines;
+
+  const AnimatedExpandableText({super.key, required this.text, this.style, this.maxLines = 2});
+
+  @override
+  State<AnimatedExpandableText> createState() => _AnimatedExpandableTextState();
+}
+
+class _AnimatedExpandableTextState extends State<AnimatedExpandableText> with TickerProviderStateMixin {
+  bool _isExpanded = false;
+  bool? _hasTextOverflow;
+  late AnimationController _expandController;
+  late Animation<double> _expandAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _expandController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
+    _expandAnimation = CurvedAnimation(parent: _expandController, curve: Curves.easeInOutCubic);
+
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut);
+
+    _fadeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _expandController.dispose();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _expandController.forward();
+      } else {
+        _expandController.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_hasTextOverflow == null) {
+          final textSpan = TextSpan(text: widget.text, style: widget.style);
+          final textPainter = TextPainter(text: textSpan, maxLines: widget.maxLines, textDirection: TextDirection.ltr)
+            ..layout(maxWidth: constraints.maxWidth);
+
+          _hasTextOverflow = textPainter.didExceedMaxLines;
+        }
+
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizeTransition(
+                sizeFactor: _expandAnimation,
+                axisAlignment: -1.0,
+                child: AnimatedCrossFade(
+                  firstChild: Text(
+                    widget.text,
+                    style: widget.style,
+                    maxLines: widget.maxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  secondChild: Text(widget.text, style: widget.style),
+                  crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 200),
+                ),
+              ),
+              if (_hasTextOverflow == true) ...[
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: _toggleExpanded,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: _isExpanded ? 0.1 : 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _isExpanded ? 'Show less' : 'Show more',
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(width: 2),
+                        AnimatedRotation(
+                          turns: _isExpanded ? 0.5 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
