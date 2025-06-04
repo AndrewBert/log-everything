@@ -535,6 +535,9 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
   late Animation<double> _borderOpacity;
   late Animation<double> _glowIntensity;
 
+  // CP: Add mounted state tracking to prevent unsafe ancestor lookups
+  bool _isDisposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -581,8 +584,20 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _highlightController.dispose();
     super.dispose();
+  }
+
+  // CP: Safe method to check if we can animate
+  void _safeAnimateHighlight(bool shouldHighlight) {
+    if (_isDisposed || !mounted) return;
+    
+    if (shouldHighlight) {
+      _highlightController.forward();
+    } else {
+      _highlightController.reverse();
+    }
   }
 
   @override
@@ -601,12 +616,10 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
         final hasContextMenuOpen = state.contextMenuEntry == widget.entry;
         final shouldHighlight = isBeingEdited || hasContextMenuOpen;
 
-        // CP: Animate highlight when state changes
-        if (shouldHighlight) {
-          _highlightController.forward();
-        } else {
-          _highlightController.reverse();
-        }
+        // CP: Use safe animation method
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _safeAnimateHighlight(shouldHighlight);
+        });
 
         return AnimatedBuilder(
           animation: _highlightController,
@@ -794,46 +807,18 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                                     // Row for category chip and action buttons
                                     Row(
                                       children: [
-                                        // Category chip without icon/avatar
-                                        ActionChip(
-                                          key: entryCategoryChipKey(
-                                            widget.entry,
-                                          ),
-                                          label: Text(
-                                            widget.categoryDisplayName(
-                                              widget.entry.category,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
-                                              color:
-                                                  widget.isProcessing
-                                                      ? Colors.orange[900]
-                                                      : CategoryColors.getTextColorForCategory(
-                                                        widget.entry.category,
-                                                      ),
-                                            ),
-                                          ),
-                                          backgroundColor:
-                                              widget.isProcessing
-                                                  ? Colors.orange.shade100.withValues(alpha: 0.8)
-                                                  : widget.categoryColor.withValues(alpha: 0.2),
-                                          side: BorderSide.none,
-                                          visualDensity: VisualDensity.compact,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4.0,
-                                          ),
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          onPressed:
-                                              widget.isProcessing
-                                                  ? null
-                                                  : () {
-                                                    HapticFeedback.lightImpact();
-                                                    widget.onChangeCategoryPressed(
-                                                      widget.entry,
-                                                    );
-                                                  },
-                                          tooltip: widget.isProcessing ? null : 'Change Category',
+                                        // CP: Safe category chip with proper lifecycle management
+                                        _SafeCategoryChip(
+                                          entry: widget.entry,
+                                          isProcessing: widget.isProcessing,
+                                          categoryColor: widget.categoryColor,
+                                          categoryDisplayName: widget.categoryDisplayName,
+                                          onPressed: widget.isProcessing 
+                                              ? null 
+                                              : () {
+                                                  HapticFeedback.lightImpact();
+                                                  widget.onChangeCategoryPressed(widget.entry);
+                                                },
                                         ),
                                         const SizedBox(width: 8.0),
                                       ],
@@ -928,6 +913,74 @@ class _ExpandableTextState extends State<_ExpandableText> {
           ],
         );
       },
+    );
+  }
+}
+
+class _SafeCategoryChip extends StatefulWidget {
+  final Entry entry;
+  final bool isProcessing;
+  final Color categoryColor;
+  final String Function(String) categoryDisplayName;
+  final VoidCallback? onPressed;
+
+  const _SafeCategoryChip({
+    required this.entry,
+    required this.isProcessing,
+    required this.categoryColor,
+    required this.categoryDisplayName,
+    this.onPressed,
+  });
+
+  @override
+  State<_SafeCategoryChip> createState() => _SafeCategoryChipState();
+}
+
+class _SafeCategoryChipState extends State<_SafeCategoryChip> {
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void _handlePress() {
+    if (_isDisposed || !mounted) return;
+    widget.onPressed?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // CP: Use a simple GestureDetector instead of ActionChip to avoid Material widget lifecycle issues
+    return GestureDetector(
+      onTap: widget.onPressed != null ? _handlePress : null,
+      child: Container(
+        key: entryCategoryChipKey(widget.entry),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        decoration: BoxDecoration(
+          color: widget.isProcessing
+              ? Colors.orange.shade100.withValues(alpha: 0.8)
+              : widget.categoryColor.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: widget.isProcessing
+                ? Colors.orange.withValues(alpha: 0.3)
+                : widget.categoryColor.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
+        ),
+        child: Text(
+          widget.categoryDisplayName(widget.entry.category),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: widget.isProcessing
+                ? Colors.orange[900]
+                : CategoryColors.getTextColorForCategory(widget.entry.category),
+          ),
+        ),
+      ),
     );
   }
 }

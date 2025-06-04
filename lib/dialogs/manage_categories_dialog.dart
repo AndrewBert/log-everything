@@ -393,11 +393,16 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
   void _saveDescription() {
     final newDescription = _descriptionController.text.trim();
 
+    // CP: Add safety check for mounted state
+    if (!mounted) return;
+
     // CP: Update the category description via the cubit
     context.read<EntryCubit>().updateCategoryDescription(
       categoryBackendValue(widget.category),
       newDescription,
     );
+
+    if (!mounted) return;
 
     setState(() {
       _isEditingDescription = false;
@@ -405,17 +410,20 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
 
     HapticFeedback.mediumImpact();
 
-    // CP: Show feedback to user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Description updated for "${widget.category}"'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // CP: Show feedback to user with mounted check
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Description updated for "${widget.category}"'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _cancelEditing() {
+    if (!mounted) return;
     _descriptionController.text = widget.categoryObj.description; // CP: Reset to original
     setState(() {
       _isEditingDescription = false;
@@ -424,16 +432,19 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
 
   // CP: Add inline name editing methods
   void _startEditingName() {
+    if (!mounted) return;
     setState(() {
       _isEditingName = true;
     });
     // CP: Focus the text field after the widget rebuilds
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _nameFocusNode.requestFocus();
-      _nameController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _nameController.text.length,
-      ); // CP: Select all text
+      if (mounted && _nameFocusNode.canRequestFocus) {
+        _nameFocusNode.requestFocus();
+        _nameController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _nameController.text.length,
+        ); // CP: Select all text
+      }
     });
     HapticFeedback.lightImpact();
   }
@@ -447,6 +458,9 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
       return;
     }
 
+    // CP: Add safety check for mounted state
+    if (!mounted) return;
+
     // CP: Check if name already exists (but allow same name to update description)
     final existingCategories = context.read<EntryCubit>().state.categories;
     final isNameChanged = newName != widget.category;
@@ -455,14 +469,16 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
     );
 
     if (isNameChanged && nameExists) {
-      // CP: Show error feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Category "$newName" already exists'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
+      // CP: Show error feedback with mounted check
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Category "$newName" already exists'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -473,14 +489,16 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
       description: widget.categoryObj.description, // CP: Keep existing description
     );
 
+    if (!mounted) return;
+
     setState(() {
       _isEditingName = false;
     });
 
     HapticFeedback.mediumImpact();
 
-    // CP: Show feedback to user
-    if (isNameChanged) {
+    // CP: Show feedback to user with mounted check
+    if (mounted && isNameChanged) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Category renamed to "$newName"'),
@@ -492,6 +510,7 @@ class _ModernCategoryCardState extends State<_ModernCategoryCard> with SingleTic
   }
 
   void _cancelNameEditing() {
+    if (!mounted) return;
     _nameController.text = widget.category; // CP: Reset to original
     setState(() {
       _isEditingName = false;
@@ -639,35 +658,40 @@ class _InlineEditableCategoryName extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // CP: Inline text field for editing category name
-          TextField(
-            controller: controller,
-            focusNode: focusNode,
-            textCapitalization: TextCapitalization.words,
-            maxLines: 1,
-            decoration: InputDecoration(
-              hintText: 'Category name',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+          // CP: Inline text field for editing category name - fix width constraints
+          SizedBox(
+            width: double.infinity, // CP: Ensure proper width constraints
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              textCapitalization: TextCapitalization.words,
+              maxLines: 1,
+              decoration: InputDecoration(
+                hintText: 'Category name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                filled: true,
+                fillColor: theme.colorScheme.surface.withValues(alpha: 0.8),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              filled: true,
-              fillColor: theme.colorScheme.surface.withValues(alpha: 0.8),
+              onSubmitted: (_) => onSave(),
+              textInputAction: TextInputAction.done,
             ),
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            onSubmitted: (_) => onSave(),
-            textInputAction: TextInputAction.done,
           ),
           const SizedBox(height: 8),
-          // CP: Action buttons for save/cancel
-          Row(
+          // CP: Fix button layout to prevent overflow - use Wrap instead of Row
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
             children: [
               TextButton.icon(
                 onPressed: onSave,
@@ -675,19 +699,18 @@ class _InlineEditableCategoryName extends StatelessWidget {
                 label: const Text('Save'),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // CP: Reduced padding
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
-              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: onCancel,
                 icon: const Icon(Icons.close, size: 16),
                 label: const Text('Cancel'),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.grey[600],
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // CP: Reduced padding
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
