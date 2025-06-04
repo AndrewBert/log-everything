@@ -80,11 +80,11 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             TextFormField(
               decoration: const InputDecoration(
                 labelText: 'Description (optional)',
-                hintText: 'Describe this category for better auto-categorization',
+                hintText: 'For better auto-categorization',
               ),
               controller: _descriptionController,
-              minLines: 3, // CP: Make the description field larger when editing
-              maxLines: 5, // CP: Allow up to 5 lines for editing
+              minLines: 1,
+              maxLines: 3,
             ),
           ],
         ),
