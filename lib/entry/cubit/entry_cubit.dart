@@ -388,6 +388,32 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
+  // CP: Add method to update category description only (for inline editing)
+  Future<void> updateCategoryDescription(
+    String categoryName,
+    String newDescription,
+  ) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      // CP: Use the existing renameCategory method with same name but new description
+      final result = await _entryRepository.renameCategory(
+        categoryName,
+        categoryName, // CP: Keep the same name
+        description: newDescription,
+      );
+      _updateStateFromRepository(
+        updatedEntries: result.entries,
+        updatedCategories: result.categories,
+      );
+    } catch (e) {
+      AppLogger.error(
+        "Cubit: Error updating category description via repository",
+        error: e,
+      );
+      emit(state.copyWith(lastErrorMessage: "Failed to update category description."));
+    }
+  }
+
   void setFilter(String? category) {
     AppLogger.info("Cubit: Setting filter to: ${category ?? 'null'}");
     final currentEntries = _entryRepository.currentEntries;
