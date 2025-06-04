@@ -314,11 +314,12 @@ class CategoryCard extends StatelessWidget {
                     ),
                   ),
                   if (category.description.isNotEmpty && !isNone) ...[
-                    const SizedBox(height: 4),
-                    AnimatedExpandableText(
-                      text: category.description,
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                      maxLines: 2,
+                    const SizedBox(height: 6),
+                    Text(
+                      category.description,
+                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600], height: 1.3),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],

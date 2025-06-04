@@ -52,41 +52,45 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Edit Category'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _editCategoryController,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Category Name', hintText: 'Enter new name...'),
-              validator: (value) {
-                final newName = value?.trim() ?? '';
-                if (newName.isEmpty) {
-                  return 'Category name cannot be empty.';
-                }
-                // CP: Only block if the new name is different and already exists
-                final existingCategories = context.read<EntryCubit>().state.categories;
-                final isNameChanged = newName != widget.oldCategoryName;
-                final nameExists = existingCategories.any((cat) => cat.name.toLowerCase() == newName.toLowerCase());
-                if (isNameChanged && nameExists) {
-                  return 'Category "$newName" already exists.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'For better auto-categorization',
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 180, // CP: Fixed height to prevent dialog resizing
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _editCategoryController,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Category Name', hintText: 'Enter new name...'),
+                validator: (value) {
+                  final newName = value?.trim() ?? '';
+                  if (newName.isEmpty) {
+                    return 'Category name cannot be empty.';
+                  }
+                  // CP: Only block if the new name is different and already exists
+                  final existingCategories = context.read<EntryCubit>().state.categories;
+                  final isNameChanged = newName != widget.oldCategoryName;
+                  final nameExists = existingCategories.any((cat) => cat.name.toLowerCase() == newName.toLowerCase());
+                  if (isNameChanged && nameExists) {
+                    return 'Category "$newName" already exists.';
+                  }
+                  return null;
+                },
               ),
-              controller: _descriptionController,
-              minLines: 1,
-              maxLines: 3,
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'For better auto-categorization',
+                ),
+                controller: _descriptionController,
+                minLines: 1,
+                maxLines: 3,
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
