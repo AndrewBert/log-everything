@@ -272,6 +272,7 @@ class CategoryCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
   });
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -282,7 +283,7 @@ class CategoryCard extends StatelessWidget {
             ? Colors.grey.withOpacity(0.3)
             : CategoryColors.getColorForCategory(category.name).withValues(alpha: 0.3);
 
-    return Container(
+    final cardContent = Container(
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
@@ -326,22 +327,76 @@ class CategoryCard extends StatelessWidget {
               ),
             ),
 
-            // CP: Action buttons (only for non-None categories)
+            // CP: Only edit button now (delete handled by swipe)
             if (!isNone) ...[
               const SizedBox(width: 8),
               _ActionButton(icon: Icons.edit_outlined, tooltip: 'Rename Category', onPressed: onEdit),
-              const SizedBox(width: 4),
-              _ActionButton(
-                icon: Icons.delete_outline,
-                tooltip: 'Delete Category',
-                color: Colors.redAccent[100],
-                onPressed: onDelete,
-              ),
             ],
           ],
         ),
       ),
     );
+
+    // CP: Wrap with Dismissible for swipe-to-delete (only for non-None categories)
+    if (!isNone && onDelete != null) {
+      return Dismissible(
+        key: Key('category_${category.name}'),
+        direction: DismissDirection.horizontal, // CP: Allow both left and right swipes
+        confirmDismiss: (direction) async {
+          // CP: Add haptic feedback when swipe is detected
+          HapticFeedback.mediumImpact();
+          // CP: Show confirmation and handle deletion
+          if (onDelete != null) {
+            onDelete!();
+          }
+          // CP: Return false to prevent auto-dismissal since we handle it in the callback
+          return false;
+        },
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red[300]!, Colors.red[500]!],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete_outline, color: Colors.white, size: 28),
+              const SizedBox(height: 4),
+              Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+            ],
+          ),
+        ),
+        secondaryBackground: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red[500]!, Colors.red[300]!],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete_outline, color: Colors.white, size: 28),
+              const SizedBox(height: 4),
+              Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+            ],
+          ),
+        ),
+        child: cardContent,
+      );
+    }
+
+    return cardContent;
   }
 }
 
@@ -349,10 +404,10 @@ class CategoryCard extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
-  final Color? color;
   final VoidCallback? onPressed;
 
-  const _ActionButton({required this.icon, required this.tooltip, this.color, this.onPressed});
+  const _ActionButton({required this.icon, required this.tooltip, this.onPressed});
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -361,10 +416,7 @@ class _ActionButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(icon, size: 20, color: color ?? Colors.grey[600]),
-        ),
+        child: Padding(padding: const EdgeInsets.all(8.0), child: Icon(icon, size: 20, color: Colors.grey[600])),
       ),
     );
   }
