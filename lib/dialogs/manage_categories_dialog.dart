@@ -110,7 +110,13 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                 return; // CP: Guard context after async gap
                               }
                               final newName = result;
-                              if (newName != null && newName.isNotEmpty && newName != category) {
+                              if (newName == '__DELETED__') {
+                                // CP: Handle deletion from edit dialog
+                                HapticFeedback.mediumImpact();
+                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                                  SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
+                                );
+                              } else if (newName != null && newName.isNotEmpty && newName != category) {
                                 HapticFeedback.mediumImpact();
                                 ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
                                   SnackBar(content: Text('Category renamed to "${categoryDisplayName(newName)}"')),
