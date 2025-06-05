@@ -127,53 +127,134 @@ class CategoriesSetupStep extends StatelessWidget {
     final controller = TextEditingController();
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Add Custom Category',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add Custom Category',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Create your own category that fits your needs',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g., Reading, Gaming, Cooking...',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          const SizedBox(height: 20),
+
+          StatefulBuilder(
+            builder: (context, setState) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        hintText: 'e.g., Reading, Gaming, Cooking...',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        prefixIcon: Icon(Icons.category_outlined, color: Colors.grey[500], size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty) {
+                          context.read<OnboardingCubit>().addCustomCategory(value.trim());
+                          controller.clear();
+                          setState(() {});
+                        }
+                      },
+                    ),
                   ),
-                  textCapitalization: TextCapitalization.words,
-                  onSubmitted: (value) {
-                    if (value.trim().isNotEmpty) {
-                      context.read<OnboardingCubit>().addCustomCategory(value.trim());
-                      controller.clear();
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  final value = controller.text.trim();
-                  if (value.isNotEmpty) {
-                    context.read<OnboardingCubit>().addCustomCategory(value);
-                    controller.clear();
-                  }
-                },
-                child: const Text('Add'),
-              ),
-            ],
+                  const SizedBox(width: 8),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 50,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed:
+                          controller.text.trim().isNotEmpty
+                              ? () {
+                                final value = controller.text.trim();
+                                if (value.isNotEmpty) {
+                                  context.read<OnboardingCubit>().addCustomCategory(value);
+                                  controller.clear();
+                                  setState(() {});
+                                }
+                              }
+                              : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: controller.text.trim().isNotEmpty ? 4 : 0,
+                        shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Icon(Icons.add, size: 20),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
