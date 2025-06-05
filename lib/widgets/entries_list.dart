@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -481,6 +482,9 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
   late Animation<double> _borderOpacity;
   late Animation<double> _glowIntensity;
 
+  // CP: Animation controller for rainbow flow effect when processing
+  late AnimationController _rainbowController;
+  late Animation<double> _rainbowAnimation;
   @override
   void initState() {
     super.initState();
@@ -490,7 +494,20 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
     _horizontalOffset = 20.0 + (DateTime.now().millisecondsSinceEpoch % 60);
 
     // CP: Longer duration for smoother animations
-    _highlightController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _highlightController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    ); // CP: Rainbow animation for processing entries - slower for more elegant effect
+    _rainbowController = AnimationController(duration: const Duration(milliseconds: 3500), vsync: this);
+    _rainbowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _rainbowController, curve: Curves.linear));
+
+    // CP: Start rainbow animation if entry is processing
+    if (widget.isProcessing) {
+      _rainbowController.repeat();
+    }
 
     // CP: Staggered animations for more fluid effect
     _highlightOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -514,7 +531,73 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
   @override
   void dispose() {
     _highlightController.dispose();
+    _rainbowController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_EntryCard oldWidget) {
+    super.didUpdateWidget(oldWidget); // CP: Handle processing state changes
+    if (widget.isProcessing != oldWidget.isProcessing) {
+      if (widget.isProcessing) {
+        _rainbowController.repeat();
+      } else {
+        _rainbowController.stop();
+        _rainbowController.reset();
+      }
+    }
+  } // CP: Build iOS/macOS style glass rainbow gradient for magical processing effect
+
+  LinearGradient _buildRainbowGradient() {
+    final animationValue =
+        _rainbowAnimation
+            .value; // CP: iOS/macOS style glass rainbow colors - maximum vibrancy while maintaining glass aesthetic
+    const rainbowColors = [
+      Color(0xCCFF2222), // Glass Red - maximum vibrancy
+      Color(0xCCFF6600), // Glass Orange - more saturated
+      Color(0xCCFFBB00), // Glass Gold - brilliant gold
+      Color(0xCC00EE77), // Glass Emerald - vivid green
+      Color(0xCC0088FF), // Glass Sky Blue - electric blue
+      Color(0xCC22BBFF), // Glass Cyan - intense cyan
+      Color(0xCCAA22FF), // Glass Purple - rich purple
+      Color(0xCCFF22AA), // Glass Pink - hot pink
+      Color(0xCCBB44FF), // Glass Lavender - vibrant violet
+      Color(0xCC44CCFF), // Glass Ice Blue - brilliant ice
+    ];
+
+    // CP: Create smooth glass effect with Apple-style transitions
+    final colorCount = rainbowColors.length;
+    final currentPosition = (animationValue * colorCount) % colorCount;
+    final baseIndex = currentPosition.floor();
+    final t = currentPosition - baseIndex;
+    final nextIndex = (baseIndex + 1) % colorCount;
+
+    // CP: Get the current glass color with smooth interpolation
+    final baseGlassColor =
+        Color.lerp(rainbowColors[baseIndex], rainbowColors[nextIndex], t) ??
+        rainbowColors[baseIndex]; // CP: Create subtle shimmer effect like iOS glass with breathing rhythm
+    final shimmerValue = (animationValue * 1.5) % 1.0; // CP: Slower, more elegant animation
+    final shimmerIntensity = 0.5 + 0.35 * (1.0 + math.sin(shimmerValue * 2 * math.pi)) / 2;
+
+    // CP: Add white highlight overlay for authentic iOS glass effect - enhanced for maximum visibility
+    final whiteHighlight = Colors.white.withValues(alpha: shimmerIntensity * 0.7);
+
+    // CP: Create the final glass color by blending with white highlight - reduced blending to preserve vibrancy
+    final glassColor = Color.lerp(baseGlassColor, whiteHighlight, 0.15) ?? baseGlassColor;
+
+    // CP: Add minimal frosted effect to maintain maximum color vibrancy
+    final frostedGlass = Color.lerp(glassColor, Colors.white.withValues(alpha: 0.1), 0.1) ?? glassColor;
+
+    // CP: Apply the iOS/macOS glass effect to the thin bar only
+    return LinearGradient(
+      stops: const [0.01, 0.01],
+      colors: [
+        frostedGlass, // CP: Final glass rainbow color with shimmer, frost, and depth
+        widget.isNew
+            ? Theme.of(context).cardColor.withValues(alpha: 0.96)
+            : Theme.of(context).cardColor, // CP: Card background stays unchanged
+      ],
+    );
   }
 
   @override
@@ -539,9 +622,8 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
         } else {
           _highlightController.reverse();
         }
-
         return AnimatedBuilder(
-          animation: _highlightController,
+          animation: Listenable.merge([_highlightController, if (widget.isProcessing) _rainbowController]),
           builder: (context, child) {
             return Transform.scale(
               scale: shouldHighlight ? _highlightScale.value : 1.0,
@@ -607,14 +689,17 @@ class _EntryCardState extends State<_EntryCard> with TickerProviderStateMixin {
                     Container(
                       key: entryCardKey(widget.entry, filterContext: context.read<EntryCubit>().state.filterCategory),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          stops: const [0.01, 0.01],
-                          colors: [
-                            // CP: Keep original colors regardless of highlight state
-                            widget.categoryColor.withValues(alpha: 0.8),
-                            widget.isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
-                          ],
-                        ),
+                        gradient:
+                            widget.isProcessing
+                                ? _buildRainbowGradient()
+                                : LinearGradient(
+                                  stops: const [0.01, 0.01],
+                                  colors: [
+                                    // CP: Keep original colors regardless of highlight state
+                                    widget.categoryColor.withValues(alpha: 0.8),
+                                    widget.isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
+                                  ],
+                                ),
                         borderRadius: BorderRadius.circular(12.0),
                         boxShadow: [
                           BoxShadow(
