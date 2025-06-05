@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../entry/cubit/entry_cubit.dart';
 import '../../utils/logger.dart';
+import '../model/model.dart';
 
 part 'onboarding_state.dart';
 
