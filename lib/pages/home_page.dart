@@ -18,10 +18,10 @@ import '../widgets/filter_section.dart';
 import '../widgets/input_area.dart';
 import '../dialogs/manage_categories_dialog.dart';
 import '../dialogs/change_category_dialog.dart';
+import '../dialogs/edit_category_dialog.dart';
 import '../dialogs/help_dialog.dart';
 import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart';
-import '../dialogs/edit_category_dialog.dart';
 import '../chat/chat.dart'; // CP: Import chat features
 
 class HomePage extends StatelessWidget {
@@ -318,8 +318,8 @@ class HomePage extends StatelessWidget {
     });
   }
 
-  Future<String?> _showEditCategoryDialog(BuildContext context, String oldCategoryName) async {
-    return await showDialog<String?>(
+  Future<EditCategoryResult?> _showEditCategoryDialog(BuildContext context, String oldCategoryName) async {
+    return await showDialog<EditCategoryResult?>(
       context: context,
       builder: (dialogContext) {
         return EditCategoryDialog(oldCategoryName: oldCategoryName);

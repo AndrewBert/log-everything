@@ -5,9 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
+import 'edit_category_dialog.dart';
 
 // Define callback types for clarity
-typedef ShowEditCategoryDialogCallback = Future<String?> Function(BuildContext context, String oldCategoryName);
+typedef ShowEditCategoryDialogCallback =
+    Future<EditCategoryResult?> Function(BuildContext context, String oldCategoryName);
 typedef ShowDeleteCategoryConfirmationDialogCallback = Future<bool> Function(BuildContext context, String category);
 
 // Helper to map backend 'Misc' to frontend 'None' and vice versa
@@ -109,17 +111,25 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                               if (!mounted) {
                                 return; // CP: Guard context after async gap
                               }
-                              final newName = result;
-                              if (newName == '__DELETED__') {
+
+                              // CP: Handle different result operations
+                              if (result?.operation == EditCategoryOperation.deleted) {
                                 // CP: Handle deletion from edit dialog
                                 HapticFeedback.mediumImpact();
                                 ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
                                   SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
                                 );
-                              } else if (newName != null && newName.isNotEmpty && newName != category) {
+                              } else if (result?.operation == EditCategoryOperation.renamed &&
+                                  result!.newCategoryName != null &&
+                                  result.newCategoryName!.isNotEmpty &&
+                                  result.newCategoryName != category) {
                                 HapticFeedback.mediumImpact();
                                 ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                  SnackBar(content: Text('Category renamed to "${categoryDisplayName(newName)}"')),
+                                  SnackBar(
+                                    content: Text(
+                                      'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
+                                    ),
+                                  ),
                                 );
                               }
                             },
