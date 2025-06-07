@@ -17,16 +17,55 @@ class OnboardingState extends Equatable {
     this.isLoading = false,
     this.selectedCategories = const [],
     this.suggestedCategories = const [
+      // CP: Work & Productivity
       'Work',
-      'Personal',
-      'Health',
-      'Learning',
-      'Travel',
-      'Food',
-      'Exercise',
-      'Family',
       'Projects',
+      'Meetings',
+      'Goals',
       'Ideas',
+      'Problems',
+      'Solutions',
+
+      // CP: Personal Life
+      'Personal',
+      'Family',
+      'Relationships',
+      'Home',
+      'Daily',
+      'Memories',
+      'Events',
+
+      // CP: Health & Wellness
+      'Health',
+      'Exercise',
+      'Mood',
+      'Habits',
+
+      // CP: Learning & Growth
+      'Learning',
+      'Books',
+      'Quotes',
+      'Inspiration',
+      'Reflections',
+
+      // CP: Lifestyle & Interests
+      'Food',
+      'Travel',
+      'Hobbies',
+      'Movies',
+      'Music',
+      'Shopping',
+
+      // CP: Planning & Tracking
+      'Finance',
+      'Reminders',
+      'Weekly',
+      'Monthly',
+      'Gratitude',
+      'Dreams',
+
+      // CP: Miscellaneous
+      'Random',
     ],
     this.errorMessage,
     this.canProceed = true,
@@ -57,6 +96,9 @@ class OnboardingState extends Equatable {
   bool get isLastStep => currentStep == OnboardingStep.completed;
   int get totalSteps => OnboardingStep.values.length - 1; // CP: Exclude completed step from total
   double get progress => currentStepIndex / (totalSteps - 1);
+
+  // CP: Get organized category groups for UI display
+  List<CategoryGroup> get categoryGroups => CategoryGroup.defaultGroups;
 
   @override
   List<Object?> get props => [

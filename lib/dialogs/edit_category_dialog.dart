@@ -2,6 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
+import 'delete_category_confirmation_dialog.dart';
+
+// CP: Result class for edit category dialog operations
+class EditCategoryResult {
+  final EditCategoryOperation operation;
+  final String? newCategoryName;
+  final String? deletedCategoryName;
+
+  const EditCategoryResult.renamed(this.newCategoryName)
+    : operation = EditCategoryOperation.renamed,
+      deletedCategoryName = null;
+
+  const EditCategoryResult.deleted(this.deletedCategoryName)
+    : operation = EditCategoryOperation.deleted,
+      newCategoryName = null;
+
+  const EditCategoryResult.cancelled()
+    : operation = EditCategoryOperation.cancelled,
+      newCategoryName = null,
+      deletedCategoryName = null;
+}
+
+enum EditCategoryOperation { renamed, deleted, cancelled }
 
 class EditCategoryDialog extends StatefulWidget {
   final String oldCategoryName;
@@ -43,7 +66,21 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
       final newDescription = _descriptionController.text.trim();
       // Call cubit method to update name and description
       context.read<EntryCubit>().renameCategory(widget.oldCategoryName, newName, description: newDescription);
-      Navigator.of(context).pop(newName); // Return the new name
+      Navigator.of(context).pop(EditCategoryResult.renamed(newName)); // Return result object
+    }
+  }
+
+  Future<void> _deleteCategory() async {
+    // CP: Show confirmation dialog before deleting
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => DeleteCategoryConfirmationDialog(category: widget.oldCategoryName),
+    );
+    if (confirmed == true && mounted) {
+      // CP: Delete the category
+      context.read<EntryCubit>().deleteCategory(widget.oldCategoryName);
+      // CP: Return result object indicating deletion
+      Navigator.of(context).pop(EditCategoryResult.deleted(widget.oldCategoryName));
     }
   }
 
@@ -94,11 +131,24 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          child: const Text('Cancel'),
-          onPressed: () => Navigator.of(context).pop(), // Return null
+        Row(
+          children: [
+            // CP: Delete button on the left
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+              onPressed: _deleteCategory,
+            ),
+            const Spacer(),
+            // CP: Cancel and Save buttons on the right
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(EditCategoryResult.cancelled()), // Return cancelled result
+            ),
+            const SizedBox(width: 8),
+            FilledButton(onPressed: _saveCategory, child: const Text('Save')),
+          ],
         ),
-        FilledButton(onPressed: _saveCategory, child: const Text('Save')),
       ],
     );
   }
