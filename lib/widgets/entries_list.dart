@@ -8,7 +8,7 @@ import '../utils/widget_keys.dart';
 import 'entry_context_menu.dart';
 import 'entry_card.dart';
 
-class EntriesList extends StatelessWidget {
+class EntriesList extends StatefulWidget {
   final String Function(DateTime) formatDateHeader;
   final Color Function(String) getCategoryColor;
   final DateFormat timeFormatter;
@@ -26,19 +26,25 @@ class EntriesList extends StatelessWidget {
     required this.onDeletePressed,
   });
 
+  @override
+  State<EntriesList> createState() => _EntriesListState();
+}
+
+class _EntriesListState extends State<EntriesList> {
+  // CP: Track split entry delays to persist across rebuilds
+  final Map<String, Duration> _splitEntryDelays = {};
+  final Set<String> _animatedEntries = {};
+
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
   String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
 
   // CP: Helper to detect if an entry is part of a group of split entries
   int _getSplitEntryIndex(List<dynamic> listItems, int currentIndex, Entry currentEntry) {
-    if (!currentEntry.isNew) return -1;
-    
     // CP: Look backwards to find other entries with same timestamp (split from same original)
     int splitIndex = 0;
     for (int i = currentIndex - 1; i >= 0; i--) {
       final item = listItems[i];
       if (item is Entry && 
-          item.isNew && 
           item.timestamp == currentEntry.timestamp &&
           item.category != 'Processing...') {
         splitIndex++;
@@ -106,8 +112,8 @@ class EntriesList extends StatelessWidget {
             (context, _, __) => EntryContextMenu(
               entry: entry,
               position: Offset(menuX, menuY), // CP: Use intelligent relative position
-              onEdit: () => onEditPressed(entry),
-              onDelete: () => onDeletePressed(entry),
+              onEdit: () => widget.onEditPressed(entry),
+              onDelete: () => widget.onDeletePressed(entry),
               onCopyText: () {
                 Clipboard.setData(ClipboardData(text: entry.text));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -142,8 +148,8 @@ class EntriesList extends StatelessWidget {
             (context, _, __) => EntryContextMenu(
               entry: entry,
               position: Offset(menuX, menuY),
-              onEdit: () => onEditPressed(entry),
-              onDelete: () => onDeletePressed(entry),
+              onEdit: () => widget.onEditPressed(entry),
+              onDelete: () => widget.onDeletePressed(entry),
               onCopyText: () {
                 Clipboard.setData(ClipboardData(text: entry.text));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -162,6 +168,30 @@ class EntriesList extends StatelessWidget {
           FocusScope.of(context).focusedChild?.unfocus();
         }
       });
+    }
+  }
+
+  // CP: Generate a unique key for an entry
+  String _getEntryKey(Entry entry) {
+    return '${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
+  }
+
+  // CP: Check and store split entry delays 
+  void _updateSplitDelays(List<dynamic> listItems) {
+    for (int i = 0; i < listItems.length; i++) {
+      final item = listItems[i];
+      if (item is Entry) {
+        final entryKey = _getEntryKey(item);
+        
+        // CP: Only calculate delay if we haven't seen this entry before
+        if (!_splitEntryDelays.containsKey(entryKey) && !_animatedEntries.contains(entryKey)) {
+          int splitIndex = _getSplitEntryIndex(listItems, i, item);
+          if (splitIndex > 0) {
+            final delay = Duration(milliseconds: splitIndex * 200); // CP: Fast, snappy timing
+            _splitEntryDelays[entryKey] = delay;
+          }
+        }
+      }
     }
   }
 
@@ -207,6 +237,10 @@ class EntriesList extends StatelessWidget {
           }
 
           final List<dynamic> listItems = state.displayListItems;
+          
+          // CP: Update split delays when list changes
+          _updateSplitDelays(listItems);
+          
           if (state.isLoading && listItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -255,7 +289,7 @@ class EntriesList extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                     child: Text(
-                      formatDateHeader(item),
+                      widget.formatDateHeader(item),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -265,38 +299,39 @@ class EntriesList extends StatelessWidget {
                   );
                 } else if (item is Entry) {
                   final entry = item;
+                  final entryKey = _getEntryKey(entry);
                   bool isProcessing = entry.category == 'Processing...';
                   bool isNew = entry.isNew;
-                  Color categoryColor = getCategoryColor(entry.category);
+                  Color categoryColor = widget.getCategoryColor(entry.category);
 
-                  // CP: Calculate stagger delay for split entries
-                  Duration? staggerDelay;
-                  if (isNew && !isProcessing) {
-                    // CP: Check if this is part of a group of split entries
-                    int splitIndex = _getSplitEntryIndex(listItems, index, entry);
-                    if (splitIndex > 0) {
-                      staggerDelay = Duration(milliseconds: splitIndex * 150); // 150ms between each
-                    }
-                  }
+                  // CP: Get stored delay for this entry (persists across rebuilds)
+                  Duration? staggerDelay = _splitEntryDelays[entryKey];
+                  
 
                   // Enhanced card with better visual design
                   return AnimatedSlideCard(
+                    key: ValueKey(entryKey),
                     isNew: isNew,
                     isProcessing: isProcessing,
                     staggerDelay: staggerDelay,
+                    onAnimationComplete: () {
+                      // CP: Mark this entry as animated to prevent future delays
+                      _animatedEntries.add(entryKey);
+                      _splitEntryDelays.remove(entryKey);
+                    },
                     child: _SwipeableEntryCard(
                       entry: entry,
-                      onDelete: () => onDeletePressed(entry),
+                      onDelete: () => widget.onDeletePressed(entry),
                       child: EntryCard(
                         entry: entry,
                         isNew: isNew,
                         isProcessing: isProcessing,
                         categoryColor: categoryColor,
-                        timeFormatter: timeFormatter,
+                        timeFormatter: widget.timeFormatter,
                         categoryDisplayName: categoryDisplayName,
-                        onChangeCategoryPressed: onChangeCategoryPressed,
-                        onEditPressed: onEditPressed,
-                        onDeletePressed: onDeletePressed,
+                        onChangeCategoryPressed: widget.onChangeCategoryPressed,
+                        onEditPressed: widget.onEditPressed,
+                        onDeletePressed: widget.onDeletePressed,
                         onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
                       ),
                     ),
@@ -318,6 +353,7 @@ class AnimatedSlideCard extends StatefulWidget {
   final bool isNew;
   final bool isProcessing;
   final Duration? staggerDelay; // CP: For staggered split animations
+  final VoidCallback? onAnimationComplete; // CP: Callback when animation completes
 
   const AnimatedSlideCard({
     super.key, 
@@ -325,6 +361,7 @@ class AnimatedSlideCard extends StatefulWidget {
     this.isNew = false,
     this.isProcessing = false,
     this.staggerDelay,
+    this.onAnimationComplete,
   });
 
   @override
@@ -392,14 +429,24 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
 
     // CP: Handle staggered delay for split entries
     if (widget.staggerDelay != null) {
+      // CP: Start from completely invisible and scaled down for delayed entries
+      _controller.value = 0.0;
       Future.delayed(widget.staggerDelay!, () {
         if (mounted) {
-          _controller.forward();
+          _controller.forward().then((_) {
+            if (widget.onAnimationComplete != null) {
+              widget.onAnimationComplete!();
+            }
+          });
         }
       });
     } else {
       // CP: Start animation immediately when widget is created
-      _controller.forward();
+      _controller.forward().then((_) {
+        if (widget.onAnimationComplete != null) {
+          widget.onAnimationComplete!();
+        }
+      });
     }
   }
   
