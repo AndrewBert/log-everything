@@ -29,6 +29,31 @@ class EntriesList extends StatelessWidget {
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
   String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
 
+  // CP: Helper to detect if an entry is part of a group of split entries
+  int _getSplitEntryIndex(List<dynamic> listItems, int currentIndex, Entry currentEntry) {
+    if (!currentEntry.isNew) return -1;
+    
+    // CP: Look backwards to find other entries with same timestamp (split from same original)
+    int splitIndex = 0;
+    for (int i = currentIndex - 1; i >= 0; i--) {
+      final item = listItems[i];
+      if (item is Entry && 
+          item.isNew && 
+          item.timestamp == currentEntry.timestamp &&
+          item.category != 'Processing...') {
+        splitIndex++;
+      } else if (item is Entry && item.timestamp != currentEntry.timestamp) {
+        // CP: Different timestamp, stop looking
+        break;
+      } else if (item is DateTime) {
+        // CP: Hit a date header, stop looking
+        break;
+      }
+    }
+    
+    return splitIndex;
+  }
+
   // CP: Show context menu at a consistent position relative to the entry card
   void _showContextMenu(BuildContext context, Entry entry, Offset globalPosition) {
     // CP: Don't show context menu if entry is processing
@@ -244,8 +269,21 @@ class EntriesList extends StatelessWidget {
                   bool isNew = entry.isNew;
                   Color categoryColor = getCategoryColor(entry.category);
 
+                  // CP: Calculate stagger delay for split entries
+                  Duration? staggerDelay;
+                  if (isNew && !isProcessing) {
+                    // CP: Check if this is part of a group of split entries
+                    int splitIndex = _getSplitEntryIndex(listItems, index, entry);
+                    if (splitIndex > 0) {
+                      staggerDelay = Duration(milliseconds: splitIndex * 150); // 150ms between each
+                    }
+                  }
+
                   // Enhanced card with better visual design
                   return AnimatedSlideCard(
+                    isNew: isNew,
+                    isProcessing: isProcessing,
+                    staggerDelay: staggerDelay,
                     child: _SwipeableEntryCard(
                       entry: entry,
                       onDelete: () => onDeletePressed(entry),
@@ -277,53 +315,132 @@ class EntriesList extends StatelessWidget {
 // CP: Animated card widget for smooth entry animations
 class AnimatedSlideCard extends StatefulWidget {
   final Widget child;
+  final bool isNew;
+  final bool isProcessing;
+  final Duration? staggerDelay; // CP: For staggered split animations
 
-  const AnimatedSlideCard({super.key, required this.child});
+  const AnimatedSlideCard({
+    super.key, 
+    required this.child,
+    this.isNew = false,
+    this.isProcessing = false,
+    this.staggerDelay,
+  });
 
   @override
   State<AnimatedSlideCard> createState() => _AnimatedSlideCardState();
 }
 
-class _AnimatedSlideCardState extends State<AnimatedSlideCard> with SingleTickerProviderStateMixin {
+class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  
+  // CP: Pulse animation for processing entries
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    
+    // CP: Main entrance animation - more dramatic for new entries
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 200), // CP: Reduced from 400ms to make it faster
+      duration: Duration(milliseconds: widget.isNew ? 400 : 200),
       vsync: this,
     );
 
+    // CP: More noticeable slide for new entries
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.05), // CP: Much more subtle slide - reduced from 0.3 to 0.05
+      begin: Offset(0.0, widget.isNew ? 0.15 : 0.05),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
-    ); // CP: Changed curve for smoother animation
+      CurvedAnimation(parent: _controller, curve: widget.isNew ? Curves.easeOutCubic : Curves.easeOutQuart),
+    );
 
+    // CP: Fade in from more transparent for new entries
     _fadeAnimation = Tween<double>(
-      begin: 0.7, // CP: Start more visible - changed from 0.0 to 0.7
+      begin: widget.isNew ? 0.3 : 0.7,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    // CP: Scale animation for new entries only - more subtle
+    _scaleAnimation = Tween<double>(
+      begin: widget.isNew ? 0.92 : 1.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: widget.isNew ? Curves.easeOutCubic : Curves.linear),
+    );
 
-    // CP: Start animation immediately when widget is created
-    _controller.forward();
+    // CP: Pulse animation for processing entries
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _pulseAnimation = Tween<double>(
+      begin: 0.98,
+      end: 1.02,
+    ).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    
+    if (widget.isProcessing) {
+      _pulseController.repeat(reverse: true);
+    }
+
+    // CP: Handle staggered delay for split entries
+    if (widget.staggerDelay != null) {
+      Future.delayed(widget.staggerDelay!, () {
+        if (mounted) {
+          _controller.forward();
+        }
+      });
+    } else {
+      // CP: Start animation immediately when widget is created
+      _controller.forward();
+    }
+  }
+  
+  @override
+  void didUpdateWidget(AnimatedSlideCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // CP: Handle processing state changes
+    if (widget.isProcessing != oldWidget.isProcessing) {
+      if (widget.isProcessing) {
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.animateTo(1.0);
+      }
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(opacity: _fadeAnimation, child: widget.child),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_controller, _pulseController]),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value * (widget.isProcessing ? _pulseAnimation.value : 1.0),
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation, 
+              child: widget.child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
