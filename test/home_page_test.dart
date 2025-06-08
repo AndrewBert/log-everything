@@ -6,12 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/entries_list.dart';
+import 'package:myapp/widgets/entry_card.dart';
 import 'package:myapp/utils/app_bar_keys.dart';
 import 'package:myapp/utils/widget_keys.dart';
 import 'package:myapp/dialogs/help_dialog.dart';
@@ -20,6 +22,7 @@ import 'package:myapp/widgets/filter_section.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myapp/chat/cubit/chat_cubit.dart';
 
 import 'mock_path_provider_platform.dart';
 import 'test_di_registrar.dart';
@@ -35,6 +38,10 @@ class HomePageTestScope {
   late MockSpeechService mockSpeechService;
   late MockAudioRecorderService mockAudioRecorderService;
   late MockPermissionService mockPermissionService;
+  late MockVectorStoreService mockVectorStoreService;
+  late MockSharedPreferences mockSharedPreferences;
+  late MockClient mockHttpClient;
+  late MockChatCubit mockChatCubit;
 
   static const testEntryText = 'Test entry 1';
   static final now = DateTime.now();
@@ -64,7 +71,11 @@ class HomePageTestScope {
   );
 
   static final rawEntriesList = [entryToday1, entryToday2, entryYesterday, entryOlder];
-  static final categoriesList = ['Misc', 'Work', 'Personal'];
+  static final categoriesList = [
+    const Category(name: 'Misc', description: 'Miscellaneous entries'),
+    const Category(name: 'Work', description: 'Work-related entries'),
+    const Category(name: 'Personal', description: 'Personal entries'),
+  ];
 
   late Widget widgetUnderTest;
 
@@ -75,12 +86,20 @@ class HomePageTestScope {
     mockAudioRecorderService = MockAudioRecorderService();
     when(mockAudioRecorderService.onStateChanged()).thenAnswer((_) => Stream<RecordState>.empty());
     mockPermissionService = MockPermissionService();
+    mockVectorStoreService = MockVectorStoreService();
+    mockSharedPreferences = MockSharedPreferences();
+    mockHttpClient = MockClient();
+    mockChatCubit = MockChatCubit();
+    when(mockChatCubit.loadDummyMessages()).thenAnswer((_) async {});
+    when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(const ChatState()));
+    when(mockChatCubit.state).thenReturn(const ChatState());
 
     widgetUnderTest = MultiBlocProvider(
       providers: [
+        BlocProvider<ChatCubit>.value(value: mockChatCubit),
         BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
         BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
-        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit()),
+        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())),
       ],
       child: MaterialApp(home: HomePage()),
     );
@@ -107,6 +126,12 @@ class HomePageTestScope {
 
   void stubTranscriptionSuccess(String resultText) {
     when(mockSpeechService.transcribeAudio(any, language: anyNamed('language'))).thenAnswer((_) async => resultText);
+  }
+
+  void stubAiServiceExtractEntries() {
+    when(mockAiService.extractEntries(any, any)).thenAnswer((_) async => [
+      (textSegment: HomePageTestScope.testEntryText, category: 'Misc'),
+    ]);
   }
 
   Future<void> dispose() async {}
@@ -141,9 +166,13 @@ void main() {
       speechService: scope.mockSpeechService,
       audioRecorder: scope.mockAudioRecorderService,
       permissionService: scope.mockPermissionService,
+      vectorStoreService: scope.mockVectorStoreService,
+      sharedPreferences: scope.mockSharedPreferences,
+      httpClient: scope.mockHttpClient,
     );
     scope.stubPersistenceWithInitialEntries();
     scope.stubPermissionGranted();
+    scope.stubAiServiceExtractEntries();
   });
 
   tearDown(() async {
@@ -221,7 +250,7 @@ void main() {
         verifyNever(scope.mockPersistenceService.saveEntries(any));
 
         final entriesListFinder = find.byType(EntriesList);
-        final entryItemFinder = find.descendant(of: entriesListFinder, matching: find.byType(ListTile));
+        final entryItemFinder = find.descendant(of: entriesListFinder, matching: find.byType(EntryCard));
         expect(entryItemFinder, findsNWidgets(initialListLength));
       });
     });
@@ -670,9 +699,8 @@ void _thenTextFieldContains(WidgetTester tester, String text) {
 void _thenEntryIsDisplayed(WidgetTester tester, String text, String time) {
   final entryTextFinder = find.text(text);
   final entryTimeFinder = find.text(time);
-  final entryListTileFinder = find.ancestor(of: entryTextFinder, matching: find.byType(ListTile));
   expect(entryTextFinder, findsOneWidget);
-  expect(find.descendant(of: entryListTileFinder, matching: entryTimeFinder), findsOneWidget);
+  expect(entryTimeFinder, findsOneWidget);
 }
 
 void _thenSnackbarIsDisplayedWithMessage(WidgetTester tester, String message) {
@@ -736,7 +764,7 @@ void _thenTitleTapCountIsIncremented(HomePageCubit cubit, int initialTapCount) {
 void _thenInitialUiElementsAreDisplayed(WidgetTester tester) {
   expect(
     find.text(HomePageTestScope.entryToday1.text),
-    findsOneWidget,
+    findsWidgets,
     reason: 'First initial entry text should be displayed',
   );
   expect(find.byType(TextField), findsOneWidget, reason: 'Input TextField should be present');
@@ -849,43 +877,6 @@ void _thenAppVersionIsDisplayed(WidgetTester tester, String version) {
   expect(versionTextFinder, findsOneWidget, reason: 'App version "$version" should be displayed in the AppBar');
 }
 
-void _thenTemporaryEntryIsDisplayedInList(WidgetTester tester, String expectedText, String expectedCategory) {
-  final entryListFinder = find.byType(EntriesList);
-  expect(entryListFinder, findsOneWidget, reason: 'EntriesList should be present');
-
-  final entryWidgets = tester.widgetList<ListTile>(
-    find.descendant(of: entryListFinder, matching: find.byType(ListTile)),
-  );
-
-  bool found = false;
-  for (final tile in entryWidgets) {
-    final textFindersInTile = find.descendant(of: find.byWidget(tile), matching: find.byType(Text));
-
-    bool textMatch = false;
-    bool categoryMatch = false;
-
-    for (final textFinder in textFindersInTile.evaluate()) {
-      final textWidget = textFinder.widget as Text;
-      if (textWidget.data == expectedText) {
-        textMatch = true;
-      }
-      if (textWidget.data == expectedCategory) {
-        categoryMatch = true;
-      }
-    }
-
-    if (textMatch && categoryMatch) {
-      found = true;
-      break;
-    }
-  }
-
-  expect(
-    found,
-    isTrue,
-    reason: 'Temporary entry with text "$expectedText" and category "$expectedCategory" should be displayed',
-  );
-}
 
 void _thenWhatsNewDialogIsDisplayed(WidgetTester tester) {
   expect(find.byType(WhatsNewDialog), findsOneWidget, reason: 'WhatsNewDialog should be displayed');

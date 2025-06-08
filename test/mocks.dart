@@ -8,6 +8,7 @@ import 'package:myapp/services/ai_service.dart'; // Import AI service
 import 'package:myapp/services/vector_store_service.dart'; // Import VectorStore service
 import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 import 'package:http/http.dart' as http; // CP: Import http for mock generation
+import 'package:myapp/chat/cubit/chat_cubit.dart'; // CP: Import ChatCubit for mock generation
 
 // Generate mocks for the services needed
 @GenerateMocks([
@@ -20,5 +21,6 @@ import 'package:http/http.dart' as http; // CP: Import http for mock generation
   VectorStoreService, // CP: Add VectorStoreService for mock generation
   SharedPreferences, // CP: Add SharedPreferences for mock generation
   http.Client, // CP: Add http.Client for mock generation
+  ChatCubit, // CP: Add ChatCubit for mock generation
 ])
 void main() {}

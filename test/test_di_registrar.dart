@@ -25,7 +25,7 @@ Future<void> setupTestDependencies({
   required MockPermissionService permissionService,
   required MockVectorStoreService vectorStoreService, // CP: Add vectorStoreService mock
   required MockSharedPreferences sharedPreferences, // CP: Add SharedPreferences mock
-  required MockClient httpClient, // CP: Add http.Client mock
+  required http.Client httpClient, // CP: Add http.Client mock
   // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
