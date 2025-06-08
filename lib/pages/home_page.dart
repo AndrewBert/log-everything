@@ -129,6 +129,34 @@ class HomePage extends StatelessWidget {
               });
             },
           ),
+          // CP: Listen for entry split notifications to show toast
+          BlocListener<EntryCubit, EntryState>(
+            listenWhen:
+                (prev, current) =>
+                    prev.splitNotification != current.splitNotification && current.splitNotification != null,
+            listener: (context, state) {
+              AppLogger.info('[HomePage] Split notification: ${state.splitNotification}');
+              _showFloatingSnackBar(
+                context,
+                content: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.call_split, size: 16, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(state.splitNotification!),
+                  ],
+                ),
+                duration: const Duration(milliseconds: 2000),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              );
+              // CP: Clear the notification after showing
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) {
+                  context.read<EntryCubit>().clearSplitNotification();
+                }
+              });
+            },
+          ),
         ],
         child: SafeArea(
           bottom: false,

@@ -107,8 +107,8 @@ class EntryRepository {
     }
   }
 
-  Future<List<Entry>> addEntry(String text) async {
-    if (text.isEmpty) return _entries;
+  Future<({List<Entry> entries, int splitCount})> addEntry(String text) async {
+    if (text.isEmpty) return (entries: _entries, splitCount: 0);
 
     final DateTime processingTimestamp = DateTime.now();
     List<EntryPrototype> extractedData = [];
@@ -144,11 +144,17 @@ class EntryRepository {
     _entries.insertAll(0, addedEntries);
     await _saveEntries();
 
+    // CP: Log split information for debugging
+    final splitCount = addedEntries.length;
+    if (splitCount > 1) {
+      AppLogger.info("Repository: Entry was split into $splitCount parts");
+    }
+
     _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
       AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
     });
 
-    return currentEntries;
+    return (entries: currentEntries, splitCount: splitCount);
   }
 
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
@@ -193,14 +199,14 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<Entry>> processCombinedEntry(String combinedText, DateTime tempEntryTimestamp) async {
+  Future<({List<Entry> entries, int splitCount})> processCombinedEntry(String combinedText, DateTime tempEntryTimestamp) async {
     AppLogger.info(
       '[Repo.processCombinedEntry] Processing combined text: "$combinedText" for temp timestamp: $tempEntryTimestamp',
     );
     if (combinedText.isEmpty) {
       _entries.removeWhere((e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...');
       await _saveEntries();
-      return currentEntries;
+      return (entries: currentEntries, splitCount: 0);
     }
 
     List<EntryPrototype> extractedData = [];
@@ -251,6 +257,13 @@ class EntryRepository {
     }
 
     await _saveEntries();
+    
+    // CP: Log split information for debugging
+    final splitCount = addedEntries.length;
+    if (splitCount > 1) {
+      AppLogger.info("Repository: Combined entry was split into $splitCount parts");
+    }
+    
     _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((e, stackTrace) {
       AppLogger.error(
         "Repository: Background vector store sync failed for processCombinedEntry",
@@ -258,7 +271,7 @@ class EntryRepository {
         stackTrace: stackTrace,
       );
     });
-    return currentEntries;
+    return (entries: currentEntries, splitCount: splitCount);
   }
 
   Future<List<Category>> addCustomCategory(String newCategory) async {

@@ -157,6 +157,7 @@ class EntryCubit extends Cubit<EntryState> {
     finalEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
   }
 
+
   // --- Public Methods (delegating to repository) ---
 
   // Ensure addEntry uses the helper methods
@@ -169,9 +170,16 @@ class EntryCubit extends Cubit<EntryState> {
     // Use the helper to show temporary state
     showTemporaryEntry(tempEntry);
 
-    List<Entry> finalEntries = [];
     try {
-      finalEntries = await _entryRepository.addEntry(text);
+      final result = await _entryRepository.addEntry(text);
+      final finalEntries = result.entries;
+      final splitCount = result.splitCount;
+
+      // CP: Handle split notification
+      if (splitCount > 1) {
+        AppLogger.info('[Split Detection] Repository detected $splitCount split entries');
+        emit(state.copyWith(splitNotification: 'Entry split into $splitCount items'));
+      }
 
       finalizeProcessing(finalEntries);
 
@@ -375,5 +383,10 @@ class EntryCubit extends Cubit<EntryState> {
   // CP: Clear the context menu entry when menu is closed
   void clearContextMenuEntry() {
     emit(state.copyWith(clearContextMenuEntry: true));
+  }
+
+  // CP: Clear split notification after toast is shown
+  void clearSplitNotification() {
+    emit(state.copyWith(clearSplitNotification: true));
   }
 }
