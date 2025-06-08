@@ -30,10 +30,15 @@ class EntriesList extends StatefulWidget {
   State<EntriesList> createState() => _EntriesListState();
 }
 
-class _EntriesListState extends State<EntriesList> {
+class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin {
   // CP: Track split entry delays to persist across rebuilds
   final Map<String, Duration> _splitEntryDelays = {};
   final Set<String> _animatedEntries = {};
+
+  // CP: Track split groups for visual grouping
+  final Map<String, DateTime> _splitGroups = {}; // timestamp -> when group was created
+  final Map<String, AnimationController> _groupControllers = {};
+  final Duration _groupDisplayDuration = const Duration(seconds: 4); // How long to show grouping
 
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
   String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
@@ -44,9 +49,7 @@ class _EntriesListState extends State<EntriesList> {
     int splitIndex = 0;
     for (int i = currentIndex - 1; i >= 0; i--) {
       final item = listItems[i];
-      if (item is Entry && 
-          item.timestamp == currentEntry.timestamp &&
-          item.category != 'Processing...') {
+      if (item is Entry && item.timestamp == currentEntry.timestamp && item.category != 'Processing...') {
         splitIndex++;
       } else if (item is Entry && item.timestamp != currentEntry.timestamp) {
         // CP: Different timestamp, stop looking
@@ -56,7 +59,7 @@ class _EntriesListState extends State<EntriesList> {
         break;
       }
     }
-    
+
     return splitIndex;
   }
 
@@ -176,23 +179,85 @@ class _EntriesListState extends State<EntriesList> {
     return '${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
   }
 
-  // CP: Check and store split entry delays 
+  // CP: Check if an entry is part of a split group that should be highlighted
+  bool _isInSplitGroup(Entry entry, List<dynamic> listItems) {
+    final groupKey = entry.timestamp.toIso8601String();
+    if (!_splitGroups.containsKey(groupKey)) return false;
+
+    // CP: Count entries with same timestamp
+    int count = 0;
+    for (final item in listItems) {
+      if (item is Entry && item.timestamp == entry.timestamp && item.category != 'Processing...') {
+        count++;
+      }
+    }
+
+    return count > 1; // Only highlight if there are multiple entries (split)
+  }
+
+  // CP: Check and store split entry delays
   void _updateSplitDelays(List<dynamic> listItems) {
     for (int i = 0; i < listItems.length; i++) {
       final item = listItems[i];
       if (item is Entry) {
         final entryKey = _getEntryKey(item);
-        
-        // CP: Only calculate delay if we haven't seen this entry before
-        if (!_splitEntryDelays.containsKey(entryKey) && !_animatedEntries.contains(entryKey)) {
+        final groupKey = item.timestamp.toIso8601String();
+
+        // CP: Only calculate delay if we haven't seen this entry before AND it's new
+        if (!_splitEntryDelays.containsKey(entryKey) && !_animatedEntries.contains(entryKey) && item.isNew) {
           int splitIndex = _getSplitEntryIndex(listItems, i, item);
           if (splitIndex > 0) {
             final delay = Duration(milliseconds: splitIndex * 200); // CP: Fast, snappy timing
             _splitEntryDelays[entryKey] = delay;
+
+            // CP: Only create group for NEW split entries (not on app reload)
+            if (!_splitGroups.containsKey(groupKey)) {
+              _splitGroups[groupKey] = DateTime.now();
+              _createGroupController(groupKey);
+            }
           }
         }
       }
     }
+  }
+
+  // CP: Create animation controller for group highlighting
+  void _createGroupController(String groupKey) {
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      reverseDuration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _groupControllers[groupKey] = controller;
+
+    // CP: Start with fade in, then fade out after delay
+    controller.forward().then((_) {
+      Future.delayed(_groupDisplayDuration, () {
+        if (mounted && _groupControllers.containsKey(groupKey)) {
+          controller.reverse().then((_) {
+            if (mounted) {
+              _cleanupGroup(groupKey);
+            }
+          });
+        }
+      });
+    });
+  }
+
+  // CP: Clean up group resources
+  void _cleanupGroup(String groupKey) {
+    _groupControllers[groupKey]?.dispose();
+    _groupControllers.remove(groupKey);
+    _splitGroups.remove(groupKey);
+  }
+
+  @override
+  void dispose() {
+    // CP: Clean up all group controllers
+    for (final controller in _groupControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   @override
@@ -237,10 +302,10 @@ class _EntriesListState extends State<EntriesList> {
           }
 
           final List<dynamic> listItems = state.displayListItems;
-          
+
           // CP: Update split delays when list changes
           _updateSplitDelays(listItems);
-          
+
           if (state.isLoading && listItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -306,10 +371,13 @@ class _EntriesListState extends State<EntriesList> {
 
                   // CP: Get stored delay for this entry (persists across rebuilds)
                   Duration? staggerDelay = _splitEntryDelays[entryKey];
-                  
 
-                  // Enhanced card with better visual design
-                  return AnimatedSlideCard(
+                  // CP: Check if this entry should be visually grouped
+                  final inSplitGroup = _isInSplitGroup(entry, listItems);
+                  final groupKey = entry.timestamp.toIso8601String();
+                  final groupController = _groupControllers[groupKey];
+
+                  Widget entryWidget = AnimatedSlideCard(
                     key: ValueKey(entryKey),
                     isNew: isNew,
                     isProcessing: isProcessing,
@@ -336,6 +404,16 @@ class _EntriesListState extends State<EntriesList> {
                       ),
                     ),
                   );
+
+                  // CP: Wrap with split group highlighting if applicable
+                  if (inSplitGroup && groupController != null) {
+                    entryWidget = _SplitGroupWrapper(
+                      controller: groupController,
+                      child: entryWidget,
+                    );
+                  }
+
+                  return entryWidget;
                 }
                 return Container();
               },
@@ -356,7 +434,7 @@ class AnimatedSlideCard extends StatefulWidget {
   final VoidCallback? onAnimationComplete; // CP: Callback when animation completes
 
   const AnimatedSlideCard({
-    super.key, 
+    super.key,
     required this.child,
     this.isNew = false,
     this.isProcessing = false,
@@ -373,7 +451,7 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   // CP: Pulse animation for processing entries
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -381,7 +459,7 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
   @override
   void initState() {
     super.initState();
-    
+
     // CP: Main entrance animation - more dramatic for new entries
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.isNew ? 400 : 200),
@@ -401,7 +479,7 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       begin: widget.isNew ? 0.3 : 0.7,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    
+
     // CP: Scale animation for new entries only - more subtle
     _scaleAnimation = Tween<double>(
       begin: widget.isNew ? 0.92 : 1.0,
@@ -415,14 +493,14 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
+
     _pulseAnimation = Tween<double>(
       begin: 0.98,
       end: 1.02,
     ).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    
+
     if (widget.isProcessing) {
       _pulseController.repeat(reverse: true);
     }
@@ -449,11 +527,11 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       });
     }
   }
-  
+
   @override
   void didUpdateWidget(AnimatedSlideCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // CP: Handle processing state changes
     if (widget.isProcessing != oldWidget.isProcessing) {
       if (widget.isProcessing) {
@@ -482,7 +560,7 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
           child: SlideTransition(
             position: _slideAnimation,
             child: FadeTransition(
-              opacity: _fadeAnimation, 
+              opacity: _fadeAnimation,
               child: widget.child,
             ),
           ),
@@ -600,3 +678,45 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
   }
 }
 
+// CP: Widget that provides visual grouping for split entries using overlay approach
+class _SplitGroupWrapper extends StatelessWidget {
+  final AnimationController controller;
+  final Widget child;
+
+  const _SplitGroupWrapper({
+    required this.controller,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            // CP: The actual entry - no changes to its positioning
+            this.child,
+            // CP: Overlay border that doesn't affect layout
+            if (controller.value > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.0),
+                      // CP: Visible outline only, no shadow
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45 * controller.value),
+                        width: 1.5,
+                        strokeAlign: BorderSide.strokeAlignInside,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
