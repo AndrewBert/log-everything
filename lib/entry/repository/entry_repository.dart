@@ -458,4 +458,13 @@ class EntryRepository {
     final dateFormat = DateFormat('yyyy-MM-dd');
     return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   }
+
+  /// CP: Disposes the repository and cancels all pending timers
+  void dispose() {
+    for (final timer in _syncDebounceTimers.values) {
+      timer.cancel();
+    }
+    _syncDebounceTimers.clear();
+    AppLogger.info("[EntryRepository] Disposed and cancelled all pending timers");
+  }
 }
