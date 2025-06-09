@@ -190,6 +190,9 @@ void main() {
     });
 
     group('Multiple entries in single input', () {
+      // TODO: Fix timer cleanup issue for split entries - Timer from _createGroupController in entries_list.dart 
+      // is not being disposed properly when multiple entries are created, causing test failure.
+      // Issue introduced with recent changes to main branch that added split entry functionality.
       testWidgets(
         'Given user enters text with multiple topics, When AI processes it, Then multiple categorized entries are created',
         (WidgetTester tester) async {
