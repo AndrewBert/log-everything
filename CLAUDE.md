@@ -26,6 +26,9 @@ dart run build_runner build
 
 # Clean and rebuild
 flutter clean && flutter pub get
+
+# Build IPA for iOS release
+flutter build ipa --release
 ```
 
 ### Environment Setup
@@ -131,3 +134,18 @@ External APIs (OpenAI, Local Storage)
 - Use `Equatable` for state classes to ensure proper equality checks
 - Handle null cases in `copyWith` methods explicitly
 - Test error scenarios and fallback behaviors
+
+## Release Management
+
+### iOS Release Checklist
+When asked to create an IPA for iOS release, Claude should:
+
+1. **Ask about version bump**: "Do you want me to bump the version number in pubspec.yaml?"
+2. **Ask about What's New dialog**: "Do you want me to update the What's New dialog (lib/dialogs/whats_new_dialog.dart) with recent features?"
+3. **Then proceed with**: `flutter build ipa --release`
+
+### What's New Dialog Updates
+- Located at `lib/dialogs/whats_new_dialog.dart`
+- Update the `changes` list with recent features (keep concise, 3-4 items max)
+- Update the title section to reflect the theme of the update (e.g., "The Gesture Update")
+- Focus on user-facing improvements, not technical architecture changes
