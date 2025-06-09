@@ -53,7 +53,7 @@ class _InputAreaState extends State<InputArea> {
     final entryCubit = context.read<EntryCubit>();
     final editingEntry = entryCubit.state.editingEntry;
 
-    if (editingEntry != null && currentText.isNotEmpty) {
+    if (editingEntry != null) {
       entryCubit.finishEditingEntry(currentText, editingEntry.category);
       _textController.clear();
       if (_inputFocusNode.hasFocus) {
@@ -61,7 +61,10 @@ class _InputAreaState extends State<InputArea> {
         FocusScope.of(context).focusedChild?.unfocus();
       }
 
-      widget.showSnackBar(context: context, content: const Text('Entry updated'), duration: const Duration(seconds: 1));
+      // CP: Only show success message if text was not empty (actual update occurred)
+      if (currentText.isNotEmpty) {
+        widget.showSnackBar(context: context, content: const Text('Entry updated'), duration: const Duration(seconds: 1));
+      }
     }
   }
 
