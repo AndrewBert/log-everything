@@ -81,6 +81,8 @@ class WidgetTestScope {
     when(mockAudioRecorderService.start(any, path: anyNamed('path'))).thenAnswer((_) async => Future.value());
     when(mockAudioRecorderService.isRecording()).thenAnswer((_) async => true);
     when(mockAudioRecorderService.stop()).thenAnswer((_) async => 'fake/path/recording.m4a');
+    // Stub to ensure recording is considered long enough (>1 second)
+    when(mockAudioRecorderService.onStateChanged()).thenAnswer((_) => Stream<RecordState>.empty());
   }
 
   void stubTranscriptionSuccess(String resultText) {
