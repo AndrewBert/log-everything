@@ -220,7 +220,16 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           'Calling repository to process combined entry: "$combinedText" (Timestamp: $processingTimestamp)',
         );
         try {
-          finalEntries = await _entryRepository.processCombinedEntry(combinedText, processingTimestamp);
+          final result = await _entryRepository.processCombinedEntry(combinedText, processingTimestamp);
+          finalEntries = result.entries;
+          final splitCount = result.splitCount;
+          
+          // CP: Handle split notification for voice input
+          if (splitCount > 1) {
+            AppLogger.info('[Voice Split Detection] Repository detected $splitCount split entries');
+            _entryCubit.emit(_entryCubit.state.copyWith(splitNotification: 'Entry split into $splitCount items'));
+          }
+          
           _entryCubit.finalizeProcessing(finalEntries);
         } catch (e) {
           AppLogger.error("Error processing combined entry in repository", error: e);

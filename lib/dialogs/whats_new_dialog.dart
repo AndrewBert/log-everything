@@ -11,16 +11,20 @@ class WhatsNewDialog extends StatelessWidget {
     // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '🎯 Streamlined Onboarding',
-        '''The onboarding flow has been simplified and improved! We've removed redundant steps and updated the chat instructions to help you get started faster.''',
+        '🎯 Tap & Hold Context Menu',
+        '''Long press on any log entry to quickly access edit and delete options with a sleek context menu.''',
       ),
       _buildChangeItem(
-        '🎨 UI Refresh',
-        '''Fresh new look for entry cards with improved spacing, better typography, and cleaner visual hierarchy. The interface now feels more modern and polished.''',
+        '🗑️ Slide to Delete',
+        '''Swipe left on any log entry to quickly delete it - faster than ever to clean up your logs.''',
       ),
       _buildChangeItem(
-        '🏷️ Enhanced Filter Chips',
-        '''Filter chips now have a sleek new design with better visual feedback and improved readability. Finding your entries has never looked this good!''',
+        '✨ Enhanced Split Feedback',
+        '''New animations, visual grouping, and toast notifications help you understand what's happening when logs are split. No more confusion about what the app is doing!''',
+      ),
+      _buildChangeItem(
+        '🎨 Improved Onboarding',
+        '''Better category selection flow when setting up the app. Reset anytime by tapping Help → Reset Onboarding.''',
       ),
     ];
     // --- End of What's New content ---
@@ -40,7 +44,33 @@ class WhatsNewDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: changes,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'The Gesture Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...changes,
+            ],
           ),
         ),
       ),

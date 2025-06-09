@@ -15,6 +15,8 @@ class EntryState extends Equatable {
   final bool isEditingMode;
   // CP: Add context menu state properties
   final Entry? contextMenuEntry;
+  // CP: Add split notification for toast messages
+  final String? splitNotification;
 
   const EntryState({
     this.categories = const [],
@@ -26,6 +28,7 @@ class EntryState extends Equatable {
     this.editingEntry,
     this.isEditingMode = false,
     this.contextMenuEntry,
+    this.splitNotification,
   });
 
   // Implement props getter
@@ -40,6 +43,7 @@ class EntryState extends Equatable {
     editingEntry,
     isEditingMode,
     contextMenuEntry,
+    splitNotification,
   ];
 
   // copyWith remains the same, but without entries
@@ -53,10 +57,12 @@ class EntryState extends Equatable {
     Entry? editingEntry,
     bool? isEditingMode,
     Entry? contextMenuEntry,
+    String? splitNotification,
     bool clearLastError = false,
     bool clearFilter = false,
     bool clearEditingEntry = false,
     bool clearContextMenuEntry = false,
+    bool clearSplitNotification = false,
   }) {
     return EntryState(
       categories: categories ?? this.categories,
@@ -68,6 +74,7 @@ class EntryState extends Equatable {
       editingEntry: clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
       isEditingMode: isEditingMode ?? this.isEditingMode,
       contextMenuEntry: clearContextMenuEntry ? null : (contextMenuEntry ?? this.contextMenuEntry),
+      splitNotification: clearSplitNotification ? null : (splitNotification ?? this.splitNotification),
     );
   }
 }
