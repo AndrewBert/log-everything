@@ -16,6 +16,7 @@ import '../../../entry/repository/entry_repository.dart';
 import '../../../locator.dart';
 import '../../../entry/entry.dart';
 import '../../../services/audio_recorder_service.dart'; // Import the service
+import '../../../chat/cubit/chat_cubit.dart';
 
 class VoiceInputCubit extends Cubit<VoiceInputState> {
   // Change type to the service abstraction
@@ -223,13 +224,13 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           final result = await _entryRepository.processCombinedEntry(combinedText, processingTimestamp);
           finalEntries = result.entries;
           final splitCount = result.splitCount;
-          
+
           // CP: Handle split notification for voice input
           if (splitCount > 1) {
             AppLogger.info('[Voice Split Detection] Repository detected $splitCount split entries');
             _entryCubit.emit(_entryCubit.state.copyWith(splitNotification: 'Entry split into $splitCount items'));
           }
-          
+
           _entryCubit.finalizeProcessing(finalEntries);
         } catch (e) {
           AppLogger.error("Error processing combined entry in repository", error: e);
@@ -255,6 +256,80 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
           isRecording: false,
           clearRecordingTime: true,
           clearAudioPath: true,
+        ),
+      );
+    }
+  }
+
+  Future<void> stopRecordingAndSendToChat(String initialText, ChatCubit chatCubit) async {
+    AppLogger.info("Stopping recording to combine with initial text for chat: '$initialText'");
+    if (!state.isRecording) return;
+    HapticFeedback.lightImpact();
+
+    _cancelRecordingTimer();
+    final recordingDuration = _calculateRecordingDuration();
+    final bool isTooShort = recordingDuration < _minRecordingDuration;
+    String? audioPath;
+
+    try {
+      // Use service to stop recording
+      audioPath = await _audioRecorderService.stop();
+      AppLogger.info("Recording stopped for chat, audio path: $audioPath");
+
+      emit(state.copyWith(isRecording: false, clearRecordingTime: true, audioPath: audioPath, clearErrorMessage: true));
+
+      String combinedText = initialText;
+
+      if (!isTooShort && audioPath != null) {
+        // CP: Set transcribing state for visual feedback
+        emit(state.copyWith(transcriptionStatus: TranscriptionStatus.transcribing));
+
+        try {
+          final transcription = await _speechService.transcribeAudio(audioPath, language: 'en');
+          if (transcription != null && transcription.isNotEmpty) {
+            AppLogger.info('Chat transcription successful: "$transcription"');
+            if (combinedText.isNotEmpty && !combinedText.endsWith(' ') && !combinedText.endsWith('\n')) {
+              combinedText += ' ';
+            }
+            combinedText += transcription;
+          } else {
+            AppLogger.warn('Chat transcription failed or returned empty text. Using only initial text.');
+          }
+        } catch (e) {
+          AppLogger.error("Chat transcription error", error: e);
+          emit(state.copyWith(errorMessage: 'Transcription error: $e', transcriptionStatus: TranscriptionStatus.error));
+          // Still send the initial text even if transcription fails
+        }
+      } else {
+        if (isTooShort) {
+          AppLogger.info("Skipping transcription for chat: recording too short.");
+        } else {
+          AppLogger.error("Failed to save recording for chat, path is null.");
+          emit(state.copyWith(errorMessage: 'Failed to save recording.'));
+        }
+      }
+
+      // Send combined text to chat if not empty
+      if (combinedText.isNotEmpty) {
+        AppLogger.info('Sending combined text to chat: "$combinedText"');
+        chatCubit.addUserMessage(combinedText);
+        // CP: Set success state for brief visual feedback
+        emit(state.copyWith(transcriptionStatus: TranscriptionStatus.success));
+      } else {
+        AppLogger.warn('Combined text is empty, not sending to chat.');
+      }
+
+      // CP: Clear transcription status after processing
+      emit(state.copyWith(clearAudioPath: true, transcriptionStatus: TranscriptionStatus.idle));
+    } catch (e) {
+      AppLogger.error("Error stopping recording for chat", error: e);
+      emit(
+        state.copyWith(
+          errorMessage: 'Error stopping recording: $e',
+          isRecording: false,
+          clearRecordingTime: true,
+          clearAudioPath: true,
+          transcriptionStatus: TranscriptionStatus.error,
         ),
       );
     }

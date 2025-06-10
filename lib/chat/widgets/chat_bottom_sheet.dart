@@ -149,6 +149,13 @@ class ChatBottomSheet extends StatelessWidget {
                 // This won't be called since InputArea handles chat mode internally
               },
               showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
+                final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+                final bottomPadding = MediaQuery.of(context).padding.bottom;
+                final inputAreaHeight = 120.0; // Approximate height of input area
+                final double bottomMargin = keyboardVisible 
+                  ? MediaQuery.of(context).viewInsets.bottom + inputAreaHeight + 16.0
+                  : bottomPadding + inputAreaHeight + 16.0;
+                
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: content,
@@ -156,7 +163,11 @@ class ChatBottomSheet extends StatelessWidget {
                     action: action,
                     backgroundColor: backgroundColor,
                     behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.all(16.0),
+                    margin: EdgeInsets.only(
+                      bottom: bottomMargin,
+                      left: 16.0,
+                      right: 16.0,
+                    ),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                   ),
                 );
