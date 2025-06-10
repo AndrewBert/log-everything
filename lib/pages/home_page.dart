@@ -49,7 +49,7 @@ class HomePage extends StatelessWidget {
               style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
               children: <TextSpan>[
                 TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                TextSpan(text: ' Splitter', style: TextStyle(color: defaultTitleColor)),
+                TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
               ],
             ),
           ),
