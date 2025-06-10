@@ -163,9 +163,12 @@ class _InputAreaState extends State<InputArea> {
               return TextFieldTapRegion(
                 // CP: Use default groupId (EditableText) for correct grouping
                 child: Material(
-                  elevation: 8.0,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(20.0), topRight: Radius.circular(20.0)),
+                  elevation: isChatOpen ? 0.0 : 8.0, // CP: Remove shadow in chat mode
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                      topRight: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                    ),
                   ),
                   child: Container(
                     decoration: BoxDecoration(
@@ -174,9 +177,9 @@ class _InputAreaState extends State<InputArea> {
                           isEditingMode
                               ? Theme.of(context).colorScheme.primaryContainer.withAlpha(77) // 0.3 * 255
                               : Theme.of(context).colorScheme.surface,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20.0),
-                        topRight: Radius.circular(20.0),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                        topRight: Radius.circular(isChatOpen ? 0.0 : 20.0),
                       ),
                     ),
                     child: Column(
