@@ -305,13 +305,7 @@ class _InputAreaState extends State<InputArea> {
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
-                                    final shouldOpenChat = !isChatOpen;
                                     context.read<HomePageCubit>().toggleChatOpen();
-                                    // CP: Only request focus if opening chat and not already focused
-                                    if (shouldOpenChat && !_inputFocusNode.hasFocus) {
-                                      _inputFocusNode.requestFocus();
-                                    }
-                                    // CP: Do not unfocus when closing chat
                                   },
                                 ),
                               ],

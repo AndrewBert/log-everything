@@ -27,50 +27,50 @@ class ChatBottomSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerLowest,
           ),
-        child: Column(
-          children: [
-            // CP: Full-screen chat header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.outline.withAlpha(50),
-                    width: 1.0,
+          child: Column(
+            children: [
+              // CP: Full-screen chat header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outline.withAlpha(50),
+                      width: 1.0,
+                    ),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Close Chat',
+                        onPressed: () {
+                          context.read<HomePageCubit>().toggleChatOpen();
+                        },
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Chat with AI',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      // CP: Spacer to center the title
+                      const SizedBox(width: 48),
+                    ],
                   ),
                 ),
               ),
-              child: SafeArea(
-                bottom: false,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Close Chat',
-                      onPressed: () {
-                        context.read<HomePageCubit>().toggleChatOpen();
-                      },
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Chat with AI',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    // CP: Spacer to center the title
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child:
-                  messages.isEmpty && !isLoading
-                      ? Padding(
+              Expanded(
+                child:
+                    messages.isEmpty && !isLoading
+                        ? Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -130,51 +130,52 @@ class ChatBottomSheet extends StatelessWidget {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                        controller: ScrollController(),
-                        reverse: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final message = messages[messages.length - 1 - index];
-                          final isUserMessage = message.sender == ChatSender.user;
-                          return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
-                        },
+                        : ListView.builder(
+                          controller: ScrollController(),
+                          reverse: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final message = messages[messages.length - 1 - index];
+                            final isUserMessage = message.sender == ChatSender.user;
+                            return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
+                          },
+                        ),
+              ),
+              if (isLoading) _buildThinkingIndicator(context),
+              const SizedBox(height: 8),
+              InputArea(
+                onSendPressed: (text) {
+                  // This won't be called since InputArea handles chat mode internally
+                },
+                showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
+                  final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+                  final bottomPadding = MediaQuery.of(context).padding.bottom;
+                  final inputAreaHeight = 120.0; // Approximate height of input area
+                  final double bottomMargin =
+                      keyboardVisible
+                          ? MediaQuery.of(context).viewInsets.bottom + inputAreaHeight + 16.0
+                          : bottomPadding + inputAreaHeight + 16.0;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: content,
+                      duration: duration ?? const Duration(seconds: 4),
+                      action: action,
+                      backgroundColor: backgroundColor,
+                      behavior: SnackBarBehavior.floating,
+                      margin: EdgeInsets.only(
+                        bottom: bottomMargin,
+                        left: 16.0,
+                        right: 16.0,
                       ),
-            ),
-            if (isLoading) _buildThinkingIndicator(context),
-            const SizedBox(height: 8),
-            InputArea(
-              onSendPressed: (text) {
-                // This won't be called since InputArea handles chat mode internally
-              },
-              showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
-                final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-                final bottomPadding = MediaQuery.of(context).padding.bottom;
-                final inputAreaHeight = 120.0; // Approximate height of input area
-                final double bottomMargin = keyboardVisible 
-                  ? MediaQuery.of(context).viewInsets.bottom + inputAreaHeight + 16.0
-                  : bottomPadding + inputAreaHeight + 16.0;
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: content,
-                    duration: duration ?? const Duration(seconds: 4),
-                    action: action,
-                    backgroundColor: backgroundColor,
-                    behavior: SnackBarBehavior.floating,
-                    margin: EdgeInsets.only(
-                      bottom: bottomMargin,
-                      left: 16.0,
-                      right: 16.0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
