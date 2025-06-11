@@ -5,6 +5,7 @@ import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/input_area.dart';
+import 'package:myapp/utils/widget_keys.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
 
 class ChatBottomSheet extends StatelessWidget {
@@ -21,6 +22,7 @@ class ChatBottomSheet extends StatelessWidget {
     // CP: Dismiss keyboard when tapping outside input in chat view
     return SafeArea(
       child: GestureDetector(
+        key: chatBottomSheet,
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
         child: Container(
@@ -46,6 +48,7 @@ class ChatBottomSheet extends StatelessWidget {
                   child: Row(
                     children: [
                       IconButton(
+                        key: chatCloseButton,
                         icon: const Icon(Icons.close),
                         tooltip: 'Close Chat',
                         onPressed: () {
@@ -71,6 +74,7 @@ class ChatBottomSheet extends StatelessWidget {
                 child:
                     messages.isEmpty && !isLoading
                         ? Padding(
+                          key: chatWelcomeMessage,
                           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -131,6 +135,7 @@ class ChatBottomSheet extends StatelessWidget {
                           ),
                         )
                         : ListView.builder(
+                          key: chatMessagesList,
                           controller: ScrollController(),
                           reverse: true,
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -184,6 +189,7 @@ class ChatBottomSheet extends StatelessWidget {
   Widget _buildThinkingIndicator(BuildContext context) {
     final Color textColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
+      key: chatThinkingIndicator,
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,

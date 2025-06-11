@@ -90,10 +90,13 @@ External APIs (OpenAI, Local Storage)
 - **Trailing Commas**: Preserved by formatter (120 char line width)
 
 ### Testing Approach
+- **No Cubit-Specific Tests**: Never test cubits directly - test the behavior they enable
+- **Test Structure**: Use Given/When/Then format with descriptive test names
 - **Widget Tests**: Use `find.byKey` with `ValueKey`s defined in `lib/utils/*_keys.dart`
 - **Mocking**: Generated via `mockito` and `build_runner` 
 - **Mock Setup**: Add services to `@GenerateMocks` annotation in `test/mocks.dart`
 - **Test DI**: Use `test_di_registrar.dart` for test-specific service registration
+- **Test Location**: Tests go in `test/behaviors/` directory
 
 ## Data Architecture
 

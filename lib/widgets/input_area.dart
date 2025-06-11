@@ -9,6 +9,7 @@ import 'voice_input/voice_input.dart';
 import 'voice_input/cubit/voice_input_cubit.dart';
 import 'voice_input/cubit/voice_input_state.dart';
 import 'package:myapp/chat/chat.dart';
+import 'package:myapp/utils/widget_keys.dart';
 
 class InputArea extends StatefulWidget {
   final void Function(String text) onSendPressed;
@@ -294,6 +295,7 @@ class _InputAreaState extends State<InputArea> {
                                 )
                               else ...[
                                 TextButton.icon(
+                                  key: chatToggleButton,
                                   icon: Icon(isChatOpen ? Icons.forum_rounded : Icons.forum_outlined),
                                   label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
                                   style: TextButton.styleFrom(

@@ -59,3 +59,11 @@ const Key whatsNewDialog = ValueKey('whatsNewDialog');
 // Keys for AppBar actions (example, can be expanded)
 const Key helpButton = ValueKey('helpButton');
 const Key manageCategoriesButton = ValueKey('manageCategoriesButton');
+
+// Keys for Chat interface
+const Key chatToggleButton = ValueKey('chatToggleButton');
+const Key chatBottomSheet = ValueKey('chatBottomSheet');
+const Key chatCloseButton = ValueKey('chatCloseButton');
+const Key chatWelcomeMessage = ValueKey('chatWelcomeMessage');
+const Key chatThinkingIndicator = ValueKey('chatThinkingIndicator');
+const Key chatMessagesList = ValueKey('chatMessagesList');

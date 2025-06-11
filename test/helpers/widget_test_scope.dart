@@ -7,6 +7,7 @@ import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
+import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/locator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -95,6 +96,34 @@ class WidgetTestScope {
         (textSegment: TestData.testEntryText, category: 'Misc'),
       ],
     );
+  }
+
+  void stubChatResponse(String responseText, {String? responseId}) {
+    when(mockAiService.getChatResponse(
+      messages: anyNamed('messages'),
+      currentDate: anyNamed('currentDate'),
+      store: anyNamed('store'),
+      previousResponseId: anyNamed('previousResponseId'),
+    )).thenAnswer((_) async => (responseText, responseId));
+  }
+
+  void stubChatError(Exception error) {
+    when(mockAiService.getChatResponse(
+      messages: anyNamed('messages'),
+      currentDate: anyNamed('currentDate'),
+      store: anyNamed('store'),
+      previousResponseId: anyNamed('previousResponseId'),
+    )).thenThrow(error);
+  }
+
+  void stubChatCubitWithMessages(List<ChatMessage> messages, {bool isLoading = false, String? lastResponseId}) {
+    final chatState = ChatState(messages: messages, isLoading: isLoading, lastResponseId: lastResponseId);
+    when(mockChatCubit.state).thenReturn(chatState);
+    when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(chatState));
+  }
+
+  void stubChatCubitEmpty() {
+    stubChatCubitWithMessages([]);
   }
 
   Future<void> dispose() async {}
