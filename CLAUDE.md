@@ -96,7 +96,9 @@ External APIs (OpenAI, Local Storage)
 - **Mocking**: Generated via `mockito` and `build_runner` 
 - **Mock Setup**: Add services to `@GenerateMocks` annotation in `test/mocks.dart`
 - **Test DI**: Use `test_di_registrar.dart` for test-specific service registration
-- **Test Location**: Tests go in `test/behaviors/` directory
+- **Test Organization**: 
+  - Feature tests: `test/chat/`, `test/dialogs/`, `test/pages/`, `test/widgets/`
+  - Integration tests: Root `test/` directory (e.g., `ai_categorization_test.dart`, `entry_management_test.dart`)
 
 ## Data Architecture
 
