@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_state.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
+import 'package:myapp/utils/logger.dart';
 import 'voice_input/voice_input.dart';
+import 'voice_input/cubit/voice_input_cubit.dart';
+import 'voice_input/cubit/voice_input_state.dart';
 import 'package:myapp/chat/chat.dart';
+import 'package:myapp/utils/widget_keys.dart';
 
 class InputArea extends StatefulWidget {
   final void Function(String text) onSendPressed;
@@ -63,7 +68,11 @@ class _InputAreaState extends State<InputArea> {
 
       // CP: Only show success message if text was not empty (actual update occurred)
       if (currentText.isNotEmpty) {
-        widget.showSnackBar(context: context, content: const Text('Entry updated'), duration: const Duration(seconds: 1));
+        widget.showSnackBar(
+          context: context,
+          content: const Text('Entry updated'),
+          duration: const Duration(seconds: 1),
+        );
       }
     }
   }
@@ -90,8 +99,19 @@ class _InputAreaState extends State<InputArea> {
     final currentText = _textController.text.trim();
     final homePageCubit = context.read<HomePageCubit>();
     final chatCubit = context.read<ChatCubit>();
+    final voiceCubit = context.read<VoiceInputCubit>();
 
     if (homePageCubit.state.isChatOpen) {
+      // CP: Handle voice recording during chat send
+      if (voiceCubit.state.isRecording) {
+        AppLogger.info('Send tapped during recording in chat mode. Stopping and combining for chat.');
+        HapticFeedback.mediumImpact();
+        voiceCubit.stopRecordingAndSendToChat(currentText, chatCubit);
+        _textController.clear();
+        return;
+      }
+      
+      // CP: Regular chat text send
       if (currentText.isNotEmpty) {
         chatCubit.addUserMessage(currentText);
       }
@@ -136,36 +156,47 @@ class _InputAreaState extends State<InputArea> {
         buildWhen:
             (prev, current) => prev.isEditingMode != current.isEditingMode || prev.editingEntry != current.editingEntry,
         builder: (context, entryState) {
-          return BlocBuilder<HomePageCubit, HomePageState>(
-            buildWhen:
-                (prev, current) =>
-                    prev.isInputFocused != current.isInputFocused || prev.isChatOpen != current.isChatOpen,
-            builder: (context, homeScreenState) {
-              final isInputFocused = homeScreenState.isInputFocused;
-              final isChatOpen = homeScreenState.isChatOpen;
-              final isEditingMode = entryState.isEditingMode;
+          return BlocBuilder<VoiceInputCubit, VoiceInputState>(
+            builder: (context, voiceState) {
+              return BlocBuilder<HomePageCubit, HomePageState>(
+                buildWhen:
+                    (prev, current) =>
+                        prev.isInputFocused != current.isInputFocused || prev.isChatOpen != current.isChatOpen,
+                builder: (context, homeScreenState) {
+                  final isInputFocused = homeScreenState.isInputFocused;
+                  final isChatOpen = homeScreenState.isChatOpen;
+                  final isEditingMode = entryState.isEditingMode;
+                  final isTranscribing = voiceState.transcriptionStatus == TranscriptionStatus.transcribing;
 
-              // CP: Determine input behavior based on mode
-              String hintText;
-              String labelText;
+                  // CP: Determine input behavior based on mode and voice state
+                  String hintText;
+                  String labelText;
 
-              if (isEditingMode) {
-                hintText = 'Edit your entry...';
-                labelText = 'Editing Entry';
-              } else if (isChatOpen) {
-                hintText = 'Ask anything';
-                labelText = 'Chatting...';
-              } else {
-                hintText = 'Log it or else';
-                labelText = isInputFocused ? 'Enter log entry' : 'What happened?...';
-              }
+                  if (isEditingMode) {
+                    hintText = 'Edit your entry...';
+                    labelText = 'Editing Entry';
+                  } else if (isChatOpen) {
+                    if (isTranscribing) {
+                      hintText = 'Processing voice...';
+                      labelText = 'Transcribing...';
+                    } else {
+                      hintText = 'Ask anything';
+                      labelText = 'Chatting...';
+                    }
+                  } else {
+                    hintText = 'Log it or else';
+                    labelText = isInputFocused ? 'Enter log entry' : 'What happened?...';
+                  }
 
               return TextFieldTapRegion(
                 // CP: Use default groupId (EditableText) for correct grouping
                 child: Material(
-                  elevation: 8.0,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(20.0), topRight: Radius.circular(20.0)),
+                  elevation: isChatOpen ? 0.0 : 8.0, // CP: Remove shadow in chat mode
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                      topRight: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                    ),
                   ),
                   child: Container(
                     decoration: BoxDecoration(
@@ -174,9 +205,9 @@ class _InputAreaState extends State<InputArea> {
                           isEditingMode
                               ? Theme.of(context).colorScheme.primaryContainer.withAlpha(77) // 0.3 * 255
                               : Theme.of(context).colorScheme.surface,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20.0),
-                        topRight: Radius.circular(20.0),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isChatOpen ? 0.0 : 20.0),
+                        topRight: Radius.circular(isChatOpen ? 0.0 : 20.0),
                       ),
                     ),
                     child: Column(
@@ -264,6 +295,7 @@ class _InputAreaState extends State<InputArea> {
                                 )
                               else ...[
                                 TextButton.icon(
+                                  key: chatToggleButton,
                                   icon: Icon(isChatOpen ? Icons.forum_rounded : Icons.forum_outlined),
                                   label: Text(isChatOpen ? 'Close Chat' : 'Chat'),
                                   style: TextButton.styleFrom(
@@ -275,19 +307,13 @@ class _InputAreaState extends State<InputArea> {
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
-                                    final shouldOpenChat = !isChatOpen;
                                     context.read<HomePageCubit>().toggleChatOpen();
-                                    // CP: Only request focus if opening chat and not already focused
-                                    if (shouldOpenChat && !_inputFocusNode.hasFocus) {
-                                      _inputFocusNode.requestFocus();
-                                    }
-                                    // CP: Do not unfocus when closing chat
                                   },
                                 ),
                               ],
                               const Spacer(),
-                              // CP: Hide voice input when editing
-                              if (!isChatOpen && !isEditingMode)
+                              // CP: Hide voice input only when editing (allow in chat mode)
+                              if (!isEditingMode)
                                 VoiceInput(
                                   textController: _textController,
                                   inputFocusNode: _inputFocusNode,
@@ -308,39 +334,60 @@ class _InputAreaState extends State<InputArea> {
                                     );
                                   },
                                 ),
-                              BlocBuilder<ChatCubit, ChatState>(
-                                builder: (context, chatState) {
-                                  final isLoading = chatState.isLoading;
-                                  final messages = chatState.messages;
-                                  final lastIsUser = messages.isNotEmpty && messages.last.sender == ChatSender.user;
-                                  final shouldDisableSend =
-                                      (isChatOpen && (isLoading || lastIsUser)) ||
-                                      (isEditingMode && _textController.text.trim().isEmpty);
+                              BlocBuilder<VoiceInputCubit, VoiceInputState>(
+                                builder: (context, voiceState) {
+                                  return BlocBuilder<ChatCubit, ChatState>(
+                                    builder: (context, chatState) {
+                                      final isLoading = chatState.isLoading;
+                                      final messages = chatState.messages;
+                                      final lastIsUser = messages.isNotEmpty && messages.last.sender == ChatSender.user;
+                                      final isTranscribing = voiceState.transcriptionStatus == TranscriptionStatus.transcribing;
+                                      final shouldDisableSend =
+                                          (isChatOpen && (isLoading || lastIsUser || isTranscribing)) ||
+                                          (isEditingMode && _textController.text.trim().isEmpty);
 
-                                  // CP: Change icon and tooltip based on mode
-                                  IconData sendIcon;
-                                  String tooltip;
+                                      // CP: Change icon and tooltip based on mode and voice state
+                                      IconData sendIcon;
+                                      String tooltip;
+                                      Color? iconColor;
 
-                                  if (isEditingMode) {
-                                    sendIcon = Icons.check_rounded;
-                                    tooltip = 'Save Changes';
-                                  } else if (isChatOpen) {
-                                    sendIcon = Icons.send_rounded;
-                                    tooltip = 'Send Message';
-                                  } else {
-                                    sendIcon = Icons.send_rounded;
-                                    tooltip = 'Add Entry';
-                                  }
+                                      if (isEditingMode) {
+                                        sendIcon = Icons.check_rounded;
+                                        tooltip = 'Save Changes';
+                                        iconColor = Theme.of(context).colorScheme.primary;
+                                      } else if (isChatOpen) {
+                                        if (isTranscribing) {
+                                          sendIcon = Icons.hourglass_bottom;
+                                          tooltip = 'Processing voice...';
+                                          iconColor = Colors.orange.shade700;
+                                        } else {
+                                          sendIcon = Icons.send_rounded;
+                                          tooltip = 'Send Message';
+                                          iconColor = Theme.of(context).colorScheme.primary;
+                                        }
+                                      } else {
+                                        sendIcon = Icons.send_rounded;
+                                        tooltip = 'Add Entry';
+                                        iconColor = Theme.of(context).colorScheme.primary;
+                                      }
 
-                                  return IconButton(
-                                    onPressed: shouldDisableSend ? null : _handleLocalSend,
-                                    icon: Icon(sendIcon),
-                                    color:
-                                        isEditingMode
-                                            ? Theme.of(context).colorScheme.primary
-                                            : Theme.of(context).colorScheme.primary,
-                                    iconSize: 28,
-                                    tooltip: tooltip,
+                                      return IconButton(
+                                        onPressed: shouldDisableSend ? null : _handleLocalSend,
+                                        icon: isTranscribing 
+                                          ? SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: iconColor,
+                                              ),
+                                            )
+                                          : Icon(sendIcon),
+                                        color: iconColor,
+                                        iconSize: 28,
+                                        tooltip: tooltip,
+                                      );
+                                    },
                                   );
                                 },
                               ),
@@ -351,6 +398,8 @@ class _InputAreaState extends State<InputArea> {
                     ),
                   ),
                 ),
+              );
+                },
               );
             },
           );

@@ -278,6 +278,63 @@ void main() {
       // This test would verify that voice input works during entry editing
       // but it may require UI changes to enable mic button in edit mode
     });
+
+    group('Chat mode integration', () {
+      testWidgets(
+        'Given app is loaded, When user taps chat button, Then chat mode becomes active',
+        (WidgetTester tester) async {
+          // Given - User has app open
+          scope.stubPermissionGranted();
+          await givenUserHasAppOpenWithMicPermission(tester, scope);
+
+          // When - User taps chat button
+          await givenChatModeIsActive(tester);
+
+          // Then - Chat mode is active (UI changes)
+          await thenChatModeIsActive(tester);
+        },
+      );
+
+      testWidgets(
+        'Given chat mode is active, When user taps close chat, Then chat mode becomes inactive',
+        (WidgetTester tester) async {
+          // Given - Chat mode is active
+          scope.stubPermissionGranted();
+          await givenUserHasAppOpenWithMicPermission(tester, scope);
+          await givenChatModeIsActive(tester);
+
+          // When - User taps close chat button
+          final closeChatButton = find.byIcon(Icons.forum_rounded);
+          await tester.tap(closeChatButton);
+          await tester.pumpAndSettle();
+
+          // Then - Chat mode becomes inactive
+          expect(find.byIcon(Icons.forum_outlined), findsOneWidget);
+          expect(find.text('Chat'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'Given chat mode is active, When user records voice, Then voice input handles chat context appropriately',
+        (WidgetTester tester) async {
+          // Given - Chat mode is active and voice input is configured
+          const voiceText = 'What did I work on yesterday?';
+          scope.stubPermissionGranted();
+          scope.stubStartRecordingSuccess();
+          scope.stubTranscriptionSuccess(voiceText);
+          
+          await givenUserHasAppOpenWithMicPermission(tester, scope);
+          await givenChatModeIsActive(tester);
+
+          // When - User records voice input in chat mode
+          await whenUserRecordsVoiceInChatMode(tester);
+
+          // Then - Voice input behaves appropriately for chat context
+          await thenVoiceInputReturnsToNormalState(tester);
+          // Note: Full chat integration tested elsewhere
+        },
+      );
+    });
   });
 }
 
@@ -479,5 +536,48 @@ Future<void> thenVoiceContentIsAppended(WidgetTester tester, String expectedComb
 Future<void> thenUserCanSubmitCombinedEntry(WidgetTester tester) async {
   // Send button should be available
   expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+}
+
+// Chat Mode Helper Functions
+
+Future<void> givenChatModeIsActive(WidgetTester tester) async {
+  // Tap chat button to activate chat mode
+  final chatButton = find.byIcon(Icons.forum_outlined);
+  expect(chatButton, findsOneWidget);
+  await tester.tap(chatButton);
+  await tester.pumpAndSettle();
+}
+
+Future<void> whenUserRecordsVoiceInChatMode(WidgetTester tester) async {
+  await whenUserTapsMicButton(tester);
+  await tester.pump(const Duration(seconds: 2));
+  await whenUserTapsStopButton(tester);
+  await tester.pumpAndSettle();
+}
+
+Future<void> thenVoiceInputIsSentToChat(WidgetTester tester, String expectedText) async {
+  // Check that the user message appears in chat
+  expect(find.text(expectedText), findsOneWidget);
+}
+
+Future<void> thenChatShowsAiResponse(WidgetTester tester, String aiResponse) async {
+  // Check that AI response appears in chat
+  expect(find.text(aiResponse), findsOneWidget);
+}
+
+Future<void> thenChatShowsErrorResponse(WidgetTester tester) async {
+  // Check for error message in chat
+  expect(find.textContaining('Sorry'), findsOneWidget);
+}
+
+Future<void> thenChatModeRemainsActive(WidgetTester tester) async {
+  // Verify chat mode is still active (bottom sheet should be visible)
+  expect(find.byType(BottomSheet), findsOneWidget);
+}
+
+Future<void> thenChatModeIsActive(WidgetTester tester) async {
+  // Verify chat mode is active (icon changes to filled version)
+  expect(find.byIcon(Icons.forum_rounded), findsOneWidget);
+  expect(find.text('Close Chat'), findsOneWidget);
 }
 

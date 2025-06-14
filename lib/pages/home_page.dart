@@ -38,7 +38,7 @@ class HomePage extends StatelessWidget {
     final isChatOpen = context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: isChatOpen ? null : AppBar(
         title: GestureDetector(
           key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
           onTap: () {
@@ -158,48 +158,35 @@ class HomePage extends StatelessWidget {
             },
           ),
         ],
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            // CP: Main column for overall layout
-            children: [
-              Expanded(
-                child: Stack(
-                  // CP: Use Stack to overlay chat
-                  children: <Widget>[
-                    // CP: Base layer (Filter and EntriesList)
-                    Column(
+        child: isChatOpen 
+          ? const ChatBottomSheet()
+          : SafeArea(
+              bottom: false,
+              child: Column(
+                // CP: Main column for overall layout
+                children: [
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[const FilterSection(), _buildEntriesList(context)],
                     ),
-                    // CP: Overlay layer (ChatBottomSheet)
-                    if (isChatOpen)
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: FractionallySizedBox(
-                          heightFactor: 0.92, // CP: Increased from 0.8 for a taller chat sheet
-                          child: const ChatBottomSheet(),
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
+                  InputArea(
+                    // CP: InputArea remains at the bottom
+                    onSendPressed: (text) => _handleInput(context, text),
+                    showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
+                      _showFloatingSnackBar(
+                        context,
+                        content: content,
+                        duration: duration ?? const Duration(seconds: 4),
+                        action: action,
+                        backgroundColor: backgroundColor,
+                      );
+                    },
+                  ),
+                ],
               ),
-              InputArea(
-                // CP: InputArea remains at the bottom
-                onSendPressed: (text) => _handleInput(context, text),
-                showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
-                  _showFloatingSnackBar(
-                    context,
-                    content: content,
-                    duration: duration ?? const Duration(seconds: 4),
-                    action: action,
-                    backgroundColor: backgroundColor,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }
