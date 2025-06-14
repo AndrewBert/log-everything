@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
+import '../utils/widget_keys.dart';
 import 'edit_category_dialog.dart';
 
 // Define callback types for clarity
@@ -245,6 +246,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      key: addCategoryDialog,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Add Category'),
       content: Column(
@@ -253,6 +255,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: TextField(
+              key: addCategoryNameField,
               controller: categoryInputController,
               focusNode: categoryFocusNode, // CP: Auto-focus here
               textCapitalization: TextCapitalization.words, // CP: Auto-capitalize each word
@@ -267,6 +270,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: TextField(
+              key: addCategoryDescriptionField,
               controller: descriptionInputController,
               decoration: InputDecoration(
                 labelText: 'Description (optional)',
@@ -291,6 +295,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
                   ),
                 ),
                 Switch(
+                  key: addCategoryChecklistToggle,
                   value: _isChecklist,
                   onChanged: (value) => setState(() => _isChecklist = value),
                 ),
@@ -301,10 +306,12 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
       ),
       actions: [
         TextButton(
+          key: addCategoryCancelButton,
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
+          key: addCategoryAddButton,
           onPressed: () {
             final name = categoryInputController.text.trim();
             final description = descriptionInputController.text.trim();
@@ -394,6 +401,7 @@ class CategoryCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Icon(
                               Icons.checklist,
+                              key: categoryChecklistIconKey(category.name),
                               size: 16,
                               color: theme.colorScheme.primary,
                             ),

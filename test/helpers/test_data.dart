@@ -40,6 +40,52 @@ class TestData {
     const Category(name: 'Personal', description: 'Personal entries'),
   ];
 
+  // CP: Checklist test data
+  static const checklistCategory = Category(
+    name: 'TodoList', 
+    description: 'Tasks and checklist items',
+    isChecklist: true,
+  );
+
+  static const regularCategory = Category(
+    name: 'Notes', 
+    description: 'Regular notes and thoughts',
+    isChecklist: false,
+  );
+
+  static final checklistEntryIncomplete = Entry(
+    text: 'Buy groceries',
+    timestamp: today.add(const Duration(hours: 12)),
+    category: 'TodoList',
+    isCompleted: false,
+  );
+
+  static final checklistEntryCompleted = Entry(
+    text: 'Finish weekly report',
+    timestamp: today.add(const Duration(hours: 11)),
+    category: 'TodoList',
+    isCompleted: true,
+  );
+
+  static final regularEntry = Entry(
+    text: 'Meeting notes from today',
+    timestamp: today.add(const Duration(hours: 13)),
+    category: 'Notes',
+    isCompleted: false, // CP: Should be ignored for regular entries
+  );
+
+  static final checklistEntriesWithMixed = [
+    checklistEntryIncomplete,
+    checklistEntryCompleted,
+    regularEntry,
+  ];
+
+  static final categoriesWithChecklist = [
+    ...categoriesList,
+    checklistCategory,
+    regularCategory,
+  ];
+
   static List<Entry> getExpectedEntriesAfterDelete(Entry entryToDelete) {
     return List<Entry>.from(rawEntriesList)
       ..removeWhere((e) => e.timestamp == entryToDelete.timestamp && e.text == entryToDelete.text);

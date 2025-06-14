@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
+import '../utils/widget_keys.dart';
 import 'delete_category_confirmation_dialog.dart';
 
 // CP: Result class for edit category dialog operations
@@ -142,6 +143,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                     ),
                   ),
                   Switch(
+                    key: editCategoryChecklistToggle,
                     value: _isChecklist,
                     onChanged: (value) => setState(() => _isChecklist = value),
                   ),

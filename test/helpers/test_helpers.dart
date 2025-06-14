@@ -309,3 +309,8 @@ void thenAudioAndSpeechServicesAreCalledForStopAndTranscribe(WidgetTestScope sco
   verify(scope.mockAudioRecorderService.stop()).called(1);
   verify(scope.mockSpeechService.transcribeAudio(any, language: 'en')).called(1);
 }
+
+// CP: Dialog interaction helpers
+Future<void> whenManageCategoriesDialogIsOpened(WidgetTester tester) async {
+  await whenManageCategoriesButtonIsTapped(tester);
+}

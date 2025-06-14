@@ -341,6 +341,7 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                                 }
                                               : null,
                                           child: AnimatedContainer(
+                                            key: entryCheckboxKey(widget.entry),
                                             duration: const Duration(milliseconds: 200),
                                             curve: Curves.easeInOutCubic,
                                             width: 20,

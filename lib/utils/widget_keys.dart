@@ -67,3 +67,22 @@ const Key chatCloseButton = ValueKey('chatCloseButton');
 const Key chatWelcomeMessage = ValueKey('chatWelcomeMessage');
 const Key chatThinkingIndicator = ValueKey('chatThinkingIndicator');
 const Key chatMessagesList = ValueKey('chatMessagesList');
+
+// CP: Keys for Checklist functionality
+ValueKey<String> entryCheckboxKey(Entry entry) =>
+    ValueKey('entryCheckbox_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
+
+// CP: Keys for Category Management with checklist
+const Key addCategoryDialog = ValueKey('addCategoryDialog');
+const Key addCategoryNameField = ValueKey('addCategoryNameField');
+const Key addCategoryDescriptionField = ValueKey('addCategoryDescriptionField');
+const Key addCategoryChecklistToggle = ValueKey('addCategoryChecklistToggle');
+const Key addCategoryAddButton = ValueKey('addCategoryAddButton');
+const Key addCategoryCancelButton = ValueKey('addCategoryCancelButton');
+
+// CP: Keys for Edit Category Dialog with checklist
+const Key editCategoryChecklistToggle = ValueKey('editCategoryChecklistToggle');
+
+// CP: Keys for Category Card indicators
+ValueKey<String> categoryChecklistIconKey(String categoryName) =>
+    ValueKey('categoryChecklistIcon_$categoryName');

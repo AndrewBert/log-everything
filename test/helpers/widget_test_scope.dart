@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/entry/entry.dart';
 import 'package:myapp/pages/home_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
@@ -96,6 +97,42 @@ class WidgetTestScope {
         (textSegment: TestData.testEntryText, category: 'Misc'),
       ],
     );
+  }
+
+  // CP: Checklist-specific persistence stubs
+  void stubPersistenceWithChecklistCategories() {
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [TestData.checklistEntryIncomplete]);
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => [TestData.checklistCategory]);
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
+  }
+
+  void stubPersistenceWithRegularCategories() {
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [TestData.regularEntry]);
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => [TestData.regularCategory]);
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
+  }
+
+  void stubPersistenceWithMixedCategories() {
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => TestData.checklistEntriesWithMixed);
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => TestData.categoriesWithChecklist);
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
+  }
+
+  void stubPersistenceWithChecklistEntries(List<Entry> entries) {
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => entries);
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => [TestData.checklistCategory]);
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
+  }
+
+  void stubPersistenceWithMixedEntries(List<Entry> entries) {
+    when(mockPersistenceService.loadEntries()).thenAnswer((_) async => entries);
+    when(mockPersistenceService.loadCategories()).thenAnswer((_) async => TestData.categoriesWithChecklist);
+    when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
+    when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
   }
 
   void stubChatResponse(String responseText, {String? responseId}) {
