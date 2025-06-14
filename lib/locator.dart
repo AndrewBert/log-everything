@@ -6,6 +6,7 @@ import 'package:myapp/speech_service.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/permission_service.dart';
 import 'package:myapp/services/audio_recorder_service.dart';
+import 'package:myapp/services/timer_factory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/services/vector_store_service.dart'; // CP: Corrected package name
@@ -46,11 +47,15 @@ Future<void> configureDependencies() async {
 
   getIt.registerLazySingleton<AudioRecorderService>(() => AudioRecorderServiceImpl());
 
+  // Register TimerFactory for production use
+  getIt.registerLazySingleton<TimerFactory>(() => RealTimerFactory());
+
   getIt.registerLazySingleton(
     () => EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
       aiService: getIt<AiService>(),
       vectorStoreService: getIt<VectorStoreService>(), // CP: Injected VectorStoreService
+      timerFactory: getIt<TimerFactory>(), // CP: Injected TimerFactory
     ),
   );
 }

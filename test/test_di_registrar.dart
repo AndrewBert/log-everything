@@ -5,6 +5,7 @@ import 'package:myapp/services/audio_recorder_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
 import 'package:myapp/services/permission_service.dart'; // Import Permission service
 import 'package:myapp/services/vector_store_service.dart'; // CP: Import VectorStoreService
+import 'package:myapp/services/timer_factory.dart'; // CP: Import TimerFactory
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Import SharedPreferences
 import 'package:http/http.dart' as http; // CP: Import http
@@ -41,6 +42,9 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<VectorStoreService>(vectorStoreService); // CP: Register VectorStoreService mock
   getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
+  
+  // --- Register TimerFactory for testing ---
+  getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
 
   // --- Register REAL EntryRepository ---
   // It depends on the mocked services registered above.
@@ -49,6 +53,7 @@ Future<void> setupTestDependencies({
       persistenceService: getIt<EntryPersistenceService>(),
       aiService: getIt<AiService>(),
       vectorStoreService: getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
+      timerFactory: getIt<TimerFactory>(), // CP: Pass TimerFactory for tests
     ),
   );
 

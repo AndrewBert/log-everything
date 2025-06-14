@@ -5,6 +5,7 @@ import '../category.dart'; // CP: Import Category model
 import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
 import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
+import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
 import '../../utils/logger.dart';
 
 /// Manages the storage and retrieval of entries, synchronizing with vector store and handling AI categorization.
@@ -12,6 +13,7 @@ class EntryRepository {
   final EntryPersistenceService _persistenceService;
   final AiService _aiService;
   final VectorStoreService _vectorStoreService;
+  final TimerFactory _timerFactory;
   List<Entry> _entries = [];
   List<Category> _categories = [];
   // CP: Map to store debounce timers for each month's sync
@@ -25,9 +27,11 @@ class EntryRepository {
     required EntryPersistenceService persistenceService,
     required AiService aiService,
     required VectorStoreService vectorStoreService,
+    required TimerFactory timerFactory,
   }) : _persistenceService = persistenceService,
        _aiService = aiService,
-       _vectorStoreService = vectorStoreService;
+       _vectorStoreService = vectorStoreService,
+       _timerFactory = timerFactory;
 
   Future<void> initialize() async {
     await _loadCategories();
@@ -418,7 +422,7 @@ class EntryRepository {
     _syncDebounceTimers[monthKeyString]?.cancel();
 
     // CP: Create a new timer that will trigger the sync after the debounce period
-    _syncDebounceTimers[monthKeyString] = Timer(Duration(milliseconds: _syncDebounceMs), () async {
+    _syncDebounceTimers[monthKeyString] = _timerFactory.createTimer(Duration(milliseconds: _syncDebounceMs), () async {
       _syncDebounceTimers.remove(monthKeyString);
 
       AppLogger.info("[EntryRepository] Triggering vector store sync for month: $monthKeyString");
