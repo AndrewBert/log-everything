@@ -173,20 +173,20 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                   onPressed: () async {
                     final entryCubit = context.read<EntryCubit>(); // CP: Get cubit before async
                     final rootNavigator = Navigator.of(context, rootNavigator: true); // CP: Get navigator before async
-                    final result = await showDialog<Map<String, String>?>(
+                    final result = await showDialog<Map<String, Object>?>(
                       context: context,
                       builder: (dialogContext) => const AddCategoryDialog(),
                     );
                     if (!mounted) return; // CP: Guard context after async gap
                     if (result != null && result['name'] != null) {
                       entryCubit.addCustomCategoryWithDescription(
-                        result['name']!, 
-                        result['description'] ?? '',
+                        result['name']! as String, 
+                        (result['description'] as String?) ?? '',
                         isChecklist: (result['isChecklist'] as bool?) ?? false,
                       );
                       ScaffoldMessenger.of(
                         rootNavigator.context,
-                      ).showSnackBar(SnackBar(content: Text('Category "${result['name']}" added')));
+                      ).showSnackBar(SnackBar(content: Text('Category "${result['name']! as String}" added')));
                     }
                   },
                   icon: const Icon(Icons.add),

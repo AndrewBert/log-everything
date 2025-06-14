@@ -38,56 +38,59 @@ class HomePage extends StatelessWidget {
     final isChatOpen = context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
 
     return Scaffold(
-      appBar: isChatOpen ? null : AppBar(
-        title: GestureDetector(
-          key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
-          onTap: () {
-            context.read<HomePageCubit>().incrementTitleTap();
-          },
-          child: RichText(
-            text: TextSpan(
-              style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
-              children: <TextSpan>[
-                TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          BlocBuilder<HomePageCubit, HomePageState>(
-            // Remove unnecessary null checks
-            buildWhen: (prev, current) => prev.appVersion != current.appVersion,
-            builder: (context, state) {
-              // Remove unnecessary null checks
-              if (state.appVersion.isNotEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Center(
-                    child: Text(
-                      state.appVersion, // Remove !
-                      style: TextStyle(fontSize: 12, color: Colors.black87),
+      appBar:
+          isChatOpen
+              ? null
+              : AppBar(
+                title: GestureDetector(
+                  key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
+                  onTap: () {
+                    context.read<HomePageCubit>().incrementTitleTap();
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
+                      children: <TextSpan>[
+                        TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                        TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
+                      ],
                     ),
                   ),
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'Help / About',
-            onPressed: () => _showHelpDialog(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
-            tooltip: 'Manage Categories',
-            onPressed: () => _showManageCategoriesDialog(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+                ),
+                actions: [
+                  BlocBuilder<HomePageCubit, HomePageState>(
+                    // Remove unnecessary null checks
+                    buildWhen: (prev, current) => prev.appVersion != current.appVersion,
+                    builder: (context, state) {
+                      // Remove unnecessary null checks
+                      if (state.appVersion.isNotEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Center(
+                            child: Text(
+                              state.appVersion, // Remove !
+                              style: TextStyle(fontSize: 12, color: Colors.black87),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.help_outline),
+                    tooltip: 'Help / About',
+                    onPressed: () => _showHelpDialog(context),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
+                    tooltip: 'Manage Categories',
+                    onPressed: () => _showManageCategoriesDialog(context),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
       body: MultiBlocListener(
         listeners: [
           BlocListener<HomePageCubit, HomePageState>(
@@ -158,35 +161,42 @@ class HomePage extends StatelessWidget {
             },
           ),
         ],
-        child: isChatOpen 
-          ? const ChatBottomSheet()
-          : SafeArea(
-              bottom: false,
-              child: Column(
-                // CP: Main column for overall layout
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[const FilterSection(), _buildEntriesList(context)],
-                    ),
+        child:
+            isChatOpen
+                ? const ChatBottomSheet()
+                : SafeArea(
+                  bottom: false,
+                  child: Column(
+                    // CP: Main column for overall layout
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[const FilterSection(), _buildEntriesList(context)],
+                        ),
+                      ),
+                      InputArea(
+                        // CP: InputArea remains at the bottom
+                        onSendPressed: (text) => _handleInput(context, text),
+                        showSnackBar: ({
+                          required context,
+                          required content,
+                          Duration? duration,
+                          action,
+                          backgroundColor,
+                        }) {
+                          _showFloatingSnackBar(
+                            context,
+                            content: content,
+                            duration: duration ?? const Duration(seconds: 4),
+                            action: action,
+                            backgroundColor: backgroundColor,
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  InputArea(
-                    // CP: InputArea remains at the bottom
-                    onSendPressed: (text) => _handleInput(context, text),
-                    showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
-                      _showFloatingSnackBar(
-                        context,
-                        content: content,
-                        duration: duration ?? const Duration(seconds: 4),
-                        action: action,
-                        backgroundColor: backgroundColor,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+                ),
       ),
     );
   }
