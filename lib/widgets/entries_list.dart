@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../entry/entry.dart';
+import '../entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
 import '../utils/widget_keys.dart';
 import 'entry_context_menu.dart';
@@ -390,17 +391,33 @@ class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin
                     child: _SwipeableEntryCard(
                       entry: entry,
                       onDelete: () => widget.onDeletePressed(entry),
-                      child: EntryCard(
-                        entry: entry,
-                        isNew: isNew,
-                        isProcessing: isProcessing,
-                        categoryColor: categoryColor,
-                        timeFormatter: widget.timeFormatter,
-                        categoryDisplayName: categoryDisplayName,
-                        onChangeCategoryPressed: widget.onChangeCategoryPressed,
-                        onEditPressed: widget.onEditPressed,
-                        onDeletePressed: widget.onDeletePressed,
-                        onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
+                      child: BlocBuilder<EntryCubit, EntryState>(
+                        buildWhen: (prev, current) => prev.categories != current.categories,
+                        builder: (context, state) {
+                          // CP: Check if this entry's category is a checklist
+                          final category = state.categories.firstWhere(
+                            (cat) => cat.name == entry.category,
+                            orElse: () => const Category(name: ''),
+                          );
+                          final isChecklistCategory = category.isChecklist;
+                          
+                          return EntryCard(
+                            entry: entry,
+                            isNew: isNew,
+                            isProcessing: isProcessing,
+                            categoryColor: categoryColor,
+                            timeFormatter: widget.timeFormatter,
+                            categoryDisplayName: categoryDisplayName,
+                            onChangeCategoryPressed: widget.onChangeCategoryPressed,
+                            onEditPressed: widget.onEditPressed,
+                            onDeletePressed: widget.onDeletePressed,
+                            onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
+                            isChecklistCategory: isChecklistCategory,
+                            onToggleCompletion: isChecklistCategory 
+                                ? (entry) => context.read<EntryCubit>().toggleEntryCompletion(entry)
+                                : null,
+                          );
+                        },
                       ),
                     ),
                   );

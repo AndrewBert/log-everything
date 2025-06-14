@@ -56,9 +56,6 @@ class EntryCubit extends Cubit<EntryState> {
                 .where((entry) => entry.category == filterCategory)
                 .toList(); // .where().toList() already creates a new mutable list
 
-    // Sort the filtered list (which is now guaranteed to be mutable)
-    filteredEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
     if (filteredEntries.isEmpty) {
       return [];
     }
@@ -76,7 +73,39 @@ class EntryCubit extends Cubit<EntryState> {
     final List<dynamic> listItems = [];
     for (var date in sortedDates) {
       listItems.add(date);
-      listItems.addAll(groupedEntries[date]!);
+      
+      // CP: Enhanced sorting for each day's entries
+      final dayEntries = groupedEntries[date]!;
+      dayEntries.sort((a, b) {
+        // First get category information for both entries
+        final aCat = state.categories.firstWhere((cat) => cat.name == a.category, 
+            orElse: () => Category(name: a.category));
+        final bCat = state.categories.firstWhere((cat) => cat.name == b.category, 
+            orElse: () => Category(name: b.category));
+        
+        final aIsChecklist = aCat.isChecklist;
+        final bIsChecklist = bCat.isChecklist;
+        
+        // If both are checklist categories, prioritize incomplete items
+        if (aIsChecklist && bIsChecklist) {
+          if (a.isCompleted != b.isCompleted) {
+            return a.isCompleted ? 1 : -1; // Incomplete first
+          }
+        }
+        
+        // If one is checklist and one isn't, prioritize incomplete checklist items
+        if (aIsChecklist && !bIsChecklist) {
+          return a.isCompleted ? 1 : -1; // Incomplete checklist first, completed checklist after normal
+        }
+        if (!aIsChecklist && bIsChecklist) {
+          return b.isCompleted ? -1 : 1; // Incomplete checklist first, completed checklist after normal
+        }
+        
+        // Default: sort by timestamp (newest first)
+        return b.timestamp.compareTo(a.timestamp);
+      });
+      
+      listItems.addAll(dayEntries);
     }
 
     return listItems;
@@ -274,10 +303,10 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  Future<void> addCustomCategoryWithDescription(String name, String description) async {
+  Future<void> addCustomCategoryWithDescription(String name, String description, {bool isChecklist = false}) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(name, description);
+      final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(name, description, isChecklist: isChecklist);
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category with description via repository", error: e);
@@ -308,10 +337,10 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  Future<void> renameCategory(String oldName, String newName, {String? description}) async {
+  Future<void> renameCategory(String oldName, String newName, {String? description, bool? isChecklist}) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final result = await _entryRepository.renameCategory(oldName, newName, description: description);
+      final result = await _entryRepository.renameCategory(oldName, newName, description: description, isChecklist: isChecklist);
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,
@@ -388,5 +417,18 @@ class EntryCubit extends Cubit<EntryState> {
   // CP: Clear split notification after toast is shown
   void clearSplitNotification() {
     emit(state.copyWith(clearSplitNotification: true));
+  }
+
+  // CP: Toggle completion status for checklist items
+  Future<void> toggleEntryCompletion(Entry entry) async {
+    emit(state.copyWith(clearLastError: true));
+    try {
+      final updatedEntry = entry.toggleCompletion();
+      final updatedEntries = await _entryRepository.updateEntry(entry, updatedEntry);
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+    } catch (e) {
+      AppLogger.error("Cubit: Error toggling entry completion via repository", error: e);
+      emit(state.copyWith(lastErrorMessage: "Failed to update entry."));
+    }
   }
 }

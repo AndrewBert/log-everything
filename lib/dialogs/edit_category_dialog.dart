@@ -39,18 +39,20 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
   late final TextEditingController _editCategoryController;
   late final TextEditingController _descriptionController; // Controller for description
   final _formKey = GlobalKey<FormState>();
+  bool _isChecklist = false; // Track checklist setting
 
   @override
   void initState() {
     super.initState();
     _editCategoryController = TextEditingController(text: widget.oldCategoryName);
-    // Pre-fill with existing description if editing
+    // Pre-fill with existing description and checklist setting if editing
     final categories = context.read<EntryCubit>().state.categories;
     final existing = categories.firstWhere(
       (cat) => cat.name == widget.oldCategoryName,
       orElse: () => Category(name: widget.oldCategoryName),
     );
     _descriptionController = TextEditingController(text: existing.description);
+    _isChecklist = existing.isChecklist;
   }
 
   @override
@@ -64,8 +66,9 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
     if (_formKey.currentState!.validate()) {
       final newName = _editCategoryController.text.trim();
       final newDescription = _descriptionController.text.trim();
-      // Call cubit method to update name and description
-      context.read<EntryCubit>().renameCategory(widget.oldCategoryName, newName, description: newDescription);
+      // Call cubit method to update name, description, and checklist setting
+      context.read<EntryCubit>().renameCategory(widget.oldCategoryName, newName, 
+          description: newDescription, isChecklist: _isChecklist);
       Navigator.of(context).pop(EditCategoryResult.renamed(newName)); // Return result object
     }
   }
@@ -91,7 +94,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
       title: const Text('Edit Category'),
       content: SizedBox(
         width: double.maxFinite,
-        height: 180, // CP: Fixed height to prevent dialog resizing
+        height: 240, // CP: Increased height to accommodate checklist toggle
         child: Form(
           key: _formKey,
           child: Column(
@@ -126,6 +129,24 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                 minLines: 1,
                 maxLines: 3,
               ),
+              const SizedBox(height: 16),
+              // CP: Checklist toggle
+              Row(
+                children: [
+                  Icon(Icons.checklist, size: 20, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Use as Checklist',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  Switch(
+                    value: _isChecklist,
+                    onChanged: (value) => setState(() => _isChecklist = value),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -136,17 +157,20 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             // CP: Delete button on the left
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
               onPressed: _deleteCategory,
+              child: const Text('Delete'),
             ),
             const Spacer(),
             // CP: Cancel and Save buttons on the right
             TextButton(
-              child: const Text('Cancel'),
               onPressed: () => Navigator.of(context).pop(EditCategoryResult.cancelled()), // Return cancelled result
+              child: const Text('Cancel'),
             ),
             const SizedBox(width: 8),
-            FilledButton(onPressed: _saveCategory, child: const Text('Save')),
+            FilledButton(
+              onPressed: _saveCategory, 
+              child: const Text('Save'),
+            ),
           ],
         ),
       ],

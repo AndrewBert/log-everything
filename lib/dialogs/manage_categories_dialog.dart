@@ -179,7 +179,11 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                     );
                     if (!mounted) return; // CP: Guard context after async gap
                     if (result != null && result['name'] != null) {
-                      entryCubit.addCustomCategoryWithDescription(result['name']!, result['description'] ?? '');
+                      entryCubit.addCustomCategoryWithDescription(
+                        result['name']!, 
+                        result['description'] ?? '',
+                        isChecklist: (result['isChecklist'] as bool?) ?? false,
+                      );
                       ScaffoldMessenger.of(
                         rootNavigator.context,
                       ).showSnackBar(SnackBar(content: Text('Category "${result['name']}" added')));
@@ -204,22 +208,42 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
   }
 }
 
-class AddCategoryDialog extends StatelessWidget {
+class AddCategoryDialog extends StatefulWidget {
   const AddCategoryDialog({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // CP: Remove leading underscores from local variables
-    final categoryInputController = TextEditingController();
-    final descriptionInputController = TextEditingController();
-    // CP: FocusNode to auto-focus the category name field
-    final categoryFocusNode = FocusNode();
+  State<AddCategoryDialog> createState() => _AddCategoryDialogState();
+}
+
+class _AddCategoryDialogState extends State<AddCategoryDialog> {
+  late final TextEditingController categoryInputController;
+  late final TextEditingController descriptionInputController;
+  late final FocusNode categoryFocusNode;
+  bool _isChecklist = false;
+
+  @override
+  void initState() {
+    super.initState();
+    categoryInputController = TextEditingController();
+    descriptionInputController = TextEditingController();
+    categoryFocusNode = FocusNode();
 
     // CP: Request focus when the dialog is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       categoryFocusNode.requestFocus();
     });
+  }
 
+  @override
+  void dispose() {
+    categoryInputController.dispose();
+    descriptionInputController.dispose();
+    categoryFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Add Category'),
@@ -253,16 +277,43 @@ class AddCategoryDialog extends StatelessWidget {
               maxLines: 2,
             ),
           ),
+          // CP: Checklist toggle
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Row(
+              children: [
+                Icon(Icons.checklist, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Use as Checklist',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+                Switch(
+                  value: _isChecklist,
+                  onChanged: (value) => setState(() => _isChecklist = value),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       actions: [
-        TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(context).pop()),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             final name = categoryInputController.text.trim();
             final description = descriptionInputController.text.trim();
             if (name.isNotEmpty) {
-              Navigator.of(context).pop({'name': name, 'description': description});
+              Navigator.of(context).pop({
+                'name': name, 
+                'description': description,
+                'isChecklist': _isChecklist,
+              });
             }
           },
           child: const Text('Add'),
@@ -296,7 +347,7 @@ class CategoryCard extends StatelessWidget {
     // CP: Get category color for visual consistency with entries list
     final categoryColor =
         isNone
-            ? Colors.grey.withOpacity(0.3)
+            ? Colors.grey.withValues(alpha: 0.3)
             : CategoryColors.getColorForCategory(category.name).withValues(alpha: 0.3);
     final cardContent = Material(
       color: Colors.transparent,
@@ -329,12 +380,25 @@ class CategoryCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        displayName,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: isNone ? Colors.grey : null,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            displayName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isNone ? Colors.grey : null,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          // CP: Show checklist indicator
+                          if (category.isChecklist && !isNone) ...[
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.checklist,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ],
                       ),
                       if (category.description.isNotEmpty && !isNone) ...[
                         const SizedBox(height: 6),

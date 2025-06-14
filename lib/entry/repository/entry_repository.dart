@@ -285,11 +285,11 @@ class EntryRepository {
     return currentCategories;
   }
 
-  Future<List<Category>> addCustomCategoryWithDescription(String name, String description) async {
+  Future<List<Category>> addCustomCategoryWithDescription(String name, String description, {bool isChecklist = false}) async {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
     if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
-      _categories.add(Category(name: trimmedName, description: trimmedDescription));
+      _categories.add(Category(name: trimmedName, description: trimmedDescription, isChecklist: isChecklist));
       await _saveCategories();
     }
     return currentCategories;
@@ -351,6 +351,7 @@ class EntryRepository {
     String oldName,
     String newName, {
     String? description,
+    bool? isChecklist,
   }) async {
     final trimmedNewName = newName.trim();
     final oldCategoryIndex = _categories.indexWhere((cat) => cat.name == oldName);
@@ -367,6 +368,7 @@ class EntryRepository {
     _categories[oldCategoryIndex] = oldCategory.copyWith(
       name: trimmedNewName,
       description: description ?? oldCategory.description,
+      isChecklist: isChecklist ?? oldCategory.isChecklist,
     );
     bool entriesChanged = false;
     final Set<DateTime> affectedDates = {};

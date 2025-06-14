@@ -21,6 +21,8 @@ class EntryCard extends StatefulWidget {
   final Function(Entry) onEditPressed;
   final Function(Entry) onDeletePressed;
   final Function(Offset) onLongPress;
+  final Function(Entry)? onToggleCompletion; // CP: Optional callback for checklist toggling
+  final bool isChecklistCategory; // CP: Whether this entry belongs to a checklist category
 
   const EntryCard({
     super.key,
@@ -34,6 +36,8 @@ class EntryCard extends StatefulWidget {
     required this.onEditPressed,
     required this.onDeletePressed,
     required this.onLongPress,
+    this.onToggleCompletion,
+    required this.isChecklistCategory,
   });
 
   @override
@@ -321,16 +325,81 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // CP: Expandable text section
-                                _ExpandableText(
-                                  text: widget.entry.text,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    height: 1.4,
-                                    // CP: Slightly mute text when being edited to indicate it's in input field
-                                    color:
-                                        isBeingEdited ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7) : null,
-                                  ),
-                                  maxLines: 3,
+                                // CP: Row with optional checkbox and expandable text
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // CP: Checkbox for checklist categories
+                                    if (widget.isChecklistCategory) ...[
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2.0, right: 12.0),
+                                        child: GestureDetector(
+                                          onTap: widget.onToggleCompletion != null
+                                              ? () {
+                                                  HapticFeedback.lightImpact();
+                                                  widget.onToggleCompletion!(widget.entry);
+                                                }
+                                              : null,
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 200),
+                                            curve: Curves.easeInOutCubic,
+                                            width: 20,
+                                            height: 20,
+                                            decoration: BoxDecoration(
+                                              color: widget.entry.isCompleted
+                                                  ? theme.colorScheme.primary
+                                                  : Colors.transparent,
+                                              border: Border.all(
+                                                color: widget.entry.isCompleted
+                                                    ? theme.colorScheme.primary
+                                                    : Colors.grey.shade400,
+                                                width: 2,
+                                              ),
+                                              borderRadius: BorderRadius.circular(4),
+                                              boxShadow: widget.entry.isCompleted ? [
+                                                BoxShadow(
+                                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                                  blurRadius: 4,
+                                                  spreadRadius: 1,
+                                                ),
+                                              ] : null,
+                                            ),
+                                            child: AnimatedSwitcher(
+                                              duration: const Duration(milliseconds: 150),
+                                              child: widget.entry.isCompleted
+                                                  ? Icon(
+                                                      Icons.check,
+                                                      key: const ValueKey('check'),
+                                                      size: 14,
+                                                      color: theme.colorScheme.onPrimary,
+                                                    )
+                                                  : const SizedBox.shrink(key: ValueKey('empty')),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    // CP: Expandable text section
+                                    Expanded(
+                                      child: _ExpandableText(
+                                        text: widget.entry.text,
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          height: 1.4,
+                                          // CP: Slightly mute text when being edited to indicate it's in input field
+                                          color: isBeingEdited 
+                                              ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7) 
+                                              : null,
+                                          // CP: Strikethrough for completed checklist items
+                                          decoration: widget.isChecklistCategory && widget.entry.isCompleted
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          decorationColor: Colors.grey,
+                                        ),
+                                        maxLines: 3,
+                                        isCompleted: widget.isChecklistCategory && widget.entry.isCompleted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 12.0),
                                 // Bottom row with timestamp and category
@@ -351,9 +420,16 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                     // Row for category chip and action buttons
                                     Row(
                                       children: [
-                                        // Category chip without icon/avatar
+                                        // Category chip with optional checklist icon
                                         ActionChip(
                                           key: entryCategoryChipKey(widget.entry),
+                                          avatar: widget.isChecklistCategory ? Icon(
+                                            Icons.checklist,
+                                            size: 14,
+                                            color: widget.isProcessing
+                                                ? Colors.orange[900]
+                                                : CategoryColors.getTextColorForCategory(widget.entry.category),
+                                          ) : null,
                                           label: Text(
                                             widget.categoryDisplayName(widget.entry.category),
                                             style: TextStyle(
@@ -408,8 +484,9 @@ class _ExpandableText extends StatefulWidget {
   final String text;
   final TextStyle? style;
   final int maxLines;
+  final bool isCompleted;
 
-  const _ExpandableText({required this.text, this.style, this.maxLines = 3});
+  const _ExpandableText({required this.text, this.style, this.maxLines = 3, this.isCompleted = false});
 
   @override
   State<_ExpandableText> createState() => _ExpandableTextState();
@@ -436,37 +513,41 @@ class _ExpandableTextState extends State<_ExpandableText> {
           _hasTextOverflow = textPainter.didExceedMaxLines;
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AnimatedCrossFade(
-              firstChild: Text(
-                widget.text,
-                style: widget.style,
-                maxLines: widget.maxLines,
-                overflow: TextOverflow.ellipsis,
+        return AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: widget.isCompleted ? 0.6 : 1.0, // CP: Reduce opacity for completed items
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedCrossFade(
+                firstChild: Text(
+                  widget.text,
+                  style: widget.style,
+                  maxLines: widget.maxLines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                secondChild: Text(widget.text, style: widget.style),
+                crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 200),
               ),
-              secondChild: Text(widget.text, style: widget.style),
-              crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 200),
-            ),
-            if (_hasTextOverflow ?? false)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: TextButton(
-                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                  style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0), // CP: Increased tap target
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    _isExpanded ? 'Show less' : 'Show more',
-                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
+              if (_hasTextOverflow ?? false)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: TextButton(
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0), // CP: Increased tap target
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      _isExpanded ? 'Show less' : 'Show more',
+                      style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );
