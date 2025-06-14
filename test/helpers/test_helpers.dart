@@ -11,6 +11,7 @@ import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/manage_categories_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:myapp/widgets/filter_section.dart';
+import 'package:myapp/snackbar/widgets/snackbar_item.dart';
 
 import 'widget_test_scope.dart';
 import 'test_data.dart';
@@ -114,10 +115,10 @@ Future<void> whenEditIconIsTappedForEntry(WidgetTester tester, String entryText)
 }
 
 Future<void> whenSnackbarActionIsTapped(WidgetTester tester, String actionLabel) async {
-  final snackBarFinder = find.byType(SnackBar);
-  expect(snackBarFinder, findsOneWidget);
+  final snackbarItemFinder = find.byType(SnackbarItem);
+  expect(snackbarItemFinder, findsAtLeastNWidgets(1));
 
-  final actionFinder = find.widgetWithText(SnackBarAction, actionLabel);
+  final actionFinder = find.descendant(of: snackbarItemFinder, matching: find.text(actionLabel));
   expect(actionFinder, findsOneWidget);
 
   await tester.tap(actionFinder);
@@ -194,16 +195,16 @@ void thenEntryIsNotDisplayed(WidgetTester tester, String text) {
 }
 
 void thenSnackbarIsDisplayedWithMessage(WidgetTester tester, String message) {
-  final snackBarFinder = find.byType(SnackBar);
-  expect(snackBarFinder, findsOneWidget);
-  final messageFinder = find.descendant(of: snackBarFinder, matching: find.text(message));
+  final snackbarItemFinder = find.byType(SnackbarItem);
+  expect(snackbarItemFinder, findsAtLeastNWidgets(1));
+  final messageFinder = find.descendant(of: snackbarItemFinder, matching: find.text(message));
   expect(messageFinder, findsOneWidget, reason: 'Snackbar should contain the message "$message"');
 }
 
 void thenSnackbarHasAction(WidgetTester tester, String actionLabel) {
-  final snackBarFinder = find.byType(SnackBar);
-  expect(snackBarFinder, findsOneWidget);
-  final actionFinder = find.widgetWithText(SnackBarAction, actionLabel);
+  final snackbarItemFinder = find.byType(SnackbarItem);
+  expect(snackbarItemFinder, findsAtLeastNWidgets(1));
+  final actionFinder = find.descendant(of: snackbarItemFinder, matching: find.text(actionLabel));
   expect(actionFinder, findsOneWidget, reason: 'Snackbar should have an action button labeled "$actionLabel"');
 }
 

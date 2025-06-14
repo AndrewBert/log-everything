@@ -7,6 +7,9 @@ import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/widgets/input_area.dart';
 import 'package:myapp/utils/widget_keys.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
+import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
+import 'package:myapp/snackbar/services/snackbar_service.dart';
+import 'package:myapp/locator.dart';
 
 class ChatBottomSheet extends StatelessWidget {
   const ChatBottomSheet({super.key});
@@ -71,7 +74,9 @@ class ChatBottomSheet extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child:
+                child: Stack(
+                  children: [
+                    // Main chat content
                     messages.isEmpty && !isLoading
                         ? Padding(
                           key: chatWelcomeMessage,
@@ -146,6 +151,10 @@ class ChatBottomSheet extends StatelessWidget {
                             return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
                           },
                         ),
+                    // Snackbar overlay at top of chat
+                    const ContextualSnackbarOverlay(),
+                  ],
+                ),
               ),
               if (isLoading) _buildThinkingIndicator(context),
               const SizedBox(height: 8),
@@ -154,29 +163,10 @@ class ChatBottomSheet extends StatelessWidget {
                   // This won't be called since InputArea handles chat mode internally
                 },
                 showSnackBar: ({required context, required content, Duration? duration, action, backgroundColor}) {
-                  final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-                  final bottomPadding = MediaQuery.of(context).padding.bottom;
-                  final inputAreaHeight = 120.0; // Approximate height of input area
-                  final double bottomMargin =
-                      keyboardVisible
-                          ? MediaQuery.of(context).viewInsets.bottom + inputAreaHeight + 16.0
-                          : bottomPadding + inputAreaHeight + 16.0;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: content,
-                      duration: duration ?? const Duration(seconds: 4),
-                      action: action,
-                      backgroundColor: backgroundColor,
-                      behavior: SnackBarBehavior.floating,
-                      margin: EdgeInsets.only(
-                        bottom: bottomMargin,
-                        left: 16.0,
-                        right: 16.0,
-                      ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                    ),
-                  );
+                  // Use the new snackbar service for chat mode as well
+                  final snackbarService = getIt<SnackbarService>();
+                  final message = content is Text ? content.data ?? 'Success' : 'Success';
+                  snackbarService.showSuccess(message);
                 },
               ),
             ],

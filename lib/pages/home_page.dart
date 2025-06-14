@@ -23,6 +23,9 @@ import '../dialogs/help_dialog.dart';
 import '../dialogs/whats_new_dialog.dart';
 import '../dialogs/delete_category_confirmation_dialog.dart';
 import '../chat/chat.dart'; // CP: Import chat features
+import '../snackbar/services/snackbar_service.dart';
+import '../snackbar/widgets/contextual_snackbar_overlay.dart';
+import '../locator.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
@@ -113,14 +116,8 @@ class HomePage extends StatelessWidget {
             listener: (context, state) {
               // CP: Log listener invocation for snackBarMessage
               AppLogger.info('[HomePage] SnackBar listener called. state.snackBarMessage: ${state.snackBarMessage}');
-              _showFloatingSnackBar(
-                context,
-                content: Text(state.snackBarMessage!), // Keep !
-                duration:
-                    state.snackBarMessage!.contains('magic tap') // Keep !
-                        ? const Duration(seconds: 3)
-                        : const Duration(milliseconds: 800),
-              );
+              final snackbarService = getIt<SnackbarService>();
+              snackbarService.showInfo(state.snackBarMessage!);
               // CP: Log before calling clearSnackBarMessage in addPostFrameCallback
               AppLogger.info('[HomePage] Scheduling clearSnackBarMessage via addPostFrameCallback.');
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -139,19 +136,8 @@ class HomePage extends StatelessWidget {
                     prev.splitNotification != current.splitNotification && current.splitNotification != null,
             listener: (context, state) {
               AppLogger.info('[HomePage] Split notification: ${state.splitNotification}');
-              _showFloatingSnackBar(
-                context,
-                content: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.call_split, size: 16, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(state.splitNotification!),
-                  ],
-                ),
-                duration: const Duration(milliseconds: 2000),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              );
+              final snackbarService = getIt<SnackbarService>();
+              snackbarService.showInfo(state.splitNotification!);
               // CP: Clear the notification after showing
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
@@ -172,7 +158,17 @@ class HomePage extends StatelessWidget {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[const FilterSection(), _buildEntriesList(context)],
+                          children: <Widget>[
+                            const FilterSection(),
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  _buildEntriesList(context),
+                                  const ContextualSnackbarOverlay(),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       InputArea(
@@ -185,13 +181,10 @@ class HomePage extends StatelessWidget {
                           action,
                           backgroundColor,
                         }) {
-                          _showFloatingSnackBar(
-                            context,
-                            content: content,
-                            duration: duration ?? const Duration(seconds: 4),
-                            action: action,
-                            backgroundColor: backgroundColor,
-                          );
+                          final snackbarService = getIt<SnackbarService>();
+                          // For now, convert to simple text message - can be enhanced later
+                          final message = content is Text ? content.data ?? 'Success' : 'Success';
+                          snackbarService.showSuccess(message);
                         },
                       ),
                     ],
@@ -214,34 +207,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  void _showFloatingSnackBar(
-    BuildContext targetContext, {
-    required Widget content,
-    Duration duration = const Duration(seconds: 4),
-    SnackBarAction? action,
-    Color? backgroundColor,
-  }) {
-    final messenger = ScaffoldMessenger.of(targetContext);
-    messenger.hideCurrentSnackBar();
-
-    final keyboardVisible = MediaQuery.of(targetContext).viewInsets.bottom > 0;
-    final bottomPadding = MediaQuery.of(targetContext).padding.bottom;
-    final double bottomMargin =
-        keyboardVisible ? MediaQuery.of(targetContext).viewInsets.bottom + 8.0 : bottomPadding + 80.0;
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: content,
-        duration: duration,
-        action: action,
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: bottomMargin, left: 16.0, right: 16.0),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      ),
-    );
-  }
-
   Future<void> _showWhatsNewDialog(BuildContext context, [String? version]) async {
     String currentVersion = version ?? '';
     if (currentVersion.isEmpty) {
@@ -252,11 +217,8 @@ class HomePage extends StatelessWidget {
         AppLogger.error('Error getting package info for What\'s New dialog: $e', stackTrace: stackTrace);
         // Check context is still valid if async gap occurred
         if (!context.mounted) return;
-        _showFloatingSnackBar(
-          context,
-          content: const Text('Could not load version info.'),
-          backgroundColor: Colors.redAccent,
-        );
+        final snackbarService = getIt<SnackbarService>();
+        snackbarService.showError('Could not load version info.');
         return;
       }
     }
@@ -372,11 +334,8 @@ class HomePage extends StatelessWidget {
       final updatedEntry = entry.copyWith(category: newCategory);
       entryCubit.updateEntry(entry, updatedEntry);
       if (context.mounted) {
-        _showFloatingSnackBar(
-          context,
-          content: Text('Category changed to "$newCategory"'),
-          duration: const Duration(seconds: 1),
-        );
+        final snackbarService = getIt<SnackbarService>();
+        snackbarService.showSuccess('Category changed to "$newCategory"');
       }
     }
   }
@@ -420,18 +379,15 @@ class HomePage extends StatelessWidget {
     final entryToDelete = entry;
     context.read<EntryCubit>().deleteEntry(entryToDelete);
     if (context.mounted) {
-      _showFloatingSnackBar(
-        context,
-        content: const Text('Entry deleted'),
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            if (context.mounted) {
-              context.read<EntryCubit>().addEntryObject(entryToDelete);
-            }
-          },
-        ),
+      final snackbarService = getIt<SnackbarService>();
+      snackbarService.showSuccess(
+        'Entry deleted',
+        actionLabel: 'Undo',
+        onActionPressed: () {
+          if (context.mounted) {
+            context.read<EntryCubit>().addEntryObject(entryToDelete);
+          }
+        },
       );
     }
   }

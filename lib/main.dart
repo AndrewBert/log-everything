@@ -14,6 +14,7 @@ import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
 import 'onboarding/onboarding.dart';
 import 'locator.dart';
+import 'snackbar/cubit/snackbar_cubit.dart';
 
 // Make main async
 void main() async {
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
                 entryCubit: context.read<EntryCubit>(),
               ),
         ),
+        BlocProvider<SnackbarCubit>(create: (context) => getIt<SnackbarCubit>()),
       ],
       child: MaterialApp(
         theme: ThemeData(
@@ -59,9 +61,18 @@ class MyApp extends StatelessWidget {
           dividerTheme: const DividerThemeData(space: 1, thickness: 1),
           useMaterial3: true,
         ),
-        home: const AppRoot(),
+        home: const AppRootWithSnackbar(),
       ),
     );
+  }
+}
+
+class AppRootWithSnackbar extends StatelessWidget {
+  const AppRootWithSnackbar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const AppRoot();
   }
 }
 

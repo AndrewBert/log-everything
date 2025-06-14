@@ -44,7 +44,7 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<VectorStoreService>(vectorStoreService); // CP: Register VectorStoreService mock
   getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
-  
+
   // --- Register TimerFactory for testing ---
   getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
 

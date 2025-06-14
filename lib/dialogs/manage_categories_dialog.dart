@@ -7,6 +7,8 @@ import '../entry/cubit/entry_cubit.dart';
 import '../utils/category_colors.dart';
 import '../utils/widget_keys.dart';
 import 'edit_category_dialog.dart';
+import '../snackbar/services/snackbar_service.dart';
+import '../locator.dart';
 
 // Define callback types for clarity
 typedef ShowEditCategoryDialogCallback =
@@ -101,10 +103,6 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                             isNone: isNone,
                             onEdit: () async {
                               final onShowEditCategoryDialog = widget.onShowEditCategoryDialog;
-                              final rootNavigator = Navigator.of(
-                                context,
-                                rootNavigator: true,
-                              ); // CP: Get navigator before async
                               final result = await onShowEditCategoryDialog(
                                 itemContext,
                                 categoryBackendValue(category),
@@ -117,20 +115,16 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                               if (result?.operation == EditCategoryOperation.deleted) {
                                 // CP: Handle deletion from edit dialog
                                 HapticFeedback.mediumImpact();
-                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                  SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
-                                );
+                                final snackbarService = getIt<SnackbarService>();
+                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted');
                               } else if (result?.operation == EditCategoryOperation.renamed &&
                                   result!.newCategoryName != null &&
                                   result.newCategoryName!.isNotEmpty &&
                                   result.newCategoryName != category) {
                                 HapticFeedback.mediumImpact();
-                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
-                                    ),
-                                  ),
+                                final snackbarService = getIt<SnackbarService>();
+                                snackbarService.showSuccess(
+                                  'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
                                 );
                               }
                             },
@@ -138,10 +132,6 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                               final entryCubit = itemContext.read<EntryCubit>(); // CP: Get cubit before async
                               final onShowDeleteCategoryConfirmationDialog =
                                   widget.onShowDeleteCategoryConfirmationDialog;
-                              final rootNavigator = Navigator.of(
-                                context,
-                                rootNavigator: true,
-                              ); // CP: Get navigator before async
                               final confirmed = await onShowDeleteCategoryConfirmationDialog(
                                 itemContext,
                                 categoryBackendValue(category),
@@ -152,9 +142,8 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                               if (confirmed && itemContext.mounted) {
                                 HapticFeedback.mediumImpact();
                                 entryCubit.deleteCategory(categoryBackendValue(category));
-                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
-                                  SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
-                                );
+                                final snackbarService = getIt<SnackbarService>();
+                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted');
                               }
                             },
                           ),
@@ -173,7 +162,6 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     final entryCubit = context.read<EntryCubit>(); // CP: Get cubit before async
-                    final rootNavigator = Navigator.of(context, rootNavigator: true); // CP: Get navigator before async
                     final result = await showDialog<Map<String, Object>?>(
                       context: context,
                       builder: (dialogContext) => const AddCategoryDialog(),
@@ -185,9 +173,8 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                         (result['description'] as String?) ?? '',
                         isChecklist: (result['isChecklist'] as bool?) ?? false,
                       );
-                      ScaffoldMessenger.of(
-                        rootNavigator.context,
-                      ).showSnackBar(SnackBar(content: Text('Category "${result['name']! as String}" added')));
+                      final snackbarService = getIt<SnackbarService>();
+                      snackbarService.showSuccess('Category "${result['name']! as String}" added');
                     }
                   },
                   icon: const Icon(Icons.add),
