@@ -182,9 +182,15 @@ class HomePage extends StatelessWidget {
                           backgroundColor,
                         }) {
                           final snackbarService = getIt<SnackbarService>();
-                          // For now, convert to simple text message - can be enhanced later
-                          final message = content is Text ? content.data ?? 'Success' : 'Success';
-                          snackbarService.showSuccess(message);
+                          if (content is Text && content.data != null && content.data!.isNotEmpty) {
+                            // Determine the type based on background color or content
+                            if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
+                              snackbarService.showError(content.data!);
+                            } else {
+                              snackbarService.showSuccess(content.data!);
+                            }
+                          }
+                          // If content is empty or not meaningful, don't show a snackbar
                         },
                       ),
                     ],
