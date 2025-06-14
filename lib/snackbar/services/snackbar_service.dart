@@ -7,37 +7,41 @@ class SnackbarService {
 
   final SnackbarCubit _snackbarCubit;
 
-  void showSuccess(String message, {String? actionLabel, VoidCallback? onActionPressed}) {
+  void showSuccess(String message, {SnackbarContext context = SnackbarContext.global, String? actionLabel, VoidCallback? onActionPressed}) {
     _showSnackbar(
       message: message,
       type: SnackbarType.success,
+      context: context,
       actionLabel: actionLabel,
       onActionPressed: onActionPressed,
     );
   }
 
-  void showError(String message, {String? actionLabel, VoidCallback? onActionPressed}) {
+  void showError(String message, {SnackbarContext context = SnackbarContext.global, String? actionLabel, VoidCallback? onActionPressed}) {
     _showSnackbar(
       message: message,
       type: SnackbarType.error,
+      context: context,
       actionLabel: actionLabel,
       onActionPressed: onActionPressed,
     );
   }
 
-  void showWarning(String message, {String? actionLabel, VoidCallback? onActionPressed}) {
+  void showWarning(String message, {SnackbarContext context = SnackbarContext.global, String? actionLabel, VoidCallback? onActionPressed}) {
     _showSnackbar(
       message: message,
       type: SnackbarType.warning,
+      context: context,
       actionLabel: actionLabel,
       onActionPressed: onActionPressed,
     );
   }
 
-  void showInfo(String message, {String? actionLabel, VoidCallback? onActionPressed}) {
+  void showInfo(String message, {SnackbarContext context = SnackbarContext.global, String? actionLabel, VoidCallback? onActionPressed}) {
     _showSnackbar(
       message: message,
       type: SnackbarType.info,
+      context: context,
       actionLabel: actionLabel,
       onActionPressed: onActionPressed,
     );
@@ -46,6 +50,7 @@ class SnackbarService {
   void _showSnackbar({
     required String message,
     required SnackbarType type,
+    SnackbarContext context = SnackbarContext.global,
     String? actionLabel,
     VoidCallback? onActionPressed,
     Duration? duration,
@@ -54,6 +59,7 @@ class SnackbarService {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       message: message,
       type: type,
+      context: context,
       actionLabel: actionLabel,
       onActionPressed: onActionPressed,
       duration: duration ?? const Duration(seconds: 4),

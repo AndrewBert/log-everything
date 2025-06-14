@@ -9,6 +9,7 @@ import 'package:myapp/utils/widget_keys.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
 import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
 import 'package:myapp/snackbar/services/snackbar_service.dart';
+import 'package:myapp/snackbar/models/snackbar_message.dart';
 import 'package:myapp/locator.dart';
 
 class ChatBottomSheet extends StatelessWidget {
@@ -152,7 +153,7 @@ class ChatBottomSheet extends StatelessWidget {
                           },
                         ),
                     // Snackbar overlay at top of chat
-                    const ContextualSnackbarOverlay(),
+                    const ContextualSnackbarOverlay(contextFilter: SnackbarContext.chat),
                   ],
                 ),
               ),
@@ -168,9 +169,9 @@ class ChatBottomSheet extends StatelessWidget {
                   if (content is Text && content.data != null && content.data!.isNotEmpty) {
                     // Determine the type based on background color or content
                     if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
-                      snackbarService.showError(content.data!);
+                      snackbarService.showError(content.data!, context: SnackbarContext.chat);
                     } else {
-                      snackbarService.showSuccess(content.data!);
+                      snackbarService.showSuccess(content.data!, context: SnackbarContext.chat);
                     }
                   }
                   // If content is empty or not meaningful, don't show a snackbar

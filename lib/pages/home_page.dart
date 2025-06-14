@@ -25,6 +25,7 @@ import '../dialogs/delete_category_confirmation_dialog.dart';
 import '../chat/chat.dart'; // CP: Import chat features
 import '../snackbar/services/snackbar_service.dart';
 import '../snackbar/widgets/contextual_snackbar_overlay.dart';
+import '../snackbar/models/snackbar_message.dart';
 import '../locator.dart';
 
 class HomePage extends StatelessWidget {
@@ -117,7 +118,7 @@ class HomePage extends StatelessWidget {
               // CP: Log listener invocation for snackBarMessage
               AppLogger.info('[HomePage] SnackBar listener called. state.snackBarMessage: ${state.snackBarMessage}');
               final snackbarService = getIt<SnackbarService>();
-              snackbarService.showInfo(state.snackBarMessage!);
+              snackbarService.showInfo(state.snackBarMessage!, context: SnackbarContext.home);
               // CP: Log before calling clearSnackBarMessage in addPostFrameCallback
               AppLogger.info('[HomePage] Scheduling clearSnackBarMessage via addPostFrameCallback.');
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -137,7 +138,7 @@ class HomePage extends StatelessWidget {
             listener: (context, state) {
               AppLogger.info('[HomePage] Split notification: ${state.splitNotification}');
               final snackbarService = getIt<SnackbarService>();
-              snackbarService.showInfo(state.splitNotification!);
+              snackbarService.showInfo(state.splitNotification!, context: SnackbarContext.home);
               // CP: Clear the notification after showing
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
@@ -164,7 +165,7 @@ class HomePage extends StatelessWidget {
                               child: Stack(
                                 children: [
                                   _buildEntriesList(context),
-                                  const ContextualSnackbarOverlay(),
+                                  const ContextualSnackbarOverlay(contextFilter: SnackbarContext.home),
                                 ],
                               ),
                             ),
@@ -185,9 +186,9 @@ class HomePage extends StatelessWidget {
                           if (content is Text && content.data != null && content.data!.isNotEmpty) {
                             // Determine the type based on background color or content
                             if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
-                              snackbarService.showError(content.data!);
+                              snackbarService.showError(content.data!, context: SnackbarContext.home);
                             } else {
-                              snackbarService.showSuccess(content.data!);
+                              snackbarService.showSuccess(content.data!, context: SnackbarContext.home);
                             }
                           }
                           // If content is empty or not meaningful, don't show a snackbar
@@ -224,7 +225,7 @@ class HomePage extends StatelessWidget {
         // Check context is still valid if async gap occurred
         if (!context.mounted) return;
         final snackbarService = getIt<SnackbarService>();
-        snackbarService.showError('Could not load version info.');
+        snackbarService.showError('Could not load version info.', context: SnackbarContext.home);
         return;
       }
     }
@@ -341,7 +342,7 @@ class HomePage extends StatelessWidget {
       entryCubit.updateEntry(entry, updatedEntry);
       if (context.mounted) {
         final snackbarService = getIt<SnackbarService>();
-        snackbarService.showSuccess('Category changed to "$newCategory"');
+        snackbarService.showSuccess('Category changed to "$newCategory"', context: SnackbarContext.home);
       }
     }
   }
@@ -388,6 +389,7 @@ class HomePage extends StatelessWidget {
       final snackbarService = getIt<SnackbarService>();
       snackbarService.showSuccess(
         'Entry deleted',
+        context: SnackbarContext.home,
         actionLabel: 'Undo',
         onActionPressed: () {
           if (context.mounted) {

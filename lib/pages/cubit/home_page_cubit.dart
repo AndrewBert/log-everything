@@ -3,8 +3,6 @@ import 'package:myapp/chat/chat.dart'; // Added import for ChatCubit
 import 'package:myapp/utils/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/snackbar/services/snackbar_service.dart';
-import 'package:myapp/locator.dart';
 
 import 'home_page_state.dart';
 
@@ -123,10 +121,6 @@ class HomePageCubit extends Cubit<HomePageState> {
   }
 
   void toggleChatOpen() {
-    // Clear any existing snackbars when switching screens
-    final snackbarService = getIt<SnackbarService>();
-    snackbarService.dismissAll();
-    
     emit(state.copyWith(isChatOpen: !state.isChatOpen));
     if (state.isChatOpen) {
       setInputFocus(false);

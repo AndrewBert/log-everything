@@ -1,16 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/snackbar_cubit.dart';
+import '../models/snackbar_message.dart';
 import 'snackbar_item.dart';
 
 class ContextualSnackbarOverlay extends StatelessWidget {
-  const ContextualSnackbarOverlay({super.key});
+  const ContextualSnackbarOverlay({
+    super.key,
+    this.contextFilter = SnackbarContext.global,
+  });
+
+  final SnackbarContext contextFilter;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SnackbarCubit, SnackbarState>(
       builder: (context, state) {
-        if (state.messages.isEmpty) {
+        // Filter messages based on context
+        final filteredMessages = state.messages
+            .where((message) => 
+                message.context == contextFilter || 
+                message.context == SnackbarContext.global)
+            .toList();
+
+        if (filteredMessages.isEmpty) {
           return const SizedBox.shrink();
         }
 
@@ -19,7 +32,7 @@ class ContextualSnackbarOverlay extends StatelessWidget {
           left: 16.0,
           right: 16.0,
           child: Column(
-            children: state.messages
+            children: filteredMessages
                 .asMap()
                 .entries
                 .map((entry) {
