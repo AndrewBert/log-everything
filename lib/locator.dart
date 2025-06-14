@@ -10,6 +10,8 @@ import 'package:myapp/services/timer_factory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/services/vector_store_service.dart'; // CP: Corrected package name
+import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
+import 'package:myapp/snackbar/services/snackbar_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -49,6 +51,10 @@ Future<void> configureDependencies() async {
 
   // Register TimerFactory for production use
   getIt.registerLazySingleton<TimerFactory>(() => RealTimerFactory());
+
+  // Register SnackbarCubit and SnackbarService
+  getIt.registerLazySingleton<SnackbarCubit>(() => SnackbarCubit());
+  getIt.registerLazySingleton<SnackbarService>(() => SnackbarService(getIt<SnackbarCubit>()));
 
   getIt.registerLazySingleton(
     () => EntryRepository(

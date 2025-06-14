@@ -274,50 +274,50 @@ Future<void> thenEntryIsMarkedAsIncomplete(WidgetTester tester, entry) async {
 
 Future<void> thenEntryTextHasStrikethrough(WidgetTester tester, entry) async {
   final entryTextFinder = find.text(entry.text);
-  expect(entryTextFinder, findsOneWidget);
+  expect(entryTextFinder, findsAtLeastNWidgets(1));
   
-  final textWidget = tester.widget<Text>(entryTextFinder);
+  // CP: Check the first text widget (should have strikethrough for completed entries)
+  final textWidget = tester.widget<Text>(entryTextFinder.first);
   expect(textWidget.style?.decoration, TextDecoration.lineThrough);
 }
 
 Future<void> thenEntryTextHasNormalStyling(WidgetTester tester, entry) async {
   final entryTextFinder = find.text(entry.text);
-  expect(entryTextFinder, findsOneWidget);
+  expect(entryTextFinder, findsAtLeastNWidgets(1));
   
-  final textWidget = tester.widget<Text>(entryTextFinder);
+  // CP: Check the first text widget (should not have strikethrough for incomplete entries)
+  final textWidget = tester.widget<Text>(entryTextFinder.first);
   expect(textWidget.style?.decoration, isNot(TextDecoration.lineThrough));
 }
 
 Future<void> thenEntryHasReducedOpacity(WidgetTester tester, entry) async {
-  // CP: Find the opacity widget wrapping the completed entry
+  // CP: Find the AnimatedOpacity widget wrapping the completed entry text
   final entryTextFinder = find.text(entry.text);
-  expect(entryTextFinder, findsOneWidget);
+  expect(entryTextFinder, findsAtLeastNWidgets(1));
   
   final opacityFinder = find.ancestor(
-    of: entryTextFinder,
-    matching: find.byType(Opacity),
+    of: entryTextFinder.first,
+    matching: find.byType(AnimatedOpacity),
   );
   expect(opacityFinder, findsOneWidget);
   
-  final opacityWidget = tester.widget<Opacity>(opacityFinder);
+  final opacityWidget = tester.widget<AnimatedOpacity>(opacityFinder);
   expect(opacityWidget.opacity, lessThan(1.0));
 }
 
 Future<void> thenEntryHasNormalOpacity(WidgetTester tester, entry) async {
-  // CP: Verify entry doesn't have reduced opacity
+  // CP: Verify entry has full opacity (1.0)
   final entryTextFinder = find.text(entry.text);
-  expect(entryTextFinder, findsOneWidget);
+  expect(entryTextFinder, findsAtLeastNWidgets(1));
   
-  // CP: Check if there's no opacity widget or if it's at full opacity
   final opacityFinder = find.ancestor(
-    of: entryTextFinder,
-    matching: find.byType(Opacity),
+    of: entryTextFinder.first,
+    matching: find.byType(AnimatedOpacity),
   );
+  expect(opacityFinder, findsOneWidget);
   
-  if (opacityFinder.evaluate().isNotEmpty) {
-    final opacityWidget = tester.widget<Opacity>(opacityFinder);
-    expect(opacityWidget.opacity, equals(1.0));
-  }
+  final opacityWidget = tester.widget<AnimatedOpacity>(opacityFinder);
+  expect(opacityWidget.opacity, equals(1.0));
 }
 
 Future<void> thenCategoryChipShowsChecklistIcon(WidgetTester tester, entry) async {

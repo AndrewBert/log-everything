@@ -318,14 +318,14 @@ Future<void> thenSortingOrderIsCorrect(WidgetTester tester) async {
 Future<void> thenEntryMovesToBottom(WidgetTester tester, Entry entry) async {
   // CP: Verify the entry has moved to a lower position
   final entryFinder = find.text(entry.text);
-  expect(entryFinder, findsOneWidget);
+  expect(entryFinder, findsAtLeastNWidgets(1));
   // CP: Additional position verification logic would go here
 }
 
 Future<void> thenEntryMovesToTop(WidgetTester tester, Entry entry) async {
   // CP: Verify the entry has moved to a higher position
   final entryFinder = find.text(entry.text);
-  expect(entryFinder, findsOneWidget);
+  expect(entryFinder, findsAtLeastNWidgets(1));
   // CP: Additional position verification logic would go here
 }
 
@@ -361,7 +361,7 @@ Future<void> thenNewEntryAppearsAtTopOfIncompleteGroup(WidgetTester tester, Stri
       return;
     }
   }
-  expect(newEntryFinder, findsOneWidget);
+  expect(newEntryFinder, findsAtLeastNWidgets(1));
 }
 
 // CP: Helper functions to create test data

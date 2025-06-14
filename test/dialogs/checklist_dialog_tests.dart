@@ -243,9 +243,22 @@ Future<void> whenCategoryDescriptionIsEntered(WidgetTester tester, String descri
 }
 
 Future<void> whenChecklistToggleIsEnabled(WidgetTester tester) async {
-  final toggle = tester.widget<Switch>(find.byKey(addCategoryChecklistToggle));
+  // CP: Try to find the toggle in either add or edit dialog
+  final addToggleFinder = find.byKey(addCategoryChecklistToggle);
+  final editToggleFinder = find.byKey(editCategoryChecklistToggle);
+  
+  Finder toggleFinder;
+  if (addToggleFinder.evaluate().isNotEmpty) {
+    toggleFinder = addToggleFinder;
+  } else if (editToggleFinder.evaluate().isNotEmpty) {
+    toggleFinder = editToggleFinder;
+  } else {
+    throw Exception('Could not find checklist toggle in add or edit dialog');
+  }
+  
+  final toggle = tester.widget<Switch>(toggleFinder);
   if (!toggle.value) {
-    await tester.tap(find.byKey(addCategoryChecklistToggle));
+    await tester.tap(toggleFinder);
     await tester.pumpAndSettle();
   }
 }

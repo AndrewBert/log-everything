@@ -9,6 +9,8 @@ import 'package:myapp/services/timer_factory.dart'; // CP: Import TimerFactory
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Import SharedPreferences
 import 'package:http/http.dart' as http; // CP: Import http
+import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
+import 'package:myapp/snackbar/services/snackbar_service.dart';
 
 import 'mocks.mocks.dart'; // Import generated mocks
 
@@ -45,6 +47,10 @@ Future<void> setupTestDependencies({
   
   // --- Register TimerFactory for testing ---
   getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
+
+  // --- Register Snackbar services ---
+  getIt.registerSingleton<SnackbarCubit>(SnackbarCubit());
+  getIt.registerSingleton<SnackbarService>(SnackbarService(getIt<SnackbarCubit>()));
 
   // --- Register REAL EntryRepository ---
   // It depends on the mocked services registered above.
