@@ -28,6 +28,7 @@ void main() {
       sharedPreferences: scope.mockSharedPreferences,
       httpClient: scope.mockHttpClient,
     );
+    scope.initializeWidget();
     scope.stubPersistenceWithInitialEntries();
     scope.stubPermissionGranted();
     scope.stubAiServiceExtractEntries();
