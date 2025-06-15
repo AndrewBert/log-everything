@@ -42,59 +42,6 @@ class HomePage extends StatelessWidget {
     final isChatOpen = context.watch<HomePageCubit>().state.isChatOpen; // CP: Get chat state
 
     return Scaffold(
-      appBar:
-          isChatOpen
-              ? null
-              : AppBar(
-                title: GestureDetector(
-                  key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
-                  onTap: () {
-                    context.read<HomePageCubit>().incrementTitleTap();
-                  },
-                  child: RichText(
-                    text: TextSpan(
-                      style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
-                      children: <TextSpan>[
-                        TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                        TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
-                      ],
-                    ),
-                  ),
-                ),
-                actions: [
-                  BlocBuilder<HomePageCubit, HomePageState>(
-                    // Remove unnecessary null checks
-                    buildWhen: (prev, current) => prev.appVersion != current.appVersion,
-                    builder: (context, state) {
-                      // Remove unnecessary null checks
-                      if (state.appVersion.isNotEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Center(
-                            child: Text(
-                              state.appVersion, // Remove !
-                              style: TextStyle(fontSize: 12, color: Colors.black87),
-                            ),
-                          ),
-                        );
-                      } else {
-                        return const SizedBox.shrink();
-                      }
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.help_outline),
-                    tooltip: 'Help / About',
-                    onPressed: () => _showHelpDialog(context),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
-                    tooltip: 'Manage Categories',
-                    onPressed: () => _showManageCategoriesDialog(context),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
       body: MultiBlocListener(
         listeners: [
           BlocListener<HomePageCubit, HomePageState>(
@@ -157,18 +104,81 @@ class HomePage extends StatelessWidget {
                     // CP: Main column for overall layout
                     children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const FilterSection(),
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  _buildEntriesList(context),
-                                  const ContextualSnackbarOverlay(contextFilter: SnackbarContext.home),
-                                ],
-                              ),
+                        child: Stack(
+                          children: [
+                            CustomScrollView(
+                              slivers: [
+                                SliverAppBar(
+                                  expandedHeight: 112.0, // 56 (app bar) + 56 (filter section with margins)
+                                  floating: false,
+                                  pinned: true, // Keep app bar always visible
+                                  snap: false,
+                                  title: GestureDetector(
+                                    key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
+                                    onTap: () {
+                                      context.read<HomePageCubit>().incrementTitleTap();
+                                    },
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
+                                        children: <TextSpan>[
+                                          TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                                          TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  actions: [
+                                    BlocBuilder<HomePageCubit, HomePageState>(
+                                      // Remove unnecessary null checks
+                                      buildWhen: (prev, current) => prev.appVersion != current.appVersion,
+                                      builder: (context, state) {
+                                        // Remove unnecessary null checks
+                                        if (state.appVersion.isNotEmpty) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(right: 8.0),
+                                            child: Center(
+                                              child: Text(
+                                                state.appVersion, // Remove !
+                                                style: TextStyle(fontSize: 12, color: Colors.black87),
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          return const SizedBox.shrink();
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.help_outline),
+                                      tooltip: 'Help / About',
+                                      onPressed: () => _showHelpDialog(context),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
+                                      tooltip: 'Manage Categories',
+                                      onPressed: () => _showManageCategoriesDialog(context),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  flexibleSpace: FlexibleSpaceBar(
+                                    background: Column(
+                                      children: [
+                                        // Space for the app bar title and actions
+                                        const SizedBox(height: 56.0),
+                                        // Filter section in the expanded area
+                                        const FilterSection(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                ..._buildEntriesSliver(context),
+                                SliverPadding(
+                                  padding: const EdgeInsets.only(bottom: 150.0),
+                                ),
+                              ],
                             ),
+                            const ContextualSnackbarOverlay(contextFilter: SnackbarContext.home),
                           ],
                         ),
                       ),
@@ -203,8 +213,9 @@ class HomePage extends StatelessWidget {
 
   // --- Helper Methods Below Build ---
 
-  Widget _buildEntriesList(BuildContext context) {
-    return EntriesList(
+  List<Widget> _buildEntriesSliver(BuildContext context) {
+    return EntriesList.buildSlivers(
+      context: context,
       formatDateHeader: _formatDateHeader,
       getCategoryColor: _getCategoryColor,
       timeFormatter: _timeFormatter,
