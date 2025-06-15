@@ -198,6 +198,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
+                  key: manageCategoriesDialogAddButton,
                   onPressed: () async {
                     final entryCubit = context.read<EntryCubit>(); // CP: Get cubit before async
                     final result = await showDialog<Map<String, Object>?>(
@@ -229,7 +230,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
           ],
         ),
       ),
-      actions: [TextButton(child: const Text('Done'), onPressed: () => Navigator.of(context).pop())],
+      actions: [TextButton(key: manageCategoriesDialogDoneButton, child: const Text('Done'), onPressed: () => Navigator.of(context).pop())],
     );
   }
 }
@@ -386,6 +387,7 @@ class CategoryCard extends StatelessWidget {
     final cardContent = Material(
       color: Colors.transparent,
       child: InkWell(
+        key: categoryListItemKey(category.name),
         borderRadius: BorderRadius.circular(12),
         onTap: !isNone && onEdit != null ? onEdit : null, // CP: Make entire card tappable for editing
         child: Container(

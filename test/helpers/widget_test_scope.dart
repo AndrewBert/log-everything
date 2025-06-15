@@ -9,6 +9,7 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
+import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
 import 'package:myapp/locator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -47,13 +48,16 @@ class WidgetTestScope {
     when(mockChatCubit.loadDummyMessages()).thenAnswer((_) async {});
     when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(const ChatState()));
     when(mockChatCubit.state).thenReturn(const ChatState());
+  }
 
+  void initializeWidget() {
     widgetUnderTest = MultiBlocProvider(
       providers: [
         BlocProvider<ChatCubit>.value(value: mockChatCubit),
         BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
         BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
         BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())),
+        BlocProvider.value(value: getIt<SnackbarCubit>()),
       ],
       child: MaterialApp(home: HomePage()),
     );
