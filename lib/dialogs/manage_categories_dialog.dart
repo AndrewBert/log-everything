@@ -8,6 +8,7 @@ import '../utils/category_colors.dart';
 import '../utils/widget_keys.dart';
 import 'edit_category_dialog.dart';
 import '../snackbar/services/snackbar_service.dart';
+import '../snackbar/models/snackbar_message.dart';
 import '../locator.dart';
 
 // Define callback types for clarity
@@ -116,7 +117,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                 // CP: Handle deletion from edit dialog
                                 HapticFeedback.mediumImpact();
                                 final snackbarService = getIt<SnackbarService>();
-                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted');
+                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted', context: SnackbarContext.dialog);
                               } else if (result?.operation == EditCategoryOperation.renamed &&
                                   result!.newCategoryName != null &&
                                   result.newCategoryName!.isNotEmpty &&
@@ -125,6 +126,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                 final snackbarService = getIt<SnackbarService>();
                                 snackbarService.showSuccess(
                                   'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
+                                  context: SnackbarContext.dialog,
                                 );
                               }
                             },
@@ -143,7 +145,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                 HapticFeedback.mediumImpact();
                                 entryCubit.deleteCategory(categoryBackendValue(category));
                                 final snackbarService = getIt<SnackbarService>();
-                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted');
+                                snackbarService.showSuccess('Category "${categoryDisplayName(category)}" deleted', context: SnackbarContext.dialog);
                               }
                             },
                           ),
@@ -174,7 +176,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                         isChecklist: (result['isChecklist'] as bool?) ?? false,
                       );
                       final snackbarService = getIt<SnackbarService>();
-                      snackbarService.showSuccess('Category "${result['name']! as String}" added');
+                      snackbarService.showSuccess('Category "${result['name']! as String}" added', context: SnackbarContext.dialog);
                     }
                   },
                   icon: const Icon(Icons.add),

@@ -300,11 +300,16 @@ class HomePage extends StatelessWidget {
       builder:
           (context) => Scaffold(
             backgroundColor: Colors.transparent,
-            body: Center(
-              child: ManageCategoriesDialog(
-                onShowEditCategoryDialog: (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
-                onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
-              ),
+            body: Stack(
+              children: [
+                Center(
+                  child: ManageCategoriesDialog(
+                    onShowEditCategoryDialog: (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
+                    onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
+                  ),
+                ),
+                const ContextualSnackbarOverlay(contextFilter: SnackbarContext.dialog),
+              ],
             ),
           ),
     ).then((_) {

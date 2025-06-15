@@ -11,6 +11,7 @@ enum SnackbarType {
 enum SnackbarContext {
   home,
   chat,
+  dialog,
   global,
 }
 
