@@ -94,7 +94,7 @@ class WidgetTestScope {
   void stubAiServiceExtractEntries() {
     when(mockAiService.extractEntries(any, any)).thenAnswer(
       (_) async => [
-        (textSegment: TestData.testEntryText, category: 'Misc'),
+        (textSegment: TestData.testEntryText, category: 'Misc', isTask: false),
       ],
     );
   }

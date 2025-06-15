@@ -84,7 +84,7 @@ void main() {
           // Configure mocks
           scope.stubPersistenceWithInitialEntries();
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
-            (_) async => [(textSegment: newEntryText, category: 'Work')],
+            (_) async => [(textSegment: newEntryText, category: 'Work', isTask: false)],
           );
           
           await givenAppIsOpened(tester, scope);
@@ -163,7 +163,7 @@ void main() {
             Exception('Storage full'),
           );
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
-            (_) async => [(textSegment: 'Test entry', category: 'Misc')],
+            (_) async => [(textSegment: 'Test entry', category: 'Misc', isTask: false)],
           );
           
           await givenAppIsOpened(tester, scope);
@@ -200,7 +200,7 @@ void main() {
           
           // When - User recreates similar entry
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
-            (_) async => [(textSegment: entryToDelete.text, category: entryToDelete.category)],
+            (_) async => [(textSegment: entryToDelete.text, category: entryToDelete.category, isTask: false)],
           );
           await whenUserCreatesEntry(tester, entryToDelete.text);
           

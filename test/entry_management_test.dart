@@ -57,7 +57,7 @@ void main() {
           // Configure AI service to return the actual input text
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: workText, category: 'Work'),
+              (textSegment: workText, category: 'Work', isTask: false),
             ],
           );
           
@@ -109,7 +109,7 @@ void main() {
           // Configure AI service to handle transcribed text
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: transcribedText, category: 'Personal'),
+              (textSegment: transcribedText, category: 'Personal', isTask: false),
             ],
           );
           
@@ -159,7 +159,7 @@ void main() {
           // Configure AI service for the updated text
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: updatedText, category: 'Work'),
+              (textSegment: updatedText, category: 'Work', isTask: false),
             ],
           );
           

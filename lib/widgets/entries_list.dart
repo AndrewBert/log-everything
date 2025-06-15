@@ -412,7 +412,7 @@ class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin
                             onDeletePressed: widget.onDeletePressed,
                             onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
                             isChecklistCategory: isChecklistCategory,
-                            onToggleCompletion: isChecklistCategory 
+                            onToggleCompletion: (isChecklistCategory || entry.isTask)
                                 ? (entry) => context.read<EntryCubit>().toggleEntryCompletion(entry)
                                 : null,
                           );

@@ -7,7 +7,7 @@ import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
 
 // Rename field in typedef to follow Dart conventions
-typedef EntryPrototype = ({String textSegment, String category});
+typedef EntryPrototype = ({String textSegment, String category, bool isTask});
 
 // Interface for AI Service
 abstract class AiService {
@@ -108,8 +108,12 @@ class OpenAiService implements AiService {
                     "The category assigned to this text segment. Use only the category name from the provided list, not the description.",
                 "enum": categoryNames, // Use only names
               },
+              "is_task": {
+                "type": "boolean",
+                "description": "Whether this entry represents a task, todo item, or action item that can be completed. True for actionable items like 'call mom', 'buy groceries', 'finish report'. False for observations, thoughts, or completed activities like 'had lunch', 'feeling good', 'it was sunny'.",
+              },
             },
-            "required": ["text_segment", "category"],
+            "required": ["text_segment", "category", "is_task"],
             "additionalProperties": false,
           },
         },
@@ -140,6 +144,18 @@ SPLITTING GUIDELINES:
 - If all sentences relate to the same topic or experience, keep them as ONE entry  
 - If sentences are thoughts/reflections about the same thing, keep them as ONE entry
 - Only split if you have clearly different activities (like "played volleyball" AND "went grocery shopping")
+
+TASK DETECTION:
+For each entry, determine if it represents a task/todo item that can be completed:
+- TRUE for actionable items: "call mom", "buy groceries", "finish the report", "schedule dentist appointment", "respond to email"
+- TRUE for future intentions: "need to", "should", "must", "have to", "going to", "plan to"
+- TRUE for single items that are commonly acquired/bought: "boots", "tshirt", "milk", "batteries", "toothpaste", "shampoo" (assume these are reminders to get/buy)
+- TRUE for single nouns that could be tasks without context: "haircut", "dentist", "groceries", "laundry", "dishes"
+- TRUE for short phrases that imply action: "oil change", "pick up dry cleaning", "return library books"
+- FALSE for completed activities with past tense verbs: "had lunch", "went to store", "called mom", "finished report", "bought groceries"
+- FALSE for clearly observational statements: "feeling good", "it was sunny", "the meeting was long", "saw a movie"
+- FALSE for passive statements: "the car needs repair" (unless phrased as "need to repair the car")
+- WHEN IN DOUBT for ambiguous single items or short phrases, lean toward TRUE (task) since users often log reminders in shorthand
 
 Here are the available categories:
 $categoriesListString
@@ -213,17 +229,20 @@ When deciding which category to use, consider both the name and the description 
                       item.containsKey('text_segment') &&
                       item['text_segment'] is String &&
                       item.containsKey('category') &&
-                      item['category'] is String) {
+                      item['category'] is String &&
+                      item.containsKey('is_task') &&
+                      item['is_task'] is bool) {
                     String segment = item['text_segment']; // Read from JSON key
                     String category = item['category'];
+                    bool isTask = item['is_task']; // Read task detection
 
                     if (categoryNames.contains(category)) {
                       // Assign to the renamed typedef field
-                      extractedEntries.add((textSegment: segment, category: category));
+                      extractedEntries.add((textSegment: segment, category: category, isTask: isTask));
                     } else {
                       AppLogger.warn("OpenAI category ('$category') not in allowed list. Using 'Misc' for: '$segment'");
                       // Assign to the renamed typedef field
-                      extractedEntries.add((textSegment: segment, category: 'Misc'));
+                      extractedEntries.add((textSegment: segment, category: 'Misc', isTask: isTask));
                     }
                   } else {
                     AppLogger.warn("Invalid item format in 'entries' array: $item");
