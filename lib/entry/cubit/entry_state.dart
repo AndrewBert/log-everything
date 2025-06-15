@@ -13,6 +13,7 @@ class EntryState extends Equatable {
   // CP: Add editing state properties
   final Entry? editingEntry;
   final bool isEditingMode;
+  final bool? editingIsTask;
   // CP: Add context menu state properties
   final Entry? contextMenuEntry;
   // CP: Add split notification for toast messages
@@ -27,6 +28,7 @@ class EntryState extends Equatable {
     this.recentCategories = const [],
     this.editingEntry,
     this.isEditingMode = false,
+    this.editingIsTask,
     this.contextMenuEntry,
     this.splitNotification,
   });
@@ -42,6 +44,7 @@ class EntryState extends Equatable {
     recentCategories,
     editingEntry,
     isEditingMode,
+    editingIsTask,
     contextMenuEntry,
     splitNotification,
   ];
@@ -56,11 +59,13 @@ class EntryState extends Equatable {
     List<String>? recentCategories,
     Entry? editingEntry,
     bool? isEditingMode,
+    bool? editingIsTask,
     Entry? contextMenuEntry,
     String? splitNotification,
     bool clearLastError = false,
     bool clearFilter = false,
     bool clearEditingEntry = false,
+    bool clearEditingIsTask = false,
     bool clearContextMenuEntry = false,
     bool clearSplitNotification = false,
   }) {
@@ -73,6 +78,7 @@ class EntryState extends Equatable {
       recentCategories: recentCategories ?? this.recentCategories,
       editingEntry: clearEditingEntry ? null : (editingEntry ?? this.editingEntry),
       isEditingMode: isEditingMode ?? this.isEditingMode,
+      editingIsTask: clearEditingIsTask ? null : (editingIsTask ?? this.editingIsTask),
       contextMenuEntry: clearContextMenuEntry ? null : (contextMenuEntry ?? this.contextMenuEntry),
       splitNotification: clearSplitNotification ? null : (splitNotification ?? this.splitNotification),
     );

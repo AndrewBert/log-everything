@@ -59,7 +59,8 @@ class _InputAreaState extends State<InputArea> {
     final editingEntry = entryCubit.state.editingEntry;
 
     if (editingEntry != null) {
-      entryCubit.finishEditingEntry(currentText, editingEntry.category);
+      final taskStatus = entryCubit.state.editingIsTask;
+      entryCubit.finishEditingEntry(currentText, editingEntry.category, isTask: taskStatus);
       _textController.clear();
       if (_inputFocusNode.hasFocus) {
         // CP: Use focusedChild?.unfocus() for more reliable behavior
@@ -282,17 +283,62 @@ class _InputAreaState extends State<InputArea> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             children: [
                               // CP: Show cancel button when editing
-                              if (isEditingMode)
+                              if (isEditingMode) ...[
                                 TextButton.icon(
-                                  icon: const Icon(Icons.close),
+                                  icon: Icon(Icons.close, size: 18),
                                   label: const Text('Cancel'),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.error,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    foregroundColor: Theme.of(context).colorScheme.error.withAlpha(192),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: _handleEditingCancel,
-                                )
+                                ),
+                                const SizedBox(width: 12.0),
+                                // CP: Task toggle button when editing
+                                BlocBuilder<EntryCubit, EntryState>(
+                                  buildWhen: (prev, current) => prev.editingIsTask != current.editingIsTask,
+                                  builder: (context, state) {
+                                    final isTask = state.editingIsTask ?? false;
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: isTask 
+                                            ? Theme.of(context).colorScheme.primaryContainer.withAlpha(128)
+                                            : Theme.of(context).colorScheme.surfaceContainerHigh.withAlpha(128),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isTask 
+                                              ? Theme.of(context).colorScheme.primary.withAlpha(128)
+                                              : Theme.of(context).colorScheme.outline.withAlpha(64),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: TextButton.icon(
+                                        icon: Icon(
+                                          isTask ? Icons.check_circle : Icons.circle_outlined,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          isTask ? 'Task' : 'Note',
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: isTask
+                                              ? Theme.of(context).colorScheme.primary
+                                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          minimumSize: Size.zero,
+                                        ),
+                                        onPressed: () {
+                                          HapticFeedback.lightImpact();
+                                          context.read<EntryCubit>().toggleEditingTaskStatus();
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ]
                               else ...[
                                 TextButton.icon(
                                   key: chatToggleButton,

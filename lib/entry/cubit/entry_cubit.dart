@@ -341,14 +341,20 @@ class EntryCubit extends Cubit<EntryState> {
 
   // CP: Add editing methods for the new editing experience
   void startEditingEntry(Entry entry) {
-    emit(state.copyWith(editingEntry: entry, isEditingMode: true));
+    emit(state.copyWith(editingEntry: entry, isEditingMode: true, editingIsTask: entry.isTask));
   }
 
   void cancelEditingEntry() {
-    emit(state.copyWith(clearEditingEntry: true, isEditingMode: false));
+    emit(state.copyWith(clearEditingEntry: true, isEditingMode: false, clearEditingIsTask: true));
   }
 
-  Future<void> finishEditingEntry(String newText, String newCategory) async {
+  // CP: Toggle task status during editing
+  void toggleEditingTaskStatus() {
+    final currentStatus = state.editingIsTask ?? false;
+    emit(state.copyWith(editingIsTask: !currentStatus));
+  }
+
+  Future<void> finishEditingEntry(String newText, String newCategory, {bool? isTask}) async {
     final editingEntry = state.editingEntry;
     if (editingEntry == null || newText.trim().isEmpty) {
       cancelEditingEntry();
@@ -357,14 +363,15 @@ class EntryCubit extends Cubit<EntryState> {
 
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedEntry = editingEntry.copyWith(text: newText.trim(), category: newCategory);
+      final taskStatus = isTask ?? state.editingIsTask ?? editingEntry.isTask;
+      final updatedEntry = editingEntry.copyWith(text: newText.trim(), category: newCategory, isTask: taskStatus);
 
       final updatedEntries = await _entryRepository.updateEntry(editingEntry, updatedEntry);
 
       _updateStateFromRepository(updatedEntries: updatedEntries);
 
       // Clear editing state
-      emit(state.copyWith(clearEditingEntry: true, isEditingMode: false));
+      emit(state.copyWith(clearEditingEntry: true, isEditingMode: false, clearEditingIsTask: true));
     } catch (e) {
       AppLogger.error("Cubit: Error updating entry via repository", error: e);
       emit(state.copyWith(lastErrorMessage: "Failed to update entry."));

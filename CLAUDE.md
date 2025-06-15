@@ -31,6 +31,11 @@ flutter clean && flutter pub get
 flutter build ipa --release
 ```
 
+### Testing Policy
+- Claude does not build or run the Flutter app - user handles testing
+- Focus on implementation and code analysis only
+- User will test changes and provide feedback
+
 ### Environment Setup
 - Requires `.env` file in root directory with OpenAI API key
 - App loads `.env` on startup but gracefully falls back if missing
