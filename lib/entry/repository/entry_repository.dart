@@ -131,7 +131,7 @@ class EntryRepository {
 
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(text: text, timestamp: processingTimestamp, category: 'Misc', isNew: true);
+      final fallbackEntry = Entry(text: text, timestamp: processingTimestamp, category: 'Misc', isNew: true, isTask: false);
       addedEntries.add(fallbackEntry);
     } else {
       for (var data in extractedData) {
@@ -140,6 +140,7 @@ class EntryRepository {
           timestamp: processingTimestamp,
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
+          isTask: data.isTask,
         );
         addedEntries.add(newEntry);
       }

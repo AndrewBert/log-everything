@@ -329,8 +329,8 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // CP: Checkbox for checklist categories
-                                    if (widget.isChecklistCategory) ...[
+                                    // CP: Checkbox for checklist categories or individual tasks
+                                    if (widget.isChecklistCategory || widget.entry.isTask) ...[
                                       Padding(
                                         padding: const EdgeInsets.only(top: 2.0, right: 12.0),
                                         child: GestureDetector(
@@ -390,14 +390,14 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                           color: isBeingEdited 
                                               ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7) 
                                               : null,
-                                          // CP: Strikethrough for completed checklist items
-                                          decoration: widget.isChecklistCategory && widget.entry.isCompleted
+                                          // CP: Strikethrough for completed checklist items or tasks
+                                          decoration: (widget.isChecklistCategory || widget.entry.isTask) && widget.entry.isCompleted
                                               ? TextDecoration.lineThrough
                                               : null,
                                           decorationColor: Colors.grey,
                                         ),
                                         maxLines: 3,
-                                        isCompleted: widget.isChecklistCategory && widget.entry.isCompleted,
+                                        isCompleted: (widget.isChecklistCategory || widget.entry.isTask) && widget.entry.isCompleted,
                                       ),
                                     ),
                                   ],
@@ -421,11 +421,11 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                     // Row for category chip and action buttons
                                     Row(
                                       children: [
-                                        // Category chip with optional checklist icon
+                                        // Category chip with optional checklist or task icon
                                         ActionChip(
                                           key: entryCategoryChipKey(widget.entry),
-                                          avatar: widget.isChecklistCategory ? Icon(
-                                            Icons.checklist,
+                                          avatar: (widget.isChecklistCategory || widget.entry.isTask) ? Icon(
+                                            widget.isChecklistCategory ? Icons.checklist : Icons.task_alt,
                                             size: 14,
                                             color: widget.isProcessing
                                                 ? Colors.orange[900]

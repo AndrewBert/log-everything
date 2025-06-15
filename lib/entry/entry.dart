@@ -9,6 +9,7 @@ class Entry extends Equatable {
   final String category; // Added category field
   final bool isNew; // Track whether this is a newly added entry
   final bool isCompleted; // Track completion status for checklist items
+  final bool isTask; // Track whether this entry is AI-detected as a task/todo
 
   const Entry({
     required this.text,
@@ -16,6 +17,7 @@ class Entry extends Equatable {
     required this.category, // Make category required
     this.isNew = false, // Default to false
     this.isCompleted = false, // Default to false
+    this.isTask = false, // Default to false
   });
 
   // Factory constructor to create an Entry from a JSON map
@@ -26,6 +28,7 @@ class Entry extends Equatable {
       category: json['category'] as String? ?? 'Unknown', // Default if missing
       isNew: json['isNew'] as bool? ?? false, // Default to false if missing
       isCompleted: json['isCompleted'] as bool? ?? false, // Default to false if missing
+      isTask: json['isTask'] as bool? ?? false, // Default to false if missing
     );
   }
 
@@ -37,6 +40,7 @@ class Entry extends Equatable {
       'category': category, // Add category to JSON
       'isNew': isNew, // Add isNew to JSON
       'isCompleted': isCompleted, // Add isCompleted to JSON
+      'isTask': isTask, // Add isTask to JSON
     };
   }
 
@@ -47,13 +51,14 @@ class Entry extends Equatable {
   static Entry fromJsonString(String jsonString) => Entry.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
   // Create a copy of this entry with modified properties
-  Entry copyWith({String? text, DateTime? timestamp, String? category, bool? isNew, bool? isCompleted}) {
+  Entry copyWith({String? text, DateTime? timestamp, String? category, bool? isNew, bool? isCompleted, bool? isTask}) {
     return Entry(
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,
       category: category ?? this.category,
       isNew: isNew ?? this.isNew,
       isCompleted: isCompleted ?? this.isCompleted,
+      isTask: isTask ?? this.isTask,
     );
   }
 
@@ -61,5 +66,5 @@ class Entry extends Equatable {
   Entry toggleCompletion() => copyWith(isCompleted: !isCompleted);
 
   @override
-  List<Object?> get props => [text, timestamp, category, isNew, isCompleted]; // Add props for Equatable
+  List<Object?> get props => [text, timestamp, category, isNew, isCompleted, isTask]; // Add props for Equatable
 }
