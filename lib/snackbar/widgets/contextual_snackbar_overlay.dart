@@ -16,13 +16,10 @@ class ContextualSnackbarOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SnackbarCubit, SnackbarState>(
       builder: (context, state) {
-        // Filter messages based on context
-        final filteredMessages =
-            state.messages
-                .where((message) => message.context == contextFilter || message.context == SnackbarContext.global)
-                .toList();
-
-        if (filteredMessages.isEmpty) {
+        // Show only the current message if it matches the context filter
+        final currentMessage = state.currentMessage;
+        if (currentMessage == null || 
+            (currentMessage.context != contextFilter && currentMessage.context != SnackbarContext.global)) {
           return const SizedBox.shrink();
         }
 
@@ -30,30 +27,10 @@ class ContextualSnackbarOverlay extends StatelessWidget {
           top: 0,
           left: 16.0,
           right: 16.0,
-          child: Column(
-            children:
-                filteredMessages.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final message = entry.value;
-                  final isLatest = index == 0;
-
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    transform:
-                        Matrix4.identity()
-                          ..scale(isLatest ? 1.0 : 0.95)
-                          ..translate(0.0, index * 2.0),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: isLatest ? 1.0 : 0.85,
-                      child: SnackbarItem(
-                        key: ValueKey(message.id),
-                        message: message,
-                        onDismiss: () => context.read<SnackbarCubit>().removeSnackbar(message.id),
-                      ),
-                    ),
-                  );
-                }).toList(),
+          child: SnackbarItem(
+            key: ValueKey(currentMessage.id),
+            message: currentMessage,
+            onDismiss: () => context.read<SnackbarCubit>().removeSnackbar(currentMessage.id),
           ),
         );
       },
