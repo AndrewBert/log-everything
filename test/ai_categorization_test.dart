@@ -55,7 +55,7 @@ void main() {
           // Configure AI to recognize work content
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: workText, category: 'Work'),
+              (textSegment: workText, category: 'Work', isTask: false),
             ],
           );
           
@@ -79,7 +79,7 @@ void main() {
           // Configure AI to recognize personal content
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: personalText, category: 'Personal'),
+              (textSegment: personalText, category: 'Personal', isTask: false),
             ],
           );
           
@@ -103,7 +103,7 @@ void main() {
           // Configure AI to categorize as Misc
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: miscText, category: 'Misc'),
+              (textSegment: miscText, category: 'Misc', isTask: false),
             ],
           );
           
@@ -173,7 +173,7 @@ void main() {
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async {
               await Future.delayed(const Duration(seconds: 2));
-              return [(textSegment: entryText, category: 'Misc')];
+              return [(textSegment: entryText, category: 'Misc', isTask: false)];
             },
           );
           
@@ -202,9 +202,9 @@ void main() {
           // Configure AI to extract multiple entries
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: 'Finished project report', category: 'Work'),
-              (textSegment: 'Had lunch with mom', category: 'Personal'),
-              (textSegment: 'Fixed bike tire', category: 'Misc'),
+              (textSegment: 'Finished project report', category: 'Work', isTask: false),
+              (textSegment: 'Had lunch with mom', category: 'Personal', isTask: false),
+              (textSegment: 'Fixed bike tire', category: 'Misc', isTask: false),
             ],
           );
           
@@ -242,7 +242,7 @@ void main() {
           // Configure AI to use custom category
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: healthText, category: 'Health'),
+              (textSegment: healthText, category: 'Health', isTask: false),
             ],
           );
           
@@ -265,7 +265,7 @@ void main() {
           // Configure AI to adapt based on user history
           when(scope.mockAiService.extractEntries(any, any)).thenAnswer(
             (_) async => [
-              (textSegment: gymText, category: 'Health'),
+              (textSegment: gymText, category: 'Health', isTask: false),
             ],
           );
           
