@@ -11,20 +11,12 @@ class WhatsNewDialog extends StatelessWidget {
     // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '🎯 Tap & Hold Context Menu',
-        '''Long press on any log entry to quickly access edit and delete options with a sleek context menu.''',
+        '✅ Checklist Categories',
+        '''Transform any category into a checklist! Perfect for tracking todo's. Check off items as you complete them.''',
       ),
       _buildChangeItem(
-        '🗑️ Slide to Delete',
-        '''Swipe left on any log entry to quickly delete it - faster than ever to clean up your logs.''',
-      ),
-      _buildChangeItem(
-        '✨ Enhanced Split Feedback',
-        '''New animations, visual grouping, and toast notifications help you understand what's happening when logs are split. No more confusion about what the app is doing!''',
-      ),
-      _buildChangeItem(
-        '🎨 Improved Onboarding',
-        '''Better category selection flow when setting up the app. Reset anytime by tapping Help → Reset Onboarding.''',
+        '🔧 General Improvements',
+        '''Better snackbar notifications, improved dialog layouts, and various small enhancements throughout the app for a smoother experience.''',
       ),
     ];
     // --- End of What's New content ---
@@ -57,7 +49,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'The Gesture Update',
+                        'The Checklist Update',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
