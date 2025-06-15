@@ -13,7 +13,7 @@ import '../locator.dart';
 
 // Define callback types for clarity
 typedef ShowEditCategoryDialogCallback =
-    Future<EditCategoryResult?> Function(BuildContext context, String oldCategoryName);
+    Future<EditCategoryResult?> Function(BuildContext context, String oldCategoryName, {bool focusDescription});
 typedef ShowDeleteCategoryConfirmationDialogCallback = Future<bool> Function(BuildContext context, String category);
 
 // Helper to map backend 'Misc' to frontend 'None' and vice versa
@@ -127,6 +127,42 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> with Ti
                                 snackbarService.showSuccess(
                                   'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
                                   context: SnackbarContext.dialog,
+                                );
+                              }
+                            },
+                            onEditWithDescriptionFocus: () async {
+                              final onShowEditCategoryDialog = widget.onShowEditCategoryDialog;
+                              final rootNavigator = Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ); // CP: Get navigator before async
+                              final result = await onShowEditCategoryDialog(
+                                itemContext,
+                                categoryBackendValue(category),
+                                focusDescription: true,
+                              );
+                              if (!mounted) {
+                                return; // CP: Guard context after async gap
+                              }
+
+                              // CP: Handle different result operations
+                              if (result?.operation == EditCategoryOperation.deleted) {
+                                // CP: Handle deletion from edit dialog
+                                HapticFeedback.mediumImpact();
+                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                                  SnackBar(content: Text('Category "${categoryDisplayName(category)}" deleted')),
+                                );
+                              } else if (result?.operation == EditCategoryOperation.renamed &&
+                                  result!.newCategoryName != null &&
+                                  result.newCategoryName!.isNotEmpty &&
+                                  result.newCategoryName != category) {
+                                HapticFeedback.mediumImpact();
+                                ScaffoldMessenger.of(rootNavigator.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Category renamed to "${categoryDisplayName(result.newCategoryName!)}"',
+                                    ),
+                                  ),
                                 );
                               }
                             },
@@ -262,8 +298,8 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
               key: addCategoryDescriptionField,
               controller: descriptionInputController,
               decoration: InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'Describe this category for better auto-categorization',
+                labelText: 'Description',
+                hintText: 'Help the AI understand when to use this category automatically',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
@@ -325,6 +361,7 @@ class CategoryCard extends StatelessWidget {
   final String displayName;
   final bool isNone;
   final VoidCallback? onEdit;
+  final VoidCallback? onEditWithDescriptionFocus;
   final VoidCallback? onDelete;
 
   const CategoryCard({
@@ -333,6 +370,7 @@ class CategoryCard extends StatelessWidget {
     required this.displayName,
     required this.isNone,
     this.onEdit,
+    this.onEditWithDescriptionFocus,
     this.onDelete,
   });
 
@@ -397,14 +435,53 @@ class CategoryCard extends StatelessWidget {
                           ],
                         ],
                       ),
-                      if (category.description.isNotEmpty && !isNone) ...[
+                      if (!isNone) ...[
                         const SizedBox(height: 6),
-                        Text(
-                          category.description,
-                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600], height: 1.3),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        if (category.description.isNotEmpty)
+                          Text(
+                            category.description,
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600], height: 1.3),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        else
+                          GestureDetector(
+                            onTap: () {
+                              if (onEditWithDescriptionFocus != null) {
+                                onEditWithDescriptionFocus!();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 14,
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Add description',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ],
                   ),

@@ -304,7 +304,7 @@ class HomePage extends StatelessWidget {
               children: [
                 Center(
                   child: ManageCategoriesDialog(
-                    onShowEditCategoryDialog: (ctx, oldName) => _showEditCategoryDialog(ctx, oldName),
+                    onShowEditCategoryDialog: (ctx, oldName, {bool focusDescription = false}) => _showEditCategoryDialog(ctx, oldName, focusDescription: focusDescription),
                     onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
                   ),
                 ),
@@ -317,11 +317,11 @@ class HomePage extends StatelessWidget {
     });
   }
 
-  Future<EditCategoryResult?> _showEditCategoryDialog(BuildContext context, String oldCategoryName) async {
+  Future<EditCategoryResult?> _showEditCategoryDialog(BuildContext context, String oldCategoryName, {bool focusDescription = false}) async {
     return await showDialog<EditCategoryResult?>(
       context: context,
       builder: (dialogContext) {
-        return EditCategoryDialog(oldCategoryName: oldCategoryName);
+        return EditCategoryDialog(oldCategoryName: oldCategoryName, focusDescription: focusDescription);
       },
     );
   }

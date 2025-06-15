@@ -29,8 +29,9 @@ enum EditCategoryOperation { renamed, deleted, cancelled }
 
 class EditCategoryDialog extends StatefulWidget {
   final String oldCategoryName;
+  final bool focusDescription;
 
-  const EditCategoryDialog({super.key, required this.oldCategoryName});
+  const EditCategoryDialog({super.key, required this.oldCategoryName, this.focusDescription = false});
 
   @override
   State<EditCategoryDialog> createState() => _EditCategoryDialogState();
@@ -39,6 +40,7 @@ class EditCategoryDialog extends StatefulWidget {
 class _EditCategoryDialogState extends State<EditCategoryDialog> {
   late final TextEditingController _editCategoryController;
   late final TextEditingController _descriptionController; // Controller for description
+  late final FocusNode _descriptionFocusNode;
   final _formKey = GlobalKey<FormState>();
   bool _isChecklist = false; // Track checklist setting
 
@@ -46,6 +48,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
   void initState() {
     super.initState();
     _editCategoryController = TextEditingController(text: widget.oldCategoryName);
+    _descriptionFocusNode = FocusNode();
     // Pre-fill with existing description and checklist setting if editing
     final categories = context.read<EntryCubit>().state.categories;
     final existing = categories.firstWhere(
@@ -54,12 +57,20 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
     );
     _descriptionController = TextEditingController(text: existing.description);
     _isChecklist = existing.isChecklist;
+    
+    // Focus description field if requested
+    if (widget.focusDescription) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _descriptionFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     _editCategoryController.dispose();
     _descriptionController.dispose();
+    _descriptionFocusNode.dispose();
     super.dispose();
   }
 
@@ -103,8 +114,12 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             children: [
               TextFormField(
                 controller: _editCategoryController,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'Category Name', hintText: 'Enter new name...'),
+                decoration: InputDecoration(
+                  labelText: 'Category Name',
+                  hintText: 'Enter new name...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
                 validator: (value) {
                   final newName = value?.trim() ?? '';
                   if (newName.isEmpty) {
@@ -121,14 +136,43 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'For better auto-categorization',
-                ),
-                controller: _descriptionController,
-                minLines: 1,
-                maxLines: 3,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Describe this category',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    controller: _descriptionController,
+                    focusNode: _descriptionFocusNode,
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 12,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Helps AI sort better',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // CP: Checklist toggle
