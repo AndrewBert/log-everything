@@ -113,6 +113,9 @@ class HomePage extends StatelessWidget {
                                   floating: false,
                                   pinned: true, // Keep app bar always visible
                                   snap: false,
+                                  elevation: 0, // Remove default shadow
+                                  surfaceTintColor: Colors.transparent, // Remove surface tint
+                                  backgroundColor: Theme.of(context).colorScheme.surface,
                                   title: GestureDetector(
                                     key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
                                     onTap: () {
@@ -169,6 +172,29 @@ class HomePage extends StatelessWidget {
                                         // Filter section in the expanded area
                                         const FilterSection(),
                                       ],
+                                    ),
+                                  ),
+                                  bottom: PreferredSize(
+                                    preferredSize: const Size.fromHeight(0),
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        // Check if we're in collapsed state by looking at flex space
+                                        final isCollapsed = constraints.maxHeight <= 56.0;
+                                        return AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          height: isCollapsed ? 1.0 : 0.0,
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                              bottom: BorderSide(
+                                                color: isCollapsed 
+                                                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                                                    : Colors.transparent,
+                                                width: 1.0,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),

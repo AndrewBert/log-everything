@@ -110,7 +110,8 @@ class OpenAiService implements AiService {
               },
               "is_task": {
                 "type": "boolean",
-                "description": "Whether this entry represents a task, todo item, or action item that can be completed. True for actionable items like 'call mom', 'buy groceries', 'finish report'. False for observations, thoughts, or completed activities like 'had lunch', 'feeling good', 'it was sunny'.",
+                "description":
+                    "Whether this entry represents a task, todo item, or action item that can be completed. True for actionable items like 'call mom', 'buy groceries', 'finish report'. False for observations, thoughts, or completed activities like 'had lunch', 'feeling good', 'it was sunny'.",
               },
             },
             "required": ["text_segment", "category", "is_task"],
