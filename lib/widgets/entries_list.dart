@@ -263,8 +263,7 @@ class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: BlocBuilder<EntryCubit, EntryState>(
+    return BlocBuilder<EntryCubit, EntryState>(
         builder: (context, state) {
           // CP: Show empty background when in editing mode
           if (state.isEditingMode) {
@@ -437,7 +436,6 @@ class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin
             ),
           );
         },
-      ),
     );
   }
 }
