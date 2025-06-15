@@ -8,7 +8,6 @@ import '../mock_path_provider_platform.dart';
 import '../test_di_registrar.dart';
 import '../helpers/test_helpers.dart';
 import '../helpers/widget_test_scope.dart';
-import '../helpers/test_data.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

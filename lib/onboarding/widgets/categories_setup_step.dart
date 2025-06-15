@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/onboarding_cubit.dart';
-import '../model/model.dart';
 
 class CategoriesSetupStep extends StatelessWidget {
   const CategoriesSetupStep({super.key});
