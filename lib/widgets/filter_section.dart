@@ -33,8 +33,8 @@ class FilterSection extends StatelessWidget {
             ['None', ...allCategories].where((cat) => !recentDisplayCategories.contains(cat)).toList();
 
         return Container(
-          height: 48,
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          height: 44,
+          margin: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
               // CP: Sticky "All" chip
