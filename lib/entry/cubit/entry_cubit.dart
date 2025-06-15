@@ -74,36 +74,9 @@ class EntryCubit extends Cubit<EntryState> {
     for (var date in sortedDates) {
       listItems.add(date);
       
-      // CP: Enhanced sorting for each day's entries
+      // Sort all entries by timestamp (newest first) - maintain chronological order
       final dayEntries = groupedEntries[date]!;
-      dayEntries.sort((a, b) {
-        // First get category information for both entries
-        final aCat = state.categories.firstWhere((cat) => cat.name == a.category, 
-            orElse: () => Category(name: a.category));
-        final bCat = state.categories.firstWhere((cat) => cat.name == b.category, 
-            orElse: () => Category(name: b.category));
-        
-        final aIsChecklist = aCat.isChecklist;
-        final bIsChecklist = bCat.isChecklist;
-        
-        // If both are checklist categories, prioritize incomplete items
-        if (aIsChecklist && bIsChecklist) {
-          if (a.isCompleted != b.isCompleted) {
-            return a.isCompleted ? 1 : -1; // Incomplete first
-          }
-        }
-        
-        // If one is checklist and one isn't, prioritize incomplete checklist items
-        if (aIsChecklist && !bIsChecklist) {
-          return a.isCompleted ? 1 : -1; // Incomplete checklist first, completed checklist after normal
-        }
-        if (!aIsChecklist && bIsChecklist) {
-          return b.isCompleted ? -1 : 1; // Incomplete checklist first, completed checklist after normal
-        }
-        
-        // Default: sort by timestamp (newest first)
-        return b.timestamp.compareTo(a.timestamp);
-      });
+      dayEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       
       listItems.addAll(dayEntries);
     }
