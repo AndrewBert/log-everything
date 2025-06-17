@@ -37,14 +37,16 @@ class EntriesList extends StatefulWidget {
     required void Function(Entry entry) onEditPressed,
     required void Function(Entry entry) onDeletePressed,
   }) {
-    return [_EntriesListSliver(
-      formatDateHeader: formatDateHeader,
-      getCategoryColor: getCategoryColor,
-      timeFormatter: timeFormatter,
-      onChangeCategoryPressed: onChangeCategoryPressed,
-      onEditPressed: onEditPressed,
-      onDeletePressed: onDeletePressed,
-    )];
+    return [
+      _EntriesListSliver(
+        formatDateHeader: formatDateHeader,
+        getCategoryColor: getCategoryColor,
+        timeFormatter: timeFormatter,
+        onChangeCategoryPressed: onChangeCategoryPressed,
+        onEditPressed: onEditPressed,
+        onDeletePressed: onDeletePressed,
+      ),
+    ];
   }
 
   @override
@@ -284,84 +286,83 @@ class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<EntryCubit, EntryState>(
-        builder: (context, state) {
-          // CP: Show empty background when in editing mode
-          if (state.isEditingMode) {
-            return Container(
-              color: Theme.of(context).colorScheme.surface,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.edit_outlined,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+      builder: (context, state) {
+        // CP: Show empty background when in editing mode
+        if (state.isEditingMode) {
+          return Container(
+            color: Theme.of(context).colorScheme.surface,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Editing Entry',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Editing Entry',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Make your changes in the input field below',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Make your changes in the input field below',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-            );
-          }
-
-          final List<dynamic> listItems = state.displayListItems;
-
-          // CP: Update split delays when list changes
-          _updateSplitDelays(listItems);
-
-          if (state.isLoading && listItems.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (listItems.isEmpty) {
-            return AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: 1.0,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Text(
-                    state.filterCategory != null
-                        ? 'No entries found for category: "${state.filterCategory}"'
-                        : 'No entries yet.\nType or use the mic below!',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // For backward compatibility, still support widget usage
-          return _EntriesListSliver(
-            formatDateHeader: widget.formatDateHeader,
-            getCategoryColor: widget.getCategoryColor,
-            timeFormatter: widget.timeFormatter,
-            onChangeCategoryPressed: widget.onChangeCategoryPressed,
-            onEditPressed: widget.onEditPressed,
-            onDeletePressed: widget.onDeletePressed,
+            ),
           );
-        },
+        }
+
+        final List<dynamic> listItems = state.displayListItems;
+
+        // CP: Update split delays when list changes
+        _updateSplitDelays(listItems);
+
+        if (state.isLoading && listItems.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (listItems.isEmpty) {
+          return AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: 1.0,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  state.filterCategory != null
+                      ? 'No entries found for category: "${state.filterCategory}"'
+                      : 'No entries yet.\nType or use the mic below!',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        }
+
+        // For backward compatibility, still support widget usage
+        return _EntriesListSliver(
+          formatDateHeader: widget.formatDateHeader,
+          getCategoryColor: widget.getCategoryColor,
+          timeFormatter: widget.timeFormatter,
+          onChangeCategoryPressed: widget.onChangeCategoryPressed,
+          onEditPressed: widget.onEditPressed,
+          onDeletePressed: widget.onDeletePressed,
+        );
+      },
     );
   }
-
 }
 
 // CP: Internal sliver-based widget for entries
@@ -619,89 +620,89 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<EntryCubit, EntryState>(
-        builder: (context, state) {
-          // CP: Show empty background when in editing mode
-          if (state.isEditingMode) {
-            return SliverFillRemaining(
-              child: Container(
-                color: Theme.of(context).colorScheme.surface,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.edit_outlined,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+      builder: (context, state) {
+        // CP: Show empty background when in editing mode
+        if (state.isEditingMode) {
+          return SliverFillRemaining(
+            child: Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Editing Entry',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Editing Entry',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Make your changes in the input field below',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Make your changes in the input field below',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            );
-          }
-
-          final List<dynamic> listItems = state.displayListItems;
-
-          // CP: Update split delays when list changes
-          _updateSplitDelays(listItems);
-
-          if (state.isLoading && listItems.isEmpty) {
-            return SliverFillRemaining(
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (listItems.isEmpty) {
-            return SliverFillRemaining(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: 1.0,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Text(
-                      state.filterCategory != null
-                          ? 'No entries found for category: "${state.filterCategory}"'
-                          : 'No entries yet.\nType or use the mic below!',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return SliverPadding(
-            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return _buildListItem(context, listItems, index, state);
-                },
-                childCount: listItems.length,
               ),
             ),
           );
-        },
+        }
+
+        final List<dynamic> listItems = state.displayListItems;
+
+        // CP: Update split delays when list changes
+        _updateSplitDelays(listItems);
+
+        if (state.isLoading && listItems.isEmpty) {
+          return SliverFillRemaining(
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (listItems.isEmpty) {
+          return SliverFillRemaining(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: 1.0,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Text(
+                    state.filterCategory != null
+                        ? 'No entries found for category: "${state.filterCategory}"'
+                        : 'No entries yet.\nType or use the mic below!',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SliverPadding(
+          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                return _buildListItem(context, listItems, index, state);
+              },
+              childCount: listItems.length,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -710,7 +711,7 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
     final nextItem = (index + 1 < listItems.length) ? listItems[index + 1] : null;
 
     Widget itemWidget;
-    
+
     if (item is DateTime) {
       // Enhanced date header styling
       itemWidget = Padding(
@@ -761,7 +762,7 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
                 orElse: () => const Category(name: ''),
               );
               final isChecklistCategory = category.isChecklist;
-              
+
               return EntryCard(
                 entry: entry,
                 isNew: isNew,
@@ -774,9 +775,10 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
                 onDeletePressed: widget.onDeletePressed,
                 onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
                 isChecklistCategory: isChecklistCategory,
-                onToggleCompletion: (isChecklistCategory || entry.isTask)
-                    ? (entry) => context.read<EntryCubit>().toggleEntryCompletion(entry)
-                    : null,
+                onToggleCompletion:
+                    (isChecklistCategory || entry.isTask)
+                        ? (entry) => context.read<EntryCubit>().toggleEntryCompletion(entry)
+                        : null,
               );
             },
           ),

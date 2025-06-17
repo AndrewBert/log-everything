@@ -204,7 +204,10 @@ class HomePage extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const ContextualSnackbarOverlay(contextFilter: SnackbarContext.home),
+                            const ContextualSnackbarOverlay(
+                              contextFilter: SnackbarContext.home,
+                              topOffset: 56.0, // Position over the filters section
+                            ),
                           ],
                         ),
                       ),

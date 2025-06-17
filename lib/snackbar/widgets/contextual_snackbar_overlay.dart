@@ -8,9 +8,11 @@ class ContextualSnackbarOverlay extends StatelessWidget {
   const ContextualSnackbarOverlay({
     super.key,
     this.contextFilter = SnackbarContext.global,
+    this.topOffset = 0,
   });
 
   final SnackbarContext contextFilter;
+  final double topOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +26,7 @@ class ContextualSnackbarOverlay extends StatelessWidget {
         }
 
         return Positioned(
-          top: 0,
+          top: topOffset,
           left: 16.0,
           right: 16.0,
           child: SnackbarItem(
