@@ -185,7 +185,7 @@ class _InputAreaState extends State<InputArea> {
                       labelText = 'Chatting...';
                     }
                   } else {
-                    hintText = 'Log it or else';
+                    hintText = 'What\'s on your mind?';
                     labelText = isInputFocused ? 'Enter log entry' : 'What happened?...';
                   }
 

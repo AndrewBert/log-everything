@@ -73,33 +73,27 @@ class _SnackbarItemState extends State<SnackbarItem>
   }
 
   Color _getBackgroundColor(BuildContext context) {
-    // Neutral light background
-    return const Color(0xFFF8F9FA);
+    // Use theme surface color for consistency
+    return Theme.of(context).colorScheme.surface;
   }
 
   Color _getAccentColor(BuildContext context) {
-    switch (widget.message.type) {
-      case SnackbarType.success:
-        return const Color(0xFF10B981).withValues(alpha: 0.3);
-      case SnackbarType.error:
-        return const Color(0xFFEF4444).withValues(alpha: 0.3);
-      case SnackbarType.warning:
-        return const Color(0xFFF59E0B).withValues(alpha: 0.3);
-      case SnackbarType.info:
-        return const Color(0xFF3B82F6).withValues(alpha: 0.3);
-    }
+    // Use theme outline color for subtle border
+    return Theme.of(context).colorScheme.outline.withValues(alpha: 0.2);
   }
 
   Color _getIconColor(BuildContext context) {
+    // Use theme primary color with subtle variations for different types
+    final primary = Theme.of(context).colorScheme.primary;
     switch (widget.message.type) {
       case SnackbarType.success:
-        return const Color(0xFF10B981);
+        return primary; // Main theme color for success
       case SnackbarType.error:
-        return const Color(0xFFEF4444);
+        return Theme.of(context).colorScheme.error;
       case SnackbarType.warning:
-        return const Color(0xFFF59E0B);
+        return primary.withValues(alpha: 0.8); // Slightly muted primary
       case SnackbarType.info:
-        return const Color(0xFF3B82F6);
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
@@ -137,8 +131,8 @@ class _SnackbarItemState extends State<SnackbarItem>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8.0,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 6.0,
                     offset: const Offset(0, 2),
                     spreadRadius: 0,
                   ),
@@ -146,26 +140,19 @@ class _SnackbarItemState extends State<SnackbarItem>
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6.0),
-                    decoration: BoxDecoration(
-                      color: _getAccentColor(context),
-                      borderRadius: BorderRadius.circular(6.0),
-                    ),
-                    child: Icon(
-                      _getIcon(),
-                      color: _getIconColor(context),
-                      size: 16.0,
-                    ),
+                  Icon(
+                    _getIcon(),
+                    color: _getIconColor(context),
+                    size: 14.0,
                   ),
                   const SizedBox(width: 12.0),
                   Expanded(
                     child: Text(
                       widget.message.message,
-                      style: const TextStyle(
-                        color: Color(0xFF1F2937),
-                        fontSize: 14.0,
-                        fontWeight: FontWeight.w500,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 13.0,
+                        fontWeight: FontWeight.w400,
                         height: 1.3,
                         decoration: TextDecoration.none,
                       ),
@@ -173,55 +160,47 @@ class _SnackbarItemState extends State<SnackbarItem>
                   ),
                   if (widget.message.actionLabel != null) ...[
                     const SizedBox(width: 12.0),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _getAccentColor(context),
-                        borderRadius: BorderRadius.circular(6.0),
-                        border: Border.all(
-                          color: _getIconColor(context),
-                          width: 1.0,
+                    TextButton(
+                      onPressed: () {
+                        widget.message.onActionPressed?.call();
+                        _dismiss();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                        minimumSize: const Size(44.0, 44.0), // Accessibility minimum
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
                         ),
                       ),
-                      child: TextButton(
-                        onPressed: () {
-                          widget.message.onActionPressed?.call();
-                          _dismiss();
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: _getIconColor(context),
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                          ),
-                        ),
-                        child: Text(
-                          widget.message.actionLabel!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13.0,
-                            decoration: TextDecoration.none,
-                          ),
+                      child: Text(
+                        widget.message.actionLabel!,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12.0,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
                   ],
-                  const SizedBox(width: 8.0),
-                  GestureDetector(
-                    onTap: _dismiss,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(4.0),
+                  const SizedBox(width: 4.0),
+                  SizedBox(
+                    width: 44.0,
+                    height: 44.0,
+                    child: IconButton(
+                      onPressed: _dismiss,
+                      padding: EdgeInsets.zero,
+                      iconSize: 16.0,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
                       ),
-                      child: Icon(
-                        Icons.close,
-                        color: Colors.black.withValues(alpha: 0.6),
-                        size: 14.0,
-                      ),
+                      icon: const Icon(Icons.close),
                     ),
                   ),
                 ],
