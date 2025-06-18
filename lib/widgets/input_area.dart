@@ -47,7 +47,10 @@ class _InputAreaState extends State<InputArea> {
   }
 
   void _onInputFocusChange() {
-    if (mounted && context.mounted && !context.read<HomePageCubit>().state.isChatOpen) {
+    AppLogger.info('_onInputFocusChange: hasFocus=${_inputFocusNode.hasFocus}, mounted=$mounted, context.mounted=${context.mounted}');
+    if (mounted && context.mounted) {
+      final chatOpen = context.read<HomePageCubit>().state.isChatOpen;
+      AppLogger.info('_onInputFocusChange: calling setInputFocus(${_inputFocusNode.hasFocus}), chatOpen=$chatOpen');
       context.read<HomePageCubit>().setInputFocus(_inputFocusNode.hasFocus);
     }
   }
@@ -123,7 +126,10 @@ class _InputAreaState extends State<InputArea> {
     _textController.clear();
     if (!homePageCubit.state.isChatOpen && _inputFocusNode.hasFocus) {
       // CP: Use focusedChild?.unfocus() for more reliable behavior
+      AppLogger.info('_handleLocalSend: unfocusing keyboard because not in chat mode');
       FocusScope.of(context).focusedChild?.unfocus();
+    } else {
+      AppLogger.info('_handleLocalSend: NOT unfocusing - chatOpen=${homePageCubit.state.isChatOpen}, hasFocus=${_inputFocusNode.hasFocus}');
     }
   }
 
@@ -160,13 +166,24 @@ class _InputAreaState extends State<InputArea> {
           return BlocBuilder<VoiceInputCubit, VoiceInputState>(
             builder: (context, voiceState) {
               return BlocBuilder<HomePageCubit, HomePageState>(
-                buildWhen:
-                    (prev, current) =>
-                        prev.isInputFocused != current.isInputFocused || prev.isChatOpen != current.isChatOpen,
+                buildWhen: (prev, current) => 
+                    prev.isInputFocused != current.isInputFocused || prev.isChatOpen != current.isChatOpen,
                 builder: (context, homeScreenState) {
+                  // CP: Preserve focus during rebuilds
+                  final wasInputFocused = _inputFocusNode.hasFocus;
                   final isInputFocused = homeScreenState.isInputFocused;
                   final isChatOpen = homeScreenState.isChatOpen;
                   final isEditingMode = entryState.isEditingMode;
+                  
+                  // CP: Restore focus after rebuild if it was lost
+                  if (wasInputFocused) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && !_inputFocusNode.hasFocus) {
+                        AppLogger.info('Restoring focus after rebuild - was focused but lost during rebuild');
+                        _inputFocusNode.requestFocus();
+                      }
+                    });
+                  }
                   final isTranscribing = voiceState.transcriptionStatus == TranscriptionStatus.transcribing;
 
                   // CP: Determine input behavior based on mode and voice state
@@ -255,8 +272,12 @@ class _InputAreaState extends State<InputArea> {
                                   minLines: 1,
                                   maxLines: 5,
                                   onTapOutside: (_) {
+                                    AppLogger.info('onTapOutside: hasFocus=${_inputFocusNode.hasFocus}, chatOpen=$isChatOpen, editingMode=$isEditingMode');
                                     if (_inputFocusNode.hasFocus && !isChatOpen && !isEditingMode) {
+                                      AppLogger.info('onTapOutside: unfocusing keyboard');
                                       FocusScope.of(context).unfocus();
+                                    } else {
+                                      AppLogger.info('onTapOutside: NOT unfocusing');
                                     }
                                   },
                                   onTap: () {
@@ -353,6 +374,7 @@ class _InputAreaState extends State<InputArea> {
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
+                                    AppLogger.info('Chat toggle button pressed - hasFocus: ${_inputFocusNode.hasFocus}');
                                     context.read<HomePageCubit>().toggleChatOpen();
                                   },
                                 ),

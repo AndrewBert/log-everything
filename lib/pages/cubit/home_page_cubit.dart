@@ -91,8 +91,12 @@ class HomePageCubit extends Cubit<HomePageState> {
   }
 
   void setInputFocus(bool hasFocus) {
+    AppLogger.info('setInputFocus called: old=${state.isInputFocused}, new=$hasFocus, chatOpen=${state.isChatOpen}');
     if (hasFocus != state.isInputFocused) {
       emit(state.copyWith(isInputFocused: hasFocus));
+      AppLogger.info('setInputFocus: state updated to $hasFocus');
+    } else {
+      AppLogger.info('setInputFocus: no change needed');
     }
   }
 
@@ -121,9 +125,9 @@ class HomePageCubit extends Cubit<HomePageState> {
   }
 
   void toggleChatOpen() {
+    final wasOpen = state.isChatOpen;
+    AppLogger.info('toggleChatOpen: changing from $wasOpen to ${!wasOpen}');
     emit(state.copyWith(isChatOpen: !state.isChatOpen));
-    if (state.isChatOpen) {
-      setInputFocus(false);
-    }
+    AppLogger.info('toggleChatOpen: state updated, new isChatOpen: ${state.isChatOpen}');
   }
 }

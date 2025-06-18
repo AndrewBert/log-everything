@@ -11,7 +11,9 @@ import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
 import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/snackbar/models/snackbar_message.dart';
 import 'package:myapp/locator.dart';
+import 'package:myapp/utils/logger.dart';
 
+//todo chat bottom sheet is is dismissing the keyboard when it's already open when opening or closing the c
 class ChatBottomSheet extends StatelessWidget {
   const ChatBottomSheet({super.key});
 
@@ -28,7 +30,10 @@ class ChatBottomSheet extends StatelessWidget {
       child: GestureDetector(
         key: chatBottomSheet,
         behavior: HitTestBehavior.opaque,
-        onTap: () => FocusScope.of(context).unfocus(),
+        onTap: () {
+          AppLogger.info('ChatBottomSheet GestureDetector onTap: unfocusing keyboard');
+          FocusScope.of(context).unfocus();
+        },
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -79,65 +84,67 @@ class ChatBottomSheet extends StatelessWidget {
                   children: [
                     // Main chat content
                     messages.isEmpty && !isLoading
-                        ? Padding(
-                          key: chatWelcomeMessage,
-                          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.psychology_outlined,
-                                size: 48,
-                                color: Theme.of(context).colorScheme.primary.withAlpha(128),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                "Unlock insights from your logs!",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w600,
+                        ? SingleChildScrollView(
+                          child: Padding(
+                            key: chatWelcomeMessage,
+                            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.psychology_outlined,
+                                  size: 48,
+                                  color: Theme.of(context).colorScheme.primary.withAlpha(128),
                                 ),
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surfaceContainer,
-                                  borderRadius: BorderRadius.circular(16),
+                                const SizedBox(height: 24),
+                                Text(
+                                  "Unlock insights from your logs!",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      "Ask me to:",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
+                                const SizedBox(height: 24),
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surfaceContainer,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        "Ask me to:",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildSuggestionItem(context, "📊", "Summarize recent entries"),
-                                    const SizedBox(height: 12),
-                                    _buildSuggestionItem(context, "🔍", "Find logs about a specific topic"),
-                                    const SizedBox(height: 12),
-                                    _buildSuggestionItem(context, "📈", "Analyze patterns in your data"),
-                                  ],
+                                      const SizedBox(height: 16),
+                                      _buildSuggestionItem(context, "📊", "Summarize recent entries"),
+                                      const SizedBox(height: 12),
+                                      _buildSuggestionItem(context, "🔍", "Find logs about a specific topic"),
+                                      const SizedBox(height: 12),
+                                      _buildSuggestionItem(context, "📈", "Analyze patterns in your data"),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                "What would you like to explore?",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  fontSize: 16,
-                                  fontStyle: FontStyle.italic,
+                                const SizedBox(height: 24),
+                                Text(
+                                  "What would you like to explore?",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontSize: 16,
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         )
                         : ListView.builder(
