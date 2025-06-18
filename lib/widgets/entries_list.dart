@@ -94,26 +94,33 @@ class _EntriesListSliver extends StatefulWidget {
   State<_EntriesListSliver> createState() => _EntriesListSliverState();
 }
 
-class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProviderStateMixin {
+class _EntriesListSliverState extends State<_EntriesListSliver>
+    with TickerProviderStateMixin {
   // CP: Track split entry delays to persist across rebuilds
   final Map<String, Duration> _splitEntryDelays = {};
   final Set<String> _animatedEntries = {};
 
   // CP: Track split groups for visual grouping
-  final Map<String, DateTime> _splitGroups = {}; // timestamp -> when group was created
+  final Map<String, DateTime> _splitGroups =
+      {}; // timestamp -> when group was created
   final Map<String, AnimationController> _groupControllers = {};
-  final Duration _groupDisplayDuration = const Duration(seconds: 4); // How long to show grouping
+  final Duration _groupDisplayDuration =
+      const Duration(seconds: 4); // How long to show grouping
 
   // Helper to map backend 'Misc' to frontend 'None' and vice versa
-  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
+  String categoryDisplayName(String category) =>
+      category == 'Misc' ? 'None' : category;
 
   // CP: Helper to detect if an entry is part of a group of split entries
-  int _getSplitEntryIndex(List<dynamic> listItems, int currentIndex, Entry currentEntry) {
+  int _getSplitEntryIndex(
+      List<dynamic> listItems, int currentIndex, Entry currentEntry) {
     // CP: Look backwards to find other entries with same timestamp (split from same original)
     int splitIndex = 0;
     for (int i = currentIndex - 1; i >= 0; i--) {
       final item = listItems[i];
-      if (item is Entry && item.timestamp == currentEntry.timestamp && item.category != 'Processing...') {
+      if (item is Entry &&
+          item.timestamp == currentEntry.timestamp &&
+          item.category != 'Processing...') {
         splitIndex++;
       } else if (item is Entry && item.timestamp != currentEntry.timestamp) {
         // CP: Different timestamp, stop looking
@@ -140,7 +147,9 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
     // CP: Count entries with same timestamp
     int count = 0;
     for (final item in listItems) {
-      if (item is Entry && item.timestamp == entry.timestamp && item.category != 'Processing...') {
+      if (item is Entry &&
+          item.timestamp == entry.timestamp &&
+          item.category != 'Processing...') {
         count++;
       }
     }
@@ -157,10 +166,13 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
         final groupKey = item.timestamp.toIso8601String();
 
         // CP: Only calculate delay if we haven't seen this entry before AND it's new
-        if (!_splitEntryDelays.containsKey(entryKey) && !_animatedEntries.contains(entryKey) && item.isNew) {
+        if (!_splitEntryDelays.containsKey(entryKey) &&
+            !_animatedEntries.contains(entryKey) &&
+            item.isNew) {
           int splitIndex = _getSplitEntryIndex(listItems, i, item);
           if (splitIndex > 0) {
-            final delay = Duration(milliseconds: splitIndex * 200); // CP: Fast, snappy timing
+            final delay = Duration(
+                milliseconds: splitIndex * 200); // CP: Fast, snappy timing
             _splitEntryDelays[entryKey] = delay;
 
             // CP: Only create group for NEW split entries (not on app reload)
@@ -205,7 +217,8 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
   }
 
   // CP: Show context menu at a consistent position relative to the entry card
-  void _showContextMenu(BuildContext context, Entry entry, Offset globalPosition) {
+  void _showContextMenu(
+      BuildContext context, Entry entry, Offset globalPosition) {
     // CP: Don't show context menu if entry is processing
     if (entry.category == 'Processing...') {
       return;
@@ -220,8 +233,10 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
     // CP: Find the entry card widget to get its position and size
     // CP: Pass filter context to prevent GlobalKey duplicates
     final entryState = context.read<EntryCubit>().state;
-    final entryKey = entryCardKey(entry, filterContext: entryState.filterCategory);
-    final RenderBox? entryBox = entryKey.currentContext?.findRenderObject() as RenderBox?;
+    final entryKey =
+        entryCardKey(entry, filterContext: entryState.filterCategory);
+    final RenderBox? entryBox =
+        entryKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (entryBox != null) {
       // CP: Get the entry card's position and size
@@ -240,35 +255,38 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
       // - Horizontally: always centered to the card
       // - Vertically: well below card if in top half, well above card if in bottom half
       final menuX = entryPosition.dx + (entrySize.width / 2);
-      final menuY =
-          isInBottomHalf
-              ? entryPosition.dy -
-                  estimatedMenuHeight -
-                  16.0 // CP: Menu height + 16px above the card
-              : entryPosition.dy + entrySize.height + 16.0; // CP: 16px below the card
+      final menuY = isInBottomHalf
+          ? entryPosition.dy -
+              estimatedMenuHeight -
+              16.0 // CP: Menu height + 16px above the card
+          : entryPosition.dy +
+              entrySize.height +
+              16.0; // CP: 16px below the card
 
       showGeneralDialog(
         context: context,
         barrierDismissible: true,
-        barrierColor: Colors.transparent, // CP: Completely transparent - no dimming effect
+        barrierColor: Colors
+            .transparent, // CP: Completely transparent - no dimming effect
         barrierLabel: 'Entry context menu',
-        pageBuilder:
-            (context, animation, secondaryAnimation) => EntryContextMenu(
-              entry: entry,
-              position: Offset(menuX, menuY), // CP: Use intelligent relative position
-              onEdit: () => widget.onEditPressed(entry),
-              onDelete: () => widget.onDeletePressed(entry),
-              onCopyText: () {
-                Clipboard.setData(ClipboardData(text: entry.text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Text copied to clipboard'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            EntryContextMenu(
+          entry: entry,
+          position:
+              Offset(menuX, menuY), // CP: Use intelligent relative position
+          onEdit: () => widget.onEditPressed(entry),
+          onDelete: () => widget.onDeletePressed(entry),
+          onCopyText: () {
+            Clipboard.setData(ClipboardData(text: entry.text));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Text copied to clipboard'),
+                duration: const Duration(seconds: 1),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
       ).then((_) {
         // CP: Clear the context menu entry when dialog is dismissed
         if (context.mounted) {
@@ -288,23 +306,23 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
         barrierDismissible: true,
         barrierColor: Colors.transparent,
         barrierLabel: 'Entry context menu',
-        pageBuilder:
-            (context, animation, secondaryAnimation) => EntryContextMenu(
-              entry: entry,
-              position: Offset(menuX, menuY),
-              onEdit: () => widget.onEditPressed(entry),
-              onDelete: () => widget.onDeletePressed(entry),
-              onCopyText: () {
-                Clipboard.setData(ClipboardData(text: entry.text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Text copied to clipboard'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            EntryContextMenu(
+          entry: entry,
+          position: Offset(menuX, menuY),
+          onEdit: () => widget.onEditPressed(entry),
+          onDelete: () => widget.onDeletePressed(entry),
+          onCopyText: () {
+            Clipboard.setData(ClipboardData(text: entry.text));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Text copied to clipboard'),
+                duration: const Duration(seconds: 1),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
       ).then((_) {
         if (context.mounted) {
           context.read<EntryCubit>().clearContextMenuEntry();
@@ -342,20 +360,26 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
                       Icon(
                         Icons.edit_outlined,
                         size: 48,
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.6),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Editing Entry',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Make your changes in the input field below',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -389,7 +413,10 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
                     state.filterCategory != null
                         ? 'No entries found for category: "${state.filterCategory}"'
                         : 'No entries yet.\nType or use the mic below!',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -413,9 +440,11 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
     );
   }
 
-  Widget _buildListItem(BuildContext context, List<dynamic> listItems, int index, EntryState state) {
+  Widget _buildListItem(BuildContext context, List<dynamic> listItems,
+      int index, EntryState state) {
     final item = listItems[index];
-    final nextItem = (index + 1 < listItems.length) ? listItems[index + 1] : null;
+    final nextItem =
+        (index + 1 < listItems.length) ? listItems[index + 1] : null;
 
     Widget itemWidget;
 
@@ -426,10 +455,10 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
         child: Text(
           widget.formatDateHeader(item),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
         ),
       );
     } else if (item is Entry) {
@@ -480,12 +509,13 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
                 onChangeCategoryPressed: widget.onChangeCategoryPressed,
                 onEditPressed: widget.onEditPressed,
                 onDeletePressed: widget.onDeletePressed,
-                onLongPress: (globalPosition) => _showContextMenu(context, entry, globalPosition),
+                onLongPress: (globalPosition) =>
+                    _showContextMenu(context, entry, globalPosition),
                 isChecklistCategory: isChecklistCategory,
-                onToggleCompletion:
-                    (isChecklistCategory || entry.isTask)
-                        ? (entry) => context.read<EntryCubit>().toggleEntryCompletion(entry)
-                        : null,
+                onToggleCompletion: (isChecklistCategory || entry.isTask)
+                    ? (entry) =>
+                        context.read<EntryCubit>().toggleEntryCompletion(entry)
+                    : null,
               );
             },
           ),
@@ -508,9 +538,11 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
     // Add spacing after items
     Widget spacing = const SizedBox.shrink();
     if (item is Entry && nextItem is Entry) {
-      spacing = const SizedBox(height: 16.0); // Increased spacing between entries
+      spacing =
+          const SizedBox(height: 16.0); // Increased spacing between entries
     } else if (item is DateTime && nextItem is Entry) {
-      spacing = const SizedBox(height: 8.0); // Increased spacing after date header
+      spacing =
+          const SizedBox(height: 8.0); // Increased spacing after date header
     }
 
     return Column(
@@ -529,7 +561,8 @@ class AnimatedSlideCard extends StatefulWidget {
   final bool isNew;
   final bool isProcessing;
   final Duration? staggerDelay; // CP: For staggered split animations
-  final VoidCallback? onAnimationComplete; // CP: Callback when animation completes
+  final VoidCallback?
+      onAnimationComplete; // CP: Callback when animation completes
 
   const AnimatedSlideCard({
     super.key,
@@ -544,7 +577,8 @@ class AnimatedSlideCard extends StatefulWidget {
   State<AnimatedSlideCard> createState() => _AnimatedSlideCardState();
 }
 
-class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProviderStateMixin {
+class _AnimatedSlideCardState extends State<AnimatedSlideCard>
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -569,7 +603,9 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       begin: Offset(0.0, widget.isNew ? 0.15 : 0.05),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _controller, curve: widget.isNew ? Curves.easeOutCubic : Curves.easeOutQuart),
+      CurvedAnimation(
+          parent: _controller,
+          curve: widget.isNew ? Curves.easeOutCubic : Curves.easeOutQuart),
     );
 
     // CP: Fade in from more transparent for new entries
@@ -583,7 +619,9 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       begin: widget.isNew ? 0.92 : 1.0,
       end: 1.0,
     ).animate(
-      CurvedAnimation(parent: _controller, curve: widget.isNew ? Curves.easeOutCubic : Curves.linear),
+      CurvedAnimation(
+          parent: _controller,
+          curve: widget.isNew ? Curves.easeOutCubic : Curves.linear),
     );
 
     // CP: Pulse animation for processing entries
@@ -654,7 +692,8 @@ class _AnimatedSlideCardState extends State<AnimatedSlideCard> with TickerProvid
       animation: Listenable.merge([_controller, _pulseController]),
       builder: (context, child) {
         return Transform.scale(
-          scale: _scaleAnimation.value * (widget.isProcessing ? _pulseAnimation.value : 1.0),
+          scale: _scaleAnimation.value *
+              (widget.isProcessing ? _pulseAnimation.value : 1.0),
           child: SlideTransition(
             position: _slideAnimation,
             child: FadeTransition(
@@ -674,7 +713,8 @@ class _SwipeableEntryCard extends StatefulWidget {
   final Widget child;
   final VoidCallback onDelete;
 
-  const _SwipeableEntryCard({required this.entry, required this.child, required this.onDelete});
+  const _SwipeableEntryCard(
+      {required this.entry, required this.child, required this.onDelete});
 
   @override
   State<_SwipeableEntryCard> createState() => _SwipeableEntryCardState();
@@ -682,8 +722,22 @@ class _SwipeableEntryCard extends StatefulWidget {
 
 class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
   // CP: Fun nuke-themed emojis for different swipe directions
-  static const List<String> _leftNukeEmojis = ['💥', '🧨', '💣', '🔥', '⚡', '🌪️'];
-  static const List<String> _rightNukeEmojis = ['☢️', '💀', '💥', '🌋', '⚡', '🔥'];
+  static const List<String> _leftNukeEmojis = [
+    '💥',
+    '🧨',
+    '💣',
+    '🔥',
+    '⚡',
+    '🌪️'
+  ];
+  static const List<String> _rightNukeEmojis = [
+    '☢️',
+    '💀',
+    '💥',
+    '🌋',
+    '⚡',
+    '🔥'
+  ];
 
   late final String _leftEmoji;
   late final String _rightEmoji;
@@ -692,7 +746,8 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
   void initState() {
     super.initState();
     // CP: Select random emojis for this specific entry card
-    final random = DateTime.now().millisecondsSinceEpoch + widget.entry.text.hashCode;
+    final random =
+        DateTime.now().millisecondsSinceEpoch + widget.entry.text.hashCode;
     _leftEmoji = _leftNukeEmojis[random % _leftNukeEmojis.length];
     _rightEmoji = _rightNukeEmojis[(random * 7) % _rightNukeEmojis.length];
   }
@@ -706,10 +761,12 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
 
     return Dismissible(
       // CP: Use the consistent key from widget_keys.dart
-      key: ValueKey('dismissible_${widget.entry.timestamp.toIso8601String()}_${widget.entry.text.hashCode}'),
+      key: ValueKey(
+          'dismissible_${widget.entry.timestamp.toIso8601String()}_${widget.entry.text.hashCode}'),
       direction: DismissDirection.horizontal, // CP: Allow both directions
       dismissThresholds: const {
-        DismissDirection.startToEnd: 0.3, // CP: Lower threshold for easier dismissal
+        DismissDirection.startToEnd:
+            0.3, // CP: Lower threshold for easier dismissal
         DismissDirection.endToStart: 0.3,
       },
       // CP: Custom background with nuke theme
@@ -726,8 +783,11 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
 
   Widget _buildNukeBackground({required bool isLeftSwipe}) {
     final emoji = isLeftSwipe ? _leftEmoji : _rightEmoji;
-    final alignment = isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight;
-    final padding = isLeftSwipe ? const EdgeInsets.only(left: 20) : const EdgeInsets.only(right: 20);
+    final alignment =
+        isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight;
+    final padding = isLeftSwipe
+        ? const EdgeInsets.only(left: 20)
+        : const EdgeInsets.only(right: 20);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8), // CP: Match card margins
@@ -736,11 +796,20 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
         gradient: LinearGradient(
           begin: isLeftSwipe ? Alignment.centerLeft : Alignment.centerRight,
           end: isLeftSwipe ? Alignment.centerRight : Alignment.centerLeft,
-          colors: [Colors.red.shade600, Colors.orange.shade500, Colors.yellow.shade400],
+          colors: [
+            Colors.red.shade600,
+            Colors.orange.shade500,
+            Colors.yellow.shade400
+          ],
         ),
         borderRadius: BorderRadius.circular(12),
         // CP: Subtle glow effect
-        boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.red.withValues(alpha: 0.3),
+              blurRadius: 8,
+              spreadRadius: 2)
+        ],
       ),
       child: Padding(
         padding: padding,
@@ -754,7 +823,9 @@ class _SwipeableEntryCardState extends State<_SwipeableEntryCard> {
                 duration: const Duration(milliseconds: 300),
                 tween: Tween(begin: 0, end: isLeftSwipe ? 0.1 : -0.1),
                 builder: (context, rotation, child) {
-                  return Transform.rotate(angle: rotation, child: Text(emoji, style: const TextStyle(fontSize: 32)));
+                  return Transform.rotate(
+                      angle: rotation,
+                      child: Text(emoji, style: const TextStyle(fontSize: 32)));
                 },
               ),
               const SizedBox(height: 4),
@@ -804,7 +875,10 @@ class _SplitGroupWrapper extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12.0),
                       // CP: Visible outline only, no shadow
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.45 * controller.value),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.45 * controller.value),
                         width: 1.5,
                         strokeAlign: BorderSide.strokeAlignInside,
                       ),
