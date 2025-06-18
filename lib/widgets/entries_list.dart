@@ -53,319 +53,26 @@ class EntriesList extends StatefulWidget {
   State<EntriesList> createState() => _EntriesListState();
 }
 
-class _EntriesListState extends State<EntriesList> with TickerProviderStateMixin {
-  // CP: Track split entry delays to persist across rebuilds
-  final Map<String, Duration> _splitEntryDelays = {};
-  final Set<String> _animatedEntries = {};
-
-  // CP: Track split groups for visual grouping
-  final Map<String, DateTime> _splitGroups = {}; // timestamp -> when group was created
-  final Map<String, AnimationController> _groupControllers = {};
-  final Duration _groupDisplayDuration = const Duration(seconds: 4); // How long to show grouping
-
-  // Helper to map backend 'Misc' to frontend 'None' and vice versa
-  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
-
-  // CP: Helper to detect if an entry is part of a group of split entries
-  int _getSplitEntryIndex(List<dynamic> listItems, int currentIndex, Entry currentEntry) {
-    // CP: Look backwards to find other entries with same timestamp (split from same original)
-    int splitIndex = 0;
-    for (int i = currentIndex - 1; i >= 0; i--) {
-      final item = listItems[i];
-      if (item is Entry && item.timestamp == currentEntry.timestamp && item.category != 'Processing...') {
-        splitIndex++;
-      } else if (item is Entry && item.timestamp != currentEntry.timestamp) {
-        // CP: Different timestamp, stop looking
-        break;
-      } else if (item is DateTime) {
-        // CP: Hit a date header, stop looking
-        break;
-      }
-    }
-
-    return splitIndex;
-  }
-
-  // CP: Show context menu at a consistent position relative to the entry card
-  void _showContextMenu(BuildContext context, Entry entry, Offset globalPosition) {
-    // CP: Don't show context menu if entry is processing
-    if (entry.category == 'Processing...') {
-      return;
-    }
-
-    // CP: Add more punchy haptic feedback on long press
-    HapticFeedback.heavyImpact();
-
-    // CP: Set the context menu entry in the cubit to trigger highlighting
-    context.read<EntryCubit>().setContextMenuEntry(entry);
-
-    // CP: Find the entry card widget to get its position and size
-    // CP: Pass filter context to prevent GlobalKey duplicates
-    final entryState = context.read<EntryCubit>().state;
-    final entryKey = entryCardKey(entry, filterContext: entryState.filterCategory);
-    final RenderBox? entryBox = entryKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (entryBox != null) {
-      // CP: Get the entry card's position and size
-      final entryPosition = entryBox.localToGlobal(Offset.zero);
-      final entrySize = entryBox.size;
-      final screenSize = MediaQuery.of(context).size;
-
-      // CP: Intelligent positioning based on card location on screen
-      final cardCenterY = entryPosition.dy + (entrySize.height / 2);
-      final isInBottomHalf = cardCenterY > (screenSize.height / 2);
-
-      // CP: Estimate context menu height (3 options + padding + dividers ≈ 140px)
-      const estimatedMenuHeight = 140.0;
-
-      // CP: Position menu relative to the card:
-      // - Horizontally: always centered to the card
-      // - Vertically: well below card if in top half, well above card if in bottom half
-      final menuX = entryPosition.dx + (entrySize.width / 2);
-      final menuY =
-          isInBottomHalf
-              ? entryPosition.dy -
-                  estimatedMenuHeight -
-                  16.0 // CP: Menu height + 16px above the card
-              : entryPosition.dy + entrySize.height + 16.0; // CP: 16px below the card
-
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierColor: Colors.transparent, // CP: Completely transparent - no dimming effect
-        barrierLabel: 'Entry context menu',
-        pageBuilder:
-            (context, _, __) => EntryContextMenu(
-              entry: entry,
-              position: Offset(menuX, menuY), // CP: Use intelligent relative position
-              onEdit: () => widget.onEditPressed(entry),
-              onDelete: () => widget.onDeletePressed(entry),
-              onCopyText: () {
-                Clipboard.setData(ClipboardData(text: entry.text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Text copied to clipboard'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-      ).then((_) {
-        // CP: Clear the context menu entry when dialog is dismissed
-        if (context.mounted) {
-          context.read<EntryCubit>().clearContextMenuEntry();
-          // CP: Use focusedChild?.unfocus() for more reliable behavior
-          FocusScope.of(context).focusedChild?.unfocus();
-        }
-      });
-    } else {
-      // CP: Fallback to original position if card not found
-      final screenSize = MediaQuery.of(context).size;
-      final menuX = screenSize.width / 2;
-      final menuY = screenSize.height * 0.4;
-
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierColor: Colors.transparent,
-        barrierLabel: 'Entry context menu',
-        pageBuilder:
-            (context, _, __) => EntryContextMenu(
-              entry: entry,
-              position: Offset(menuX, menuY),
-              onEdit: () => widget.onEditPressed(entry),
-              onDelete: () => widget.onDeletePressed(entry),
-              onCopyText: () {
-                Clipboard.setData(ClipboardData(text: entry.text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Text copied to clipboard'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-      ).then((_) {
-        if (context.mounted) {
-          context.read<EntryCubit>().clearContextMenuEntry();
-          // CP: Use focusedChild?.unfocus() for more reliable behavior
-          FocusScope.of(context).focusedChild?.unfocus();
-        }
-      });
-    }
-  }
-
-  // CP: Generate a unique key for an entry
-  String _getEntryKey(Entry entry) {
-    return '${entry.timestamp.toIso8601String()}_${entry.text.hashCode}';
-  }
-
-  // CP: Check if an entry is part of a split group that should be highlighted
-  bool _isInSplitGroup(Entry entry, List<dynamic> listItems) {
-    final groupKey = entry.timestamp.toIso8601String();
-    if (!_splitGroups.containsKey(groupKey)) return false;
-
-    // CP: Count entries with same timestamp
-    int count = 0;
-    for (final item in listItems) {
-      if (item is Entry && item.timestamp == entry.timestamp && item.category != 'Processing...') {
-        count++;
-      }
-    }
-
-    return count > 1; // Only highlight if there are multiple entries (split)
-  }
-
-  // CP: Check and store split entry delays
-  void _updateSplitDelays(List<dynamic> listItems) {
-    for (int i = 0; i < listItems.length; i++) {
-      final item = listItems[i];
-      if (item is Entry) {
-        final entryKey = _getEntryKey(item);
-        final groupKey = item.timestamp.toIso8601String();
-
-        // CP: Only calculate delay if we haven't seen this entry before AND it's new
-        if (!_splitEntryDelays.containsKey(entryKey) && !_animatedEntries.contains(entryKey) && item.isNew) {
-          int splitIndex = _getSplitEntryIndex(listItems, i, item);
-          if (splitIndex > 0) {
-            final delay = Duration(milliseconds: splitIndex * 200); // CP: Fast, snappy timing
-            _splitEntryDelays[entryKey] = delay;
-
-            // CP: Only create group for NEW split entries (not on app reload)
-            if (!_splitGroups.containsKey(groupKey)) {
-              _splitGroups[groupKey] = DateTime.now();
-              _createGroupController(groupKey);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // CP: Create animation controller for group highlighting
-  void _createGroupController(String groupKey) {
-    final controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      reverseDuration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _groupControllers[groupKey] = controller;
-
-    // CP: Start with fade in, then fade out after delay
-    controller.forward().then((_) {
-      Future.delayed(_groupDisplayDuration, () {
-        if (mounted && _groupControllers.containsKey(groupKey)) {
-          controller.reverse().then((_) {
-            if (mounted) {
-              _cleanupGroup(groupKey);
-            }
-          });
-        }
-      });
-    });
-  }
-
-  // CP: Clean up group resources
-  void _cleanupGroup(String groupKey) {
-    _groupControllers[groupKey]?.dispose();
-    _groupControllers.remove(groupKey);
-    _splitGroups.remove(groupKey);
-  }
-
-  @override
-  void dispose() {
-    // CP: Clean up all group controllers
-    for (final controller in _groupControllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
+// Simple wrapper state that just delegates to sliver implementation
+class _EntriesListState extends State<EntriesList> {
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EntryCubit, EntryState>(
-      builder: (context, state) {
-        // CP: Show empty background when in editing mode
-        if (state.isEditingMode) {
-          return Container(
-            color: Theme.of(context).colorScheme.surface,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.edit_outlined,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Editing Entry',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Make your changes in the input field below',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        final List<dynamic> listItems = state.displayListItems;
-
-        // CP: Update split delays when list changes
-        _updateSplitDelays(listItems);
-
-        if (state.isLoading && listItems.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (listItems.isEmpty) {
-          return AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: 1.0,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Text(
-                  state.filterCategory != null
-                      ? 'No entries found for category: "${state.filterCategory}"'
-                      : 'No entries yet.\nType or use the mic below!',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          );
-        }
-
-        // For backward compatibility, still support widget usage
-        return _EntriesListSliver(
+    return CustomScrollView(
+      slivers: [
+        _EntriesListSliver(
           formatDateHeader: widget.formatDateHeader,
           getCategoryColor: widget.getCategoryColor,
           timeFormatter: widget.timeFormatter,
           onChangeCategoryPressed: widget.onChangeCategoryPressed,
           onEditPressed: widget.onEditPressed,
           onDeletePressed: widget.onDeletePressed,
-        );
-      },
+        ),
+      ],
     );
   }
 }
 
-// CP: Internal sliver-based widget for entries
+// Internal sliver-based widget for entries - contains all the actual implementation
 class _EntriesListSliver extends StatefulWidget {
   final String Function(DateTime) formatDateHeader;
   final Color Function(String) getCategoryColor;
@@ -546,7 +253,7 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
         barrierColor: Colors.transparent, // CP: Completely transparent - no dimming effect
         barrierLabel: 'Entry context menu',
         pageBuilder:
-            (context, _, __) => EntryContextMenu(
+            (context, animation, secondaryAnimation) => EntryContextMenu(
               entry: entry,
               position: Offset(menuX, menuY), // CP: Use intelligent relative position
               onEdit: () => widget.onEditPressed(entry),
@@ -582,7 +289,7 @@ class _EntriesListSliverState extends State<_EntriesListSliver> with TickerProvi
         barrierColor: Colors.transparent,
         barrierLabel: 'Entry context menu',
         pageBuilder:
-            (context, _, __) => EntryContextMenu(
+            (context, animation, secondaryAnimation) => EntryContextMenu(
               entry: entry,
               position: Offset(menuX, menuY),
               onEdit: () => widget.onEditPressed(entry),
