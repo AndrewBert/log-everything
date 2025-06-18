@@ -76,12 +76,10 @@ class VectorStoreService {
     String? vectorStoreId = _prefs.getString(_vectorStoreIdKey);
 
     if (vectorStoreId == null || vectorStoreId.isEmpty) {
-      AppLogger.info('[VectorStoreService] No existing Vector Store ID found or it was empty. Creating a new one.');
       try {
         // CP: Generate a more unique name for the vector store
         final String uniqueSuffix = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
         final String vectorStoreName = 'LogEverythingApp_User_$uniqueSuffix';
-        AppLogger.info('[VectorStoreService] Attempting to create vector store with name: $vectorStoreName');
 
         final response = await _httpClient.post(
           Uri.parse('$_openAIBaseUrl/vector_stores'), // CP: Use _openAIBaseUrl
@@ -99,9 +97,6 @@ class VectorStoreService {
             );
           }
           vectorStoreId = createdId;
-          AppLogger.info(
-            '[VectorStoreService] New Vector Store created with ID: $vectorStoreId and Name: $vectorStoreName',
-          );
           await _prefs.setString(_vectorStoreIdKey, vectorStoreId);
         } else {
           AppLogger.error(
@@ -118,7 +113,6 @@ class VectorStoreService {
         throw VectorStoreApiException('Error creating vector store: $e', underlyingError: e);
       }
     } else {
-      AppLogger.info('[VectorStoreService] Using existing real Vector Store ID: $vectorStoreId');
     }
     return vectorStoreId;
   }
@@ -139,8 +133,7 @@ class VectorStoreService {
           );
           if (attempt == 2) {
             // CP: On final attempt, clear corrupted data and return empty map
-            AppLogger.warn('[VectorStoreService] Clearing corrupted monthly_log_file_ids after 3 failed attempts.');
-            await _prefs.remove(_monthlyLogFileIdsKey);
+              await _prefs.remove(_monthlyLogFileIdsKey);
             return {};
           }
           // CP: Wait a bit before retrying
@@ -168,7 +161,6 @@ class VectorStoreService {
         throw VectorStoreSyncException('SharedPreferences save verification failed - data corruption detected');
       }
 
-      AppLogger.info('[VectorStoreService] Successfully saved monthly_log_file_ids with ${ids.length} entries.');
     } catch (e) {
       AppLogger.error(
         '[VectorStoreService] Error saving monthly_log_file_ids to SharedPreferences: $e', // CP: Updated log
@@ -181,7 +173,6 @@ class VectorStoreService {
   }
 
   Future<String> _uploadLogContentToOpenAIFile(String fileName, String content) async {
-    AppLogger.info('[VectorStoreService] Uploading file "$fileName" to OpenAI.');
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_openAIBaseUrl/files'));
       request.headers.addAll(_getHeaders(isJsonContent: false));
@@ -197,7 +188,6 @@ class VectorStoreService {
         if (fileId == null || fileId.isEmpty) {
           throw VectorStoreApiException('Failed to upload file: ID missing in response.', responseBody: response.body);
         }
-        AppLogger.info('[VectorStoreService] File "$fileName" uploaded successfully. File ID: $fileId');
         return fileId;
       } else {
         AppLogger.error(
@@ -221,7 +211,6 @@ class VectorStoreService {
     List<Entry>? entries,
     DateTime? monthDate,
   }) async {
-    AppLogger.info('[VectorStoreService] Adding file "$fileId" to Vector Store "$vectorStoreId".');
     try {
       // CP: Calculate metadata if we have entries
       Map<String, dynamic>? attributes;
@@ -248,9 +237,6 @@ class VectorStoreService {
         if (addedFileId != fileId) {
           AppLogger.warn('[VectorStoreService] Added file ID $addedFileId does not match expected $fileId.');
         }
-        AppLogger.info(
-          '[VectorStoreService] File "$fileId" added to vector store "$vectorStoreId". Initial status: $status. Starting polling for completion.',
-        );
 
         // CP: Polling for file processing completion
         int pollCount = 0;
@@ -271,13 +257,7 @@ class VectorStoreService {
           if (pollResponse.statusCode == 200) {
             final pollBody = jsonDecode(pollResponse.body);
             final fileStatus = pollBody['status'] as String?;
-            AppLogger.info(
-              '[VectorStoreService] Polling file "$fileId" in vector store "$vectorStoreId" (Attempt $pollCount/$maxPolls): Status: $fileStatus',
-            );
             if (fileStatus == 'completed') {
-              AppLogger.info(
-                '[VectorStoreService] File "$fileId" processing completed in vector store "$vectorStoreId".',
-              );
               return; // CP: Success
             } else if (fileStatus == 'failed' || fileStatus == 'cancelled') {
               AppLogger.error(
@@ -321,7 +301,6 @@ class VectorStoreService {
   }
 
   Future<void> _deleteOpenAIFile(String fileId) async {
-    AppLogger.info('[VectorStoreService] Deleting OpenAI file "$fileId".');
     try {
       final response = await _httpClient.delete(
         Uri.parse('$_openAIBaseUrl/files/$fileId'), // CP: Use _openAIBaseUrl
@@ -331,7 +310,6 @@ class VectorStoreService {
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
         if (responseBody['deleted'] == true) {
-          AppLogger.info('[VectorStoreService] OpenAI file "$fileId" deleted successfully.');
         } else {
           AppLogger.warn(
             '[VectorStoreService] OpenAI file "$fileId" deletion response did not confirm deletion: ${response.body}',
@@ -363,7 +341,6 @@ class VectorStoreService {
   }
 
   Future<void> _deleteFileFromVectorStore(String vectorStoreId, String fileId) async {
-    AppLogger.info('[VectorStoreService] Deleting file "$fileId" from Vector Store "$vectorStoreId".');
     try {
       final response = await _httpClient.delete(
         Uri.parse('$_openAIBaseUrl/vector_stores/$vectorStoreId/files/$fileId'), // CP: Use _openAIBaseUrl
@@ -373,9 +350,6 @@ class VectorStoreService {
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
         if (responseBody['deleted'] == true) {
-          AppLogger.info(
-            '[VectorStoreService] File "$fileId" deleted successfully from vector store "$vectorStoreId".',
-          );
         } else {
           AppLogger.warn(
             '[VectorStoreService] File "$fileId" deletion from vector store "$vectorStoreId" response did not confirm deletion: ${response.body}',
@@ -416,7 +390,6 @@ class VectorStoreService {
 
     // CP: If lock exists and is less than 10 minutes old, wait
     if (lockTimestamp != null && (now - lockTimestamp) < 600000) {
-      AppLogger.info('[VectorStoreService] Month $monthKey is locked by another operation. Waiting...');
       // CP: Wait a bit and check again
       await Future.delayed(const Duration(seconds: 2));
       // CP: Recursive call to check lock again
@@ -459,13 +432,11 @@ class VectorStoreService {
     final fileName = "logs_$monthKey.txt";
 
     return _withMonthSyncLock(monthKey, () async {
-      AppLogger.info('[VectorStoreService] Starting synchronization for month: $monthKey, file: $fileName');
 
       Map<String, String> monthlyLogFileIds = await _getMonthlyLogFileIds();
       final String? existingFileId = monthlyLogFileIds[monthKey];
 
       if (existingFileId != null) {
-        AppLogger.info('[VectorStoreService] Existing file found for $monthKey: $existingFileId. Deleting it first.');
         try {
           await _deleteFileFromVectorStore(vectorStoreId, existingFileId);
         } catch (e) {
@@ -483,21 +454,16 @@ class VectorStoreService {
       }
 
       if (formattedMonthlyLogContent.isEmpty) {
-        AppLogger.info('[VectorStoreService] Formatted monthly log content for $monthKey is empty.');
         if (existingFileId != null) {
-          AppLogger.info('[VectorStoreService] Removing $monthKey from monthly_log_file_ids as content is now empty.');
           monthlyLogFileIds.remove(monthKey); // CP: Use monthKey
           await _saveMonthlyLogFileIds(monthlyLogFileIds);
         }
-        AppLogger.info('[VectorStoreService] Synchronization for $monthKey skipped as content is empty.');
         return;
       }
 
-      AppLogger.info('[VectorStoreService] Uploading new content for $monthKey.');
       String newFileId;
       try {
         newFileId = await _uploadLogContentToOpenAIFile(fileName, formattedMonthlyLogContent);
-        AppLogger.info('[VectorStoreService] Content for $monthKey uploaded. New file ID: $newFileId');
       } catch (e, stackTrace) {
         AppLogger.error(
           '[VectorStoreService] Failed to upload log content for $monthKey to OpenAI.',
@@ -508,18 +474,13 @@ class VectorStoreService {
       }
 
       try {
-        AppLogger.info(
-          '[VectorStoreService] Adding new file $newFileId to vector store $vectorStoreId.',
-        ); // Get entries for metadata
+        // Get entries for metadata
         final List<Entry> allEntries = await _entryPersistenceService.loadEntries();
         final List<Entry> monthEntries =
             allEntries.where((e) {
               return e.timestamp.year == date.year && e.timestamp.month == date.month;
             }).toList();
         await _addFileToVectorStore(vectorStoreId, newFileId, entries: monthEntries, monthDate: date);
-        AppLogger.info(
-          '[VectorStoreService] File $newFileId successfully added and processed in vector store $vectorStoreId.',
-        );
       } catch (e, stackTrace) {
         AppLogger.error(
           '[VectorStoreService] Failed to add file $newFileId for $monthKey to vector store $vectorStoreId.',
@@ -545,22 +506,18 @@ class VectorStoreService {
 
       monthlyLogFileIds[monthKey] = newFileId; // CP: Use monthKey
       await _saveMonthlyLogFileIds(monthlyLogFileIds);
-      AppLogger.info('[VectorStoreService] Successfully synchronized file for $monthKey. New ID $newFileId stored.');
     });
   }
 
   // CP: New method to perform initial backfill of historical logs.
   Future<void> performInitialBackfillIfNeeded() async {
-    AppLogger.info("[VectorStoreService] Checking if initial backfill is needed.");
 
     final bool fullRunPreviouslyAttempted = _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
 
     if (fullRunPreviouslyAttempted) {
-      AppLogger.info("[VectorStoreService] Full historical log backfill run previously attempted. Skipping.");
       return;
     }
 
-    AppLogger.info("[VectorStoreService] Starting historical log backfill process.");
     String? currentVectorStoreId;
 
     try {
@@ -571,14 +528,8 @@ class VectorStoreService {
       }
 
       final List<Entry> allEntries = await _entryPersistenceService.loadEntries();
-      AppLogger.info(
-        "[VectorStoreService] Backfill: Loaded ${allEntries.length} total entries for potential backfill.",
-      );
 
       if (allEntries.isEmpty) {
-        AppLogger.info(
-          "[VectorStoreService] Backfill: No entries found in persistence. Marking backfill as attempted.",
-        );
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         return;
       }
@@ -630,16 +581,10 @@ class VectorStoreService {
           }).toList();
 
       if (monthsToProcess.isEmpty) {
-        AppLogger.info(
-          "[VectorStoreService] Backfill: No new historical months to process since last successful backfill ($lastSuccessfulDateString). Marking as fully attempted.",
-        );
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         return;
       }
 
-      AppLogger.info(
-        "[VectorStoreService] Backfill: Found ${monthsToProcess.length} historical months to process. Starting from ${_formatMonthKeyForStorage(monthsToProcess.first)}.",
-      );
 
       int successCount = 0;
       int failureCount = 0;
@@ -657,9 +602,6 @@ class VectorStoreService {
             .join("\\n---\\n");
 
         if (monthlyLogContent.isNotEmpty) {
-          AppLogger.info(
-            "[VectorStoreService] Backfill: Processing logs for month: ${_formatMonthKeyForStorage(monthDate)}",
-          );
           try {
             await synchronizeMonthlyLogFile(
               currentVectorStoreId,
@@ -672,9 +614,6 @@ class VectorStoreService {
             await _prefs.setString(
               _backfillLastSuccessfulDateKey,
               _formatDateKey(monthDate), // CP: Store as YYYY-MM-DD (first day of month)
-            );
-            AppLogger.info(
-              "[VectorStoreService] Backfill: Successfully processed month ${_formatMonthKeyForStorage(monthDate)} and updated last successful backfill date to ${_formatDateKey(monthDate)}.",
             );
           } catch (e, stackTrace) {
             failureCount++;
@@ -689,18 +628,12 @@ class VectorStoreService {
             break;
           }
         } else {
-          AppLogger.info(
-            "[VectorStoreService] Backfill: Skipping month ${_formatMonthKeyForStorage(monthDate)} as it has no content after formatting.",
-          );
           latestSuccessfullyProcessedMonthInThisRun = monthDate;
           await _prefs.setString(_backfillLastSuccessfulDateKey, _formatDateKey(monthDate));
         }
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      AppLogger.info(
-        "[VectorStoreService] Backfill: Iteration finished. Processed this session: Successes: $successCount, Failures: $failureCount.",
-      );
 
       if (failureCount == 0 &&
           (monthsToProcess.isEmpty ||
@@ -708,13 +641,7 @@ class VectorStoreService {
                   latestSuccessfullyProcessedMonthInThisRun.year == monthsToProcess.last.year &&
                   latestSuccessfullyProcessedMonthInThisRun.month == monthsToProcess.last.month))) {
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
-        AppLogger.info(
-          "[VectorStoreService] Backfill: Successfully processed all pending historical months. Marked full backfill run as attempted.",
-        );
       } else if (failureCount > 0) {
-        AppLogger.info(
-          "[VectorStoreService] Backfill: Run completed with failures. Last successful month recorded was ${_formatMonthKeyForStorage(latestSuccessfullyProcessedMonthInThisRun!)}. Full backfill not marked as attempted.",
-        );
       } else {
         AppLogger.warn(
           "[VectorStoreService] Backfill: Run completed, but not all months may have been processed. Last successful: ${latestSuccessfullyProcessedMonthInThisRun != null ? _formatMonthKeyForStorage(latestSuccessfullyProcessedMonthInThisRun) : 'None'}. Full backfill not marked as attempted.",
@@ -780,7 +707,6 @@ class VectorStoreService {
 
   // CP: Helper method to clean up duplicate files in vector store
   Future<void> cleanupDuplicateFiles() async {
-    AppLogger.info('[VectorStoreService] Starting cleanup of duplicate files.');
 
     try {
       final vectorStoreId = await getOrCreateVectorStoreId();
@@ -803,7 +729,6 @@ class VectorStoreService {
       final responseBody = jsonDecode(response.body);
       final files = responseBody['data'] as List<dynamic>;
 
-      AppLogger.info('[VectorStoreService] Found ${files.length} files in vector store.');
 
       // CP: Group files by month based on filename pattern
       final Map<String, List<Map<String, dynamic>>> filesByMonth = {};
@@ -845,7 +770,6 @@ class VectorStoreService {
         }
       }
 
-      AppLogger.info('[VectorStoreService] Grouped files into ${filesByMonth.length} months for duplicate checking.');
 
       // CP: Find and remove duplicates (keep the most recent)
       for (final month in filesByMonth.keys) {
@@ -863,9 +787,6 @@ class VectorStoreService {
           final keepFile = monthFiles.first;
           final deleteFiles = monthFiles.skip(1).toList();
 
-          AppLogger.info(
-            '[VectorStoreService] Keeping file ${keepFile['id']} (${keepFile['filename']}) for month $month, deleting ${deleteFiles.length} duplicates',
-          );
 
           for (final fileToDelete in deleteFiles) {
             final fileId = fileToDelete['id'] as String;
@@ -873,7 +794,6 @@ class VectorStoreService {
             try {
               await _deleteFileFromVectorStore(vectorStoreId, fileId);
               await _deleteOpenAIFile(fileId);
-              AppLogger.info('[VectorStoreService] Deleted duplicate file $fileId ($filename) for month $month');
             } catch (e) {
               AppLogger.error('[VectorStoreService] Failed to delete duplicate file $fileId ($filename): $e');
             }
@@ -886,7 +806,6 @@ class VectorStoreService {
         }
       }
 
-      AppLogger.info('[VectorStoreService] Cleanup completed.');
     } catch (e, stackTrace) {
       AppLogger.error('[VectorStoreService] Error during cleanup: $e', error: e, stackTrace: stackTrace);
     }
@@ -897,7 +816,6 @@ class VectorStoreService {
     try {
       final vectorStoreId = await getOrCreateVectorStoreId();
       if (vectorStoreId == null) {
-        AppLogger.info('[VectorStoreService] No vector store ID available for debugging.');
         return;
       }
 
@@ -910,7 +828,6 @@ class VectorStoreService {
         final responseBody = jsonDecode(response.body);
         final files = responseBody['data'] as List<dynamic>;
 
-        AppLogger.info('[VectorStoreService] DEBUG: Vector store contains ${files.length} files:');
 
         // CP: For each file, get its filename from the files API
         for (final file in files) {
@@ -931,11 +848,7 @@ class VectorStoreService {
               filename = fileData['filename'] as String? ?? 'unknown';
             }
 
-            AppLogger.info('[VectorStoreService] DEBUG: - $filename (ID: $fileId, Created: $createdDate)');
           } catch (e) {
-            AppLogger.info(
-              '[VectorStoreService] DEBUG: - unknown filename (ID: $fileId, Created: $createdDate) - Error getting filename: $e',
-            );
           }
         }
       } else {
