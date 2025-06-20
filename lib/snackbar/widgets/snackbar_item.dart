@@ -34,25 +34,27 @@ class _SnackbarItemState extends State<SnackbarItem> with TickerProviderStateMix
       vsync: this,
     );
 
-    _slideAnimation = Tween<double>(
-      begin: -1.2,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.elasticOut,
-      ),
-    );
+    _slideAnimation =
+        Tween<double>(
+          begin: -1.2,
+          end: 0.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.elasticOut,
+          ),
+        );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
+    _fadeAnimation =
+        Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+          ),
+        );
 
     _animationController.forward();
 
@@ -114,15 +116,16 @@ class _SnackbarItemState extends State<SnackbarItem> with TickerProviderStateMix
         vsync: this,
       );
 
-      final animation = Tween<double>(
-        begin: _dragOffset,
-        end: 0.0,
-      ).animate(
-        CurvedAnimation(
-          parent: _snapBackController!,
-          curve: Curves.easeOut,
-        ),
-      );
+      final animation =
+          Tween<double>(
+            begin: _dragOffset,
+            end: 0.0,
+          ).animate(
+            CurvedAnimation(
+              parent: _snapBackController!,
+              curve: Curves.easeOut,
+            ),
+          );
 
       animation.addListener(() {
         if (mounted) {

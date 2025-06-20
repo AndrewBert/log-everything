@@ -95,18 +95,16 @@ class HomePage extends StatelessWidget {
             },
           ),
         ],
-        child:
-            isChatOpen
-                ? const ChatBottomSheet()
-                : SafeArea(
-                  bottom: false,
-                  child: Column(
-                    // CP: Main column for overall layout
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            CustomScrollView(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Expanded(
+                child: isChatOpen
+                    ? const ChatBottomSheet()
+                    : Stack(
+                        children: [
+                          CustomScrollView(
                               slivers: [
                                 SliverAppBar(
                                   expandedHeight: 112.0, // 56 (app bar) + 56 (filter section with margins)
@@ -210,32 +208,32 @@ class HomePage extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ),
-                      InputArea(
-                        // CP: InputArea remains at the bottom
-                        onSendPressed: (text) => _handleInput(context, text),
-                        showSnackBar: ({
-                          required context,
-                          required content,
-                          Duration? duration,
-                          action,
-                          backgroundColor,
-                        }) {
-                          final snackbarService = getIt<SnackbarService>();
-                          if (content is Text && content.data != null && content.data!.isNotEmpty) {
-                            // Determine the type based on background color or content
-                            if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
-                              snackbarService.showError(content.data!, context: SnackbarContext.home);
-                            } else {
-                              snackbarService.showSuccess(content.data!, context: SnackbarContext.home);
-                            }
-                          }
-                          // If content is empty or not meaningful, don't show a snackbar
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+              ),
+              // CP: InputArea is now outside the conditional, so it persists
+              InputArea(
+                onSendPressed: (text) => _handleInput(context, text),
+                showSnackBar: ({
+                  required context,
+                  required content,
+                  Duration? duration,
+                  action,
+                  backgroundColor,
+                }) {
+                  final snackbarService = getIt<SnackbarService>();
+                  if (content is Text && content.data != null && content.data!.isNotEmpty) {
+                    // Determine the type based on background color or content
+                    if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
+                      snackbarService.showError(content.data!, context: SnackbarContext.home);
+                    } else {
+                      snackbarService.showSuccess(content.data!, context: SnackbarContext.home);
+                    }
+                  }
+                  // If content is empty or not meaningful, don't show a snackbar
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
