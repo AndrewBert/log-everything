@@ -91,12 +91,8 @@ class HomePageCubit extends Cubit<HomePageState> {
   }
 
   void setInputFocus(bool hasFocus) {
-    AppLogger.info('setInputFocus called: old=${state.isInputFocused}, new=$hasFocus, chatOpen=${state.isChatOpen}');
     if (hasFocus != state.isInputFocused) {
       emit(state.copyWith(isInputFocused: hasFocus));
-      AppLogger.info('setInputFocus: state updated to $hasFocus');
-    } else {
-      AppLogger.info('setInputFocus: no change needed');
     }
   }
 

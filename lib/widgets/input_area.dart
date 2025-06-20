@@ -186,7 +186,6 @@ class _InputAreaState extends State<InputArea> {
                   }
 
                   return TextFieldTapRegion(
-                    // CP: Use default groupId (EditableText) for correct grouping
                     child: Material(
                       elevation: isChatOpen ? 0.0 : 8.0, // CP: Remove shadow in chat mode
                       shape: RoundedRectangleBorder(

@@ -21,143 +21,146 @@ class ChatBottomSheet extends StatelessWidget {
     // CP: Changed from 24-hour to 12-hour format
     final DateFormat timeFormatter = DateFormat('h:mm a');
 
-    return SafeArea(
-      child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest,
-          ),
-          child: Column(
-            children: [
-              // CP: Full-screen chat header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withAlpha(50),
-                      width: 1.0,
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      ),
+      child: Column(
+        children: [
+          // CP: Full-screen chat header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.outline.withAlpha(50),
+                  width: 1.0,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                children: [
+                  IconButton(
+                    key: chatCloseButton,
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close Chat',
+                    onPressed: () {
+                      context.read<HomePageCubit>().toggleChatOpen();
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Chat with AI',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        key: chatCloseButton,
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Close Chat',
-                        onPressed: () {
-                          context.read<HomePageCubit>().toggleChatOpen();
+                  // CP: Spacer to center the title
+                  const SizedBox(width: 48),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                // CP: Dismiss keyboard when tapping chat messages
+                FocusScope.of(context).unfocus();
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Stack(
+                children: [
+                  // Main chat content
+                  messages.isEmpty && !isLoading
+                      ? SingleChildScrollView(
+                        child: Padding(
+                          key: chatWelcomeMessage,
+                          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.psychology_outlined,
+                                size: 48,
+                                color: Theme.of(context).colorScheme.primary.withAlpha(128),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "Unlock insights from your logs!",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "Ask me to:",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildSuggestionItem(context, "📊", "Summarize recent entries"),
+                                    const SizedBox(height: 12),
+                                    _buildSuggestionItem(context, "🔍", "Find logs about a specific topic"),
+                                    const SizedBox(height: 12),
+                                    _buildSuggestionItem(context, "📈", "Analyze patterns in your data"),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "What would you like to explore?",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 16,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        key: chatMessagesList,
+                        controller: ScrollController(),
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final message = messages[messages.length - 1 - index];
+                          final isUserMessage = message.sender == ChatSender.user;
+                          return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
                         },
                       ),
-                      Expanded(
-                        child: Text(
-                          'Chat with AI',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      // CP: Spacer to center the title
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
+                  // Snackbar overlay at top of chat
+                  const ContextualSnackbarOverlay(contextFilter: SnackbarContext.chat),
+                ],
               ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    // Main chat content
-                    messages.isEmpty && !isLoading
-                        ? SingleChildScrollView(
-                            child: Padding(
-                              key: chatWelcomeMessage,
-                              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.psychology_outlined,
-                                    size: 48,
-                                    color: Theme.of(context).colorScheme.primary.withAlpha(128),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    "Unlock insights from your logs!",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surfaceContainer,
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          "Ask me to:",
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Theme.of(context).colorScheme.onSurface,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _buildSuggestionItem(context, "📊", "Summarize recent entries"),
-                                        const SizedBox(height: 12),
-                                        _buildSuggestionItem(context, "🔍", "Find logs about a specific topic"),
-                                        const SizedBox(height: 12),
-                                        _buildSuggestionItem(context, "📈", "Analyze patterns in your data"),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    "What would you like to explore?",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      fontSize: 16,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            key: chatMessagesList,
-                            controller: ScrollController(),
-                            reverse: true,
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                            itemCount: messages.length,
-                            itemBuilder: (context, index) {
-                              final message = messages[messages.length - 1 - index];
-                              final isUserMessage = message.sender == ChatSender.user;
-                              return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
-                            },
-                          ),
-                    // Snackbar overlay at top of chat
-                    const ContextualSnackbarOverlay(contextFilter: SnackbarContext.chat),
-                  ],
-                ),
-              ),
-              if (isLoading) _buildThinkingIndicator(context),
-              // CP: Removed InputArea - now using shared one from HomePage
-              const SizedBox(height: 100), // CP: Space for InputArea
-            ],
+            ),
           ),
-        ),
+          if (isLoading) _buildThinkingIndicator(context),
+        ],
+      ),
     );
   }
 
