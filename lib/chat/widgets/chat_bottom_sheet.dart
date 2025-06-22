@@ -9,8 +9,36 @@ import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markd
 import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
 import 'package:myapp/snackbar/models/snackbar_message.dart';
 
-class ChatBottomSheet extends StatelessWidget {
+class ChatBottomSheet extends StatefulWidget {
   const ChatBottomSheet({super.key});
+
+  @override
+  State<ChatBottomSheet> createState() => _ChatBottomSheetState();
+}
+
+class _ChatBottomSheetState extends State<ChatBottomSheet> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      // CP: Scroll to bottom with animation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,62 +48,61 @@ class ChatBottomSheet extends StatelessWidget {
     // CP: Changed from 24-hour to 12-hour format
     final DateFormat timeFormatter = DateFormat('h:mm a');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-      ),
-      child: Column(
-        children: [
-          // CP: Full-screen chat header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withAlpha(50),
-                  width: 1.0,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Row(
-                children: [
-                  IconButton(
-                    key: chatCloseButton,
-                    icon: const Icon(Icons.close),
-                    tooltip: 'Close Chat',
-                    onPressed: () {
-                      context.read<HomePageCubit>().toggleChatOpen();
-                    },
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Chat with AI',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+    // CP: Scroll to bottom when new messages are added
+    return BlocListener<ChatCubit, ChatState>(
+      listenWhen: (previous, current) => previous.messages.length < current.messages.length,
+      listener: (context, state) {
+        _scrollToBottom();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        ),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // CP: Full-screen chat header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.outline.withAlpha(50),
+                        width: 1.0,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                  // CP: Spacer to center the title
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                // CP: Dismiss keyboard when tapping chat messages
-                FocusScope.of(context).unfocus();
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Stack(
-                children: [
-                  // Main chat content
-                  messages.isEmpty && !isLoading
+                  child: SafeArea(
+                    bottom: false,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          key: chatCloseButton,
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Close Chat',
+                          onPressed: () {
+                            context.read<HomePageCubit>().toggleChatOpen();
+                          },
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Chat with AI',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        // CP: Spacer to center the title
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: messages.isEmpty && !isLoading
                       ? SingleChildScrollView(
                           child: Padding(
                             key: chatWelcomeMessage,
@@ -141,7 +168,7 @@ class ChatBottomSheet extends StatelessWidget {
                         )
                       : ListView.builder(
                           key: chatMessagesList,
-                          controller: ScrollController(),
+                          controller: _scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
@@ -150,14 +177,14 @@ class ChatBottomSheet extends StatelessWidget {
                             return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
                           },
                         ),
-                  // Snackbar overlay at top of chat
-                  const ContextualSnackbarOverlay(contextFilter: SnackbarContext.chat),
-                ],
-              ),
+                ),
+                if (isLoading) _buildThinkingIndicator(context),
+              ],
             ),
-          ),
-          if (isLoading) _buildThinkingIndicator(context),
-        ],
+            // CP: Snackbar overlay at top of chat
+            const ContextualSnackbarOverlay(contextFilter: SnackbarContext.chat),
+          ],
+        ),
       ),
     );
   }
