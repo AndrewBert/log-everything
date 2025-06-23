@@ -79,9 +79,8 @@ class HomePage extends StatelessWidget {
           ),
           // CP: Listen for entry split notifications to show toast
           BlocListener<EntryCubit, EntryState>(
-            listenWhen:
-                (prev, current) =>
-                    prev.splitNotification != current.splitNotification && current.splitNotification != null,
+            listenWhen: (prev, current) =>
+                prev.splitNotification != current.splitNotification && current.splitNotification != null,
             listener: (context, state) {
               AppLogger.info('[HomePage] Split notification: ${state.splitNotification}');
               final snackbarService = getIt<SnackbarService>();
@@ -100,136 +99,154 @@ class HomePage extends StatelessWidget {
           child: Column(
             children: [
               Expanded(
-                child: isChatOpen
-                    ? const ChatBottomSheet()
-                    : Stack(
-                        children: [
-                          CustomScrollView(
-                              slivers: [
-                                SliverAppBar(
-                                  expandedHeight: 112.0, // 56 (app bar) + 56 (filter section with margins)
-                                  floating: false,
-                                  pinned: true, // Keep app bar always visible
-                                  snap: false,
-                                  elevation: 0, // Remove default shadow
-                                  surfaceTintColor: Colors.transparent, // Remove surface tint
-                                  backgroundColor: Theme.of(context).colorScheme.surface,
-                                  title: GestureDetector(
-                                    key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
-                                    onTap: () {
-                                      context.read<HomePageCubit>().incrementTitleTap();
-                                    },
-                                    child: RichText(
-                                      text: TextSpan(
-                                        style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
-                                        children: <TextSpan>[
-                                          TextSpan(text: 'Log', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                                          TextSpan(text: ' / Splitter', style: TextStyle(color: defaultTitleColor)),
-                                        ],
+                child: IndexedStack(
+                  index: isChatOpen ? 1 : 0,
+                  children: [
+                    // CP: Entries list view - kept alive when chat is open
+                    Stack(
+                      children: [
+                        CustomScrollView(
+                          controller: context.read<HomePageCubit>().entriesScrollController,
+                          slivers: [
+                            SliverAppBar(
+                              expandedHeight: 112.0, // 56 (app bar) + 56 (filter section with margins)
+                              floating: false,
+                              pinned: true, // Keep app bar always visible
+                              snap: false,
+                              elevation: 0, // Remove default shadow
+                              surfaceTintColor: Colors.transparent, // Remove surface tint
+                              backgroundColor: Theme.of(context).colorScheme.surface,
+                              title: GestureDetector(
+                                key: appBarTitleGestureDetector, // Use the key from app_bar_keys.dart
+                                onTap: () {
+                                  context.read<HomePageCubit>().incrementTitleTap();
+                                },
+                                child: RichText(
+                                  text: TextSpan(
+                                    style:
+                                        Theme.of(context).appBarTheme.titleTextStyle ??
+                                        Theme.of(context).textTheme.titleLarge,
+                                    children: <TextSpan>[
+                                      TextSpan(
+                                        text: 'Log',
+                                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                                       ),
-                                    ),
+                                      TextSpan(
+                                        text: ' / Splitter',
+                                        style: TextStyle(color: defaultTitleColor),
+                                      ),
+                                    ],
                                   ),
-                                  actions: [
-                                    BlocBuilder<HomePageCubit, HomePageState>(
-                                      // Remove unnecessary null checks
-                                      buildWhen: (prev, current) => prev.appVersion != current.appVersion,
-                                      builder: (context, state) {
-                                        // Remove unnecessary null checks
-                                        if (state.appVersion.isNotEmpty) {
-                                          return Padding(
-                                            padding: const EdgeInsets.only(right: 8.0),
-                                            child: Center(
-                                              child: Text(
-                                                state.appVersion, // Remove !
-                                                style: TextStyle(fontSize: 12, color: Colors.black87),
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          return const SizedBox.shrink();
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.help_outline),
-                                      tooltip: 'Help / About',
-                                      onPressed: () => _showHelpDialog(context),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.tune), // CP: Changed from category_outlined to tune for clarity
-                                      tooltip: 'Manage Categories',
-                                      onPressed: () => _showManageCategoriesDialog(context),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  flexibleSpace: FlexibleSpaceBar(
-                                    background: Column(
-                                      children: [
-                                        // Space for the app bar title and actions
-                                        const SizedBox(height: 56.0),
-                                        // Filter section in the expanded area
-                                        const FilterSection(),
-                                      ],
-                                    ),
-                                  ),
-                                  bottom: PreferredSize(
-                                    preferredSize: const Size.fromHeight(0),
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        // Check if we're in collapsed state by looking at flex space
-                                        final isCollapsed = constraints.maxHeight <= 56.0;
-                                        return AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
-                                          height: isCollapsed ? 1.0 : 0.0,
-                                          decoration: BoxDecoration(
-                                            border: Border(
-                                              bottom: BorderSide(
-                                                color: isCollapsed 
-                                                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
-                                                    : Colors.transparent,
-                                                width: 1.0,
-                                              ),
-                                            ),
+                                ),
+                              ),
+                              actions: [
+                                BlocBuilder<HomePageCubit, HomePageState>(
+                                  // Remove unnecessary null checks
+                                  buildWhen: (prev, current) => prev.appVersion != current.appVersion,
+                                  builder: (context, state) {
+                                    // Remove unnecessary null checks
+                                    if (state.appVersion.isNotEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 8.0),
+                                        child: Center(
+                                          child: Text(
+                                            state.appVersion, // Remove !
+                                            style: TextStyle(fontSize: 12, color: Colors.black87),
                                           ),
-                                        );
-                                      },
-                                    ),
-                                  ),
+                                        ),
+                                      );
+                                    } else {
+                                      return const SizedBox.shrink();
+                                    }
+                                  },
                                 ),
-                                ..._buildEntriesSliver(context),
-                                SliverPadding(
-                                  padding: const EdgeInsets.only(bottom: 150.0),
+                                IconButton(
+                                  icon: const Icon(Icons.help_outline),
+                                  tooltip: 'Help / About',
+                                  onPressed: () => _showHelpDialog(context),
                                 ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.tune,
+                                  ), // CP: Changed from category_outlined to tune for clarity
+                                  tooltip: 'Manage Categories',
+                                  onPressed: () => _showManageCategoriesDialog(context),
+                                ),
+                                const SizedBox(width: 8),
                               ],
+                              flexibleSpace: FlexibleSpaceBar(
+                                background: Column(
+                                  children: [
+                                    // Space for the app bar title and actions
+                                    const SizedBox(height: 56.0),
+                                    // Filter section in the expanded area
+                                    const FilterSection(),
+                                  ],
+                                ),
+                              ),
+                              bottom: PreferredSize(
+                                preferredSize: const Size.fromHeight(0),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Check if we're in collapsed state by looking at flex space
+                                    final isCollapsed = constraints.maxHeight <= 56.0;
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      height: isCollapsed ? 1.0 : 0.0,
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: isCollapsed
+                                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                                                : Colors.transparent,
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
-                            const ContextualSnackbarOverlay(
-                              contextFilter: SnackbarContext.home,
-                              topOffset: 56.0, // Position over the filters section
+                            ..._buildEntriesSliver(context),
+                            SliverPadding(
+                              padding: const EdgeInsets.only(bottom: 150.0),
                             ),
                           ],
                         ),
+                        const ContextualSnackbarOverlay(
+                          contextFilter: SnackbarContext.home,
+                          topOffset: 56.0, // Position over the filters section
+                        ),
+                      ],
+                    ),
+                    // CP: Chat view
+                    const ChatBottomSheet(),
+                  ],
+                ),
               ),
               // CP: InputArea is now outside the conditional, so it persists
               InputArea(
                 onSendPressed: (text) => _handleInput(context, text),
-                showSnackBar: ({
-                  required context,
-                  required content,
-                  Duration? duration,
-                  action,
-                  backgroundColor,
-                }) {
-                  final snackbarService = getIt<SnackbarService>();
-                  if (content is Text && content.data != null && content.data!.isNotEmpty) {
-                    // Determine the type based on background color or content
-                    if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
-                      snackbarService.showError(content.data!, context: SnackbarContext.home);
-                    } else {
-                      snackbarService.showSuccess(content.data!, context: SnackbarContext.home);
-                    }
-                  }
-                  // If content is empty or not meaningful, don't show a snackbar
-                },
+                showSnackBar:
+                    ({
+                      required context,
+                      required content,
+                      Duration? duration,
+                      action,
+                      backgroundColor,
+                    }) {
+                      final snackbarService = getIt<SnackbarService>();
+                      if (content is Text && content.data != null && content.data!.isNotEmpty) {
+                        // Determine the type based on background color or content
+                        if (backgroundColor == Colors.red || backgroundColor == Colors.redAccent) {
+                          snackbarService.showError(content.data!, context: SnackbarContext.home);
+                        } else {
+                          snackbarService.showSuccess(content.data!, context: SnackbarContext.home);
+                        }
+                      }
+                      // If content is empty or not meaningful, don't show a snackbar
+                    },
               ),
             ],
           ),
@@ -275,7 +292,10 @@ class HomePage extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    await showDialog(context: context, builder: (dialogContext) => WhatsNewDialog(currentVersion: displayVersion));
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => WhatsNewDialog(currentVersion: displayVersion),
+    );
   }
 
   void _handleInput(BuildContext context, String currentText) {
@@ -335,27 +355,31 @@ class HomePage extends StatelessWidget {
     final focusScope = FocusScope.of(context);
     showDialog(
       context: context,
-      builder:
-          (context) => Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Stack(
-              children: [
-                Center(
-                  child: ManageCategoriesDialog(
-                    onShowEditCategoryDialog: (ctx, oldName, {bool focusDescription = false}) => _showEditCategoryDialog(ctx, oldName, focusDescription: focusDescription),
-                    onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
-                  ),
-                ),
-                const ContextualSnackbarOverlay(contextFilter: SnackbarContext.dialog),
-              ],
+      builder: (context) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Center(
+              child: ManageCategoriesDialog(
+                onShowEditCategoryDialog: (ctx, oldName, {bool focusDescription = false}) =>
+                    _showEditCategoryDialog(ctx, oldName, focusDescription: focusDescription),
+                onShowDeleteCategoryConfirmationDialog: (ctx, cat) => _showDeleteCategoryConfirmationDialog(ctx, cat),
+              ),
             ),
-          ),
+            const ContextualSnackbarOverlay(contextFilter: SnackbarContext.dialog),
+          ],
+        ),
+      ),
     ).then((_) {
       focusScope.focusedChild?.unfocus();
     });
   }
 
-  Future<EditCategoryResult?> _showEditCategoryDialog(BuildContext context, String oldCategoryName, {bool focusDescription = false}) async {
+  Future<EditCategoryResult?> _showEditCategoryDialog(
+    BuildContext context,
+    String oldCategoryName, {
+    bool focusDescription = false,
+  }) async {
     return await showDialog<EditCategoryResult?>(
       context: context,
       builder: (dialogContext) {

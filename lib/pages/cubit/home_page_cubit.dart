@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/chat/chat.dart'; // Added import for ChatCubit
 import 'package:myapp/utils/logger.dart';
@@ -11,6 +12,7 @@ class HomePageCubit extends Cubit<HomePageState> {
   final int _targetTapCount = 7; // Easter egg target
 
   final ChatCubit chatCubit;
+  final ScrollController entriesScrollController = ScrollController();
 
   HomePageCubit({required this.chatCubit}) : super(const HomePageState()) {
     _loadInitialData();
@@ -125,5 +127,11 @@ class HomePageCubit extends Cubit<HomePageState> {
     AppLogger.info('toggleChatOpen: changing from $wasOpen to ${!wasOpen}');
     emit(state.copyWith(isChatOpen: !state.isChatOpen));
     AppLogger.info('toggleChatOpen: state updated, new isChatOpen: ${state.isChatOpen}');
+  }
+
+  @override
+  Future<void> close() {
+    entriesScrollController.dispose();
+    return super.close();
   }
 }
