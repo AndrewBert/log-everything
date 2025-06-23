@@ -42,7 +42,6 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
                 .whereType<Entry>()
                 .toList(); // Filter out nulls
       }
-      AppLogger.info('Persistence: Successfully loaded ${loadedEntries.length} entries.');
       return loadedEntries;
     } catch (e) {
       AppLogger.error('Persistence: Error loading entries. Clearing potentially incompatible data.', error: e);
@@ -67,7 +66,6 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
       final entriesToSave = entries.map((e) => e.copyWith(isNew: false)).toList();
       final entriesJson = entriesToSave.map((entry) => entry.toJsonString()).toList();
       await prefs.setStringList(_entriesKey, entriesJson);
-      AppLogger.info('Persistence: Saved ${entries.length} entries.');
     } catch (e) {
       AppLogger.error('Persistence: Error saving entries', error: e);
       // Re-throw or handle? Re-throwing allows caller (Cubit) to know.
@@ -81,7 +79,6 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
       final prefs = await SharedPreferences.getInstance();
       final savedCategoriesJson = prefs.getStringList(_categoriesKey);
       if (savedCategoriesJson == null || savedCategoriesJson.isEmpty) {
-        AppLogger.info('Persistence: No categories found, creating only essential Misc category.');
         await saveCategories(_essentialCategories);
         return _essentialCategories;
       } else {
