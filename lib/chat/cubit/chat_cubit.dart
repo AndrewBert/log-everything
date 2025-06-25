@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/services/ai_service.dart';
@@ -86,6 +87,9 @@ class ChatCubit extends Cubit<ChatState> {
     );
     final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
     emit(state.copyWith(messages: messagesWithAi, isLoading: true, streamingMessageId: aiMessageId));
+    
+    // CP: Haptic feedback when streaming starts
+    HapticFeedback.lightImpact();
 
     // CP: Variables for typewriter effect - declared outside try block
     final StringBuffer receivedText = StringBuffer(); // CP: Buffer for received text
@@ -265,6 +269,9 @@ class ChatCubit extends Cubit<ChatState> {
         lastResponseId: responseId,
         clearStreamingMessageId: true,
       ));
+      
+      // CP: Haptic feedback when streaming completes
+      HapticFeedback.selectionClick();
     }
   }
 

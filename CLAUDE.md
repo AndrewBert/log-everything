@@ -93,6 +93,7 @@ External APIs (OpenAI, Local Storage)
 - **Barrel Files**: Use for managing exports/imports
 - **withOpacity**: Deprecated - use `Color.withValues()` instead
 - **Trailing Commas**: Preserved by formatter (120 char line width)
+- **Avoid Unnecessary Comments**: Dont litter the codebase with comments explaining easy to understand code
 
 ### Testing Approach
 - **No Cubit-Specific Tests**: Never test cubits directly - test the behavior they enable

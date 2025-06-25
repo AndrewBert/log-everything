@@ -8,6 +8,7 @@ import 'package:myapp/utils/widget_keys.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
 import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
 import 'package:myapp/snackbar/models/snackbar_message.dart';
+import 'thinking_indicator.dart';
 
 class ChatBottomSheet extends StatefulWidget {
   const ChatBottomSheet({super.key});
@@ -16,41 +17,37 @@ class ChatBottomSheet extends StatefulWidget {
   State<ChatBottomSheet> createState() => _ChatBottomSheetState();
 }
 
-class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProviderStateMixin {
+class _ChatBottomSheetState extends State<ChatBottomSheet> {
   final ScrollController _scrollController = ScrollController();
-  late AnimationController _cursorAnimationController;
-  late Animation<double> _cursorAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _cursorAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _cursorAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(_cursorAnimationController);
-  }
 
   @override
   void dispose() {
-    _cursorAnimationController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool isStreaming = false}) {
     if (_scrollController.hasClients) {
-      // CP: Scroll to bottom with animation
+      // CP: Scroll to bottom with enhanced animation
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
+          final targetPosition = _scrollController.position.maxScrollExtent;
+          final currentPosition = _scrollController.position.pixels;
+          final distance = (targetPosition - currentPosition).abs();
+          
+          // CP: Adjust animation based on distance and streaming state
+          final duration = isStreaming 
+            ? Duration(milliseconds: (150 + distance * 0.5).round().clamp(150, 400))
+            : const Duration(milliseconds: 300);
+            
+          final curve = isStreaming 
+            ? Curves.linearToEaseOut  // CP: Smoother for streaming
+            : Curves.easeOutCubic;    // CP: Bouncier for new messages
+          
           _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
+            targetPosition,
+            duration: duration,
+            curve: curve,
           );
         }
       });
@@ -86,7 +83,8 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
         (current.streamingMessageId != null && 
          previous.messages != current.messages),
       listener: (context, state) {
-        _scrollToBottom();
+        final isStreaming = state.streamingMessageId != null;
+        _scrollToBottom(isStreaming: isStreaming);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -204,15 +202,18 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
                           key: chatMessagesList,
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          itemCount: messages.length,
+                          itemCount: messages.length + (isLoading && _shouldShowThinkingIndicator(chatCubit) ? 1 : 0),
                           itemBuilder: (context, index) {
+                            // Show thinking indicator as the last item
+                            if (index == messages.length && isLoading && _shouldShowThinkingIndicator(chatCubit)) {
+                              return _buildThinkingIndicator(context);
+                            }
                             final message = messages[index];
                             final isUserMessage = message.sender == ChatSender.user;
                             return _buildMessageBubble(context, message, isUserMessage, timeFormatter);
                           },
                         ),
                 ),
-                if (isLoading && _shouldShowThinkingIndicator(chatCubit)) _buildThinkingIndicator(context),
               ],
             ),
             // CP: Snackbar overlay at top of chat
@@ -224,17 +225,13 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
   }
 
   Widget _buildThinkingIndicator(BuildContext context) {
-    final Color textColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
       key: chatThinkingIndicator,
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text(
-            "Thinking...",
-            style: TextStyle(color: textColor, fontSize: 16, fontStyle: FontStyle.italic),
-          ),
+          ThinkingIndicator(),
         ],
       ),
     );
@@ -281,32 +278,33 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
         child: Column(
           crossAxisAlignment: bubbleAlignment,
           children: [
-            isStreaming
-                ? _buildStreamingMessage(context, message, textColor)
-                : MarkdownBody(
-                    data: message.text,
-                    styleSheet: MarkdownStyleSheet.fromTheme(
-                      Theme.of(context),
-                    ).copyWith(p: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor, fontSize: 16)),
-                  ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text(
-                  timeFormatter.format(message.timestamp),
-                  style: TextStyle(color: textColor.withAlpha(179), fontSize: 10),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    'Assistant',
-                    style: TextStyle(color: textColor.withAlpha(150), fontSize: 10, fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ],
+            MarkdownBody(
+              data: message.text,
+              styleSheet: MarkdownStyleSheet.fromTheme(
+                Theme.of(context),
+              ).copyWith(p: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor, fontSize: 16)),
             ),
+            // Only show timestamp and assistant label after streaming is complete
+            if (!isStreaming) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    timeFormatter.format(message.timestamp),
+                    style: TextStyle(color: textColor.withAlpha(179), fontSize: 10),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Text(
+                      'Assistant',
+                      style: TextStyle(color: textColor.withAlpha(150), fontSize: 10, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       );
@@ -335,51 +333,5 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
     );
   }
 
-  Widget _buildStreamingMessage(BuildContext context, ChatMessage message, Color textColor) {
-    // CP: Display message with inline blinking cursor
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Flexible(
-          child: RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: message.text,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: textColor,
-                    fontSize: 16,
-                  ),
-                ),
-                WidgetSpan(
-                  child: _buildStreamingCursor(context),
-                  alignment: PlaceholderAlignment.baseline,
-                  baseline: TextBaseline.alphabetic,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildStreamingCursor(BuildContext context) {
-    // CP: Blinking cursor to indicate streaming
-    return AnimatedBuilder(
-      animation: _cursorAnimation,
-      builder: (context, child) {
-        return Container(
-          width: 10,
-          height: 16,
-          margin: const EdgeInsets.only(left: 1),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: _cursorAnimation.value),
-            borderRadius: BorderRadius.circular(1),
-          ),
-        );
-      },
-    );
-  }
 }
