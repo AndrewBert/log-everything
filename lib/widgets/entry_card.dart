@@ -87,20 +87,35 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
 
     // CP: Staggered animations for more fluid effect
     _highlightOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _highlightController, curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic)),
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
+      ),
     );
 
-    _highlightScale = Tween<double>(
-      begin: 0.98,
-      end: 1.02,
-    ).animate(CurvedAnimation(parent: _highlightController, curve: const Interval(0.2, 1.0, curve: Curves.elasticOut)));
+    _highlightScale =
+        Tween<double>(
+          begin: 0.98,
+          end: 1.02,
+        ).animate(
+          CurvedAnimation(
+            parent: _highlightController,
+            curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
+          ),
+        );
 
     _borderOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _highlightController, curve: const Interval(0.1, 0.8, curve: Curves.easeInOutQuart)),
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.1, 0.8, curve: Curves.easeInOutQuart),
+      ),
     );
 
     _glowIntensity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _highlightController, curve: const Interval(0.3, 1.0, curve: Curves.easeOutExpo)),
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOutExpo),
+      ),
     );
   }
 
@@ -125,9 +140,8 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
   } // CP: Build iOS/macOS style glass rainbow gradient for magical processing effect
 
   LinearGradient _buildRainbowGradient() {
-    final animationValue =
-        _rainbowAnimation
-            .value; // CP: iOS/macOS style glass rainbow colors - maximum vibrancy while maintaining glass aesthetic
+    final animationValue = _rainbowAnimation
+        .value; // CP: iOS/macOS style glass rainbow colors - maximum vibrancy while maintaining glass aesthetic
     const rainbowColors = [
       Color(0xCCFF2222), // Glass Red - maximum vibrancy
       Color(0xCCFF6600), // Glass Orange - more saturated
@@ -182,11 +196,10 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
 
     // CP: Check if this entry is currently being edited or has context menu open
     return BlocBuilder<EntryCubit, EntryState>(
-      buildWhen:
-          (prev, current) =>
-              prev.editingEntry != current.editingEntry ||
-              prev.isEditingMode != current.isEditingMode ||
-              prev.contextMenuEntry != current.contextMenuEntry,
+      buildWhen: (prev, current) =>
+          prev.editingEntry != current.editingEntry ||
+          prev.isEditingMode != current.isEditingMode ||
+          prev.contextMenuEntry != current.contextMenuEntry,
       builder: (context, state) {
         final isBeingEdited = state.isEditingMode && state.editingEntry == widget.entry;
         final hasContextMenuOpen = state.contextMenuEntry == widget.entry;
@@ -265,24 +278,22 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                     Container(
                       key: entryCardKey(widget.entry, filterContext: context.read<EntryCubit>().state.filterCategory),
                       decoration: BoxDecoration(
-                        gradient:
-                            widget.isProcessing
-                                ? _buildRainbowGradient()
-                                : LinearGradient(
-                                  stops: const [0.01, 0.01],
-                                  colors: [
-                                    // CP: Keep original colors regardless of highlight state
-                                    widget.categoryColor.withValues(alpha: 0.8),
-                                    widget.isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
-                                  ],
-                                ),
+                        gradient: widget.isProcessing
+                            ? _buildRainbowGradient()
+                            : LinearGradient(
+                                stops: const [0.01, 0.01],
+                                colors: [
+                                  // CP: Keep original colors regardless of highlight state
+                                  widget.categoryColor.withValues(alpha: 0.8),
+                                  widget.isNew ? theme.cardColor.withValues(alpha: 0.96) : theme.cardColor,
+                                ],
+                              ),
                         borderRadius: BorderRadius.circular(12.0),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                widget.isNew
-                                    ? theme.colorScheme.primary.withValues(alpha: 0.24)
-                                    : Colors.black.withValues(alpha: 0.04),
+                            color: widget.isNew
+                                ? theme.colorScheme.primary.withValues(alpha: 0.24)
+                                : Colors.black.withValues(alpha: 0.04),
                             blurRadius: widget.isNew ? 8.0 : 4.0,
                             spreadRadius: widget.isNew ? 1.0 : 0.0,
                             offset: const Offset(0, 2),
@@ -357,13 +368,15 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                                 width: 2,
                                               ),
                                               borderRadius: BorderRadius.circular(4),
-                                              boxShadow: widget.entry.isCompleted ? [
-                                                BoxShadow(
-                                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                                  blurRadius: 4,
-                                                  spreadRadius: 1,
-                                                ),
-                                              ] : null,
+                                              boxShadow: widget.entry.isCompleted
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                                        blurRadius: 4,
+                                                        spreadRadius: 1,
+                                                      ),
+                                                    ]
+                                                  : null,
                                             ),
                                             child: AnimatedSwitcher(
                                               duration: const Duration(milliseconds: 150),
@@ -387,17 +400,21 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                         style: theme.textTheme.bodyLarge?.copyWith(
                                           height: 1.4,
                                           // CP: Slightly mute text when being edited to indicate it's in input field
-                                          color: isBeingEdited 
-                                              ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7) 
+                                          color: isBeingEdited
+                                              ? theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7)
                                               : null,
                                           // CP: Strikethrough for completed checklist items or tasks
-                                          decoration: (widget.isChecklistCategory || widget.entry.isTask) && widget.entry.isCompleted
+                                          decoration:
+                                              (widget.isChecklistCategory || widget.entry.isTask) &&
+                                                  widget.entry.isCompleted
                                               ? TextDecoration.lineThrough
                                               : null,
                                           decorationColor: Colors.grey,
                                         ),
                                         maxLines: 3,
-                                        isCompleted: (widget.isChecklistCategory || widget.entry.isTask) && widget.entry.isCompleted,
+                                        isCompleted:
+                                            (widget.isChecklistCategory || widget.entry.isTask) &&
+                                            widget.entry.isCompleted,
                                       ),
                                     ),
                                   ],
@@ -424,39 +441,38 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                         // Category chip with optional checklist or task icon
                                         ActionChip(
                                           key: entryCategoryChipKey(widget.entry),
-                                          avatar: (widget.isChecklistCategory || widget.entry.isTask) ? Icon(
-                                            widget.isChecklistCategory ? Icons.checklist : Icons.task_alt,
-                                            size: 14,
-                                            color: widget.isProcessing
-                                                ? Colors.orange[900]
-                                                : CategoryColors.getTextColorForCategory(widget.entry.category),
-                                          ) : null,
+                                          avatar: widget.isChecklistCategory
+                                              ? Icon(
+                                                  Icons.checklist,
+                                                  size: 14,
+                                                  color: widget.isProcessing
+                                                      ? Colors.orange[900]
+                                                      : CategoryColors.getTextColorForCategory(widget.entry.category),
+                                                )
+                                              : null,
                                           label: Text(
                                             widget.categoryDisplayName(widget.entry.category),
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w500,
-                                              color:
-                                                  widget.isProcessing
-                                                      ? Colors.orange[900]
-                                                      : CategoryColors.getTextColorForCategory(widget.entry.category),
+                                              color: widget.isProcessing
+                                                  ? Colors.orange[900]
+                                                  : CategoryColors.getTextColorForCategory(widget.entry.category),
                                             ),
                                           ),
-                                          backgroundColor:
-                                              widget.isProcessing
-                                                  ? Colors.orange.shade100.withValues(alpha: 0.8)
-                                                  : widget.categoryColor.withValues(alpha: 0.2),
+                                          backgroundColor: widget.isProcessing
+                                              ? Colors.orange.shade100.withValues(alpha: 0.8)
+                                              : widget.categoryColor.withValues(alpha: 0.2),
                                           side: BorderSide.none,
                                           visualDensity: VisualDensity.compact,
                                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          onPressed:
-                                              widget.isProcessing
-                                                  ? null
-                                                  : () {
-                                                    HapticFeedback.lightImpact();
-                                                    widget.onChangeCategoryPressed(widget.entry);
-                                                  },
+                                          onPressed: widget.isProcessing
+                                              ? null
+                                              : () {
+                                                  HapticFeedback.lightImpact();
+                                                  widget.onChangeCategoryPressed(widget.entry);
+                                                },
                                           tooltip: widget.isProcessing ? null : 'Change Category',
                                         ),
                                         const SizedBox(width: 8.0),
