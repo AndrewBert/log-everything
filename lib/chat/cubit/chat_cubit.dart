@@ -67,6 +67,115 @@ class ChatCubit extends Cubit<ChatState> {
     }
   }
 
+  Future<void> addUserMessageStreaming(String text) async {
+    // CP: New method for streaming responses
+    final userMessage = ChatMessage(id: _uuid.v4(), text: text, sender: ChatSender.user, timestamp: DateTime.now());
+
+    // CP: Add user message and set loading state
+    final messagesWithUser = List<ChatMessage>.from(state.messages)..add(userMessage);
+    emit(state.copyWith(messages: messagesWithUser, isLoading: true));
+
+    // CP: Create AI message placeholder
+    final aiMessageId = _uuid.v4();
+    final aiMessage = ChatMessage(
+      id: aiMessageId,
+      text: '',
+      sender: ChatSender.ai,
+      timestamp: DateTime.now(),
+    );
+    final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
+    emit(state.copyWith(messages: messagesWithAi, isLoading: true, streamingMessageId: aiMessageId));
+
+    try {
+      final StringBuffer accumulatedText = StringBuffer();
+      
+      await for (final event in _aiService.streamChatResponse(
+        messages: state.messages.sublist(0, state.messages.length - 1), // CP: Exclude the empty AI message
+        currentDate: DateTime.now(),
+        store: true,
+        previousResponseId: state.lastResponseId,
+      )) {
+        switch (event) {
+          case ChatStreamDelta(:final text):
+            accumulatedText.write(text);
+            
+            // CP: Update the AI message with accumulated text
+            final updatedMessages = List<ChatMessage>.from(state.messages);
+            final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+            if (aiMessageIndex != -1) {
+              updatedMessages[aiMessageIndex] = ChatMessage(
+                id: aiMessageId,
+                text: accumulatedText.toString(),
+                sender: ChatSender.ai,
+                timestamp: DateTime.now(),
+              );
+              emit(state.copyWith(messages: updatedMessages, streamingMessageId: aiMessageId));
+            }
+            break;
+            
+          case ChatStreamCompleted(:final fullText, :final responseId):
+            // CP: Final update with complete text
+            final updatedMessages = List<ChatMessage>.from(state.messages);
+            final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+            if (aiMessageIndex != -1) {
+              updatedMessages[aiMessageIndex] = ChatMessage(
+                id: aiMessageId,
+                text: fullText,
+                sender: ChatSender.ai,
+                timestamp: DateTime.now(),
+              );
+              emit(state.copyWith(
+                messages: updatedMessages,
+                isLoading: false,
+                lastResponseId: responseId,
+                clearStreamingMessageId: true,
+              ));
+            }
+            break;
+            
+          case ChatStreamError(:final message):
+            AppLogger.error('Stream error in ChatCubit: $message');
+            final updatedMessages = List<ChatMessage>.from(state.messages);
+            final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+            if (aiMessageIndex != -1) {
+              final errorText = accumulatedText.isEmpty 
+                ? "Sorry, I couldn't get a response. Error: $message"
+                : "${accumulatedText.toString()}\n\n[Error: $message]";
+              updatedMessages[aiMessageIndex] = ChatMessage(
+                id: aiMessageId,
+                text: errorText,
+                sender: ChatSender.ai,
+                timestamp: DateTime.now(),
+              );
+              emit(state.copyWith(
+                messages: updatedMessages,
+                isLoading: false,
+                clearStreamingMessageId: true,
+              ));
+            }
+            break;
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error('Unexpected error in streaming chat: $e', stackTrace: stackTrace);
+      final updatedMessages = List<ChatMessage>.from(state.messages);
+      final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+      if (aiMessageIndex != -1) {
+        updatedMessages[aiMessageIndex] = ChatMessage(
+          id: aiMessageId,
+          text: "Sorry, an unexpected error occurred while streaming the response.",
+          sender: ChatSender.ai,
+          timestamp: DateTime.now(),
+        );
+        emit(state.copyWith(
+          messages: updatedMessages,
+          isLoading: false,
+          clearStreamingMessageId: true,
+        ));
+      }
+    }
+  }
+
   // CP: _addAIMessage is no longer needed as AI responses are handled by addUserMessage
   // void _addAIMessage(String text) { ... }
 

@@ -110,9 +110,9 @@ class _InputAreaState extends State<InputArea> {
         return;
       }
 
-      // CP: Regular chat text send
+      // CP: Regular chat text send with streaming
       if (currentText.isNotEmpty) {
-        chatCubit.addUserMessage(currentText);
+        chatCubit.addUserMessageStreaming(currentText);
       }
     } else {
       widget.onSendPressed(currentText);

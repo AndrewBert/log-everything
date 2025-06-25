@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -5,9 +6,29 @@ import 'package:myapp/entry/category.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Added SharedPreferences
 import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
+import '../utils/sse_parser.dart';
 
 // Rename field in typedef to follow Dart conventions
 typedef EntryPrototype = ({String textSegment, String category, bool isTask});
+
+// CP: Sealed class for streaming chat events
+sealed class ChatStreamEvent {}
+
+class ChatStreamDelta extends ChatStreamEvent {
+  final String text;
+  ChatStreamDelta(this.text);
+}
+
+class ChatStreamCompleted extends ChatStreamEvent {
+  final String fullText;
+  final String? responseId;
+  ChatStreamCompleted(this.fullText, this.responseId);
+}
+
+class ChatStreamError extends ChatStreamEvent {
+  final String message;
+  ChatStreamError(this.message);
+}
 
 // Interface for AI Service
 abstract class AiService {
@@ -34,6 +55,22 @@ abstract class AiService {
   /// Returns a tuple containing the response text and the response ID.
   /// Throws an [AiServiceException] if the process fails.
   Future<(String text, String? responseId)> getChatResponse({
+    required List<ChatMessage> messages,
+    DateTime? currentDate,
+    bool store = true,
+    String? previousResponseId,
+  });
+
+  /// Streams a chat response from the AI model using server-sent events.
+  ///
+  /// Similar to [getChatResponse] but returns a stream of events for real-time
+  /// response generation. The stream will emit:
+  /// - [ChatStreamDelta] events for incremental text
+  /// - [ChatStreamCompleted] event when the response is fully generated
+  /// - [ChatStreamError] event if an error occurs
+  ///
+  /// The stream will close after emitting a completed or error event.
+  Stream<ChatStreamEvent> streamChatResponse({
     required List<ChatMessage> messages,
     DateTime? currentDate,
     bool store = true,
@@ -347,10 +384,9 @@ When deciding which category to use, consider both the name and the description 
       AppLogger.warn("No Vector Store ID found. File Search will not be enabled.");
     }
 
-    final List<Map<String, dynamic>> inputMessages =
-        messages.map((msg) {
-          return {"role": msg.sender == ChatSender.user ? "user" : "assistant", "content": msg.text};
-        }).toList(); // CP: Updated system instructions for File Search with temporal context
+    final List<Map<String, dynamic>> inputMessages = messages.map((msg) {
+      return {"role": msg.sender == ChatSender.user ? "user" : "assistant", "content": msg.text};
+    }).toList(); // CP: Updated system instructions for File Search with temporal context
     final String systemInstructions = _buildSystemInstructions(
       currentDate,
     ); // CP: Prepare the request body, including system instructions as the first message
@@ -520,6 +556,173 @@ When deciding which category to use, consider both the name and the description 
         rethrow;
       }
       throw AiServiceException('An unexpected error occurred during chat processing.', underlyingError: e);
+    }
+  }
+
+  @override
+  Stream<ChatStreamEvent> streamChatResponse({
+    required List<ChatMessage> messages,
+    DateTime? currentDate,
+    bool store = true,
+    String? previousResponseId,
+  }) async* {
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      yield ChatStreamError('OpenAI API Key not found.');
+      return;
+    }
+    if (messages.isEmpty) {
+      yield ChatStreamError('Cannot get chat response for an empty message list.');
+      return;
+    }
+
+
+    // CP: Retrieve vector_store_id from SharedPreferences
+    final String? vectorStoreId = _prefs.getString('openai_vector_store_id');
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      AppLogger.info("Using Vector Store ID: $vectorStoreId for File Search.");
+    }
+
+    final List<Map<String, dynamic>> inputMessages = messages.map((msg) {
+      return {"role": msg.sender == ChatSender.user ? "user" : "assistant", "content": msg.text};
+    }).toList();
+
+    final String systemInstructions = _buildSystemInstructions(currentDate);
+
+    final Map<String, dynamic> requestBody = {
+      'model': _chatModelId,
+      'input': [
+        {"role": "system", "content": systemInstructions},
+        ...inputMessages,
+      ],
+      'stream': true, // CP: Enable streaming
+      'store': store,
+      'metadata': {
+        'request_type': 'chat_response_streaming',
+        'app_name': 'log-everything',
+        'message_count': messages.length.toString(),
+        'has_vector_store': vectorStoreId != null && vectorStoreId.isNotEmpty ? 'true' : 'false',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _chatModelId,
+        'has_previous_response': previousResponseId != null ? 'true' : 'false',
+      },
+    };
+
+    if (previousResponseId != null) {
+      requestBody['previous_response_id'] = previousResponseId;
+    }
+
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      requestBody['tools'] = [
+        {
+          "type": "file_search",
+          "vector_store_ids": [vectorStoreId],
+        },
+      ];
+    }
+
+    try {
+      final request = http.Request('POST', Uri.parse(_apiUrl));
+      request.headers.addAll({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_apiKey',
+      });
+      request.body = jsonEncode(requestBody);
+
+      final streamedResponse = await request.send();
+
+      if (streamedResponse.statusCode != 200) {
+        final body = await streamedResponse.stream.bytesToString();
+        String errorMessage;
+        if (streamedResponse.statusCode == 400) {
+          errorMessage = 'OpenAI API error (Code: 400) for streaming chat.';
+        } else if (streamedResponse.statusCode == 401) {
+          errorMessage = 'Invalid OpenAI API Key for streaming chat.';
+        } else if (streamedResponse.statusCode == 429) {
+          errorMessage = 'OpenAI rate limit exceeded for streaming chat.';
+        } else {
+          errorMessage = 'OpenAI API HTTP error for streaming chat (Code: ${streamedResponse.statusCode})';
+        }
+        AppLogger.error('$errorMessage Response Body: $body');
+        yield ChatStreamError(errorMessage);
+        return;
+      }
+
+      // CP: Parse SSE stream
+      final parser = SseParser();
+      final StringBuffer accumulatedText = StringBuffer();
+      String? responseId;
+
+      // CP: Create a StreamController to handle the conversion
+      final controller = StreamController<ChatStreamEvent>();
+
+      // CP: Listen to parser events in the background
+      parser.events.listen(
+        (event) {
+          try {
+            final jsonData = event.jsonData;
+            if (jsonData == null) return;
+
+            switch (event.type) {
+              case 'response.output_text.delta':
+                final delta = jsonData['delta'] as String?;
+                if (delta != null) {
+                  accumulatedText.write(delta);
+                  controller.add(ChatStreamDelta(delta));
+                }
+                break;
+
+              case 'response.completed':
+                final response = jsonData['response'] as Map<String, dynamic>?;
+                responseId = response?['id'] as String?;
+                controller.add(ChatStreamCompleted(accumulatedText.toString(), responseId));
+                controller.close();
+                break;
+
+              case 'response.failed':
+              case 'error':
+                final errorMsg = jsonData['error']?['message'] ?? 'Stream failed';
+                AppLogger.error('Streaming error: $errorMsg');
+                controller.add(ChatStreamError(errorMsg));
+                controller.close();
+                break;
+            }
+          } catch (e) {
+            AppLogger.error('Error processing SSE event: $e');
+          }
+        },
+        onError: (error) {
+          controller.add(ChatStreamError('Stream error: $error'));
+          controller.close();
+        },
+        onDone: () {
+          if (!controller.isClosed) {
+            controller.close();
+          }
+        },
+      );
+
+      // CP: Process the HTTP stream and feed to parser
+      streamedResponse.stream
+          .transform(utf8.decoder)
+          .listen(
+            (chunk) {
+              parser.processChunk(chunk);
+            },
+            onError: (error) {
+              AppLogger.error('HTTP stream error: $error');
+              controller.add(ChatStreamError('Connection error: $error'));
+              controller.close();
+            },
+            onDone: () {
+              parser.close();
+            },
+          );
+
+      // CP: Yield events from our controller
+      yield* controller.stream;
+    } catch (e, stackTrace) {
+      AppLogger.error('Unexpected error during streaming chat', error: e, stackTrace: stackTrace);
+      yield ChatStreamError('An unexpected error occurred during streaming: $e');
     }
   }
 }

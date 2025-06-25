@@ -16,11 +16,28 @@ class ChatBottomSheet extends StatefulWidget {
   State<ChatBottomSheet> createState() => _ChatBottomSheetState();
 }
 
-class _ChatBottomSheetState extends State<ChatBottomSheet> {
+class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
+  late AnimationController _cursorAnimationController;
+  late Animation<double> _cursorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _cursorAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _cursorAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_cursorAnimationController);
+  }
 
   @override
   void dispose() {
+    _cursorAnimationController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -40,6 +57,20 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
     }
   }
 
+  bool _shouldShowThinkingIndicator(ChatCubit chatCubit) {
+    // CP: Only show thinking indicator if we're loading and haven't started streaming
+    if (!chatCubit.state.isLoading) return false;
+    if (chatCubit.state.streamingMessageId == null) return true;
+    
+    // CP: Check if the streaming message has any text yet
+    final streamingMessage = chatCubit.state.messages.firstWhere(
+      (msg) => msg.id == chatCubit.state.streamingMessageId,
+      orElse: () => ChatMessage(id: '', text: '', sender: ChatSender.ai, timestamp: DateTime.now()),
+    );
+    
+    return streamingMessage.text.isEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatCubit = context.watch<ChatCubit>();
@@ -48,9 +79,12 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
     // CP: Changed from 24-hour to 12-hour format
     final DateFormat timeFormatter = DateFormat('h:mm a');
 
-    // CP: Scroll to bottom when new messages are added
+    // CP: Scroll to bottom when new messages are added or streaming updates
     return BlocListener<ChatCubit, ChatState>(
-      listenWhen: (previous, current) => previous.messages.length < current.messages.length,
+      listenWhen: (previous, current) => 
+        previous.messages.length < current.messages.length ||
+        (current.streamingMessageId != null && 
+         previous.messages != current.messages),
       listener: (context, state) {
         _scrollToBottom();
       },
@@ -178,7 +212,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
                           },
                         ),
                 ),
-                if (isLoading) _buildThinkingIndicator(context),
+                if (isLoading && _shouldShowThinkingIndicator(chatCubit)) _buildThinkingIndicator(context),
               ],
             ),
             // CP: Snackbar overlay at top of chat
@@ -208,6 +242,8 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
 
   Widget _buildMessageBubble(BuildContext context, ChatMessage message, bool isUserMessage, DateFormat timeFormatter) {
     final CrossAxisAlignment bubbleAlignment = isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final chatCubit = context.watch<ChatCubit>();
+    final isStreaming = message.id == chatCubit.state.streamingMessageId;
 
     if (isUserMessage) {
       final Color bubbleColor = Theme.of(context).colorScheme.primaryContainer;
@@ -245,12 +281,14 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
         child: Column(
           crossAxisAlignment: bubbleAlignment,
           children: [
-            MarkdownBody(
-              data: message.text,
-              styleSheet: MarkdownStyleSheet.fromTheme(
-                Theme.of(context),
-              ).copyWith(p: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor, fontSize: 16)),
-            ),
+            isStreaming
+                ? _buildStreamingMessage(context, message, textColor)
+                : MarkdownBody(
+                    data: message.text,
+                    styleSheet: MarkdownStyleSheet.fromTheme(
+                      Theme.of(context),
+                    ).copyWith(p: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor, fontSize: 16)),
+                  ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -294,6 +332,54 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStreamingMessage(BuildContext context, ChatMessage message, Color textColor) {
+    // CP: Display message with inline blinking cursor
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(
+          child: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: message.text,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: textColor,
+                    fontSize: 16,
+                  ),
+                ),
+                WidgetSpan(
+                  child: _buildStreamingCursor(context),
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStreamingCursor(BuildContext context) {
+    // CP: Blinking cursor to indicate streaming
+    return AnimatedBuilder(
+      animation: _cursorAnimation,
+      builder: (context, child) {
+        return Container(
+          width: 10,
+          height: 16,
+          margin: const EdgeInsets.only(left: 1),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(_cursorAnimation.value),
+            borderRadius: BorderRadius.circular(1),
+          ),
+        );
+      },
     );
   }
 }
