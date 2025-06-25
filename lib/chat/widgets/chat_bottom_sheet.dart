@@ -375,7 +375,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> with SingleTickerProv
           height: 16,
           margin: const EdgeInsets.only(left: 1),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(_cursorAnimation.value),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: _cursorAnimation.value),
             borderRadius: BorderRadius.circular(1),
           ),
         );

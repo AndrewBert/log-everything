@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/chat/model/chat_message.dart';
@@ -86,8 +87,65 @@ class ChatCubit extends Cubit<ChatState> {
     final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
     emit(state.copyWith(messages: messagesWithAi, isLoading: true, streamingMessageId: aiMessageId));
 
+    // CP: Variables for typewriter effect - declared outside try block
+    final StringBuffer receivedText = StringBuffer(); // CP: Buffer for received text
+    final StringBuffer displayedText = StringBuffer(); // CP: Buffer for displayed text
+    Timer? typewriterTimer;
+    int currentIndex = 0;
+    
     try {
-      final StringBuffer accumulatedText = StringBuffer();
+      
+      // CP: Start typewriter effect with variable speed
+      void startTypewriter() {
+        typewriterTimer?.cancel();
+        
+        void typeNextCharacter() {
+          if (currentIndex >= receivedText.length) {
+            // CP: No more characters to display yet
+            return;
+          }
+          
+          final fullText = receivedText.toString();
+          final char = fullText[currentIndex];
+          displayedText.write(char);
+          currentIndex++;
+          
+          // CP: Update UI with smooth character reveal
+          final updatedMessages = List<ChatMessage>.from(state.messages);
+          final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+          if (aiMessageIndex != -1) {
+            updatedMessages[aiMessageIndex] = ChatMessage(
+              id: aiMessageId,
+              text: displayedText.toString(),
+              sender: ChatSender.ai,
+              timestamp: DateTime.now(),
+            );
+            emit(state.copyWith(messages: updatedMessages, streamingMessageId: aiMessageId));
+          }
+          
+          // CP: Variable delay based on character type
+          Duration nextDelay;
+          if (char == '.' || char == '!' || char == '?') {
+            nextDelay = const Duration(milliseconds: 200); // CP: Pause after sentence
+          } else if (char == ',' || char == ';' || char == ':') {
+            nextDelay = const Duration(milliseconds: 100); // CP: Short pause after clause
+          } else if (char == '\n') {
+            nextDelay = const Duration(milliseconds: 150); // CP: Pause for new paragraph
+          } else if (char == ' ') {
+            nextDelay = const Duration(milliseconds: 30); // CP: Quick space
+          } else {
+            nextDelay = const Duration(milliseconds: 25); // CP: Normal character speed
+          }
+          
+          // CP: Schedule next character
+          if (currentIndex < receivedText.length) {
+            typewriterTimer = Timer(nextDelay, typeNextCharacter);
+          }
+        }
+        
+        // CP: Start typing
+        typeNextCharacter();
+      }
       
       await for (final event in _aiService.streamChatResponse(
         messages: state.messages.sublist(0, state.messages.length - 1), // CP: Exclude the empty AI message
@@ -97,50 +155,63 @@ class ChatCubit extends Cubit<ChatState> {
       )) {
         switch (event) {
           case ChatStreamDelta(:final text):
-            accumulatedText.write(text);
-            
-            // CP: Update the AI message with accumulated text
-            final updatedMessages = List<ChatMessage>.from(state.messages);
-            final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
-            if (aiMessageIndex != -1) {
-              updatedMessages[aiMessageIndex] = ChatMessage(
-                id: aiMessageId,
-                text: accumulatedText.toString(),
-                sender: ChatSender.ai,
-                timestamp: DateTime.now(),
-              );
-              emit(state.copyWith(messages: updatedMessages, streamingMessageId: aiMessageId));
+            receivedText.write(text);
+            // CP: Start typewriter if not already running
+            if (typewriterTimer == null || !typewriterTimer!.isActive) {
+              startTypewriter();
             }
             break;
             
           case ChatStreamCompleted(:final fullText, :final responseId):
-            // CP: Final update with complete text
-            final updatedMessages = List<ChatMessage>.from(state.messages);
-            final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
-            if (aiMessageIndex != -1) {
-              updatedMessages[aiMessageIndex] = ChatMessage(
-                id: aiMessageId,
-                text: fullText,
-                sender: ChatSender.ai,
-                timestamp: DateTime.now(),
-              );
-              emit(state.copyWith(
-                messages: updatedMessages,
-                isLoading: false,
-                lastResponseId: responseId,
-                clearStreamingMessageId: true,
-              ));
+            // CP: Wait for typewriter to catch up, then show final text
+            typewriterTimer?.cancel();
+            
+            // CP: Calculate remaining time to display all text
+            final remainingChars = receivedText.length - currentIndex;
+            if (remainingChars > 0) {
+              // CP: Speed up to finish in reasonable time
+              const catchUpSpeed = Duration(milliseconds: 5);
+              
+              // CP: Fast-forward remaining text
+              Timer.periodic(catchUpSpeed, (timer) {
+                if (currentIndex >= receivedText.length) {
+                  timer.cancel();
+                  // CP: Show final complete text
+                  _finishStreaming(aiMessageId, fullText, responseId);
+                  return;
+                }
+                
+                displayedText.write(receivedText.toString()[currentIndex]);
+                currentIndex++;
+                
+                final updatedMessages = List<ChatMessage>.from(state.messages);
+                final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+                if (aiMessageIndex != -1) {
+                  updatedMessages[aiMessageIndex] = ChatMessage(
+                    id: aiMessageId,
+                    text: displayedText.toString(),
+                    sender: ChatSender.ai,
+                    timestamp: DateTime.now(),
+                  );
+                  emit(state.copyWith(messages: updatedMessages, streamingMessageId: aiMessageId));
+                }
+              });
+            } else {
+              // CP: All text already displayed
+              _finishStreaming(aiMessageId, fullText, responseId);
             }
             break;
             
           case ChatStreamError(:final message):
             AppLogger.error('Stream error in ChatCubit: $message');
+            typewriterTimer?.cancel();
+            
             final updatedMessages = List<ChatMessage>.from(state.messages);
             final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
             if (aiMessageIndex != -1) {
-              final errorText = accumulatedText.isEmpty 
+              final errorText = displayedText.isEmpty 
                 ? "Sorry, I couldn't get a response. Error: $message"
-                : "${accumulatedText.toString()}\n\n[Error: $message]";
+                : "${displayedText.toString()}\n\n[Error: $message]";
               updatedMessages[aiMessageIndex] = ChatMessage(
                 id: aiMessageId,
                 text: errorText,
@@ -158,6 +229,8 @@ class ChatCubit extends Cubit<ChatState> {
       }
     } catch (e, stackTrace) {
       AppLogger.error('Unexpected error in streaming chat: $e', stackTrace: stackTrace);
+      typewriterTimer?.cancel();
+      
       final updatedMessages = List<ChatMessage>.from(state.messages);
       final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
       if (aiMessageIndex != -1) {
@@ -173,6 +246,25 @@ class ChatCubit extends Cubit<ChatState> {
           clearStreamingMessageId: true,
         ));
       }
+    }
+  }
+
+  void _finishStreaming(String aiMessageId, String fullText, String? responseId) {
+    final updatedMessages = List<ChatMessage>.from(state.messages);
+    final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
+    if (aiMessageIndex != -1) {
+      updatedMessages[aiMessageIndex] = ChatMessage(
+        id: aiMessageId,
+        text: fullText,
+        sender: ChatSender.ai,
+        timestamp: DateTime.now(),
+      );
+      emit(state.copyWith(
+        messages: updatedMessages,
+        isLoading: false,
+        lastResponseId: responseId,
+        clearStreamingMessageId: true,
+      ));
     }
   }
 

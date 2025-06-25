@@ -575,7 +575,6 @@ When deciding which category to use, consider both the name and the description 
       return;
     }
 
-
     // CP: Retrieve vector_store_id from SharedPreferences
     final String? vectorStoreId = _prefs.getString('openai_vector_store_id');
     if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
