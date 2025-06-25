@@ -11,12 +11,16 @@ class WhatsNewDialog extends StatelessWidget {
     // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '✅ Checklist Categories',
-        '''Transform any category into a checklist! Perfect for tracking todo's. Check off items as you complete them.''',
+        '💬 Enhanced Chat Experience',
+        '''Improved AI chat with smoother animations, real-time streaming responses, and a polished look and feel.''',
       ),
       _buildChangeItem(
-        '🔧 General Improvements',
-        '''Better snackbar notifications, improved dialog layouts, and various small enhancements throughout the app for a smoother experience.''',
+        '✅ Smart Task Recognition',
+        '''Entries that look like tasks are automatically given checkboxes. Mark them complete with a tap!''',
+      ),
+      _buildChangeItem(
+        '✨ UI Refinements',
+        '''Cleaner snackbar notifications, smoother scrolling in the entries list, and various polish throughout.''',
       ),
     ];
     // --- End of What's New content ---
@@ -49,7 +53,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'The Checklist Update',
+                        'The Polish Update',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
