@@ -33,6 +33,7 @@ void main() {
       sharedPreferences: scope.mockSharedPreferences,
       httpClient: scope.mockHttpClient,
     );
+    scope.initializeWidget();
     scope.stubPersistenceWithInitialEntries();
     scope.stubPermissionGranted();
     // We'll configure AI service mocks per test as needed

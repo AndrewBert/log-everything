@@ -31,6 +31,19 @@ flutter clean && flutter pub get
 flutter build ipa --release
 ```
 
+### Feature Development Workflow
+```bash
+# Start new feature development
+# Creates branch, worktree, opens VS Code Insiders, and copies .env
+FEATURE_NAME="feature-name" && \
+git checkout main && \
+git pull origin main && \
+git checkout -b "$FEATURE_NAME" && \
+git worktree add "../smart-todo.worktrees/$FEATURE_NAME" "$FEATURE_NAME" && \
+cp .env "../smart-todo.worktrees/$FEATURE_NAME/.env" && \
+code-insiders "../smart-todo.worktrees/$FEATURE_NAME"
+```
+
 ### Testing Policy
 - Claude does not build or run the Flutter app - user handles testing
 - Focus on implementation and code analysis only
@@ -160,3 +173,8 @@ When asked to create an IPA for iOS release, Claude should:
 - Update the `changes` list with recent features (keep concise, 3-4 items max)
 - Update the title section to reflect the theme of the update (e.g., "The Gesture Update")
 - Focus on user-facing improvements, not technical architecture changes
+
+## Development Notes
+
+### Incomplete Commands
+- **little-boy-test feature**: Branch created but worktree setup incomplete - need to complete feature development workflow

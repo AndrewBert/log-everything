@@ -86,3 +86,23 @@ const Key editCategoryChecklistToggle = ValueKey('editCategoryChecklistToggle');
 // CP: Keys for Category Card indicators
 ValueKey<String> categoryChecklistIconKey(String categoryName) =>
     ValueKey('categoryChecklistIcon_$categoryName');
+
+// CP: Keys for Manage Categories Dialog
+const Key manageCategoriesDialogDoneButton = ValueKey('manageCategoriesDialogDoneButton');
+const Key manageCategoriesDialogAddButton = ValueKey('manageCategoriesDialogAddButton');
+
+// CP: Keys for Edit Category Dialog
+const Key editCategoryDialog = ValueKey('editCategoryDialog');
+const Key editCategoryNameField = ValueKey('editCategoryNameField');
+const Key editCategoryDescriptionField = ValueKey('editCategoryDescriptionField');
+const Key editCategorySaveButton = ValueKey('editCategorySaveButton');
+const Key editCategoryCancelButton = ValueKey('editCategoryCancelButton');
+
+// CP: Keys for Category List Items in Management Dialog
+ValueKey<String> categoryListItemKey(String categoryName) =>
+    ValueKey('categoryListItem_$categoryName');
+
+// CP: Keys for generic dialog buttons (fallback)
+const Key dialogSaveActionButton = ValueKey('dialogSaveActionButton');
+const Key dialogCancelActionButton = ValueKey('dialogCancelActionButton');
+const Key dialogDoneActionButton = ValueKey('dialogDoneActionButton');

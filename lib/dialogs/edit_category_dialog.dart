@@ -102,6 +102,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      key: editCategoryDialog,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Edit Category'),
       content: SizedBox(
@@ -113,6 +114,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
+                key: editCategoryNameField,
                 controller: _editCategoryController,
                 decoration: InputDecoration(
                   labelText: 'Category Name',
@@ -140,6 +142,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextFormField(
+                    key: editCategoryDescriptionField,
                     decoration: InputDecoration(
                       labelText: 'Description',
                       hintText: 'Describe this category',
@@ -209,11 +212,13 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             const Spacer(),
             // CP: Cancel and Save buttons on the right
             TextButton(
+              key: editCategoryCancelButton,
               onPressed: () => Navigator.of(context).pop(EditCategoryResult.cancelled()), // Return cancelled result
               child: const Text('Cancel'),
             ),
             const SizedBox(width: 8),
             FilledButton(
+              key: editCategorySaveButton,
               onPressed: _saveCategory, 
               child: const Text('Save'),
             ),
