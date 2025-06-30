@@ -28,6 +28,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         hasMoreEntries: false, // CP: For now, load all entries at once
       ),
     );
+
+    // CP: Generate insight for the first entry if available
+    if (entries.isNotEmpty) {
+      _generateInsightForEntry(0);
+    }
   }
 
   void selectCarouselEntry(int index) {

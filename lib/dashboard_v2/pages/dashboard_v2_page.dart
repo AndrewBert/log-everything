@@ -47,11 +47,31 @@ class DashboardV2Page extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: Text('Carousel placeholder'),
-                          ),
+                        BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                          buildWhen: (prev, current) => 
+                              prev.currentInsight != current.currentInsight ||
+                              prev.isGeneratingInsight != current.isGeneratingInsight,
+                          builder: (context, state) {
+                            return AiInsightContainer(
+                              insight: state.currentInsight,
+                              isLoading: state.isGeneratingInsight,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                          buildWhen: (prev, current) => 
+                              prev.selectedCarouselIndex != current.selectedCarouselIndex ||
+                              prev.entries != current.entries,
+                          builder: (context, state) {
+                            return RecentEntriesCarousel(
+                              entries: state.entries.take(10).toList(), // CP: Show only recent 10
+                              selectedIndex: state.selectedCarouselIndex,
+                              onPageChanged: (index) {
+                                context.read<DashboardV2Cubit>().selectCarouselEntry(index);
+                              },
+                            );
+                          },
                         ),
                       ],
                     ),
