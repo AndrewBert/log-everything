@@ -27,6 +27,7 @@ import '../snackbar/services/snackbar_service.dart';
 import '../snackbar/widgets/contextual_snackbar_overlay.dart';
 import '../snackbar/models/snackbar_message.dart';
 import '../locator.dart';
+import '../dashboard_v2/dashboard_v2_barrel.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
@@ -164,6 +165,13 @@ class HomePage extends StatelessWidget {
                                   icon: const Icon(Icons.help_outline),
                                   tooltip: 'Help / About',
                                   onPressed: () => _showHelpDialog(context),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.dashboard),
+                                  tooltip: 'Dashboard V2',
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const DashboardV2Page()),
+                                  ),
                                 ),
                                 IconButton(
                                   icon: const Icon(
