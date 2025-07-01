@@ -8,7 +8,7 @@ class RecentEntriesCarousel extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onPageChanged;
   final Function(Entry)? onEntryTap;
-  
+
   const RecentEntriesCarousel({
     super.key,
     required this.entries,
@@ -24,8 +24,8 @@ class RecentEntriesCarousel extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // CP: Calculate card width to show 2 cards plus a peek of the third
-    final cardWidth = (screenWidth - 48) / 2.2; // 48 = padding (16*2) + spacing (16)
+    // CP: Calculate card width to show 2 cards plus a small peek of the third
+    final cardWidth = (screenWidth - 48) / 1.9; // Wider cards, less peek of third
     final pageController = PageController(
       initialPage: selectedIndex,
       viewportFraction: cardWidth / screenWidth,
@@ -41,7 +41,7 @@ class RecentEntriesCarousel extends StatelessWidget {
         itemBuilder: (context, index) {
           final entry = entries[index];
           final isSelected = index == selectedIndex;
-          
+
           return Padding(
             padding: EdgeInsets.only(
               left: index == 0 ? 16 : 8,
