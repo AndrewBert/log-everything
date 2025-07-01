@@ -5,8 +5,8 @@ class DashboardV2State extends Equatable {
   final bool isLoading;
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
-  final Map<String, String> insightsCache;
-  final String? currentInsight;
+  final Map<String, ComprehensiveInsight> insightsCache;
+  final ComprehensiveInsight? currentInsight;
   final bool isGeneratingInsight;
 
   const DashboardV2State({
@@ -24,8 +24,8 @@ class DashboardV2State extends Equatable {
     bool? isLoading,
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
-    Map<String, String>? insightsCache,
-    String? currentInsight,
+    Map<String, ComprehensiveInsight>? insightsCache,
+    ComprehensiveInsight? currentInsight,
     bool clearCurrentInsight = false,
     bool? isGeneratingInsight,
   }) {

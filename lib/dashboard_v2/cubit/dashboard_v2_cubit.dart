@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/chat/model/chat_message.dart';
+import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:get_it/get_it.dart';
 
 part 'dashboard_v2_state.dart';
@@ -26,6 +29,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         entries: entries,
         isLoading: false,
         hasMoreEntries: false, // CP: For now, load all entries at once
+        insightsCache: const {}, // CP: Clear old cache to avoid type mismatch
+        clearCurrentInsight: true,
       ),
     );
 
@@ -51,43 +56,27 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     if (index >= state.entries.length) return;
 
     final entry = state.entries[index];
-    final cacheKey = entry.text;
+    final cacheKey = '${entry.timestamp.millisecondsSinceEpoch}_${entry.text}';
 
-    // CP: Check cache first
     if (state.insightsCache.containsKey(cacheKey)) {
-      emit(state.copyWith(currentInsight: state.insightsCache[cacheKey]));
-      return;
+      final cachedInsight = state.insightsCache[cacheKey];
+      if (cachedInsight is ComprehensiveInsight) {
+        emit(state.copyWith(currentInsight: cachedInsight));
+        return;
+      }
     }
 
     emit(state.copyWith(isGeneratingInsight: true));
 
     try {
-      // CP: For now, generate a simple summary
-      final prompt =
-          '''
-      Provide a brief, insightful summary of this log entry in 1-2 sentences:
-      "${entry.text}"
-      
-      Keep it concise and highlight the key point or emotion.
-      ''';
+      final comprehensiveInsight = await _generateComprehensiveInsight(entry);
 
-      final messages = [
-        ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: prompt,
-          sender: ChatSender.user,
-          timestamp: DateTime.now(),
-        ),
-      ];
-      final (insight, _) = await _aiService.getChatResponse(messages: messages);
-
-      // CP: Update cache and current insight
-      final updatedCache = Map<String, String>.from(state.insightsCache);
-      updatedCache[cacheKey] = insight;
+      final updatedCache = Map<String, ComprehensiveInsight>.from(state.insightsCache);
+      updatedCache[cacheKey] = comprehensiveInsight;
 
       emit(
         state.copyWith(
-          currentInsight: insight,
+          currentInsight: comprehensiveInsight,
           insightsCache: updatedCache,
           isGeneratingInsight: false,
         ),
@@ -96,9 +85,151 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       emit(
         state.copyWith(
           isGeneratingInsight: false,
-          currentInsight: 'Unable to generate insight',
         ),
       );
+    }
+  }
+
+  Future<ComprehensiveInsight> _generateComprehensiveInsight(Entry entry) async {
+    final prompt = '''
+Analyze this log entry and provide a comprehensive multi-dimensional analysis in JSON format:
+
+"${entry.text}"
+
+Provide the following insights:
+1. Summary: A concise 1-2 sentence summary highlighting the key point
+2. Emotion: The primary emotional tone and any secondary emotions detected
+3. Pattern: Any behavioral or thought patterns evident in this entry
+4. Theme: The underlying theme or topic area
+5. Recommendation: A thoughtful, actionable suggestion based on the content
+
+Return ONLY a JSON object with this structure:
+{
+  "summary": "...",
+  "emotion": {
+    "primary": "...",
+    "secondary": ["...", "..."],
+    "intensity": "low/medium/high"
+  },
+  "pattern": "...",
+  "theme": "...",
+  "recommendation": "..."
+}
+''';
+
+    final messages = [
+      ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: prompt,
+        sender: ChatSender.user,
+        timestamp: DateTime.now(),
+      ),
+    ];
+    
+    final (response, _) = await _aiService.getChatResponse(messages: messages);
+    
+    final insights = <Insight>[];
+    final now = DateTime.now();
+    
+    try {
+      final jsonStart = response.indexOf('{');
+      final jsonEnd = response.lastIndexOf('}') + 1;
+      final jsonStr = response.substring(jsonStart, jsonEnd);
+      final json = Map<String, dynamic>.from(
+        (await _parseJson(jsonStr)) ?? {},
+      );
+      
+      if (json.containsKey('summary')) {
+        insights.add(Insight(
+          id: '${entry.timestamp.millisecondsSinceEpoch}_summary',
+          type: InsightType.summary,
+          title: 'Summary',
+          content: json['summary'] as String,
+          generatedAt: now,
+        ));
+      }
+      
+      if (json.containsKey('emotion') && json['emotion'] is Map) {
+        final emotionData = json['emotion'] as Map<String, dynamic>;
+        final primary = emotionData['primary'] as String? ?? '';
+        final secondary = (emotionData['secondary'] as List?)?.cast<String>() ?? [];
+        final intensity = emotionData['intensity'] as String? ?? 'medium';
+        
+        insights.add(Insight(
+          id: '${entry.timestamp.millisecondsSinceEpoch}_emotion',
+          type: InsightType.emotion,
+          title: 'Emotional Analysis',
+          content: primary,
+          generatedAt: now,
+          metadata: {
+            'secondary': secondary,
+            'intensity': intensity,
+          },
+        ));
+      }
+      
+      if (json.containsKey('pattern')) {
+        insights.add(Insight(
+          id: '${entry.timestamp.millisecondsSinceEpoch}_pattern',
+          type: InsightType.pattern,
+          title: 'Pattern Recognition',
+          content: json['pattern'] as String,
+          generatedAt: now,
+        ));
+      }
+      
+      if (json.containsKey('theme')) {
+        insights.add(Insight(
+          id: '${entry.timestamp.millisecondsSinceEpoch}_theme',
+          type: InsightType.theme,
+          title: 'Theme',
+          content: json['theme'] as String,
+          generatedAt: now,
+        ));
+      }
+      
+      if (json.containsKey('recommendation')) {
+        insights.add(Insight(
+          id: '${entry.timestamp.millisecondsSinceEpoch}_recommendation',
+          type: InsightType.recommendation,
+          title: 'Recommendation',
+          content: json['recommendation'] as String,
+          generatedAt: now,
+        ));
+      }
+    } catch (e) {
+      insights.add(Insight(
+        id: '${entry.timestamp.millisecondsSinceEpoch}_summary',
+        type: InsightType.summary,
+        title: 'Summary',
+        content: response,
+        generatedAt: now,
+      ));
+    }
+    
+    return ComprehensiveInsight(
+      entryId: '${entry.timestamp.millisecondsSinceEpoch}',
+      entryText: entry.text,
+      insights: insights,
+      generatedAt: now,
+    );
+  }
+
+  Future<Map<String, dynamic>?> _parseJson(String text) async {
+    try {
+      final jsonStart = text.indexOf('{');
+      final jsonEnd = text.lastIndexOf('}') + 1;
+      if (jsonStart == -1 || jsonEnd == 0) return null;
+      
+      final jsonStr = text.substring(jsonStart, jsonEnd);
+      final decoded = jsonDecode(jsonStr);
+      
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 }
