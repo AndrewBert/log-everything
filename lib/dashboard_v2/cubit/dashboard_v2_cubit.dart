@@ -99,9 +99,16 @@ Analyze this log entry and provide a comprehensive multi-dimensional analysis in
 Provide the following insights:
 1. Summary: A concise 1-2 sentence summary highlighting the key point
 2. Emotion: The primary emotional tone and any secondary emotions detected
-3. Pattern: Any behavioral or thought patterns evident in this entry
+3. Pattern: Any behavioral or thought patterns evident in this entry (leave empty if none are significant)
 4. Theme: The underlying theme or topic area
-5. Recommendation: A thoughtful, actionable suggestion based on the content
+5. Recommendation: A thoughtful, actionable suggestion based on the content (leave empty if no clear action is needed)
+
+Additionally, analyze which type of insight would be most valuable to show the user and set the "priority" field to one of: "pattern", "recommendation", or "summary".
+
+Guidelines for priority:
+- Choose "pattern" if you identify a meaningful behavioral pattern, recurring theme, or notable trend that provides insight
+- Choose "recommendation" if you have a specific, actionable suggestion that would benefit the user
+- Choose "summary" for entries without strong patterns or clear actionable items
 
 Return ONLY a JSON object with this structure:
 {
@@ -113,7 +120,8 @@ Return ONLY a JSON object with this structure:
   },
   "pattern": "...",
   "theme": "...",
-  "recommendation": "..."
+  "recommendation": "...",
+  "priority": "pattern|recommendation|summary"
 }
 ''';
 
@@ -130,14 +138,11 @@ Return ONLY a JSON object with this structure:
     
     final insights = <Insight>[];
     final now = DateTime.now();
+    String? priority;
     
     try {
-      final jsonStart = response.indexOf('{');
-      final jsonEnd = response.lastIndexOf('}') + 1;
-      final jsonStr = response.substring(jsonStart, jsonEnd);
-      final json = Map<String, dynamic>.from(
-        (await _parseJson(jsonStr)) ?? {},
-      );
+      final json = await _parseJson(response) ?? {};
+      priority = json['priority'] as String?;
       
       if (json.containsKey('summary')) {
         insights.add(Insight(
@@ -212,6 +217,7 @@ Return ONLY a JSON object with this structure:
       entryText: entry.text,
       insights: insights,
       generatedAt: now,
+      priority: priority,
     );
   }
 

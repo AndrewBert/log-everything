@@ -34,12 +34,14 @@ class ComprehensiveInsight extends Equatable {
   final String entryText;
   final List<Insight> insights;
   final DateTime generatedAt;
+  final String? priority;
 
   const ComprehensiveInsight({
     required this.entryId,
     required this.entryText,
     required this.insights,
     required this.generatedAt,
+    this.priority,
   });
 
   Insight? getInsightByType(InsightType type) {
@@ -50,6 +52,35 @@ class ComprehensiveInsight extends Equatable {
     }
   }
 
+  Insight? getPrimaryInsight() {
+    // CP: First, check if AI provided a priority
+    if (priority != null) {
+      switch (priority) {
+        case 'pattern':
+          final pattern = getInsightByType(InsightType.pattern);
+          if (pattern != null && pattern.content.isNotEmpty) return pattern;
+          break;
+        case 'recommendation':
+          final recommendation = getInsightByType(InsightType.recommendation);
+          if (recommendation != null && recommendation.content.isNotEmpty) return recommendation;
+          break;
+        case 'summary':
+          final summary = getInsightByType(InsightType.summary);
+          if (summary != null) return summary;
+          break;
+      }
+    }
+    
+    // CP: Fallback logic if priority doesn't work
+    final pattern = getInsightByType(InsightType.pattern);
+    if (pattern != null && pattern.content.isNotEmpty) return pattern;
+    
+    final recommendation = getInsightByType(InsightType.recommendation);
+    if (recommendation != null && recommendation.content.isNotEmpty) return recommendation;
+    
+    return getInsightByType(InsightType.summary);
+  }
+
   @override
-  List<Object?> get props => [entryId, entryText, insights, generatedAt];
+  List<Object?> get props => [entryId, entryText, insights, generatedAt, priority];
 }

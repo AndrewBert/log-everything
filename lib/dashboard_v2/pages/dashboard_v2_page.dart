@@ -52,8 +52,9 @@ class DashboardV2Page extends StatelessWidget {
                               prev.currentInsight != current.currentInsight ||
                               prev.isGeneratingInsight != current.isGeneratingInsight,
                           builder: (context, state) {
-                            return ComprehensiveInsightContainer(
-                              insight: state.currentInsight,
+                            final primaryInsight = state.currentInsight?.getPrimaryInsight();
+                            return SimpleInsightContainer(
+                              insight: primaryInsight,
                               isLoading: state.isGeneratingInsight,
                             );
                           },
