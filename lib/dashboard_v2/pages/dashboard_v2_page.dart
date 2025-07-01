@@ -49,7 +49,7 @@ class DashboardV2Page extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                          buildWhen: (prev, current) => 
+                          buildWhen: (prev, current) =>
                               prev.currentInsight != current.currentInsight ||
                               prev.isGeneratingInsight != current.isGeneratingInsight,
                           builder: (context, state) {
@@ -62,7 +62,7 @@ class DashboardV2Page extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                          buildWhen: (prev, current) => 
+                          buildWhen: (prev, current) =>
                               prev.selectedCarouselIndex != current.selectedCarouselIndex ||
                               prev.entries != current.entries,
                           builder: (context, state) {
@@ -120,9 +120,7 @@ class DashboardV2Page extends StatelessWidget {
                             },
                           );
                         },
-                        childCount: state.hasMoreEntries
-                            ? state.entries.length + 1
-                            : state.entries.length,
+                        childCount: state.hasMoreEntries ? state.entries.length + 1 : state.entries.length,
                       ),
                     ),
                   ),
@@ -149,7 +147,7 @@ class DashboardV2Page extends StatelessWidget {
     final cacheKey = '${entry.timestamp.millisecondsSinceEpoch}_${entry.text}';
     final comprehensiveInsight = state.insightsCache[cacheKey];
     final summaryInsight = comprehensiveInsight?.getInsightByType(InsightType.summary);
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EntryDetailsPage(
