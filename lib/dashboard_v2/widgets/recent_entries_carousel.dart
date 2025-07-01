@@ -7,12 +7,14 @@ class RecentEntriesCarousel extends StatelessWidget {
   final List<Entry> entries;
   final int selectedIndex;
   final Function(int) onPageChanged;
+  final Function(Entry)? onEntryTap;
   
   const RecentEntriesCarousel({
     super.key,
     required this.entries,
     required this.selectedIndex,
     required this.onPageChanged,
+    this.onEntryTap,
   });
 
   @override
@@ -54,12 +56,17 @@ class RecentEntriesCarousel extends StatelessWidget {
                 child: SquareEntryCard(
                   entry: entry,
                   onTap: () {
-                    // CP: Animate to tapped card
-                    pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
+                    // CP: If we have a navigation callback, use it
+                    if (onEntryTap != null) {
+                      onEntryTap!(entry);
+                    } else {
+                      // CP: Otherwise, animate to tapped card
+                      pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
                   },
                 ),
               ),

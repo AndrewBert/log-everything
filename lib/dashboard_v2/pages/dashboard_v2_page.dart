@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
+import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
@@ -71,6 +72,9 @@ class DashboardV2Page extends StatelessWidget {
                               onPageChanged: (index) {
                                 context.read<DashboardV2Cubit>().selectCarouselEntry(index);
                               },
+                              onEntryTap: (entry) {
+                                _navigateToEntryDetails(context, entry, state);
+                              },
                             );
                           },
                         ),
@@ -112,7 +116,7 @@ class DashboardV2Page extends StatelessWidget {
                           return SquareEntryCard(
                             entry: entry,
                             onTap: () {
-                              // CP: TODO: Navigate to entry details
+                              _navigateToEntryDetails(context, entry, state);
                             },
                           );
                         },
@@ -135,6 +139,22 @@ class DashboardV2Page extends StatelessWidget {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToEntryDetails(BuildContext context, Entry entry, DashboardV2State state) {
+    // CP: Find the comprehensive insight for this entry if it exists
+    final cacheKey = '${entry.timestamp.millisecondsSinceEpoch}_${entry.text}';
+    final comprehensiveInsight = state.insightsCache[cacheKey];
+    final summaryInsight = comprehensiveInsight?.getInsightByType(InsightType.summary);
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EntryDetailsPage(
+          entry: entry,
+          cachedInsight: summaryInsight,
         ),
       ),
     );
