@@ -5,7 +5,6 @@ import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/services/ai_service.dart';
-import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:get_it/get_it.dart';
 
@@ -91,50 +90,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   Future<ComprehensiveInsight> _generateComprehensiveInsight(Entry entry) async {
-    final prompt = '''
-Analyze this log entry and provide a comprehensive multi-dimensional analysis in JSON format:
-
-"${entry.text}"
-
-Provide the following insights:
-1. Summary: A concise 1-2 sentence summary highlighting the key point
-2. Emotion: The primary emotional tone and any secondary emotions detected
-3. Pattern: Any behavioral or thought patterns evident in this entry (leave empty if none are significant)
-4. Theme: The underlying theme or topic area
-5. Recommendation: A thoughtful, actionable suggestion based on the content (leave empty if no clear action is needed)
-
-Additionally, analyze which type of insight would be most valuable to show the user and set the "priority" field to one of: "pattern", "recommendation", or "summary".
-
-Guidelines for priority:
-- Choose "pattern" if you identify a meaningful behavioral pattern, recurring theme, or notable trend that provides insight
-- Choose "recommendation" if you have a specific, actionable suggestion that would benefit the user
-- Choose "summary" for entries without strong patterns or clear actionable items
-
-Return ONLY a JSON object with this structure:
-{
-  "summary": "...",
-  "emotion": {
-    "primary": "...",
-    "secondary": ["...", "..."],
-    "intensity": "low/medium/high"
-  },
-  "pattern": "...",
-  "theme": "...",
-  "recommendation": "...",
-  "priority": "pattern|recommendation|summary"
-}
-''';
-
-    final messages = [
-      ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: prompt,
-        sender: ChatSender.user,
-        timestamp: DateTime.now(),
-      ),
-    ];
-    
-    final (response, _) = await _aiService.getChatResponse(messages: messages);
+    final response = await _aiService.generateEntryInsights(entry.text);
     
     final insights = <Insight>[];
     final now = DateTime.now();
@@ -212,13 +168,15 @@ Return ONLY a JSON object with this structure:
       ));
     }
     
-    return ComprehensiveInsight(
+    final comprehensiveInsight = ComprehensiveInsight(
       entryId: '${entry.timestamp.millisecondsSinceEpoch}',
       entryText: entry.text,
       insights: insights,
       generatedAt: now,
       priority: priority,
     );
+    
+    return comprehensiveInsight;
   }
 
   Future<Map<String, dynamic>?> _parseJson(String text) async {

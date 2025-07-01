@@ -325,9 +325,12 @@ class MockAiService extends _i1.Mock implements _i14.AiService {
   extractEntries(String? text, List<_i13.Category>? categories) =>
       (super.noSuchMethod(
             Invocation.method(#extractEntries, [text, categories]),
-            returnValue: _i6.Future<
-              List<({String category, bool isTask, String textSegment})>
-            >.value(<({String category, bool isTask, String textSegment})>[]),
+            returnValue:
+                _i6.Future<
+                  List<({String category, bool isTask, String textSegment})>
+                >.value(
+                  <({String category, bool isTask, String textSegment})>[],
+                ),
           )
           as _i6.Future<
             List<({String category, bool isTask, String textSegment})>
@@ -361,6 +364,37 @@ class MockAiService extends _i1.Mock implements _i14.AiService {
             )),
           )
           as _i6.Future<(String, String?)>);
+
+  @override
+  _i6.Stream<_i14.ChatStreamEvent> streamChatResponse({
+    required List<_i15.ChatMessage>? messages,
+    DateTime? currentDate,
+    bool? store = true,
+    String? previousResponseId,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#streamChatResponse, [], {
+              #messages: messages,
+              #currentDate: currentDate,
+              #store: store,
+              #previousResponseId: previousResponseId,
+            }),
+            returnValue: _i6.Stream<_i14.ChatStreamEvent>.empty(),
+          )
+          as _i6.Stream<_i14.ChatStreamEvent>);
+
+  @override
+  _i6.Future<String> generateEntryInsights(String? entryText) =>
+      (super.noSuchMethod(
+            Invocation.method(#generateEntryInsights, [entryText]),
+            returnValue: _i6.Future<String>.value(
+              _i16.dummyValue<String>(
+                this,
+                Invocation.method(#generateEntryInsights, [entryText]),
+              ),
+            ),
+          )
+          as _i6.Future<String>);
 }
 
 /// A class which mocks [AudioRecorderService].
@@ -825,6 +859,15 @@ class MockChatCubit extends _i1.Mock implements _i4.ChatCubit {
   _i6.Future<void> addUserMessage(String? text) =>
       (super.noSuchMethod(
             Invocation.method(#addUserMessage, [text]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> addUserMessageStreaming(String? text) =>
+      (super.noSuchMethod(
+            Invocation.method(#addUserMessageStreaming, [text]),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
           )

@@ -76,6 +76,16 @@ abstract class AiService {
     bool store = true,
     String? previousResponseId,
   });
+
+  /// Generates comprehensive insights for a log entry.
+  ///
+  /// Takes the [entryText] to analyze and returns a JSON string containing
+  /// multi-dimensional insights including summary, patterns, recommendations, etc.
+  /// The AI will also suggest which insight type is most valuable via the "priority" field.
+  ///
+  /// Returns a JSON string with the analysis results.
+  /// Throws an [AiServiceException] if the process fails.
+  Future<String> generateEntryInsights(String entryText);
 }
 
 // Custom Exception for the service
@@ -722,6 +732,134 @@ When deciding which category to use, consider both the name and the description 
     } catch (e, stackTrace) {
       AppLogger.error('Unexpected error during streaming chat', error: e, stackTrace: stackTrace);
       yield ChatStreamError('An unexpected error occurred during streaming: $e');
+    }
+  }
+
+  @override
+  Future<String> generateEntryInsights(String entryText) async {
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      throw AiServiceException('OpenAI API Key not found.');
+    }
+
+    AppLogger.info(
+      "Generating insights for entry: '${entryText.substring(0, entryText.length > 50 ? 50 : entryText.length)}...'",
+    );
+
+    final prompt =
+        '''
+Analyze this log entry and provide a comprehensive multi-dimensional analysis in JSON format:
+
+"$entryText"
+
+Provide the following insights:
+1. Summary: A concise 1-2 sentence summary highlighting the key point
+2. Emotion: The primary emotional tone and any secondary emotions detected
+3. Pattern: Any behavioral or thought patterns evident in this entry (leave empty if none are significant)
+4. Theme: The underlying theme or topic area
+5. Recommendation: A thoughtful, actionable suggestion based on the content (leave empty if no clear action is needed)
+
+Additionally, analyze which type of insight would be most valuable to show the user and set the "priority" field to one of: "pattern", "recommendation", or "summary".
+
+Guidelines for priority:
+- Choose "pattern" if you identify a meaningful behavioral pattern, recurring theme, or notable trend that provides insight
+- Choose "recommendation" if you have a specific, actionable suggestion that would benefit the user
+- Choose "summary" for entries without strong patterns or clear actionable items
+
+Return ONLY a JSON object with this structure:
+{
+  "summary": "...",
+  "emotion": {
+    "primary": "...",
+    "secondary": ["...", "..."],
+    "intensity": "low/medium/high"
+  },
+  "pattern": "...",
+  "theme": "...",
+  "recommendation": "...",
+  "priority": "pattern|recommendation|summary"
+}
+''';
+
+    final requestBody = {
+      'model': _defaultModelId,
+      'input': [
+        {
+          'role': 'system',
+          'content':
+              'You are an insightful assistant that analyzes personal log entries to provide valuable insights and patterns.',
+        },
+        {
+          'role': 'user',
+          'content': prompt,
+        },
+      ],
+      'text': {
+        'format': {
+          'type': 'json_object',
+        },
+      },
+      'metadata': {
+        'request_type': 'insight_generation',
+        'app_name': 'log-everything',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _defaultModelId,
+      },
+      'temperature': 0.7,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
+          final errorMsg =
+              'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
+          AppLogger.error(errorMsg);
+          throw AiServiceException(errorMsg);
+        }
+
+        if (responseBody['output'] != null &&
+            responseBody['output'] is List &&
+            responseBody['output'].isNotEmpty &&
+            responseBody['output'][0]['content'] != null &&
+            responseBody['output'][0]['content'] is List &&
+            responseBody['output'][0]['content'].isNotEmpty) {
+          final contentItem = responseBody['output'][0]['content'][0];
+
+          if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
+            final jsonOutputString = contentItem['text'];
+            AppLogger.info('Successfully generated insights for entry');
+            return jsonOutputString;
+          }
+        }
+
+        throw AiServiceException('Unexpected response format from OpenAI');
+      } else {
+        final errorBody = jsonDecode(response.body);
+        final errorMessage = errorBody['error']?['message'] ?? 'Unknown error occurred';
+        throw AiServiceException(
+          'Failed to generate insights: $errorMessage',
+          underlyingError: response.body,
+        );
+      }
+    } catch (e) {
+      if (e is AiServiceException) {
+        rethrow;
+      }
+      AppLogger.error('Error generating entry insights', error: e);
+      throw AiServiceException(
+        'Failed to generate insights: ${e.toString()}',
+        underlyingError: e,
+      );
     }
   }
 }
