@@ -67,7 +67,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     try {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
-      final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
+      final comprehensiveInsight = await _aiService.generateEntryInsights(
+        entry.text, 
+        entryId,
+        currentDate: DateTime.now(), // CC: Pass current date for temporal context
+      );
 
       final updatedCache = Map<String, ComprehensiveInsight>.from(state.insightsCache);
       updatedCache[cacheKey] = comprehensiveInsight;

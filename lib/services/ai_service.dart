@@ -81,13 +81,17 @@ abstract class AiService {
   /// Generates comprehensive insights for a log entry.
   ///
   /// Takes the [entryText] to analyze and [entryId] for identification.
-  /// Returns a [ComprehensiveInsight] object containing multi-dimensional 
+  /// Optionally takes [currentDate] to provide temporal context for pattern analysis.
+  /// Returns a [ComprehensiveInsight] object containing multi-dimensional
   /// insights including summary, patterns, recommendations, etc.
   /// The AI will also suggest which insight type is most valuable via the "priority" field.
   ///
+  /// When a vector store is available, the AI will search historical entries
+  /// to identify patterns across the user's log history.
+  ///
   /// Returns a [ComprehensiveInsight] object with the analysis results.
   /// Throws an [AiServiceException] if the process fails.
-  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId);
+  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId, {DateTime? currentDate});
 }
 
 // Custom Exception for the service
@@ -738,7 +742,7 @@ When deciding which category to use, consider both the name and the description 
   }
 
   @override
-  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId) async {
+  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId, {DateTime? currentDate}) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
     }
@@ -747,48 +751,77 @@ When deciding which category to use, consider both the name and the description 
       "Generating insights for entry: '${entryText.substring(0, entryText.length > 50 ? 50 : entryText.length)}...'",
     );
 
+    // CC: Retrieve vector_store_id for historical pattern analysis
+    final String? vectorStoreId = _prefs.getString('openai_vector_store_id');
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      AppLogger.info("Using Vector Store ID: $vectorStoreId for historical pattern analysis.");
+    } else {
+      AppLogger.warn("No Vector Store ID found. Insights will be based on single entry only.");
+    }
+
+    final dateString = currentDate != null ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}." : "";
     final prompt =
         '''
 Analyze this log entry and provide a comprehensive multi-dimensional analysis in JSON format:
 
 "$entryText"
 
-Provide the following insights:
-1. Summary: A concise 1-2 sentence summary highlighting the key point
-2. Emotion: The primary emotional tone and any secondary emotions detected
-3. Pattern: Any behavioral or thought patterns evident in this entry (leave empty if none are significant)
-4. Theme: The underlying theme or topic area
-5. Recommendation: A thoughtful, actionable suggestion based on the content (leave empty if no clear action is needed)
+${vectorStoreId != null ? "IMPORTANT: Use the File Search tool to search through the user's historical log entries to identify patterns, recurring themes, and behavioral trends across their entire log history. Do not analyze this entry in isolation." : ""}
 
-Additionally, analyze which type of insight would be most valuable to show the user and set the "priority" field to one of: "pattern", "recommendation", or "summary".
+Provide the following insights (CRITICAL: Each insight must be 1-2 sentences maximum, brief and impactful):
+1. Summary: One sentence capturing the essence of this entry
+2. Emotion: State the primary emotion in 1-3 words, with intensity (e.g., "Excited - high", "Anxious - medium")
+3. Pattern: ${vectorStoreId != null ? "One sentence about recurring behaviors across MULTIPLE historical entries (not within this single entry)" : "Leave empty - patterns require historical data"} (leave empty if none)
+4. Theme: The topic in 1-5 words (e.g., "Work stress", "Family time", "Personal growth")
+5. Recommendation: One specific, actionable step in 1-2 sentences (leave empty if none needed)
 
-Guidelines for priority:
-- Choose "pattern" if you identify a meaningful behavioral pattern, recurring theme, or notable trend that provides insight
-- Choose "recommendation" if you have a specific, actionable suggestion that would benefit the user
-- Choose "summary" for entries without strong patterns or clear actionable items
+Additionally, analyze the entry type and choose the most valuable insight to show as "priority".
+
+First, identify the entry type:
+- Brainstorming: Contains "thinking", "wondering", "maybe", "could", exploring options
+- Decision-making: Contains "should I", "or", weighing choices
+- Problem-solving: Contains "how to", "need to figure out", "not sure"
+- Reflection: Past tense, analyzing what happened
+- Activity log: Simple record of events or tasks
+
+Then set priority based on what helps most:
+- "summary": Best for brainstorming, complex thoughts, or decision-making (distills the core idea)
+- "recommendation": Best when there's a clear problem to solve or decision point
+- "pattern": ONLY when you find recurring behaviors across their history (not single-entry patterns)
+
+Example priority selection:
+- Brainstorming note → "summary" (e.g., "Considering auto-clean vs manual button for text editing")
+- "Should I apply for this job?" → "recommendation" (e.g., "List pros/cons, then decide by Friday")
+- Daily workout logs showing consistency → "pattern" (e.g., "Working out 5x/week for past month")
+
+BREVITY IS CRITICAL: Keep all responses extremely concise for display on small cards.
 
 Return ONLY a JSON object with this structure:
 {
-  "summary": "...",
+  "summary": "One impactful sentence",
   "emotion": {
-    "primary": "...",
-    "secondary": ["...", "..."],
-    "intensity": "low/medium/high"
+    "primary": "Happy",
+    "secondary": [],
+    "intensity": "high"
   },
-  "pattern": "...",
-  "theme": "...",
-  "recommendation": "...",
+  "pattern": "Brief pattern statement or empty string",
+  "theme": "Work productivity",
+  "recommendation": "Specific action in 1-2 sentences or empty string",
   "priority": "pattern|recommendation|summary"
 }
 ''';
 
+    // CC: Build system instructions with file search capability
+    final systemContent = vectorStoreId != null
+        ? "You are a concise assistant that analyzes personal log entries. Use the File Search tool to search historical entries for patterns. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards. The logs are organized into daily files.$dateString"
+        : "You are a concise assistant that analyzes personal log entries. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards.$dateString";
+
     final requestBody = {
-      'model': _defaultModelId,
+      'model': vectorStoreId != null ? _chatModelId : _defaultModelId, // CC: Use chat model for file search
       'input': [
         {
           'role': 'system',
-          'content':
-              'You are an insightful assistant that analyzes personal log entries to provide valuable insights and patterns.',
+          'content': systemContent,
         },
         {
           'role': 'user',
@@ -803,11 +836,24 @@ Return ONLY a JSON object with this structure:
       'metadata': {
         'request_type': 'insight_generation',
         'app_name': 'log-everything',
+        'has_vector_store': vectorStoreId != null && vectorStoreId.isNotEmpty ? 'true' : 'false',
         'timestamp': DateTime.now().toIso8601String(),
-        'model_used': _defaultModelId,
+        'model_used': vectorStoreId != null ? _chatModelId : _defaultModelId,
       },
-      'temperature': 0.7,
+      'temperature': 0.5, // CC: Balanced temperature for nuanced priority selection while staying concise
     };
+
+    // CC: Conditionally add tools for File Search
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      requestBody['tools'] = [
+        {
+          "type": "file_search",
+          "vector_store_ids": [vectorStoreId],
+        },
+      ];
+    }
+
+    AppLogger.info('CC: Sending insights request with model: ${requestBody['model']}');
 
     try {
       final response = await http.post(
@@ -819,6 +865,8 @@ Return ONLY a JSON object with this structure:
         body: jsonEncode(requestBody),
       );
 
+      AppLogger.info('CC: Insights API response received. Status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
 
@@ -829,43 +877,86 @@ Return ONLY a JSON object with this structure:
           throw AiServiceException(errorMsg);
         }
 
+        // CC: Handle different response structure when file search is used
         if (responseBody['output'] != null &&
             responseBody['output'] is List &&
-            responseBody['output'].isNotEmpty &&
-            responseBody['output'][0]['content'] != null &&
-            responseBody['output'][0]['content'] is List &&
-            responseBody['output'][0]['content'].isNotEmpty) {
-          final contentItem = responseBody['output'][0]['content'][0];
+            (responseBody['output'] as List).isNotEmpty) {
+          // CC: When file search is enabled, need to search for the message type
+          Map<String, dynamic>? messageOutputElement;
+          for (final item in responseBody['output'] as List) {
+            if (item is Map<String, dynamic> && item['type'] == 'message') {
+              messageOutputElement = item;
+              break;
+            }
+          }
 
-          if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
-            final jsonOutputString = contentItem['text'];
-            AppLogger.info('Successfully generated insights for entry');
-            
-            // CP: Parse JSON and create ComprehensiveInsight object
-            try {
-              final json = jsonDecode(jsonOutputString);
-              return _createComprehensiveInsight(json, entryText, entryId);
-            } catch (e) {
-              AppLogger.error('Failed to parse insights JSON', error: e);
-              throw AiServiceException('Failed to parse insights response', underlyingError: e);
+          if (messageOutputElement != null) {
+            final dynamic content = messageOutputElement['content'];
+            if (content != null && content is List && content.isNotEmpty) {
+              String? jsonOutputString;
+              for (final item in content) {
+                if (item is Map<String, dynamic> && item['type'] == 'output_text' && item['text'] != null) {
+                  jsonOutputString = item['text'] as String;
+                  break;
+                }
+              }
+
+              if (jsonOutputString != null) {
+                AppLogger.info('Successfully generated insights for entry');
+
+                // CC: Parse JSON and create ComprehensiveInsight object
+                try {
+                  final json = jsonDecode(jsonOutputString);
+                  return _createComprehensiveInsight(json, entryText, entryId);
+                } catch (e) {
+                  AppLogger.error('Failed to parse insights JSON', error: e);
+                  throw AiServiceException('Failed to parse insights response', underlyingError: e);
+                }
+              }
+            }
+          } else {
+            // CC: Fallback to original parsing for non-file-search responses
+            if (responseBody['output'][0]['content'] != null &&
+                responseBody['output'][0]['content'] is List &&
+                responseBody['output'][0]['content'].isNotEmpty) {
+              final contentItem = responseBody['output'][0]['content'][0];
+
+              if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
+                final jsonOutputString = contentItem['text'];
+                AppLogger.info('Successfully generated insights for entry');
+
+                try {
+                  final json = jsonDecode(jsonOutputString);
+                  return _createComprehensiveInsight(json, entryText, entryId);
+                } catch (e) {
+                  AppLogger.error('Failed to parse insights JSON', error: e);
+                  throw AiServiceException('Failed to parse insights response', underlyingError: e);
+                }
+              }
             }
           }
         }
 
         throw AiServiceException('Unexpected response format from OpenAI');
       } else {
-        final errorBody = jsonDecode(response.body);
-        final errorMessage = errorBody['error']?['message'] ?? 'Unknown error occurred';
+        String errorMessage;
+        try {
+          final errorBody = jsonDecode(response.body);
+          errorMessage = errorBody['error']?['message'] ?? 'Unknown error occurred';
+        } catch (_) {
+          errorMessage = 'HTTP ${response.statusCode}: ${response.body}';
+        }
+        AppLogger.error('Failed to generate insights. Status: ${response.statusCode}, Error: $errorMessage');
         throw AiServiceException(
           'Failed to generate insights: $errorMessage',
           underlyingError: response.body,
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (e is AiServiceException) {
         rethrow;
       }
-      AppLogger.error('Error generating entry insights', error: e);
+      AppLogger.error('Error generating entry insights', error: e, stackTrace: stackTrace);
       throw AiServiceException(
         'Failed to generate insights: ${e.toString()}',
         underlyingError: e,
@@ -873,85 +964,95 @@ Return ONLY a JSON object with this structure:
     }
   }
 
-  ComprehensiveInsight _createComprehensiveInsight(
-    Map<String, dynamic> json, 
-    String entryText, 
-    String entryId
-  ) {
+  ComprehensiveInsight _createComprehensiveInsight(Map<String, dynamic> json, String entryText, String entryId) {
     final insights = <Insight>[];
     final now = DateTime.now();
     String? priority = json['priority'] as String?;
-    
+
     if (json.containsKey('summary')) {
-      insights.add(Insight(
-        id: '${entryId}_summary',
-        type: InsightType.summary,
-        title: 'Summary',
-        content: json['summary'] as String,
-        generatedAt: now,
-      ));
+      insights.add(
+        Insight(
+          id: '${entryId}_summary',
+          type: InsightType.summary,
+          title: 'Summary',
+          content: json['summary'] as String,
+          generatedAt: now,
+        ),
+      );
     }
-    
+
     if (json.containsKey('emotion') && json['emotion'] is Map) {
       final emotionData = json['emotion'] as Map<String, dynamic>;
       final primary = emotionData['primary'] as String? ?? '';
       final secondary = (emotionData['secondary'] as List?)?.cast<String>() ?? [];
       final intensity = emotionData['intensity'] as String? ?? 'medium';
-      
-      insights.add(Insight(
-        id: '${entryId}_emotion',
-        type: InsightType.emotion,
-        title: 'Emotional Analysis',
-        content: primary,
-        generatedAt: now,
-        metadata: {
-          'secondary': secondary,
-          'intensity': intensity,
-        },
-      ));
+
+      insights.add(
+        Insight(
+          id: '${entryId}_emotion',
+          type: InsightType.emotion,
+          title: 'Emotional Analysis',
+          content: primary,
+          generatedAt: now,
+          metadata: {
+            'secondary': secondary,
+            'intensity': intensity,
+          },
+        ),
+      );
     }
-    
+
     if (json.containsKey('pattern') && json['pattern'] != null && json['pattern'].toString().isNotEmpty) {
-      insights.add(Insight(
-        id: '${entryId}_pattern',
-        type: InsightType.pattern,
-        title: 'Pattern Recognition',
-        content: json['pattern'] as String,
-        generatedAt: now,
-      ));
+      insights.add(
+        Insight(
+          id: '${entryId}_pattern',
+          type: InsightType.pattern,
+          title: 'Pattern Recognition',
+          content: json['pattern'] as String,
+          generatedAt: now,
+        ),
+      );
     }
-    
+
     if (json.containsKey('theme')) {
-      insights.add(Insight(
-        id: '${entryId}_theme',
-        type: InsightType.theme,
-        title: 'Theme',
-        content: json['theme'] as String,
-        generatedAt: now,
-      ));
+      insights.add(
+        Insight(
+          id: '${entryId}_theme',
+          type: InsightType.theme,
+          title: 'Theme',
+          content: json['theme'] as String,
+          generatedAt: now,
+        ),
+      );
     }
-    
-    if (json.containsKey('recommendation') && json['recommendation'] != null && json['recommendation'].toString().isNotEmpty) {
-      insights.add(Insight(
-        id: '${entryId}_recommendation',
-        type: InsightType.recommendation,
-        title: 'Recommendation',
-        content: json['recommendation'] as String,
-        generatedAt: now,
-      ));
+
+    if (json.containsKey('recommendation') &&
+        json['recommendation'] != null &&
+        json['recommendation'].toString().isNotEmpty) {
+      insights.add(
+        Insight(
+          id: '${entryId}_recommendation',
+          type: InsightType.recommendation,
+          title: 'Recommendation',
+          content: json['recommendation'] as String,
+          generatedAt: now,
+        ),
+      );
     }
-    
+
     // CP: If parsing failed, create a basic summary insight
     if (insights.isEmpty) {
-      insights.add(Insight(
-        id: '${entryId}_summary',
-        type: InsightType.summary,
-        title: 'Summary',
-        content: 'Analysis complete.',
-        generatedAt: now,
-      ));
+      insights.add(
+        Insight(
+          id: '${entryId}_summary',
+          type: InsightType.summary,
+          title: 'Summary',
+          content: 'Analysis complete.',
+          generatedAt: now,
+        ),
+      );
     }
-    
+
     return ComprehensiveInsight(
       entryId: entryId,
       entryText: entryText,
