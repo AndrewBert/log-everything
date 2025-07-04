@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -68,7 +66,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     emit(state.copyWith(isGeneratingInsight: true));
 
     try {
-      final comprehensiveInsight = await _generateComprehensiveInsight(entry);
+      final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
+      final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
 
       final updatedCache = Map<String, ComprehensiveInsight>.from(state.insightsCache);
       updatedCache[cacheKey] = comprehensiveInsight;
@@ -86,114 +85,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
           isGeneratingInsight: false,
         ),
       );
-    }
-  }
-
-  Future<ComprehensiveInsight> _generateComprehensiveInsight(Entry entry) async {
-    final response = await _aiService.generateEntryInsights(entry.text);
-    
-    final insights = <Insight>[];
-    final now = DateTime.now();
-    String? priority;
-    
-    try {
-      final json = await _parseJson(response) ?? {};
-      priority = json['priority'] as String?;
-      
-      if (json.containsKey('summary')) {
-        insights.add(Insight(
-          id: '${entry.timestamp.millisecondsSinceEpoch}_summary',
-          type: InsightType.summary,
-          title: 'Summary',
-          content: json['summary'] as String,
-          generatedAt: now,
-        ));
-      }
-      
-      if (json.containsKey('emotion') && json['emotion'] is Map) {
-        final emotionData = json['emotion'] as Map<String, dynamic>;
-        final primary = emotionData['primary'] as String? ?? '';
-        final secondary = (emotionData['secondary'] as List?)?.cast<String>() ?? [];
-        final intensity = emotionData['intensity'] as String? ?? 'medium';
-        
-        insights.add(Insight(
-          id: '${entry.timestamp.millisecondsSinceEpoch}_emotion',
-          type: InsightType.emotion,
-          title: 'Emotional Analysis',
-          content: primary,
-          generatedAt: now,
-          metadata: {
-            'secondary': secondary,
-            'intensity': intensity,
-          },
-        ));
-      }
-      
-      if (json.containsKey('pattern')) {
-        insights.add(Insight(
-          id: '${entry.timestamp.millisecondsSinceEpoch}_pattern',
-          type: InsightType.pattern,
-          title: 'Pattern Recognition',
-          content: json['pattern'] as String,
-          generatedAt: now,
-        ));
-      }
-      
-      if (json.containsKey('theme')) {
-        insights.add(Insight(
-          id: '${entry.timestamp.millisecondsSinceEpoch}_theme',
-          type: InsightType.theme,
-          title: 'Theme',
-          content: json['theme'] as String,
-          generatedAt: now,
-        ));
-      }
-      
-      if (json.containsKey('recommendation')) {
-        insights.add(Insight(
-          id: '${entry.timestamp.millisecondsSinceEpoch}_recommendation',
-          type: InsightType.recommendation,
-          title: 'Recommendation',
-          content: json['recommendation'] as String,
-          generatedAt: now,
-        ));
-      }
-    } catch (e) {
-      insights.add(Insight(
-        id: '${entry.timestamp.millisecondsSinceEpoch}_summary',
-        type: InsightType.summary,
-        title: 'Summary',
-        content: response,
-        generatedAt: now,
-      ));
-    }
-    
-    final comprehensiveInsight = ComprehensiveInsight(
-      entryId: '${entry.timestamp.millisecondsSinceEpoch}',
-      entryText: entry.text,
-      insights: insights,
-      generatedAt: now,
-      priority: priority,
-    );
-    
-    return comprehensiveInsight;
-  }
-
-  Future<Map<String, dynamic>?> _parseJson(String text) async {
-    try {
-      final jsonStart = text.indexOf('{');
-      final jsonEnd = text.lastIndexOf('}') + 1;
-      if (jsonStart == -1 || jsonEnd == 0) return null;
-      
-      final jsonStr = text.substring(jsonStart, jsonEnd);
-      final decoded = jsonDecode(jsonStr);
-      
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
-      return null;
-    } catch (_) {
-      return null;
     }
   }
 }

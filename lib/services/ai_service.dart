@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // CP: Added Shared
 import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
 import '../utils/sse_parser.dart';
+import '../dashboard_v2/model/insight.dart';
 
 // Rename field in typedef to follow Dart conventions
 typedef EntryPrototype = ({String textSegment, String category, bool isTask});
@@ -79,13 +80,14 @@ abstract class AiService {
 
   /// Generates comprehensive insights for a log entry.
   ///
-  /// Takes the [entryText] to analyze and returns a JSON string containing
-  /// multi-dimensional insights including summary, patterns, recommendations, etc.
+  /// Takes the [entryText] to analyze and [entryId] for identification.
+  /// Returns a [ComprehensiveInsight] object containing multi-dimensional 
+  /// insights including summary, patterns, recommendations, etc.
   /// The AI will also suggest which insight type is most valuable via the "priority" field.
   ///
-  /// Returns a JSON string with the analysis results.
+  /// Returns a [ComprehensiveInsight] object with the analysis results.
   /// Throws an [AiServiceException] if the process fails.
-  Future<String> generateEntryInsights(String entryText);
+  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId);
 }
 
 // Custom Exception for the service
@@ -736,7 +738,7 @@ When deciding which category to use, consider both the name and the description 
   }
 
   @override
-  Future<String> generateEntryInsights(String entryText) async {
+  Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
     }
@@ -838,7 +840,15 @@ Return ONLY a JSON object with this structure:
           if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
             final jsonOutputString = contentItem['text'];
             AppLogger.info('Successfully generated insights for entry');
-            return jsonOutputString;
+            
+            // CP: Parse JSON and create ComprehensiveInsight object
+            try {
+              final json = jsonDecode(jsonOutputString);
+              return _createComprehensiveInsight(json, entryText, entryId);
+            } catch (e) {
+              AppLogger.error('Failed to parse insights JSON', error: e);
+              throw AiServiceException('Failed to parse insights response', underlyingError: e);
+            }
           }
         }
 
@@ -861,5 +871,93 @@ Return ONLY a JSON object with this structure:
         underlyingError: e,
       );
     }
+  }
+
+  ComprehensiveInsight _createComprehensiveInsight(
+    Map<String, dynamic> json, 
+    String entryText, 
+    String entryId
+  ) {
+    final insights = <Insight>[];
+    final now = DateTime.now();
+    String? priority = json['priority'] as String?;
+    
+    if (json.containsKey('summary')) {
+      insights.add(Insight(
+        id: '${entryId}_summary',
+        type: InsightType.summary,
+        title: 'Summary',
+        content: json['summary'] as String,
+        generatedAt: now,
+      ));
+    }
+    
+    if (json.containsKey('emotion') && json['emotion'] is Map) {
+      final emotionData = json['emotion'] as Map<String, dynamic>;
+      final primary = emotionData['primary'] as String? ?? '';
+      final secondary = (emotionData['secondary'] as List?)?.cast<String>() ?? [];
+      final intensity = emotionData['intensity'] as String? ?? 'medium';
+      
+      insights.add(Insight(
+        id: '${entryId}_emotion',
+        type: InsightType.emotion,
+        title: 'Emotional Analysis',
+        content: primary,
+        generatedAt: now,
+        metadata: {
+          'secondary': secondary,
+          'intensity': intensity,
+        },
+      ));
+    }
+    
+    if (json.containsKey('pattern') && json['pattern'] != null && json['pattern'].toString().isNotEmpty) {
+      insights.add(Insight(
+        id: '${entryId}_pattern',
+        type: InsightType.pattern,
+        title: 'Pattern Recognition',
+        content: json['pattern'] as String,
+        generatedAt: now,
+      ));
+    }
+    
+    if (json.containsKey('theme')) {
+      insights.add(Insight(
+        id: '${entryId}_theme',
+        type: InsightType.theme,
+        title: 'Theme',
+        content: json['theme'] as String,
+        generatedAt: now,
+      ));
+    }
+    
+    if (json.containsKey('recommendation') && json['recommendation'] != null && json['recommendation'].toString().isNotEmpty) {
+      insights.add(Insight(
+        id: '${entryId}_recommendation',
+        type: InsightType.recommendation,
+        title: 'Recommendation',
+        content: json['recommendation'] as String,
+        generatedAt: now,
+      ));
+    }
+    
+    // CP: If parsing failed, create a basic summary insight
+    if (insights.isEmpty) {
+      insights.add(Insight(
+        id: '${entryId}_summary',
+        type: InsightType.summary,
+        title: 'Summary',
+        content: 'Analysis complete.',
+        generatedAt: now,
+      ));
+    }
+    
+    return ComprehensiveInsight(
+      entryId: entryId,
+      entryText: entryText,
+      insights: insights,
+      generatedAt: now,
+      priority: priority,
+    );
   }
 }
