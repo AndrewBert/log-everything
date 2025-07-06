@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:equatable/equatable.dart'; // Add equatable import
+import '../dashboard_v2/model/insight.dart'; // CC: Import for ComprehensiveInsight
 
 // Represents a single entry with text, a timestamp, and a category.
 class Entry extends Equatable {
@@ -10,6 +11,7 @@ class Entry extends Equatable {
   final bool isNew; // Track whether this is a newly added entry
   final bool isCompleted; // Track completion status for checklist items
   final bool isTask; // Track whether this entry is AI-detected as a task/todo
+  final ComprehensiveInsight? insight; // CC: AI-generated insights for this entry
 
   const Entry({
     required this.text,
@@ -18,6 +20,7 @@ class Entry extends Equatable {
     this.isNew = false, // Default to false
     this.isCompleted = false, // Default to false
     this.isTask = false, // Default to false
+    this.insight, // CC: Optional insight
   });
 
   // Factory constructor to create an Entry from a JSON map
@@ -29,6 +32,9 @@ class Entry extends Equatable {
       isNew: json['isNew'] as bool? ?? false, // Default to false if missing
       isCompleted: json['isCompleted'] as bool? ?? false, // Default to false if missing
       isTask: json['isTask'] as bool? ?? false, // Default to false if missing
+      insight: json['insight'] != null 
+          ? ComprehensiveInsight.fromJson(json['insight'] as Map<String, dynamic>)
+          : null, // CC: Parse insight if present
     );
   }
 
@@ -41,6 +47,7 @@ class Entry extends Equatable {
       'isNew': isNew, // Add isNew to JSON
       'isCompleted': isCompleted, // Add isCompleted to JSON
       'isTask': isTask, // Add isTask to JSON
+      'insight': insight?.toJson(), // CC: Add insight to JSON
     };
   }
 
@@ -51,7 +58,7 @@ class Entry extends Equatable {
   static Entry fromJsonString(String jsonString) => Entry.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
   // Create a copy of this entry with modified properties
-  Entry copyWith({String? text, DateTime? timestamp, String? category, bool? isNew, bool? isCompleted, bool? isTask}) {
+  Entry copyWith({String? text, DateTime? timestamp, String? category, bool? isNew, bool? isCompleted, bool? isTask, ComprehensiveInsight? insight, bool clearInsight = false}) {
     return Entry(
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,
@@ -59,6 +66,7 @@ class Entry extends Equatable {
       isNew: isNew ?? this.isNew,
       isCompleted: isCompleted ?? this.isCompleted,
       isTask: isTask ?? this.isTask,
+      insight: clearInsight ? null : (insight ?? this.insight), // CC: Support clearing insight
     );
   }
 
@@ -66,5 +74,5 @@ class Entry extends Equatable {
   Entry toggleCompletion() => copyWith(isCompleted: !isCompleted);
 
   @override
-  List<Object?> get props => [text, timestamp, category, isNew, isCompleted, isTask]; // Add props for Equatable
+  List<Object?> get props => [text, timestamp, category, isNew, isCompleted, isTask, insight]; // Add props for Equatable
 }

@@ -5,8 +5,6 @@ class DashboardV2State extends Equatable {
   final bool isLoading;
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
-  final Map<String, ComprehensiveInsight> insightsCache;
-  final ComprehensiveInsight? currentInsight;
   final bool isGeneratingInsight;
 
   const DashboardV2State({
@@ -14,19 +12,22 @@ class DashboardV2State extends Equatable {
     this.isLoading = false,
     this.hasMoreEntries = true,
     this.selectedCarouselIndex = 0,
-    this.insightsCache = const {},
-    this.currentInsight,
     this.isGeneratingInsight = false,
   });
+
+  // CC: Derive current insight from selected entry
+  ComprehensiveInsight? get currentInsight {
+    if (selectedCarouselIndex < entries.length) {
+      return entries[selectedCarouselIndex].insight;
+    }
+    return null;
+  }
 
   DashboardV2State copyWith({
     List<Entry>? entries,
     bool? isLoading,
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
-    Map<String, ComprehensiveInsight>? insightsCache,
-    ComprehensiveInsight? currentInsight,
-    bool clearCurrentInsight = false,
     bool? isGeneratingInsight,
   }) {
     return DashboardV2State(
@@ -34,8 +35,6 @@ class DashboardV2State extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       hasMoreEntries: hasMoreEntries ?? this.hasMoreEntries,
       selectedCarouselIndex: selectedCarouselIndex ?? this.selectedCarouselIndex,
-      insightsCache: insightsCache ?? this.insightsCache,
-      currentInsight: clearCurrentInsight ? null : (currentInsight ?? this.currentInsight),
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
     );
   }
@@ -46,8 +45,6 @@ class DashboardV2State extends Equatable {
         isLoading,
         hasMoreEntries,
         selectedCarouselIndex,
-        insightsCache,
-        currentInsight,
         isGeneratingInsight,
       ];
 }

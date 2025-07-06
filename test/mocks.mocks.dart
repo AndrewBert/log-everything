@@ -393,14 +393,23 @@ class MockAiService extends _i1.Mock implements _i15.AiService {
   @override
   _i7.Future<_i3.ComprehensiveInsight> generateEntryInsights(
     String? entryText,
-    String? entryId,
-  ) =>
+    String? entryId, {
+    DateTime? currentDate,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#generateEntryInsights, [entryText, entryId]),
+            Invocation.method(
+              #generateEntryInsights,
+              [entryText, entryId],
+              {#currentDate: currentDate},
+            ),
             returnValue: _i7.Future<_i3.ComprehensiveInsight>.value(
               _FakeComprehensiveInsight_1(
                 this,
-                Invocation.method(#generateEntryInsights, [entryText, entryId]),
+                Invocation.method(
+                  #generateEntryInsights,
+                  [entryText, entryId],
+                  {#currentDate: currentDate},
+                ),
               ),
             ),
           )

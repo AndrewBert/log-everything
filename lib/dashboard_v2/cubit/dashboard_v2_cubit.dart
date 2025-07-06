@@ -25,45 +25,52 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       state.copyWith(
         entries: entries,
         isLoading: false,
-        hasMoreEntries: false, // CP: For now, load all entries at once
-        insightsCache: const {}, // CP: Clear old cache to avoid type mismatch
-        clearCurrentInsight: true,
+        hasMoreEntries: false, // CC: For now, load all entries at once
       ),
     );
 
-    // CP: Generate insight for the first entry if available
-    if (entries.isNotEmpty) {
-      _generateInsightForEntry(0);
-    }
+    // CC: The first entry's insight (if any) will be shown via the getter
+    print('DEBUG: loadEntries - First entry has insight: ${entries.isNotEmpty ? entries[0].insight != null : false}');
+    print('DEBUG: loadEntries - isGeneratingInsight: ${state.isGeneratingInsight}');
+
+    // CC: Generate insights for the most recent 3 entries without insights
+    _generateInsightsForRecentEntries();
   }
 
   void selectCarouselEntry(int index) {
     emit(
       state.copyWith(
         selectedCarouselIndex: index,
-        clearCurrentInsight: true,
+        // CC: Clear generating flag when switching entries
+        isGeneratingInsight: false,
       ),
     );
 
-    // CP: Generate insight for selected entry
-    _generateInsightForEntry(index);
+    // CC: Check if entry already has insight
+    if (index < state.entries.length) {
+      final entry = state.entries[index];
+      if (entry.insight == null) {
+        // CC: Generate insight for selected entry
+        _generateInsightForEntry(index);
+      }
+    }
   }
 
   Future<void> _generateInsightForEntry(int index) async {
     if (index >= state.entries.length) return;
 
     final entry = state.entries[index];
-    final cacheKey = '${entry.timestamp.millisecondsSinceEpoch}_${entry.text}';
 
-    if (state.insightsCache.containsKey(cacheKey)) {
-      final cachedInsight = state.insightsCache[cacheKey];
-      if (cachedInsight is ComprehensiveInsight) {
-        emit(state.copyWith(currentInsight: cachedInsight));
-        return;
-      }
+    // CC: Skip if entry already has insight
+    if (entry.insight != null) {
+      print('DEBUG: _generateInsightForEntry - Entry at index $index already has insight, skipping');
+      return;
     }
 
-    emit(state.copyWith(isGeneratingInsight: true));
+    // CC: Only set isGeneratingInsight if this is for the selected entry
+    if (index == state.selectedCarouselIndex) {
+      emit(state.copyWith(isGeneratingInsight: true));
+    }
 
     try {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
@@ -73,22 +80,44 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         currentDate: DateTime.now(), // CC: Pass current date for temporal context
       );
 
-      final updatedCache = Map<String, ComprehensiveInsight>.from(state.insightsCache);
-      updatedCache[cacheKey] = comprehensiveInsight;
+      // CC: Update entry with insight
+      final updatedEntry = entry.copyWith(insight: comprehensiveInsight);
+      await _entryRepository.updateEntry(entry, updatedEntry);
 
+      // CC: Update local state with new entries list
+      final updatedEntries = _entryRepository.currentEntries;
+      
+      // CC: Only update isGeneratingInsight if this was for the selected entry
       emit(
         state.copyWith(
-          currentInsight: comprehensiveInsight,
-          insightsCache: updatedCache,
-          isGeneratingInsight: false,
+          entries: updatedEntries,
+          isGeneratingInsight: index == state.selectedCarouselIndex ? false : null,
         ),
       );
     } catch (e) {
-      emit(
-        state.copyWith(
-          isGeneratingInsight: false,
-        ),
-      );
+      // CC: Only update isGeneratingInsight if this was for the selected entry
+      if (index == state.selectedCarouselIndex) {
+        emit(
+          state.copyWith(
+            isGeneratingInsight: false,
+          ),
+        );
+      }
+    }
+  }
+
+  // CC: Generate insights for up to 3 recent entries that don't have insights
+  void _generateInsightsForRecentEntries() async {
+    final entries = state.entries;
+    int insightsGenerated = 0;
+    
+    for (int i = 0; i < entries.length && insightsGenerated < 3; i++) {
+      if (entries[i].insight == null) {
+        // Don't await - let them generate in parallel
+        _generateInsightForEntry(i);
+        insightsGenerated++;
+      } else {
+      }
     }
   }
 }

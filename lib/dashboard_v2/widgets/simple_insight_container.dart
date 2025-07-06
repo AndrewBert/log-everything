@@ -5,34 +5,47 @@ import 'package:myapp/utils/dashboard_v2_keys.dart';
 class SimpleInsightContainer extends StatelessWidget {
   final Insight? insight;
   final bool isLoading;
+  final VoidCallback? onTap;
   
   const SimpleInsightContainer({
     super.key,
     this.insight,
     this.isLoading = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return AnimatedContainer(
-      key: aiInsightContainerKey,
-      duration: const Duration(milliseconds: 300),
-      height: insight != null || isLoading ? null : 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: insight != null || isLoading 
-          ? const EdgeInsets.all(16) 
-          : EdgeInsets.zero,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        key: aiInsightContainerKey,
+        duration: const Duration(milliseconds: 300),
+        height: insight != null || isLoading ? 160 : 0, // CC: Fixed height doubled
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: insight != null || isLoading 
+            ? const EdgeInsets.all(16) 
+            : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+          ),
         ),
-      ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: child,
+            ),
+          );
+        },
         child: isLoading
             ? Row(
                 key: const ValueKey('loading'),
@@ -71,6 +84,8 @@ class SimpleInsightContainer extends StatelessWidget {
                       Expanded(
                         child: Text(
                           insight!.content,
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -79,6 +94,7 @@ class SimpleInsightContainer extends StatelessWidget {
                     ],
                   )
                 : const SizedBox.shrink(key: ValueKey('empty')),
+        ),
       ),
     );
   }

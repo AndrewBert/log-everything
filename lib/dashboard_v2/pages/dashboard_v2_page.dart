@@ -57,6 +57,12 @@ class DashboardV2Page extends StatelessWidget {
                             return SimpleInsightContainer(
                               insight: primaryInsight,
                               isLoading: state.isGeneratingInsight,
+                              onTap: primaryInsight != null && state.selectedCarouselIndex < state.entries.length
+                                  ? () {
+                                      final entry = state.entries[state.selectedCarouselIndex];
+                                      _navigateToEntryDetails(context, entry, state);
+                                    }
+                                  : null,
                             );
                           },
                         ),
@@ -143,9 +149,8 @@ class DashboardV2Page extends StatelessWidget {
   }
 
   void _navigateToEntryDetails(BuildContext context, Entry entry, DashboardV2State state) {
-    // CP: Find the comprehensive insight for this entry if it exists
-    final cacheKey = '${entry.timestamp.millisecondsSinceEpoch}_${entry.text}';
-    final comprehensiveInsight = state.insightsCache[cacheKey];
+    // CC: Get insight directly from entry
+    final comprehensiveInsight = entry.insight;
     final summaryInsight = comprehensiveInsight?.getInsightByType(InsightType.summary);
 
     Navigator.of(context).push(

@@ -8,6 +8,41 @@ enum InsightType {
   recommendation,
 }
 
+// CC: Helper to convert InsightType to/from string
+extension InsightTypeExtension on InsightType {
+  String get name {
+    switch (this) {
+      case InsightType.summary:
+        return 'summary';
+      case InsightType.emotion:
+        return 'emotion';
+      case InsightType.pattern:
+        return 'pattern';
+      case InsightType.theme:
+        return 'theme';
+      case InsightType.recommendation:
+        return 'recommendation';
+    }
+  }
+
+  static InsightType fromString(String name) {
+    switch (name) {
+      case 'summary':
+        return InsightType.summary;
+      case 'emotion':
+        return InsightType.emotion;
+      case 'pattern':
+        return InsightType.pattern;
+      case 'theme':
+        return InsightType.theme;
+      case 'recommendation':
+        return InsightType.recommendation;
+      default:
+        throw ArgumentError('Unknown InsightType: $name');
+    }
+  }
+}
+
 class Insight extends Equatable {
   final String id;
   final InsightType type;
@@ -27,6 +62,29 @@ class Insight extends Equatable {
 
   @override
   List<Object?> get props => [id, type, title, content, generatedAt, metadata];
+
+  // CC: JSON serialization
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': type.name,
+      'title': title,
+      'content': content,
+      'generatedAt': generatedAt.toIso8601String(),
+      'metadata': metadata,
+    };
+  }
+
+  factory Insight.fromJson(Map<String, dynamic> json) {
+    return Insight(
+      id: json['id'] as String,
+      type: InsightTypeExtension.fromString(json['type'] as String),
+      title: json['title'] as String,
+      content: json['content'] as String,
+      generatedAt: DateTime.parse(json['generatedAt'] as String),
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
 }
 
 class ComprehensiveInsight extends Equatable {
@@ -83,4 +141,27 @@ class ComprehensiveInsight extends Equatable {
 
   @override
   List<Object?> get props => [entryId, entryText, insights, generatedAt, priority];
+
+  // CC: JSON serialization
+  Map<String, dynamic> toJson() {
+    return {
+      'entryId': entryId,
+      'entryText': entryText,
+      'insights': insights.map((insight) => insight.toJson()).toList(),
+      'generatedAt': generatedAt.toIso8601String(),
+      'priority': priority,
+    };
+  }
+
+  factory ComprehensiveInsight.fromJson(Map<String, dynamic> json) {
+    return ComprehensiveInsight(
+      entryId: json['entryId'] as String,
+      entryText: json['entryText'] as String,
+      insights: (json['insights'] as List)
+          .map((insightJson) => Insight.fromJson(insightJson as Map<String, dynamic>))
+          .toList(),
+      generatedAt: DateTime.parse(json['generatedAt'] as String),
+      priority: json['priority'] as String?,
+    );
+  }
 }
