@@ -119,7 +119,6 @@ class DashboardV2Page extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (context) => CategoryEntriesPage(
                                       categoryName: categoryName,
-                                      entries: entries,
                                     ),
                                   ),
                                 );

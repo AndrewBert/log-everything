@@ -16,6 +16,7 @@ export 'widgets/category_card.dart';
 // Cubit
 export 'cubit/dashboard_v2_cubit.dart';
 export 'cubit/entry_details_cubit.dart';
+export 'cubit/category_entries_cubit.dart';
 
 // Models
 export 'model/insight.dart';

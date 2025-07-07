@@ -65,7 +65,6 @@ class AllCategoriesPage extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => CategoryEntriesPage(
                             categoryName: category.key,
-                            entries: category.value,
                           ),
                         ),
                       );

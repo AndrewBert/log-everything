@@ -34,7 +34,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       ),
     );
 
-
     // CC: Generate insights for the 3 most recent entries if they don't have insights
     _generateInsightsForRecentEntries();
   }
@@ -76,7 +75,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     try {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
       final comprehensiveInsight = await _aiService.generateEntryInsights(
-        entry.text, 
+        entry.text,
         entryId,
         currentDate: DateTime.now(), // CC: Pass current date for temporal context
       );
@@ -87,7 +86,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
       // CC: Update local state with new entries list
       final updatedEntries = _entryRepository.currentEntries;
-      
+
       // CC: Only update isGeneratingInsight if this was for the selected entry
       emit(
         state.copyWith(
@@ -110,10 +109,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   // CC: Generate insights for the 3 most recent entries if they don't have insights
   void _generateInsightsForRecentEntries() async {
     final entries = state.entries;
-    
+
     // CC: Only check the first 3 entries (most recent)
     final entriesToCheck = entries.length < 3 ? entries.length : 3;
-    
+
     for (int i = 0; i < entriesToCheck; i++) {
       if (entries[i].insight == null) {
         // Don't await - let them generate in parallel
@@ -121,20 +120,18 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       }
     }
   }
-  
+
   void _onEntriesUpdated(List<Entry> entries) {
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
         entries: entries,
         // CC: Reset selected index if it's out of bounds
-        selectedCarouselIndex: state.selectedCarouselIndex >= entries.length 
-            ? 0 
-            : state.selectedCarouselIndex,
+        selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
       ),
     );
   }
-  
+
   @override
   Future<void> close() {
     _entriesSubscription?.cancel();

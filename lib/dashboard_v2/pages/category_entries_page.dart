@@ -1,33 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import 'package:myapp/dashboard_v2/cubit/category_entries_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/square_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
-import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class CategoryEntriesPage extends StatelessWidget {
   final String categoryName;
-  final List<Entry> entries;
 
   const CategoryEntriesPage({
     super.key,
     required this.categoryName,
-    required this.entries,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(categoryName);
+    return BlocProvider(
+      create: (context) => CategoryEntriesCubit(
+        entryRepository: GetIt.instance<EntryRepository>(),
+        categoryName: categoryName,
+      ),
+      child: BlocBuilder<CategoryEntriesCubit, CategoryEntriesState>(
+        builder: (context, state) {
+          final theme = Theme.of(context);
+          final categoryColor = CategoryColors.getColorForCategory(categoryName);
 
-    return Scaffold(
+          return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(categoryName),
             Text(
-              '${entries.length} ${entries.length == 1 ? 'entry' : 'entries'}',
+              '${state.entries.length} ${state.entries.length == 1 ? 'entry' : 'entries'}',
               style: theme.textTheme.bodySmall,
             ),
           ],
@@ -72,7 +80,13 @@ class CategoryEntriesPage extends StatelessWidget {
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final entry = entries[index];
+                  if (state.isLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  
+                  final entry = state.entries[index];
                   return SquareEntryCard(
                     entry: entry,
                     onTap: () {
@@ -88,7 +102,7 @@ class CategoryEntriesPage extends StatelessWidget {
                     },
                   );
                 },
-                childCount: entries.length,
+                childCount: state.entries.length,
               ),
             ),
           ),
@@ -96,6 +110,9 @@ class CategoryEntriesPage extends StatelessWidget {
             child: SizedBox(height: 24),
           ),
         ],
+      ),
+          );
+        },
       ),
     );
   }
