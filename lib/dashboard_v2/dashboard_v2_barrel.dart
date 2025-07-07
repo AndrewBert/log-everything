@@ -2,6 +2,7 @@
 export 'pages/dashboard_v2_page.dart';
 export 'pages/entry_details_page.dart';
 export 'pages/category_entries_page.dart';
+export 'pages/all_categories_page.dart';
 
 // Widgets
 export 'widgets/square_entry_card.dart';

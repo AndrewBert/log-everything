@@ -5,11 +5,13 @@ import 'package:myapp/entry/entry.dart';
 class CategoriesCarousel extends StatelessWidget {
   final Map<String, List<Entry>> categorizedEntries;
   final Function(String category, List<Entry> entries) onCategoryTap;
+  final VoidCallback? onSeeAllTap;
 
   const CategoriesCarousel({
     super.key,
     required this.categorizedEntries,
     required this.onCategoryTap,
+    this.onSeeAllTap,
   });
 
   @override
@@ -18,6 +20,7 @@ class CategoriesCarousel extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     // CC: Same sizing as RecentEntriesCarousel
     final cardWidth = (screenWidth - 48) / 1.9;
@@ -27,14 +30,28 @@ class CategoriesCarousel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Categories',
-            style: Theme.of(context).textTheme.titleLarge,
+        // CC: Tappable header with arrow
+        InkWell(
+          onTap: onSeeAllTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Categories',
+                  style: theme.textTheme.titleLarge,
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         SizedBox(
           height: cardWidth,
           child: ListView.builder(

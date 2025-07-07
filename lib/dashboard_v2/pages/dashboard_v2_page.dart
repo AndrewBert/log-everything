@@ -108,7 +108,7 @@ class DashboardV2Page extends StatelessWidget {
                       if (categorizedEntries.isEmpty) {
                         return const SliverToBoxAdapter(child: SizedBox.shrink());
                       }
-                      
+
                       return SliverToBoxAdapter(
                         child: Column(
                           children: [
@@ -120,6 +120,15 @@ class DashboardV2Page extends StatelessWidget {
                                     builder: (context) => CategoryEntriesPage(
                                       categoryName: categoryName,
                                       entries: entries,
+                                    ),
+                                  ),
+                                );
+                              },
+                              onSeeAllTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => AllCategoriesPage(
+                                      categorizedEntries: categorizedEntries,
                                     ),
                                   ),
                                 );
