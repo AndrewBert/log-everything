@@ -81,6 +81,7 @@ class CategoryEntriesPage extends StatelessWidget {
                           builder: (context) => EntryDetailsPage(
                             entry: entry,
                             cachedInsight: entry.insight?.getInsightByType(InsightType.summary),
+                            allowCategoryEdit: false,
                           ),
                         ),
                       );

@@ -11,11 +11,13 @@ import 'package:myapp/utils/category_colors.dart';
 class EntryDetailsPage extends StatelessWidget {
   final Entry entry;
   final Insight? cachedInsight;
+  final bool allowCategoryEdit;
 
   const EntryDetailsPage({
     super.key,
     required this.entry,
     this.cachedInsight,
+    this.allowCategoryEdit = true,
   });
 
   @override
@@ -97,11 +99,12 @@ class EntryDetailsPage extends StatelessWidget {
                 : const Text('Save'),
           ),
         ] else ...[
-          IconButton(
-            key: categoryButtonKey,
-            icon: const Icon(Icons.category_outlined),
-            onPressed: () => _showCategoryDialog(context, state),
-          ),
+          if (allowCategoryEdit)
+            IconButton(
+              key: categoryButtonKey,
+              icon: const Icon(Icons.category_outlined),
+              onPressed: () => _showCategoryDialog(context, state),
+            ),
           IconButton(
             key: deleteButtonKey,
             icon: const Icon(Icons.delete_outline),
