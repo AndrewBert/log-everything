@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
+import 'package:myapp/dashboard_v2/widgets/categories_carousel.dart';
+import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
@@ -99,6 +101,37 @@ class DashboardV2Page extends StatelessWidget {
                   ),
                   const SliverToBoxAdapter(
                     child: SizedBox(height: 24),
+                  ),
+                  // CC: Categories carousel
+                  BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                    buildWhen: (prev, current) => prev.entries != current.entries,
+                    builder: (context, state) {
+                      final categorizedEntries = state.categorizedEntries;
+                      if (categorizedEntries.isEmpty) {
+                        return const SliverToBoxAdapter(child: SizedBox.shrink());
+                      }
+                      
+                      return SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            CategoriesCarousel(
+                              categorizedEntries: categorizedEntries,
+                              onCategoryTap: (categoryName, entries) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryEntriesPage(
+                                      categoryName: categoryName,
+                                      entries: entries,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
