@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/square_entry_card.dart';
+import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/category_colors.dart';
 
@@ -55,6 +56,10 @@ class CategoryEntriesPage extends StatelessWidget {
           const SliverToBoxAdapter(
             child: SizedBox(height: 16),
           ),
+          // TODO: Add AI insight container for the entire category
+          // - Generate insights about patterns, trends, and summaries for all entries in this category
+          // - Could include: most common themes, time patterns, emotional trends, suggestions
+          // - Use SimpleInsightContainer or create a new CategoryInsightContainer widget
           // CC: Grid of entries
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -75,6 +80,7 @@ class CategoryEntriesPage extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => EntryDetailsPage(
                             entry: entry,
+                            cachedInsight: entry.insight?.getInsightByType(InsightType.summary),
                           ),
                         ),
                       );
