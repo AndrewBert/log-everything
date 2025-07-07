@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
-import 'package:myapp/dashboard_v2/widgets/categories_carousel.dart';
-import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';

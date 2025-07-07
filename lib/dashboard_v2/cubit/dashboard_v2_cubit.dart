@@ -33,7 +33,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     print('DEBUG: loadEntries - First entry has insight: ${entries.isNotEmpty ? entries[0].insight != null : false}');
     print('DEBUG: loadEntries - isGeneratingInsight: ${state.isGeneratingInsight}');
 
-    // CC: Generate insights for the most recent 3 entries without insights
+    // CC: Generate insights for the 3 most recent entries if they don't have insights
     _generateInsightsForRecentEntries();
   }
 
@@ -106,17 +106,17 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     }
   }
 
-  // CC: Generate insights for up to 3 recent entries that don't have insights
+  // CC: Generate insights for the 3 most recent entries if they don't have insights
   void _generateInsightsForRecentEntries() async {
     final entries = state.entries;
-    int insightsGenerated = 0;
     
-    for (int i = 0; i < entries.length && insightsGenerated < 3; i++) {
+    // CC: Only check the first 3 entries (most recent)
+    final entriesToCheck = entries.length < 3 ? entries.length : 3;
+    
+    for (int i = 0; i < entriesToCheck; i++) {
       if (entries[i].insight == null) {
         // Don't await - let them generate in parallel
         _generateInsightForEntry(i);
-        insightsGenerated++;
-      } else {
       }
     }
   }
