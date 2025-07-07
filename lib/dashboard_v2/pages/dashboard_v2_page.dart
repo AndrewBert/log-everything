@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
+import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
@@ -66,7 +67,16 @@ class DashboardV2Page extends StatelessWidget {
                             );
                           },
                         ),
-                        const SizedBox(height: 12),
+                        BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                          buildWhen: (prev, current) =>
+                              prev.currentInsight != current.currentInsight ||
+                              prev.isGeneratingInsight != current.isGeneratingInsight,
+                          builder: (context, state) {
+                            return ConnectingLine(
+                              isVisible: state.currentInsight != null || state.isGeneratingInsight,
+                            );
+                          },
+                        ),
                         BlocBuilder<DashboardV2Cubit, DashboardV2State>(
                           buildWhen: (prev, current) =>
                               prev.selectedCarouselIndex != current.selectedCarouselIndex ||

@@ -55,6 +55,7 @@ class RecentEntriesCarousel extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 child: SquareEntryCard(
                   entry: entry,
+                  isSelected: isSelected,
                   onTap: () {
                     // CP: If we have a navigation callback, use it
                     if (onEntryTap != null) {

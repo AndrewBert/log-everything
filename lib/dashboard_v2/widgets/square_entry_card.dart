@@ -6,11 +6,13 @@ import 'package:myapp/utils/category_colors.dart';
 class SquareEntryCard extends StatelessWidget {
   final Entry entry;
   final VoidCallback? onTap;
+  final bool isSelected;
   
   const SquareEntryCard({
     super.key,
     required this.entry,
     this.onTap,
+    this.isSelected = false,
   });
 
   @override
@@ -30,8 +32,20 @@ class SquareEntryCard extends StatelessWidget {
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              color: isSelected 
+                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
+                  : theme.colorScheme.outline.withValues(alpha: 0.2),
+              width: isSelected ? 2 : 1,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
