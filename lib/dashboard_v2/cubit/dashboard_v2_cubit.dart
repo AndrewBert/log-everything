@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -11,11 +12,15 @@ part 'dashboard_v2_state.dart';
 class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
   final AiService _aiService = GetIt.instance<AiService>();
+  StreamSubscription<List<Entry>>? _entriesSubscription;
 
   DashboardV2Cubit({
     required EntryRepository entryRepository,
   }) : _entryRepository = entryRepository,
-       super(const DashboardV2State());
+       super(const DashboardV2State()) {
+    // CC: Subscribe to entries stream
+    _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
+  }
 
   void loadEntries() {
     emit(state.copyWith(isLoading: true));
@@ -29,9 +34,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       ),
     );
 
-    // CC: The first entry's insight (if any) will be shown via the getter
-    print('DEBUG: loadEntries - First entry has insight: ${entries.isNotEmpty ? entries[0].insight != null : false}');
-    print('DEBUG: loadEntries - isGeneratingInsight: ${state.isGeneratingInsight}');
 
     // CC: Generate insights for the 3 most recent entries if they don't have insights
     _generateInsightsForRecentEntries();
@@ -63,7 +65,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     // CC: Skip if entry already has insight
     if (entry.insight != null) {
-      print('DEBUG: _generateInsightForEntry - Entry at index $index already has insight, skipping');
       return;
     }
 
@@ -119,5 +120,24 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         _generateInsightForEntry(i);
       }
     }
+  }
+  
+  void _onEntriesUpdated(List<Entry> entries) {
+    // CC: Update state with new entries from stream
+    emit(
+      state.copyWith(
+        entries: entries,
+        // CC: Reset selected index if it's out of bounds
+        selectedCarouselIndex: state.selectedCarouselIndex >= entries.length 
+            ? 0 
+            : state.selectedCarouselIndex,
+      ),
+    );
+  }
+  
+  @override
+  Future<void> close() {
+    _entriesSubscription?.cancel();
+    return super.close();
   }
 }

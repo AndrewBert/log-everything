@@ -19,6 +19,10 @@ class EntryRepository {
   // CP: Map to store debounce timers for each month's sync
   final Map<String, Timer> _syncDebounceTimers = {};
   static const _syncDebounceMs = 2000; // CP: 2 second debounce
+  
+  // CC: Stream controller for reactive updates
+  final _entriesStreamController = StreamController<List<Entry>>.broadcast();
+  Stream<List<Entry>> get entriesStream => _entriesStreamController.stream;
 
   List<Entry> get currentEntries => List.unmodifiable(_entries);
   List<Category> get currentCategories => List.unmodifiable(_categories);
@@ -36,6 +40,9 @@ class EntryRepository {
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
+    
+    // CC: Emit initial entries to stream
+    _entriesStreamController.add(currentEntries);
 
     AppLogger.info("Repository: Triggering initial vector store backfill check (background).");
     _vectorStoreService
@@ -106,6 +113,8 @@ class EntryRepository {
     try {
       await _persistenceService.saveEntries(_entries);
       AppLogger.info('Repository: Saved ${_entries.length} entries.');
+      // CC: Emit updated entries to stream
+      _entriesStreamController.add(currentEntries);
     } catch (e) {
       AppLogger.error('Repository: Error saving entries', error: e);
     }
@@ -485,6 +494,8 @@ class EntryRepository {
       timer.cancel();
     }
     _syncDebounceTimers.clear();
+    // CC: Close the stream controller
+    _entriesStreamController.close();
     AppLogger.info("[EntryRepository] Disposed and cancelled all pending timers");
   }
 }
