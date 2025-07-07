@@ -260,7 +260,6 @@ class EntryDetailsPage extends StatelessWidget {
                   ),
                 ),
                 title: Text(category.name),
-                subtitle: Text(category.description),
                 selected: isSelected,
                 onTap: () {
                   Navigator.of(dialogContext).pop();

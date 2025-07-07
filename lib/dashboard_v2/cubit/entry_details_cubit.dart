@@ -122,9 +122,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
           isLoading: false,
         ),
       );
-
-      // CP: Regenerate insight as category change might affect analysis
-      _generateSummaryInsight(updatedEntry);
     } catch (e) {
       emit(
         state.copyWith(
