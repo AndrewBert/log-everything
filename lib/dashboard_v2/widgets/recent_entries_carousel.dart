@@ -24,8 +24,8 @@ class RecentEntriesCarousel extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // CP: Calculate card width to show 2 cards plus a small peek of the third
-    final cardWidth = (screenWidth - 48) / 1.9; // Wider cards, less peek of third
+    // CC: Match the grid card width: (screenWidth - 32 padding - 12 gap) / 2
+    final cardWidth = (screenWidth - 32 - 12) / 2;
     final pageController = PageController(
       initialPage: selectedIndex,
       viewportFraction: cardWidth / screenWidth,
@@ -44,31 +44,36 @@ class RecentEntriesCarousel extends StatelessWidget {
 
           return Padding(
             padding: EdgeInsets.only(
-              left: index == 0 ? 16 : 8,
-              right: index == entries.length - 1 ? 16 : 8,
+              left: index == 0 ? 16 : 6,
+              right: index == entries.length - 1 ? 16 : 6,
             ),
-            child: AnimatedScale(
-              scale: isSelected ? 1.0 : 0.95,
-              duration: const Duration(milliseconds: 200),
-              child: AnimatedOpacity(
-                opacity: isSelected ? 1.0 : 0.7,
+            child: Center(
+              child: AnimatedScale(
+                scale: isSelected ? 1.0 : 0.9,
                 duration: const Duration(milliseconds: 200),
-                child: SquareEntryCard(
-                  entry: entry,
-                  isSelected: isSelected,
-                  onTap: () {
-                    // CP: If we have a navigation callback, use it
-                    if (onEntryTap != null) {
-                      onEntryTap!(entry);
-                    } else {
-                      // CP: Otherwise, animate to tapped card
-                      pageController.animateToPage(
-                        index,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
+                child: AnimatedOpacity(
+                  opacity: isSelected ? 1.0 : 0.6,
+                  duration: const Duration(milliseconds: 200),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: SquareEntryCard(
+                      entry: entry,
+                      isSelected: isSelected,
+                      onTap: () {
+                        // CP: If we have a navigation callback, use it
+                        if (onEntryTap != null) {
+                          onEntryTap!(entry);
+                        } else {
+                          // CP: Otherwise, animate to tapped card
+                          pageController.animateToPage(
+                            index,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
