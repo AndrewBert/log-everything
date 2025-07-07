@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
+import 'package:myapp/dashboard_v2/widgets/shimmer_loading.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
 class SimpleInsightContainer extends StatelessWidget {
   final Insight? insight;
   final bool isLoading;
   final VoidCallback? onTap;
-  
+
   const SimpleInsightContainer({
     super.key,
     this.insight,
@@ -17,7 +18,7 @@ class SimpleInsightContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -25,9 +26,7 @@ class SimpleInsightContainer extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         height: insight != null || isLoading ? 160 : 0, // CC: Fixed height doubled
         margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: insight != null || isLoading 
-            ? const EdgeInsets.all(16) 
-            : EdgeInsets.zero,
+        padding: insight != null || isLoading ? const EdgeInsets.all(16) : EdgeInsets.zero,
         decoration: BoxDecoration(
           color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
@@ -35,65 +34,45 @@ class SimpleInsightContainer extends StatelessWidget {
             color: theme.colorScheme.primary.withValues(alpha: 0.2),
           ),
         ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: child,
-            ),
-          );
-        },
-        child: isLoading
-            ? Row(
-                key: const ValueKey('loading'),
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
-                      ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: child,
+              ),
+            );
+          },
+          child: isLoading
+              ? const ShimmerLoading(key: ValueKey('loading'))
+              : insight != null
+              ? Row(
+                  key: ValueKey(insight),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _getIconForType(insight!.type),
+                      size: 20,
+                      color: theme.colorScheme.primary,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Generating insight...',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              )
-            : insight != null
-                ? Row(
-                    key: ValueKey(insight),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        _getIconForType(insight!.type),
-                        size: 20,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          insight!.content,
-                          maxLines: 5,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        insight!.content,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                          height: 1.5,
                         ),
                       ),
-                    ],
-                  )
-                : const SizedBox.shrink(key: ValueKey('empty')),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ),
     );
