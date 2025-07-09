@@ -12,6 +12,7 @@ export 'widgets/comprehensive_insight_container.dart';
 export 'widgets/simple_insight_container.dart';
 export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';
+export 'widgets/floating_input_bar.dart';
 
 // Cubit
 export 'cubit/dashboard_v2_cubit.dart';
