@@ -46,8 +46,6 @@ class EntryDetailsPage extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, EntryDetailsState state) {
-    final cubit = context.read<EntryDetailsCubit>();
-    final theme = Theme.of(context);
     final entry = state.entry;
 
     if (entry == null) {
@@ -95,16 +93,90 @@ class EntryDetailsPage extends StatelessWidget {
     final categoryColor = CategoryColors.getColorForCategory(entry.category);
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Magazine-style header with date and category
+          // Main content - entry text (first, as user's primary focus)
+          GestureDetector(
+            onTap: state.isEditing ? null : () => context.read<EntryDetailsCubit>().startEditing(),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: state.isEditing
+                  ? TextField(
+                      key: entryTextFieldKey,
+                      controller: context.read<EntryDetailsCubit>().textController,
+                      focusNode: context.read<EntryDetailsCubit>().textFocusNode,
+                      maxLines: null,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontSize: 20,
+                        height: 1.6,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: categoryColor.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: categoryColor,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(20),
+                        helperText: '${state.editedText?.length ?? 0} characters',
+                        helperStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
+                      onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
+                    )
+                  : SizedBox(
+                      key: entryTextViewKey,
+                      width: double.infinity,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText(
+                            entry.text,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontSize: 20,
+                              height: 1.6,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Tap to edit',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+          
+          const SizedBox(height: 40),
+          
+          // Magazine-style date and metadata section
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
               border: Border(
+                top: BorderSide(
+                  color: theme.colorScheme.outlineVariant,
+                  width: 1,
+                ),
                 bottom: BorderSide(
                   color: theme.colorScheme.outlineVariant,
                   width: 1,
@@ -119,14 +191,14 @@ class EntryDetailsPage extends StatelessWidget {
                   dateFormat.format(entry.timestamp).toUpperCase(),
                   key: entryTimestampKey,
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
+                    letterSpacing: -0.5,
                     height: 1,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Text(
@@ -174,121 +246,44 @@ class EntryDetailsPage extends StatelessWidget {
             ),
           ),
 
-          // Content area
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Summary insight as pull-quote style
-                if (state.summaryInsight != null || state.isRegeneratingInsight)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 32),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: categoryColor,
-                          width: 4,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[  
-                          Text(
-                            '"${state.summaryInsight!.content}"',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w300,
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'AI INSIGHT',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              letterSpacing: 1.5,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ] else
-                          const CircularProgressIndicator(),
-                      ],
-                    ),
-                  ),
-
-                // Main content - entry text
-                GestureDetector(
-                  onTap: state.isEditing ? null : () => context.read<EntryDetailsCubit>().startEditing(),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: state.isEditing
-                        ? TextField(
-                            key: entryTextFieldKey,
-                            controller: context.read<EntryDetailsCubit>().textController,
-                            focusNode: context.read<EntryDetailsCubit>().textFocusNode,
-                            maxLines: null,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 20,
-                              height: 1.6,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: categoryColor.withValues(alpha: 0.3),
-                                  width: 2,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: categoryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.all(20),
-                              helperText: '${state.editedText?.length ?? 0} characters',
-                              helperStyle: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
-                            onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
-                          )
-                        : Container(
-                            key: entryTextViewKey,
-                            width: double.infinity,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SelectableText(
-                                  entry.text,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    fontSize: 20,
-                                    height: 1.6,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Tap to edit',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+          // AI Insight as pull-quote style (at the bottom)
+          if (state.summaryInsight != null || state.isRegeneratingInsight)
+            Container(
+              margin: const EdgeInsets.only(top: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: categoryColor,
+                    width: 4,
                   ),
                 ),
-              ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[  
+                    Text(
+                      '"${state.summaryInsight!.content}"',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w300,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'AI INSIGHT',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ] else
+                    const CircularProgressIndicator(),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
