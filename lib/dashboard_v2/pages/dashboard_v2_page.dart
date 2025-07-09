@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
+import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/entry/entry.dart';
-import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
@@ -129,7 +129,13 @@ class DashboardV2Page extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (context) => AllCategoriesPage(
                                       categorizedEntries: categorizedEntries,
-                                      onAddCategory: () => _showAddCategoryDialog(context),
+                                      onAddCategory: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => const AddCategoryPage(),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 );
@@ -210,72 +216,6 @@ class DashboardV2Page extends StatelessWidget {
           entry: entry,
           cachedInsight: summaryInsight,
         ),
-      ),
-    );
-  }
-
-  void _showAddCategoryDialog(BuildContext context) {
-    final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('New Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                hintText: 'Enter category name',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.words,
-              autofocus: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (Optional)',
-                hintText: 'Add a description for this category',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final description = descriptionController.text.trim();
-              
-              if (name.isNotEmpty) {
-                context.read<EntryCubit>().addCustomCategoryWithDescription(
-                  name,
-                  description,
-                );
-                Navigator.of(dialogContext).pop();
-                
-                // CC: Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Category "$name" created'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }

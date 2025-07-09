@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/cubit/category_entries_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
+import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/square_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/entry/category.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class CategoryEntriesPage extends StatelessWidget {
@@ -28,6 +28,7 @@ class CategoryEntriesPage extends StatelessWidget {
         builder: (context, state) {
           final theme = Theme.of(context);
           final categoryColor = CategoryColors.getColorForCategory(categoryName);
+          final cubit = context.read<CategoryEntriesCubit>();
 
           return Scaffold(
             appBar: AppBar(
@@ -46,7 +47,18 @@ class CategoryEntriesPage extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _showEditCategoryDialog(context, state.category),
+                  onPressed: () {
+                    if (state.category != null) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => BlocProvider.value(
+                            value: cubit,
+                            child: EditCategoryPage(category: state.category!),
+                          ),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -162,64 +174,6 @@ class CategoryEntriesPage extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showEditCategoryDialog(BuildContext context, Category? category) {
-    if (category == null) return;
-
-    final nameController = TextEditingController(text: category.name);
-    final descriptionController = TextEditingController(text: category.description);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Add a description for this category',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newName = nameController.text.trim();
-              final newDescription = descriptionController.text.trim();
-
-              if (newName.isNotEmpty) {
-                context.read<CategoryEntriesCubit>().updateCategory(
-                  newName,
-                  newDescription,
-                );
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
