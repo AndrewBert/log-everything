@@ -29,6 +29,18 @@ class AllCategoriesPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('All Categories'),
         elevation: 0,
+        actions: [
+          if (onAddCategory != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                icon: const Icon(Icons.add),
+                iconSize: 32,
+                onPressed: onAddCategory,
+                tooltip: 'Add Category',
+              ),
+            ),
+        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -82,13 +94,6 @@ class AllCategoriesPage extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: onAddCategory != null
-          ? FloatingActionButton.extended(
-              onPressed: onAddCategory,
-              label: const Text('New Category'),
-              icon: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }

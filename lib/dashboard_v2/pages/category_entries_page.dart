@@ -168,10 +168,10 @@ class CategoryEntriesPage extends StatelessWidget {
 
   void _showEditCategoryDialog(BuildContext context, Category? category) {
     if (category == null) return;
-    
+
     final nameController = TextEditingController(text: category.name);
     final descriptionController = TextEditingController(text: category.description);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -208,7 +208,7 @@ class CategoryEntriesPage extends StatelessWidget {
             onPressed: () {
               final newName = nameController.text.trim();
               final newDescription = descriptionController.text.trim();
-              
+
               if (newName.isNotEmpty) {
                 context.read<CategoryEntriesCubit>().updateCategory(
                   newName,
