@@ -165,19 +165,52 @@ class EntryDetailsPage extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 40),
+          // AI Insight as pull-quote style
+          if (state.summaryInsight != null || state.isRegeneratingInsight)
+            Container(
+              margin: const EdgeInsets.only(top: 40, bottom: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: categoryColor,
+                    width: 4,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[  
+                    Text(
+                      '"${state.summaryInsight!.content}"',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w300,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'AI INSIGHT',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ] else
+                    const CircularProgressIndicator(),
+                ],
+              ),
+            ),
           
-          // Magazine-style date and metadata section
+          // Magazine-style date and metadata section (at the very bottom)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                  width: 1,
-                ),
-                bottom: BorderSide(
                   color: theme.colorScheme.outlineVariant,
                   width: 1,
                 ),
@@ -245,45 +278,6 @@ class EntryDetailsPage extends StatelessWidget {
               ],
             ),
           ),
-
-          // AI Insight as pull-quote style (at the bottom)
-          if (state.summaryInsight != null || state.isRegeneratingInsight)
-            Container(
-              margin: const EdgeInsets.only(top: 40),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: categoryColor,
-                    width: 4,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[  
-                    Text(
-                      '"${state.summaryInsight!.content}"',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w300,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'AI INSIGHT',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        letterSpacing: 1.5,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ] else
-                    const CircularProgressIndicator(),
-                ],
-              ),
-            ),
         ],
       ),
     );
