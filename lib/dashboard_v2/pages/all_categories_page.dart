@@ -5,10 +5,12 @@ import 'package:myapp/entry/entry.dart';
 
 class AllCategoriesPage extends StatelessWidget {
   final Map<String, List<Entry>> categorizedEntries;
+  final VoidCallback? onAddCategory;
 
   const AllCategoriesPage({
     super.key,
     required this.categorizedEntries,
+    this.onAddCategory,
   });
 
   @override
@@ -80,6 +82,13 @@ class AllCategoriesPage extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: onAddCategory != null
+          ? FloatingActionButton.extended(
+              onPressed: onAddCategory,
+              label: const Text('New Category'),
+              icon: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

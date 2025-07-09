@@ -154,7 +154,6 @@ External APIs (OpenAI, Local Storage)
 4. Mock services, provide cubits via `BlocProvider` in tests
 
 ### Error Prevention
-- Always check widget `mounted` state before setState-like operations
 - Use `Equatable` for state classes to ensure proper equality checks
 - Handle null cases in `copyWith` methods explicitly
 - Test error scenarios and fallback behaviors
@@ -173,8 +172,3 @@ When asked to create an IPA for iOS release, Claude should:
 - Update the `changes` list with recent features (keep concise, 3-4 items max)
 - Update the title section to reflect the theme of the update (e.g., "The Gesture Update")
 - Focus on user-facing improvements, not technical architecture changes
-
-## Development Notes
-
-### Incomplete Commands
-- **little-boy-test feature**: Branch created but worktree setup incomplete - need to complete feature development workflow

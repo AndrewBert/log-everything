@@ -6,6 +6,7 @@ import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/square_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class CategoryEntriesPage extends StatelessWidget {
@@ -33,7 +34,7 @@ class CategoryEntriesPage extends StatelessWidget {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(categoryName),
+                  Text(state.category?.name ?? categoryName),
                   Text(
                     '${state.entries.length} ${state.entries.length == 1 ? 'entry' : 'entries'}',
                     style: theme.textTheme.bodySmall,
@@ -42,6 +43,12 @@ class CategoryEntriesPage extends StatelessWidget {
               ),
               elevation: 0,
               backgroundColor: categoryColor.withValues(alpha: 0.1),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _showEditCategoryDialog(context, state.category),
+                ),
+              ],
             ),
             body: CustomScrollView(
               slivers: [
@@ -61,6 +68,49 @@ class CategoryEntriesPage extends StatelessWidget {
                     ),
                   ),
                 ),
+                // CC: Category description
+                if (state.category?.description != null && state.category!.description.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: categoryColor.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'About this category',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.category!.description,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 16),
                 ),
@@ -112,6 +162,64 @@ class CategoryEntriesPage extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(BuildContext context, Category? category) {
+    if (category == null) return;
+    
+    final nameController = TextEditingController(text: category.name);
+    final descriptionController = TextEditingController(text: category.description);
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Category Name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'Add a description for this category',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newName = nameController.text.trim();
+              final newDescription = descriptionController.text.trim();
+              
+              if (newName.isNotEmpty) {
+                context.read<CategoryEntriesCubit>().updateCategory(
+                  newName,
+                  newDescription,
+                );
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
