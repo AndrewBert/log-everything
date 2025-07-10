@@ -25,77 +25,86 @@ class RecentEntriesCarousel extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // CC: Calculate card width to fit exactly 2 cards between insight container edges
-    // Total space = screenWidth - 32px (insight margins) - 16px (card's left padding)
-    final cardGap = 4.0;
-    final totalAvailableWidth = screenWidth - 32 - 16;
-    final cardWidth = (totalAvailableWidth - cardGap) / 2;
+    // CC: Calculate card width to fit exactly 2 cards aligned with insight container
+    // Insight container has 16px margin on each side
+    final containerPadding = 16.0;
+    final cardGap = 8.0;
+    final availableWidth = screenWidth - (containerPadding * 2);
+    final cardWidth = (availableWidth - cardGap) / 2;
 
-    // CC: Viewport = one card + gap + left padding to ensure proper scrolling
-    final viewportFraction = (cardWidth + cardGap + 16) / screenWidth;
+    // CC: Set viewport fraction to show 2 cards with proper spacing
+    final viewportFraction = (cardWidth + cardGap / 2) / availableWidth;
 
     final carouselController = CarouselSliderController();
 
-    return SizedBox(
-      key: recentEntriesCarouselKey,
-      height: cardWidth,
-      child: CarouselSlider.builder(
-        carouselController: carouselController,
-        options: CarouselOptions(
-          height: cardWidth,
-          viewportFraction: viewportFraction,
-          initialPage: selectedIndex,
-          enableInfiniteScroll: false,
-          onPageChanged: (index, reason) {
-            if (index < entries.length) {
-              onPageChanged(index);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: containerPadding),
+      child: SizedBox(
+        key: recentEntriesCarouselKey,
+        height: cardWidth,
+        child: CarouselSlider.builder(
+          carouselController: carouselController,
+          options: CarouselOptions(
+            height: cardWidth,
+            viewportFraction: viewportFraction,
+            initialPage: selectedIndex,
+            enableInfiniteScroll: false,
+            onPageChanged: (index, reason) {
+              if (index < entries.length) {
+                onPageChanged(index);
+              }
+            },
+            disableCenter: true,
+            padEnds: false,
+            enlargeCenterPage: false,
+            pageSnapping: true,
+            scrollDirection: Axis.horizontal,
+          ),
+          itemCount: entries.length + 1, // CC: Add ghost item for scrolling
+          itemBuilder: (context, index, realIndex) {
+            // CC: Return empty container for ghost item
+            if (index >= entries.length) {
+              return SizedBox(width: cardWidth);
             }
-          },
-          padEnds: false,
-          enlargeCenterPage: false,
-          pageSnapping: true,
-          scrollDirection: Axis.horizontal,
-        ),
-        itemCount: entries.length,
-        itemBuilder: (context, index, realIndex) {
-          final entry = entries[index];
-          final isSelected = index == selectedIndex;
 
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 16.0, // CC: All cards have consistent left padding
-              right: cardGap,
-            ),
-            child: AnimatedScale(
-              scale: isSelected ? 1.0 : 0.95,
-              duration: const Duration(milliseconds: 200),
-              child: AnimatedOpacity(
-                opacity: isSelected ? 1.0 : 0.85,
+            final entry = entries[index];
+            final isSelected = index == selectedIndex;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                right: index < entries.length - 1 ? cardGap : 0,
+              ),
+              child: AnimatedScale(
+                scale: isSelected ? 1.0 : 0.95,
                 duration: const Duration(milliseconds: 200),
-                child: AspectRatio(
-                  aspectRatio: 1.0,
-                  child: SquareEntryCard(
-                    entry: entry,
-                    isSelected: isSelected,
-                    onTap: () {
-                      // CP: If we have a navigation callback, use it
-                      if (onEntryTap != null) {
-                        onEntryTap!(entry);
-                      } else {
-                        // CP: Otherwise, animate to tapped card
-                        carouselController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
+                child: AnimatedOpacity(
+                  opacity: isSelected ? 1.0 : 0.85,
+                  duration: const Duration(milliseconds: 200),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: SquareEntryCard(
+                      entry: entry,
+                      isSelected: isSelected,
+                      onTap: () {
+                        // CP: If we have a navigation callback, use it
+                        if (onEntryTap != null) {
+                          onEntryTap!(entry);
+                        } else {
+                          // CP: Otherwise, animate to tapped card
+                          carouselController.animateToPage(
+                            index,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
