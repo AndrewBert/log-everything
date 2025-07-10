@@ -6,7 +6,7 @@ class EntryDetailsState extends Equatable {
   final bool isLoading;
   final bool isSaving;
   final String? errorMessage;
-  final Insight? summaryInsight;
+  final Insight? primaryInsight;
   final bool isRegeneratingInsight;
   final String? editedText;
 
@@ -16,7 +16,7 @@ class EntryDetailsState extends Equatable {
     this.isLoading = false,
     this.isSaving = false,
     this.errorMessage,
-    this.summaryInsight,
+    this.primaryInsight,
     this.isRegeneratingInsight = false,
     this.editedText,
   });
@@ -28,8 +28,8 @@ class EntryDetailsState extends Equatable {
     bool? isSaving,
     String? errorMessage,
     bool clearErrorMessage = false,
-    Insight? summaryInsight,
-    bool clearSummaryInsight = false,
+    Insight? primaryInsight,
+    bool clearPrimaryInsight = false,
     bool? isRegeneratingInsight,
     String? editedText,
     bool clearEditedText = false,
@@ -40,7 +40,7 @@ class EntryDetailsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
-      summaryInsight: clearSummaryInsight ? null : (summaryInsight ?? this.summaryInsight),
+      primaryInsight: clearPrimaryInsight ? null : (primaryInsight ?? this.primaryInsight),
       isRegeneratingInsight: isRegeneratingInsight ?? this.isRegeneratingInsight,
       editedText: clearEditedText ? null : (editedText ?? this.editedText),
     );
@@ -53,7 +53,7 @@ class EntryDetailsState extends Equatable {
         isLoading,
         isSaving,
         errorMessage,
-        summaryInsight,
+        primaryInsight,
         isRegeneratingInsight,
         editedText,
       ];

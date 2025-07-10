@@ -20,18 +20,24 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
   }) : _entryRepository = entryRepository,
        super(const EntryDetailsState());
 
-  void loadEntry(Entry entry, {Insight? cachedSummaryInsight}) {
+  void loadEntry(Entry entry, {Insight? cachedInsight}) {
     emit(
       state.copyWith(
         entry: entry,
-        summaryInsight: cachedSummaryInsight,
+        primaryInsight: cachedInsight,
         clearErrorMessage: true,
       ),
     );
 
     // CP: If no cached insight, generate one
-    if (cachedSummaryInsight == null) {
-      _generateSummaryInsight(entry);
+    if (cachedInsight == null && entry.insight != null) {
+      // Use the priority system to get the best insight
+      final primaryInsight = entry.insight!.getPrimaryInsight();
+      if (primaryInsight != null) {
+        emit(state.copyWith(primaryInsight: primaryInsight));
+      }
+    } else if (cachedInsight == null) {
+      _generatePrimaryInsight(entry);
     }
   }
 
@@ -85,7 +91,7 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
 
       // CP: Regenerate insight if text changed significantly
       if ((newText.length - originalText.length).abs() > 10 || _hasSignificantChange(originalText, newText)) {
-        _generateSummaryInsight(updatedEntry);
+        _generatePrimaryInsight(updatedEntry);
       }
     } catch (e) {
       emit(
@@ -167,19 +173,20 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     }
   }
 
-  Future<void> _generateSummaryInsight(Entry entry) async {
+  Future<void> _generatePrimaryInsight(Entry entry) async {
     emit(state.copyWith(isRegeneratingInsight: true));
 
     try {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
       final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
 
-      final summaryInsight = comprehensiveInsight.getInsightByType(InsightType.summary);
+      // Use the priority system to get the most relevant insight
+      final primaryInsight = comprehensiveInsight.getPrimaryInsight();
 
-      if (summaryInsight != null) {
+      if (primaryInsight != null) {
         emit(
           state.copyWith(
-            summaryInsight: summaryInsight,
+            primaryInsight: primaryInsight,
             isRegeneratingInsight: false,
           ),
         );

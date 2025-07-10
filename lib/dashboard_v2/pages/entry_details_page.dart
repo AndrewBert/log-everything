@@ -26,7 +26,7 @@ class EntryDetailsPage extends StatelessWidget {
     return BlocProvider(
       create: (context) => EntryDetailsCubit(
         entryRepository: GetIt.instance<EntryRepository>(),
-      )..loadEntry(entry, cachedSummaryInsight: cachedInsight),
+      )..loadEntry(entry, cachedInsight: cachedInsight),
       child: BlocConsumer<EntryDetailsCubit, EntryDetailsState>(
         listener: (context, state) {
           if (state.errorMessage != null) {
@@ -132,7 +132,7 @@ class EntryDetailsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // AI Insight with refined visual design
-            if (state.summaryInsight != null || state.isRegeneratingInsight)
+            if (state.primaryInsight != null || state.isRegeneratingInsight)
               Container(
                 margin: const EdgeInsets.only(bottom: 32),
                 child: IntrinsicHeight(
@@ -151,9 +151,9 @@ class EntryDetailsPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
+                            if (!state.isRegeneratingInsight && state.primaryInsight != null) ...[
                               Text(
-                                '"${state.summaryInsight!.content}"',
+                                '"${state.primaryInsight!.content}"',
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   fontStyle: FontStyle.italic,
                                   fontWeight: FontWeight.w300,
@@ -164,7 +164,7 @@ class EntryDetailsPage extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'AI INSIGHT',
+                                _getInsightLabel(state.primaryInsight!.type),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   letterSpacing: 1.2,
                                   fontSize: 11,
@@ -173,19 +173,8 @@ class EntryDetailsPage extends StatelessWidget {
                                 ),
                               ),
                             ] else
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Typewriter Loading Animation
+                              _TypewriterLoader(categoryColor: categoryColor),
                           ],
                         ),
                       ),
@@ -611,6 +600,169 @@ class EntryDetailsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  String _getInsightLabel(InsightType type) {
+    switch (type) {
+      case InsightType.summary:
+        return 'SUMMARY';
+      case InsightType.emotion:
+        return 'EMOTIONAL INSIGHT';
+      case InsightType.pattern:
+        return 'PATTERN DETECTED';
+      case InsightType.theme:
+        return 'KEY THEME';
+      case InsightType.recommendation:
+        return 'RECOMMENDATION';
+    }
+  }
+}
+
+// Typewriter Loading Animation Widget
+class _TypewriterLoader extends StatefulWidget {
+  final Color categoryColor;
+
+  const _TypewriterLoader({required this.categoryColor});
+
+  @override
+  State<_TypewriterLoader> createState() => _TypewriterLoaderState();
+}
+
+class _TypewriterLoaderState extends State<_TypewriterLoader> with TickerProviderStateMixin {
+  late AnimationController _typeController;
+  late AnimationController _cursorController;
+  late Animation<int> _charAnimation;
+  late Animation<double> _cursorOpacity;
+  late Animation<double> _progressAnimation;
+
+  final String _loadingText = "Analyzing your entry...";
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Typewriter animation controller
+    _typeController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    );
+
+    // Cursor blink animation controller
+    _cursorController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Character animation with custom curve for natural typing
+    _charAnimation =
+        IntTween(
+          begin: 0,
+          end: _loadingText.length,
+        ).animate(
+          CurvedAnimation(
+            parent: _typeController,
+            curve: const Interval(
+              0.0,
+              0.7,
+              curve: Curves.easeOut,
+            ),
+          ),
+        );
+
+    // Progress bar animation
+    _progressAnimation =
+        Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _typeController,
+            curve: Curves.linear,
+          ),
+        );
+
+    // Cursor opacity animation
+    _cursorOpacity =
+        Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _cursorController,
+            curve: Curves.easeInOut,
+          ),
+        );
+
+    // Start animations
+    _typeController.repeat();
+    _cursorController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _typeController.dispose();
+    _cursorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_typeController, _cursorController]),
+      builder: (context, child) {
+        final displayText = _loadingText.substring(0, _charAnimation.value);
+        final isTypingComplete = _charAnimation.value == _loadingText.length;
+        final showCursor = !isTypingComplete || _typeController.value > 0.8;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w300,
+                  height: 1.4,
+                  fontSize: 18,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                children: [
+                  TextSpan(text: displayText),
+                  if (showCursor)
+                    TextSpan(
+                      text: '|',
+                      style: TextStyle(
+                        color: widget.categoryColor.withValues(
+                          alpha: isTypingComplete ? _cursorOpacity.value : 1.0,
+                        ),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Smooth progress indicator
+            ClipRRect(
+              borderRadius: BorderRadius.circular(1),
+              child: SizedBox(
+                height: 2,
+                width: 120,
+                child: LinearProgressIndicator(
+                  value: _progressAnimation.value,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    widget.categoryColor.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
