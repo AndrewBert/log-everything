@@ -225,7 +225,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
               return FractionallySizedBox(
                 widthFactor: _widthAnimation.value,
                 child: Container(
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   height: 56,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
@@ -319,7 +319,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                         )
                                       : Icon(
                                           Icons.send_rounded,
-                                          color: _hasText ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                                          color: _hasText
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurface.withValues(alpha: 0.38),
                                         ),
                                   tooltip: 'Send',
                                 ),
