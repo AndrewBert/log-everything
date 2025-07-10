@@ -21,7 +21,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
   late AnimationController _animationController;
   late AnimationController _waveformController;
+  late AnimationController _pulseController;
   late Animation<double> _widthAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -36,6 +38,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+    
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
 
     _widthAnimation =
         Tween<double>(
@@ -47,6 +54,14 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
             curve: Curves.easeOutCubic,
           ),
         );
+        
+    _pulseAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
 
     _focusNode.addListener(_onFocusChange);
     _textController.addListener(_onTextChanged);
@@ -57,8 +72,15 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       _isExpanded = _focusNode.hasFocus;
       if (_isExpanded) {
         _animationController.forward();
+        _pulseController.stop();
+        _pulseController.reset();
       } else {
         _animationController.reverse();
+        // CC: Scroll text field to beginning when unfocused
+        if (_textController.text.isNotEmpty) {
+          _textController.selection = const TextSelection.collapsed(offset: 0);
+          _pulseController.repeat(reverse: true);
+        }
       }
     });
   }
@@ -66,6 +88,13 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   void _onTextChanged() {
     setState(() {
       _hasText = _textController.text.isNotEmpty;
+      // CC: Start/stop pulse animation based on text presence
+      if (_hasText && !_isExpanded) {
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
     });
   }
 
@@ -73,6 +102,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   void dispose() {
     _animationController.dispose();
     _waveformController.dispose();
+    _pulseController.dispose();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -111,15 +141,15 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
   Widget _buildRecordingIndicator(ThemeData theme) {
     return Container(
-      height: 56,
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(28),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          // CC: Recording icon with subtle animation
+      child: Center(
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            // CC: Recording icon with subtle animation
           AnimatedBuilder(
             animation: _waveformController,
             builder: (context, child) {
@@ -181,6 +211,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -224,16 +255,35 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
             builder: (context, child) {
               return FractionallySizedBox(
                 widthFactor: _widthAnimation.value,
-                child: Container(
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  height: 56,
+                  constraints: BoxConstraints(
+                    minHeight: 56,
+                    maxHeight: _isExpanded ? 200 : 56,
+                  ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
+                    color: _hasText && !_isExpanded 
+                        ? theme.colorScheme.primaryContainer
+                        : theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(28),
+                    border: _hasText && !_isExpanded
+                        ? Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.2 + (_pulseAnimation.value * 0.2),
+                            ),
+                            width: 1.5,
+                          )
+                        : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
+                        color: _hasText && !_isExpanded
+                            ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.1),
+                        blurRadius: _hasText && !_isExpanded ? 12 : 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
@@ -287,16 +337,27 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                     focusNode: _focusNode,
                                     decoration: InputDecoration(
                                       hintText: "Add log",
+                                      hintStyle: TextStyle(
+                                        color: _hasText && !_isExpanded
+                                            ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
+                                            : null,
+                                      ),
                                       border: InputBorder.none,
                                       contentPadding: EdgeInsets.symmetric(
                                         horizontal: _hasText ? 16 : 12,
                                         vertical: 16,
                                       ),
                                     ),
+                                    style: TextStyle(
+                                      color: _hasText && !_isExpanded
+                                          ? theme.colorScheme.onPrimaryContainer
+                                          : null,
+                                    ),
                                     textAlign: _isExpanded || _hasText ? TextAlign.start : TextAlign.center,
-                                    textInputAction: TextInputAction.send,
+                                    textInputAction: TextInputAction.newline,
                                     onSubmitted: (_) => _handleSubmit(),
-                                    maxLines: 1,
+                                    minLines: 1,
+                                    maxLines: _isExpanded ? 6 : 1,
                                     keyboardType: TextInputType.multiline,
                                     textCapitalization: TextCapitalization.sentences,
                                     onTapOutside: (_) {
@@ -345,6 +406,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                       ],
                     ),
                   ),
+                    );
+                  },
                 ),
               );
             },
