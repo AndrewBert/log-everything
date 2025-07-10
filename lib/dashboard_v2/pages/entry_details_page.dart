@@ -97,7 +97,46 @@ class EntryDetailsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main content - entry text (first, as user's primary focus)
+          // AI Insight as pull-quote style (at the top)
+          if (state.summaryInsight != null || state.isRegeneratingInsight)
+            Container(
+              margin: const EdgeInsets.only(bottom: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: categoryColor,
+                    width: 4,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
+                    Text(
+                      '"${state.summaryInsight!.content}"',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w300,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'AI INSIGHT',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ] else
+                    const CircularProgressIndicator(),
+                ],
+              ),
+            ),
+
+          // Main content - entry text
           GestureDetector(
             onTap: state.isEditing ? null : () => context.read<EntryDetailsCubit>().startEditing(),
             child: AnimatedSwitcher(
@@ -164,46 +203,9 @@ class EntryDetailsPage extends StatelessWidget {
                     ),
             ),
           ),
-          
-          // AI Insight as pull-quote style
-          if (state.summaryInsight != null || state.isRegeneratingInsight)
-            Container(
-              margin: const EdgeInsets.only(top: 40, bottom: 40),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: categoryColor,
-                    width: 4,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[  
-                    Text(
-                      '"${state.summaryInsight!.content}"',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w300,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'AI INSIGHT',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        letterSpacing: 1.5,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ] else
-                    const CircularProgressIndicator(),
-                ],
-              ),
-            ),
-          
+
+          const SizedBox(height: 40),
+
           // Magazine-style date and metadata section (at the very bottom)
           Container(
             width: double.infinity,
@@ -263,7 +265,7 @@ class EntryDetailsPage extends StatelessWidget {
                       side: BorderSide.none,
                       onPressed: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
                     ),
-                    if (entry.isTask) ...[  
+                    if (entry.isTask) ...[
                       const SizedBox(width: 8),
                       Checkbox(
                         key: taskCheckboxKey,
@@ -336,7 +338,7 @@ class EntryDetailsPage extends StatelessWidget {
                   final category = categories[index];
                   final isSelected = category.name == currentCategory;
                   final categoryColor = CategoryColors.getColorForCategory(category.name);
-                  
+
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -346,9 +348,7 @@ class EntryDetailsPage extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: isSelected 
-                            ? categoryColor 
-                            : categoryColor.withValues(alpha: 0.2),
+                        color: isSelected ? categoryColor : categoryColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: isSelected
@@ -391,9 +391,7 @@ class EntryDetailsPage extends StatelessWidget {
   void _showDeleteDialog(BuildContext context, EntryDetailsState state) {
     if (state.entry == null) return;
 
-    final entryPreview = state.entry!.text.length > 50
-        ? '${state.entry!.text.substring(0, 50)}...'
-        : state.entry!.text;
+    final entryPreview = state.entry!.text.length > 50 ? '${state.entry!.text.substring(0, 50)}...' : state.entry!.text;
 
     showDialog(
       context: context,
