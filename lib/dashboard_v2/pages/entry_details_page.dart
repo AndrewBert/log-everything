@@ -97,42 +97,66 @@ class EntryDetailsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // AI Insight as pull-quote style (at the top)
+          // AI Insight with refined visual design
           if (state.summaryInsight != null || state.isRegeneratingInsight)
             Container(
               margin: const EdgeInsets.only(bottom: 32),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: categoryColor,
-                    width: 4,
-                  ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      width: 3,
+                      decoration: BoxDecoration(
+                        color: categoryColor,
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
+                            Text(
+                              '"${state.summaryInsight!.content}"',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w300,
+                                height: 1.4,
+                                fontSize: 18,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'AI INSIGHT',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                letterSpacing: 1.2,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ] else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
-                    Text(
-                      '"${state.summaryInsight!.content}"',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w300,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'AI INSIGHT',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        letterSpacing: 1.5,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ] else
-                    const CircularProgressIndicator(),
-                ],
               ),
             ),
 
@@ -185,17 +209,18 @@ class EntryDetailsPage extends StatelessWidget {
                           SelectableText(
                             entry.text,
                             style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 20,
-                              height: 1.6,
+                              fontSize: 18,
+                              height: 1.5,
                               fontWeight: FontWeight.w400,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           Text(
                             'Tap to edit',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                              fontStyle: FontStyle.italic,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -225,56 +250,97 @@ class EntryDetailsPage extends StatelessWidget {
                 Text(
                   dateFormat.format(entry.timestamp).toUpperCase(),
                   key: entryTimestampKey,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                    height: 1,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      timeFormat.format(entry.timestamp),
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          timeFormat.format(entry.timestamp),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
                     // Category chip
-                    ActionChip(
-                      avatar: Container(
-                        width: 12,
-                        height: 12,
+                    InkWell(
+                      onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: categoryColor,
-                          shape: BoxShape.circle,
+                          color: categoryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: categoryColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              entry.category,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (allowCategoryEdit) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      label: Text(
-                        entry.category,
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      backgroundColor: categoryColor.withValues(alpha: 0.15),
-                      side: BorderSide.none,
-                      onPressed: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
                     ),
-                    if (entry.isTask) ...[
-                      const SizedBox(width: 8),
-                      Checkbox(
-                        key: taskCheckboxKey,
-                        value: entry.isCompleted,
-                        onChanged: state.isEditing
-                            ? null
-                            : (_) => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
+                    if (entry.isTask)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Task',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Checkbox(
+                            key: taskCheckboxKey,
+                            value: entry.isCompleted,
+                            onChanged: state.isEditing
+                                ? null
+                                : (_) => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
                       ),
-                    ],
                   ],
                 ),
               ],
