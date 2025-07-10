@@ -26,8 +26,9 @@ class RecentEntriesCarousel extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     // CC: Match the grid card width: (screenWidth - 32 padding - 12 gap) / 2
     final cardWidth = (screenWidth - 32 - 12) / 2;
-    // CC: Adjusted viewport to show 2 cards at once with proper spacing
-    final viewportFraction = (cardWidth + 12) / screenWidth;
+    // CC: Calculate viewport to show small peek of previous card
+    // 16px (left align) + cardWidth + 6px (gap) - 20px (peek amount)
+    final viewportFraction = (16 + cardWidth + 6 - 20) / screenWidth;
     final pageController = PageController(
       initialPage: selectedIndex,
       viewportFraction: viewportFraction,
@@ -56,9 +57,9 @@ class RecentEntriesCarousel extends StatelessWidget {
           final isSelected = index == selectedIndex;
 
           return Padding(
-            padding: EdgeInsets.only(
-              left: index == 0 ? 16 : 6, // CC: First card gets full left padding
-              right: 6, // CC: Consistent spacing between cards
+            padding: const EdgeInsets.only(
+              left: 16, // CC: All cards start at 16px from edge
+              right: 6, // CC: Spacing between cards
             ),
             child: AnimatedScale(
               scale: isSelected ? 1.0 : 0.95,
