@@ -89,10 +89,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         ),
       );
 
-      // CP: Regenerate insight if text changed significantly
-      if ((newText.length - originalText.length).abs() > 10 || _hasSignificantChange(originalText, newText)) {
-        _generatePrimaryInsight(updatedEntry);
-      }
+      // CP: Always regenerate insight when text changes
+      _generatePrimaryInsight(updatedEntry);
     } catch (e) {
       emit(
         state.copyWith(
@@ -196,17 +194,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     } catch (e) {
       emit(state.copyWith(isRegeneratingInsight: false));
     }
-  }
-
-  bool _hasSignificantChange(String original, String updated) {
-    // CP: Simple heuristic to detect significant changes
-    final originalWords = original.split(' ').where((w) => w.isNotEmpty).toSet();
-    final updatedWords = updated.split(' ').where((w) => w.isNotEmpty).toSet();
-
-    final addedWords = updatedWords.difference(originalWords).length;
-    final removedWords = originalWords.difference(updatedWords).length;
-
-    return addedWords + removedWords > 5;
   }
 
   @override
