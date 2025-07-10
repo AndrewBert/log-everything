@@ -24,11 +24,15 @@ class RecentEntriesCarousel extends StatelessWidget {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // CC: Match the grid card width: (screenWidth - 32 padding - 12 gap) / 2
-    final cardWidth = (screenWidth - 32 - 12) / 2;
-    // CC: Calculate viewport to show small peek of previous card
-    // 16px (left align) + cardWidth + 6px (gap) - 20px (peek amount)
-    final viewportFraction = (16 + cardWidth + 6 - 20) / screenWidth;
+    // CC: Calculate card width to fit exactly 2 cards between insight container edges
+    // Total space = screenWidth - 32px (insight margins) - 16px (card's left padding)
+    final cardGap = 4.0;
+    final totalAvailableWidth = screenWidth - 32 - 16;
+    final cardWidth = (totalAvailableWidth - cardGap) / 2;
+
+    // CC: Viewport = one card + gap + left padding to ensure proper scrolling
+    final viewportFraction = (cardWidth + cardGap + 16) / screenWidth;
+
     final pageController = PageController(
       initialPage: selectedIndex,
       viewportFraction: viewportFraction,
@@ -36,30 +40,24 @@ class RecentEntriesCarousel extends StatelessWidget {
 
     return SizedBox(
       key: recentEntriesCarouselKey,
-      height: cardWidth, // CC: Square cards to match grid
+      height: cardWidth,
       child: PageView.builder(
         controller: pageController,
         onPageChanged: (index) {
-          // CC: Don't allow selecting the empty slot
           if (index < entries.length) {
             onPageChanged(index);
           }
         },
-        itemCount: entries.length + 1, // CC: Add extra slot for scrolling to last item
-        padEnds: false, // CC: Keep left alignment
+        itemCount: entries.length,
+        padEnds: false,
         itemBuilder: (context, index) {
-          // CC: Return empty container for the extra slot
-          if (index >= entries.length) {
-            return SizedBox(width: cardWidth);
-          }
-
           final entry = entries[index];
           final isSelected = index == selectedIndex;
 
           return Padding(
-            padding: const EdgeInsets.only(
-              left: 16, // CC: All cards start at 16px from edge
-              right: 6, // CC: Spacing between cards
+            padding: EdgeInsets.only(
+              left: 16.0, // CC: All cards have consistent left padding
+              right: cardGap,
             ),
             child: AnimatedScale(
               scale: isSelected ? 1.0 : 0.95,
