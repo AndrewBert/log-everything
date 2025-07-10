@@ -122,6 +122,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   void _onEntriesUpdated(List<Entry> entries) {
+    // CC: Check if we have new entries
+    final hasNewEntries = entries.length > state.entries.length;
+    
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
@@ -130,6 +133,14 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
       ),
     );
+    
+    // CC: If we have new entries, trigger insight generation for the most recent one
+    if (hasNewEntries && entries.isNotEmpty) {
+      // CC: Select the first entry (most recent) to trigger insight generation
+      selectCarouselEntry(0);
+      // CC: Also generate insights for other recent entries
+      _generateInsightsForRecentEntries();
+    }
   }
 
   @override

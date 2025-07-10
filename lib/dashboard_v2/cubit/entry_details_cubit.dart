@@ -177,17 +177,23 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       final summaryInsight = comprehensiveInsight.getInsightByType(InsightType.summary);
 
       if (summaryInsight != null) {
-        emit(
-          state.copyWith(
-            summaryInsight: summaryInsight,
-            isRegeneratingInsight: false,
-          ),
-        );
+        if (!isClosed) {
+          emit(
+            state.copyWith(
+              summaryInsight: summaryInsight,
+              isRegeneratingInsight: false,
+            ),
+          );
+        }
       } else {
-        emit(state.copyWith(isRegeneratingInsight: false));
+        if (!isClosed) {
+          emit(state.copyWith(isRegeneratingInsight: false));
+        }
       }
     } catch (e) {
-      emit(state.copyWith(isRegeneratingInsight: false));
+      if (!isClosed) {
+        emit(state.copyWith(isRegeneratingInsight: false));
+      }
     }
   }
 
