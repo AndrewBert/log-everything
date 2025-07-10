@@ -1,3 +1,4 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/entry/entry.dart';
@@ -33,24 +34,30 @@ class RecentEntriesCarousel extends StatelessWidget {
     // CC: Viewport = one card + gap + left padding to ensure proper scrolling
     final viewportFraction = (cardWidth + cardGap + 16) / screenWidth;
 
-    final pageController = PageController(
-      initialPage: selectedIndex,
-      viewportFraction: viewportFraction,
-    );
+    final carouselController = CarouselSliderController();
 
     return SizedBox(
       key: recentEntriesCarouselKey,
       height: cardWidth,
-      child: PageView.builder(
-        controller: pageController,
-        onPageChanged: (index) {
-          if (index < entries.length) {
-            onPageChanged(index);
-          }
-        },
+      child: CarouselSlider.builder(
+        carouselController: carouselController,
+        options: CarouselOptions(
+          height: cardWidth,
+          viewportFraction: viewportFraction,
+          initialPage: selectedIndex,
+          enableInfiniteScroll: false,
+          onPageChanged: (index, reason) {
+            if (index < entries.length) {
+              onPageChanged(index);
+            }
+          },
+          padEnds: false,
+          enlargeCenterPage: false,
+          pageSnapping: true,
+          scrollDirection: Axis.horizontal,
+        ),
         itemCount: entries.length,
-        padEnds: false,
-        itemBuilder: (context, index) {
+        itemBuilder: (context, index, realIndex) {
           final entry = entries[index];
           final isSelected = index == selectedIndex;
 
@@ -76,7 +83,7 @@ class RecentEntriesCarousel extends StatelessWidget {
                         onEntryTap!(entry);
                       } else {
                         // CP: Otherwise, animate to tapped card
-                        pageController.animateToPage(
+                        carouselController.animateToPage(
                           index,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
