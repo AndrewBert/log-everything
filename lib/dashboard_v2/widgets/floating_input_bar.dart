@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +19,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   bool _isSubmitting = false;
   bool _isExpanded = false;
   bool _hasText = false;
+  bool _justTranscribed = false;
+  Timer? _transcriptionReviewTimer;
 
   late AnimationController _animationController;
   late AnimationController _waveformController;
@@ -38,7 +41,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -54,14 +57,17 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
             curve: Curves.easeOutCubic,
           ),
         );
-        
-    _pulseAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+
+    _pulseAnimation =
+        Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _pulseController,
+            curve: Curves.easeInOut,
+          ),
+        );
 
     _focusNode.addListener(_onFocusChange);
     _textController.addListener(_onTextChanged);
@@ -74,8 +80,14 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         _animationController.forward();
         _pulseController.stop();
         _pulseController.reset();
+        // CC: Cancel review timer if user focuses the field
+        _transcriptionReviewTimer?.cancel();
+        _justTranscribed = false;
       } else {
-        _animationController.reverse();
+        // CC: Don't collapse immediately if just transcribed
+        if (!_justTranscribed) {
+          _animationController.reverse();
+        }
         // CC: Scroll text field to beginning when unfocused
         if (_textController.text.isNotEmpty) {
           _textController.selection = const TextSelection.collapsed(offset: 0);
@@ -100,6 +112,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
   @override
   void dispose() {
+    _transcriptionReviewTimer?.cancel();
     _animationController.dispose();
     _waveformController.dispose();
     _pulseController.dispose();
@@ -150,67 +163,67 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
           children: [
             const SizedBox(width: 16),
             // CC: Recording icon with subtle animation
-          AnimatedBuilder(
-            animation: _waveformController,
-            builder: (context, child) {
-              return Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: theme.colorScheme.error.withValues(
-                    alpha: 0.15 + (_waveformController.value * 0.1),
+            AnimatedBuilder(
+              animation: _waveformController,
+              builder: (context, child) {
+                return Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.error.withValues(
+                      alpha: 0.15 + (_waveformController.value * 0.1),
+                    ),
                   ),
-                ),
-                child: Icon(
-                  Icons.mic,
-                  color: theme.colorScheme.error,
-                  size: 24,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recording...',
-                  style: TextStyle(
+                  child: Icon(
+                    Icons.mic,
                     color: theme.colorScheme.error,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    size: 24,
                   ),
-                ),
-                Text(
-                  'Tap to stop',
-                  style: TextStyle(
-                    color: theme.colorScheme.error.withValues(alpha: 0.7),
-                    fontSize: 12,
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recording...',
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    'Tap to stop',
+                    style: TextStyle(
+                      color: theme.colorScheme.error.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          // CC: Stop button
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.colorScheme.error,
+            // CC: Stop button
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.error,
+              ),
+              child: Icon(
+                Icons.stop_rounded,
+                color: theme.colorScheme.onError,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              Icons.stop_rounded,
-              color: theme.colorScheme.onError,
-              size: 24,
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -234,6 +247,26 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
           _textController.selection = TextSelection.fromPosition(
             TextPosition(offset: newText.length),
           );
+
+          // CC: Keep field expanded for review
+          setState(() {
+            _justTranscribed = true;
+            _isExpanded = true;
+          });
+          _animationController.forward();
+          // CC: Cancel any existing timer
+          _transcriptionReviewTimer?.cancel();
+
+          // CC: Start new timer to collapse after 4 seconds
+          _transcriptionReviewTimer = Timer(const Duration(seconds: 4), () {
+            if (mounted && _justTranscribed && !_focusNode.hasFocus) {
+              setState(() {
+                _isExpanded = false;
+                _justTranscribed = false;
+              });
+              _animationController.reverse();
+            }
+          });
         }
       },
       builder: (context, voiceState) {
@@ -259,153 +292,151 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                   animation: _pulseAnimation,
                   builder: (context, child) {
                     return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  constraints: BoxConstraints(
-                    minHeight: 56,
-                    maxHeight: _isExpanded ? 200 : 56,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _hasText && !_isExpanded 
-                        ? theme.colorScheme.primaryContainer
-                        : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(28),
-                    border: _hasText && !_isExpanded
-                        ? Border.all(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.2 + (_pulseAnimation.value * 0.2),
-                            ),
-                            width: 1.5,
-                          )
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _hasText && !_isExpanded
-                            ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                            : Colors.black.withValues(alpha: 0.1),
-                        blurRadius: _hasText && !_isExpanded ? 12 : 10,
-                        offset: const Offset(0, 4),
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      constraints: BoxConstraints(
+                        minHeight: 56,
+                        maxHeight: _isExpanded ? 200 : 56,
                       ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Stack(
-                      children: [
-                        // CC: Show recording indicator when recording
-                        if (isRecording)
-                          Positioned.fill(
-                            child: _buildRecordingIndicator(theme),
+                      decoration: BoxDecoration(
+                        color: _hasText && !_isExpanded
+                            ? theme.colorScheme.primaryContainer
+                            : theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: _hasText && !_isExpanded
+                            ? Border.all(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.2 + (_pulseAnimation.value * 0.2),
+                                ),
+                                width: 1.5,
+                              )
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: _hasText && !_isExpanded
+                                ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                                : Colors.black.withValues(alpha: 0.1),
+                            blurRadius: _hasText && !_isExpanded ? 12 : 10,
+                            offset: const Offset(0, 4),
                           ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Stack(
+                          children: [
+                            // CC: Show recording indicator when recording
+                            if (isRecording)
+                              Positioned.fill(
+                                child: _buildRecordingIndicator(theme),
+                              ),
 
-                        // CC: Show input field when not recording
-                        if (!isRecording)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Row(
-                              children: [
-                                // CC: Voice input button - hide when focused or has text
-                                if (!_hasText && !_isExpanded) ...[
-                                  IconButton(
-                                    onPressed: isTranscribing
-                                        ? null
-                                        : () {
-                                            context.read<VoiceInputCubit>().startRecording();
-                                            _focusNode.unfocus();
-                                          },
-                                    icon: isTranscribing
-                                        ? SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          )
-                                        : Icon(
-                                            Icons.mic,
-                                            color: theme.colorScheme.onSurfaceVariant,
+                            // CC: Show input field when not recording
+                            if (!isRecording)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Row(
+                                  children: [
+                                    // CC: Voice input button - hide when focused or has text
+                                    if (!_hasText && !_isExpanded) ...[
+                                      IconButton(
+                                        onPressed: isTranscribing
+                                            ? null
+                                            : () {
+                                                context.read<VoiceInputCubit>().startRecording();
+                                                _focusNode.unfocus();
+                                              },
+                                        icon: isTranscribing
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.5,
+                                                  color: theme.colorScheme.primary,
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.mic,
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                              ),
+                                        tooltip: 'Start Recording',
+                                      ),
+                                    ],
+
+                                    // CC: Text input field
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _textController,
+                                        focusNode: _focusNode,
+                                        decoration: InputDecoration(
+                                          hintText: _justTranscribed ? "Review transcription..." : "Add log",
+                                          hintStyle: TextStyle(
+                                            color: _hasText && !_isExpanded
+                                                ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
+                                                : null,
                                           ),
-                                    tooltip: 'Start Recording',
-                                  ),
-                                ],
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: _hasText ? 16 : 12,
+                                            vertical: 16,
+                                          ),
+                                        ),
+                                        style: TextStyle(
+                                          color: _hasText && !_isExpanded ? theme.colorScheme.onPrimaryContainer : null,
+                                        ),
+                                        textAlign: _isExpanded || _hasText ? TextAlign.start : TextAlign.center,
+                                        textInputAction: TextInputAction.newline,
+                                        onSubmitted: (_) => _handleSubmit(),
+                                        minLines: 1,
+                                        maxLines: _isExpanded ? 6 : 1,
+                                        keyboardType: TextInputType.multiline,
+                                        textCapitalization: TextCapitalization.sentences,
+                                        onTapOutside: (_) {
+                                          _focusNode.unfocus();
+                                        },
+                                      ),
+                                    ),
 
-                                // CC: Text input field
-                                Expanded(
-                                  child: TextField(
-                                    controller: _textController,
-                                    focusNode: _focusNode,
-                                    decoration: InputDecoration(
-                                      hintText: "Add log",
-                                      hintStyle: TextStyle(
-                                        color: _hasText && !_isExpanded
-                                            ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
-                                            : null,
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: _hasText ? 16 : 12,
-                                        vertical: 16,
-                                      ),
+                                    // CC: Send button
+                                    IconButton(
+                                      onPressed: (_isSubmitting || isTranscribing || !_hasText) ? null : _handleSubmit,
+                                      icon: _isSubmitting
+                                          ? SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.send_rounded,
+                                              color: _hasText
+                                                  ? theme.colorScheme.primary
+                                                  : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                                            ),
+                                      tooltip: 'Send',
                                     ),
-                                    style: TextStyle(
-                                      color: _hasText && !_isExpanded
-                                          ? theme.colorScheme.onPrimaryContainer
-                                          : null,
-                                    ),
-                                    textAlign: _isExpanded || _hasText ? TextAlign.start : TextAlign.center,
-                                    textInputAction: TextInputAction.newline,
-                                    onSubmitted: (_) => _handleSubmit(),
-                                    minLines: 1,
-                                    maxLines: _isExpanded ? 6 : 1,
-                                    keyboardType: TextInputType.multiline,
-                                    textCapitalization: TextCapitalization.sentences,
-                                    onTapOutside: (_) {
-                                      _focusNode.unfocus();
+                                  ],
+                                ),
+                              ),
+
+                            // CC: Make recording indicator tappable
+                            if (isRecording)
+                              Positioned.fill(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(28),
+                                    onTap: () {
+                                      context.read<VoiceInputCubit>().stopRecording();
                                     },
                                   ),
                                 ),
-
-                                // CC: Send button
-                                IconButton(
-                                  onPressed: (_isSubmitting || isTranscribing || !_hasText) ? null : _handleSubmit,
-                                  icon: _isSubmitting
-                                      ? SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        )
-                                      : Icon(
-                                          Icons.send_rounded,
-                                          color: _hasText
-                                              ? theme.colorScheme.primary
-                                              : theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                                        ),
-                                  tooltip: 'Send',
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // CC: Make recording indicator tappable
-                        if (isRecording)
-                          Positioned.fill(
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(28),
-                                onTap: () {
-                                  context.read<VoiceInputCubit>().stopRecording();
-                                },
                               ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),
