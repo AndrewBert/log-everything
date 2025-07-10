@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
@@ -46,6 +47,7 @@ class EntryDetailsPage extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, EntryDetailsState state) {
+    final theme = Theme.of(context);
     final entry = state.entry;
 
     if (entry == null) {
@@ -72,10 +74,34 @@ class EntryDetailsPage extends StatelessWidget {
             ),
       actions: [
         if (!state.isEditing)
-          IconButton(
-            key: deleteButtonKey,
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _showDeleteDialog(context, state),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _showDeleteDialog(context, state);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: theme.colorScheme.error,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Delete Entry',
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
       ],
     );
@@ -92,261 +118,343 @@ class EntryDetailsPage extends StatelessWidget {
     final timeFormat = DateFormat('h:mm a');
     final categoryColor = CategoryColors.getColorForCategory(entry.category);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // AI Insight with refined visual design
-          if (state.summaryInsight != null || state.isRegeneratingInsight)
-            Container(
-              margin: const EdgeInsets.only(bottom: 32),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      width: 3,
-                      decoration: BoxDecoration(
-                        color: categoryColor,
-                        borderRadius: BorderRadius.circular(1.5),
+    return GestureDetector(
+      onTap: () {
+        // Exit edit mode and save when tapping outside
+        if (state.isEditing) {
+          context.read<EntryDetailsCubit>().saveAndExitEditMode();
+        }
+      },
+      behavior: HitTestBehavior.opaque,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // AI Insight with refined visual design
+            if (state.summaryInsight != null || state.isRegeneratingInsight)
+              Container(
+                margin: const EdgeInsets.only(bottom: 32),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        width: 3,
+                        decoration: BoxDecoration(
+                          color: categoryColor,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
-                            Text(
-                              '"${state.summaryInsight!.content}"',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontStyle: FontStyle.italic,
-                                fontWeight: FontWeight.w300,
-                                height: 1.4,
-                                fontSize: 18,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!state.isRegeneratingInsight && state.summaryInsight != null) ...[
+                              Text(
+                                '"${state.summaryInsight!.content}"',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w300,
+                                  height: 1.4,
+                                  fontSize: 18,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'AI INSIGHT',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                letterSpacing: 1.2,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              const SizedBox(height: 8),
+                              Text(
+                                'AI INSIGHT',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  letterSpacing: 1.2,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                ),
                               ),
-                            ),
-                          ] else
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
+                            ] else
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-          // Main content - entry text
-          GestureDetector(
-            onTap: state.isEditing ? null : () => context.read<EntryDetailsCubit>().startEditing(),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: state.isEditing
-                  ? TextField(
-                      key: entryTextFieldKey,
-                      controller: context.read<EntryDetailsCubit>().textController,
-                      focusNode: context.read<EntryDetailsCubit>().textFocusNode,
-                      maxLines: null,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontSize: 20,
-                        height: 1.6,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: categoryColor.withValues(alpha: 0.3),
-                            width: 2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
+            // Main content - entry text
+            GestureDetector(
+              onTap: state.isEditing
+                  ? () {} // Consume tap when editing to prevent parent GestureDetector from triggering
+                  : () => context.read<EntryDetailsCubit>().startEditing(),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: state.isEditing
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
                             color: categoryColor,
                             width: 2,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.all(20),
-                        helperText: '${state.editedText?.length ?? 0} characters',
-                        helperStyle: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
-                      onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
-                    )
-                  : SizedBox(
-                      key: entryTextViewKey,
-                      width: double.infinity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SelectableText(
-                            entry.text,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 18,
-                              height: 1.5,
-                              fontWeight: FontWeight.w400,
-                              color: theme.colorScheme.onSurface,
+                        child: TextField(
+                          key: entryTextFieldKey,
+                          controller: context.read<EntryDetailsCubit>().textController,
+                          focusNode: context.read<EntryDetailsCubit>().textFocusNode,
+                          maxLines: null,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontSize: 18,
+                            height: 1.5,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                            helperText: '${state.editedText?.length ?? 0} characters',
+                            helperStyle: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              fontSize: 12,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Tap to edit',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-
-          const SizedBox(height: 40),
-
-          // Magazine-style date and metadata section (at the very bottom)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Large date header
-                Text(
-                  dateFormat.format(entry.timestamp).toUpperCase(),
-                  key: entryTimestampKey,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 16,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
+                          onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          timeFormat.format(entry.timestamp),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Category chip
-                    InkWell(
-                      onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      )
+                    : Container(
+                        key: entryTextViewKey,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: categoryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: categoryColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
                             Text(
-                              entry.category,
-                              style: theme.textTheme.labelMedium?.copyWith(
+                              entry.text,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontSize: 18,
+                                height: 1.5,
+                                fontWeight: FontWeight.w400,
                                 color: theme.colorScheme.onSurface,
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (allowCategoryEdit) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ],
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      size: 14,
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Tap to edit',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Copy button
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () async {
+                                      await Clipboard.setData(ClipboardData(text: entry.text));
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: const Text('Copied to clipboard'),
+                                            duration: const Duration(seconds: 2),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.copy_outlined,
+                                            size: 16,
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Copy',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Magazine-style date and metadata section (at the very bottom)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Large date header
+                  Text(
+                    dateFormat.format(entry.timestamp).toUpperCase(),
+                    key: entryTimestampKey,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: theme.colorScheme.onSurface,
                     ),
-                    if (entry.isTask)
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 4),
                           Text(
-                            'Task',
+                            timeFormat.format(entry.timestamp),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          Checkbox(
-                            key: taskCheckboxKey,
-                            value: entry.isCompleted,
-                            onChanged: state.isEditing
-                                ? null
-                                : (_) => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
                         ],
                       ),
-                  ],
-                ),
-              ],
+                      // Category chip
+                      InkWell(
+                        onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: categoryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                entry.category,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (allowCategoryEdit) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (entry.isTask)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Task',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Checkbox(
+                              key: taskCheckboxKey,
+                              value: entry.isCompleted,
+                              onChanged: state.isEditing
+                                  ? null
+                                  : (_) => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
