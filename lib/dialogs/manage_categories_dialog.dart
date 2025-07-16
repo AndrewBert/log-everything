@@ -582,6 +582,9 @@ class _AnimatedCategoryCardState extends State<AnimatedCategoryCard> with Single
 
     // CP: Staggered entrance based on index
     final delay = widget.index * 80; // 80ms delay between each card
+    final maxDelay = 500.0; // Maximum delay to prevent interval overflow
+    final clampedDelay = delay.clamp(0.0, maxDelay);
+    final intervalStart = (clampedDelay / 1000.0).clamp(0.0, 0.9); // Ensure it never reaches 1.0
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.1), // CP: Subtle slide from below
@@ -590,7 +593,7 @@ class _AnimatedCategoryCardState extends State<AnimatedCategoryCard> with Single
       CurvedAnimation(
         parent: _controller,
         curve: Interval(
-          delay / 1000.0, // Convert to percentage
+          intervalStart,
           1.0,
           curve: Curves.easeOutCubic,
         ),
@@ -600,12 +603,12 @@ class _AnimatedCategoryCardState extends State<AnimatedCategoryCard> with Single
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Interval(delay / 1000.0, 1.0, curve: Curves.easeOut)));
+    ).animate(CurvedAnimation(parent: _controller, curve: Interval(intervalStart, 1.0, curve: Curves.easeOut)));
 
     _scaleAnimation = Tween<double>(
       begin: 0.95, // CP: Subtle scale effect
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Interval(delay / 1000.0, 1.0, curve: Curves.easeOutBack)));
+    ).animate(CurvedAnimation(parent: _controller, curve: Interval(intervalStart, 1.0, curve: Curves.easeOutBack)));
 
     // CP: Start animation immediately when widget is created
     _controller.forward();
