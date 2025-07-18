@@ -13,10 +13,21 @@ class DashboardV2Page extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardV2Cubit(
-        entryRepository: GetIt.instance<EntryRepository>(),
-      )..loadEntries(),
+    final entryRepository = GetIt.instance<EntryRepository>();
+
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => DashboardV2Cubit(
+            entryRepository: entryRepository,
+          )..loadEntries(),
+        ),
+        BlocProvider(
+          create: (context) => TodoCubit(
+            entryRepository: entryRepository,
+          ),
+        ),
+      ],
       child: Scaffold(
         key: dashboardV2PageKey,
         appBar: AppBar(
@@ -96,6 +107,21 @@ class DashboardV2Page extends StatelessWidget {
                           },
                         ),
                       ],
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 24),
+                  ),
+                  // CC: Todos carousel
+                  SliverToBoxAdapter(
+                    child: TodosCarousel(
+                      onHeaderTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const TodosPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SliverToBoxAdapter(

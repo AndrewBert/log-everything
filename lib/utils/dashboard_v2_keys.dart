@@ -14,3 +14,10 @@ const Key squareEntryCardKey = ValueKey('square_entry_card');
 
 // Entries Grid Keys
 const Key entriesGridKey = ValueKey('entries_grid');
+
+// Todos Keys
+const Key todosCarouselKey = ValueKey('todos_carousel');
+const Key todosPageKey = ValueKey('todos_page');
+const Key todoCardKey = ValueKey('todo_card');
+const Key todoCheckboxKey = ValueKey('todo_checkbox');
+const Key showCompletedButtonKey = ValueKey('show_completed_button');

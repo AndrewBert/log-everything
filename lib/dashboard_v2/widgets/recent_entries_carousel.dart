@@ -40,6 +40,7 @@ class RecentEntriesCarousel extends StatelessWidget {
     final carouselController = CarouselSliderController();
 
     // CC: Wrap in Container with margin to maintain alignment
+    // TODO: Left side peek has minor glitching/offloading issue - revisit later
     return Container(
       key: recentEntriesCarouselKey,
       height: cardWidth,
