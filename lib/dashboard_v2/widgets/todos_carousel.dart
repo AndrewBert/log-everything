@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
+import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
-class TodosCarousel extends StatelessWidget {
+class TodosCarousel extends StatefulWidget {
   final VoidCallback? onHeaderTap;
   final int maxTodos;
 
@@ -15,14 +17,77 @@ class TodosCarousel extends StatelessWidget {
   });
 
   @override
+  State<TodosCarousel> createState() => _TodosCarouselState();
+}
+
+class _TodosCarouselState extends State<TodosCarousel> {
+  final Set<String> _completedTodoIds = {};
+  final Map<String, Timer> _removalTimers = {};
+
+  void _handleTodoCompletion(Entry todo) {
+    final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+    
+    context.read<TodoCubit>().toggleTodoCompletion(todo);
+    
+    if (!todo.isCompleted) {
+      // CC: Todo is being marked as completed
+      setState(() {
+        _completedTodoIds.add(todoId);
+      });
+      
+      // CC: Remove after 3 seconds
+      _removalTimers[todoId] = Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _completedTodoIds.remove(todoId);
+          });
+          _removalTimers.remove(todoId);
+        }
+      });
+    } else {
+      // CC: Todo is being uncompleted
+      _removalTimers[todoId]?.cancel();
+      _removalTimers.remove(todoId);
+      setState(() {
+        _completedTodoIds.remove(todoId);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    // CC: Cancel all timers
+    for (final timer in _removalTimers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return BlocBuilder<TodoCubit, TodoState>(
       builder: (context, state) {
-        final displayTodos = state.activeTodos.take(maxTodos).toList();
+        // CC: Filter out todos that are being removed
+        final activeTodos = state.activeTodos.where((todo) {
+          final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+          return !_completedTodoIds.contains(todoId);
+        }).toList();
         
-        if (displayTodos.isEmpty) {
+        // CC: Include completed todos that are still showing (within 3 seconds)
+        final recentlyCompleted = state.completedTodos.where((todo) {
+          final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+          return _completedTodoIds.contains(todoId);
+        }).toList();
+        
+        // CC: Combine and sort by timestamp
+        final allTodos = [...activeTodos, ...recentlyCompleted];
+        allTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        
+        final displayTodos = allTodos.take(widget.maxTodos).toList();
+        
+        if (displayTodos.isEmpty && state.activeTodos.isEmpty) {
           return const SizedBox.shrink();
         }
 
@@ -31,7 +96,7 @@ class TodosCarousel extends StatelessWidget {
           children: [
             // CC: Header
             InkWell(
-              onTap: onHeaderTap,
+              onTap: widget.onHeaderTap,
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -44,7 +109,7 @@ class TodosCarousel extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        if (state.activeTodos.length > maxTodos)
+                        if (state.activeTodos.length > widget.maxTodos)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -55,14 +120,14 @@ class TodosCarousel extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '+${state.activeTodos.length - maxTodos}',
+                              '+${state.activeTodos.length - widget.maxTodos}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                        if (state.activeTodos.length > maxTodos)
+                        if (state.activeTodos.length > widget.maxTodos)
                           const SizedBox(width: 8),
                         Icon(
                           Icons.arrow_forward_ios,
@@ -87,9 +152,9 @@ class TodosCarousel extends StatelessWidget {
                     child: RectangularTodoCard(
                       todo: todo,
                       onCheckboxTap: () {
-                        context.read<TodoCubit>().toggleTodoCompletion(todo);
+                        _handleTodoCompletion(todo);
                       },
-                      onTap: onHeaderTap,
+                      onTap: widget.onHeaderTap,
                     ),
                   );
                 }).toList(),
