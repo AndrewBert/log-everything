@@ -42,21 +42,21 @@ class DashboardV2State extends Equatable {
   // CC: Get entries organized by category
   Map<String, List<Entry>> get categorizedEntries {
     final Map<String, List<Entry>> result = {};
-    
+
     for (final entry in entries) {
-      final category = entry.category ?? 'Uncategorized';
+      final category = entry.category;
       result.putIfAbsent(category, () => []).add(entry);
     }
-    
+
     return result;
   }
 
   @override
   List<Object?> get props => [
-        entries,
-        isLoading,
-        hasMoreEntries,
-        selectedCarouselIndex,
-        isGeneratingInsight,
-      ];
+    entries,
+    isLoading,
+    hasMoreEntries,
+    selectedCarouselIndex,
+    isGeneratingInsight,
+  ];
 }

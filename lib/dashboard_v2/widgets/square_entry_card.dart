@@ -18,7 +18,7 @@ class SquareEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(entry.category ?? 'Uncategorized');
+    final categoryColor = CategoryColors.getColorForCategory(entry.category);
     final dateFormatter = DateFormat('MMM d');
     final timeFormatter = DateFormat('h:mm a');
 
@@ -96,7 +96,7 @@ class SquareEntryCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  entry.category ?? 'Uncategorized',
+                                  entry.category,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: categoryColor,
                                     fontWeight: FontWeight.w500,

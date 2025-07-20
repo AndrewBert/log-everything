@@ -20,7 +20,7 @@ class RectangularTodoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(todo.category ?? 'Uncategorized');
+    final categoryColor = CategoryColors.getColorForCategory(todo.category);
     final dateFormatter = DateFormat('MMM d');
 
     return AnimatedOpacity(
@@ -70,11 +70,9 @@ class RectangularTodoCard extends StatelessWidget {
                         height: 24,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: todo.isCompleted 
-                              ? theme.colorScheme.primary 
-                              : Colors.transparent,
+                          color: todo.isCompleted ? theme.colorScheme.primary : Colors.transparent,
                           border: Border.all(
-                            color: todo.isCompleted 
+                            color: todo.isCompleted
                                 ? theme.colorScheme.primary
                                 : theme.colorScheme.outline.withValues(alpha: 0.5),
                             width: 2,
@@ -102,9 +100,7 @@ class RectangularTodoCard extends StatelessWidget {
                           Text(
                             todo.text,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              decoration: todo.isCompleted 
-                                  ? TextDecoration.lineThrough 
-                                  : null,
+                              decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
                               decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                             maxLines: 1,
@@ -125,7 +121,7 @@ class RectangularTodoCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  todo.category ?? 'Uncategorized',
+                                  todo.category,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: categoryColor,
                                     fontWeight: FontWeight.w500,

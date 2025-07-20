@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/utils/category_colors.dart';
 
 class CategoryForm extends StatefulWidget {
   final String? initialName;
@@ -131,9 +130,7 @@ class _CategoryFormState extends State<CategoryForm> {
                       child: Text(
                         _nameController.text.isEmpty ? 'Category Name' : _nameController.text,
                         style: TextStyle(
-                          color: HSLColor.fromColor(_selectedColor)
-                              .withLightness(0.3)
-                              .toColor(),
+                          color: HSLColor.fromColor(_selectedColor).withLightness(0.3).toColor(),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -152,7 +149,7 @@ class _CategoryFormState extends State<CategoryForm> {
                       itemBuilder: (context, index) {
                         final color = _availableColors[index];
                         final isSelected = color == _selectedColor;
-                        
+
                         return GestureDetector(
                           onTap: () {
                             setState(() {
@@ -164,9 +161,7 @@ class _CategoryFormState extends State<CategoryForm> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isSelected 
-                                    ? theme.colorScheme.primary 
-                                    : Colors.transparent,
+                                color: isSelected ? theme.colorScheme.primary : Colors.transparent,
                                 width: 3,
                               ),
                             ),
@@ -213,7 +208,7 @@ class _CategoryFormState extends State<CategoryForm> {
     if (_formKey.currentState!.validate()) {
       final name = _nameController.text.trim();
       final description = _descriptionController.text.trim();
-      
+
       widget.onSubmit(name, description, _selectedColor);
     }
   }

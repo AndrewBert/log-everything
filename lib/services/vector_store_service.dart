@@ -232,7 +232,7 @@ class VectorStoreService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseBody = jsonDecode(response.body);
         final addedFileId = responseBody['id'] as String?;
-        final status = responseBody['status'] as String?;
+        // CC: Status field exists in response but not currently used
 
         if (addedFileId != fileId) {
           AppLogger.warn('[VectorStoreService] Added file ID $addedFileId does not match expected $fileId.');
@@ -833,7 +833,7 @@ class VectorStoreService {
         for (final file in files) {
           final fileId = file['id'] as String;
           final createdAt = file['created_at'] as int;
-          final createdDate = DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
+          // CC: Created date from timestamp (currently unused)
 
           try {
             // CP: Get file details including filename from files API
@@ -842,13 +842,14 @@ class VectorStoreService {
               headers: _getHeaders(),
             );
 
-            String filename = 'unknown';
+            // CC: Filename retrieval for debugging (currently unused)
             if (fileResponse.statusCode == 200) {
-              final fileData = jsonDecode(fileResponse.body);
-              filename = fileData['filename'] as String? ?? 'unknown';
+              // CC: File data available in response but not currently used
+              jsonDecode(fileResponse.body);
             }
 
           } catch (e) {
+            // CC: Silently ignore file retrieval errors for cleanup
           }
         }
       } else {
