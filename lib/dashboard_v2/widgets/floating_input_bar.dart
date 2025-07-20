@@ -25,8 +25,16 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   late AnimationController _animationController;
   late AnimationController _waveformController;
   late AnimationController _pulseController;
+  late AnimationController _heightController;
   late Animation<double> _widthAnimation;
   late Animation<double> _pulseAnimation;
+  late Animation<double> _heightAnimation;
+  double _currentTextHeight = 56.0;
+
+  // TODO: QUICK FIX - To temporarily disable height animation issues:
+  // 1. Comment out all _updateTextHeight() calls
+  // 2. Change Container back to AnimatedContainer with duration: 300ms
+  // 3. Use maxHeight: _isExpanded ? 200 : 56 instead of _heightAnimation.value
 
   @override
   void initState() {
@@ -44,6 +52,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _heightController = AnimationController(
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
@@ -69,6 +82,17 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
           ),
         );
 
+    _heightAnimation =
+        Tween<double>(
+          begin: 56.0,
+          end: 200.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _heightController,
+            curve: Curves.easeInOutCubic,
+          ),
+        );
+
     _focusNode.addListener(_onFocusChange);
     _textController.addListener(_onTextChanged);
   }
@@ -83,10 +107,34 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         // CC: Cancel review timer if user focuses the field
         _transcriptionReviewTimer?.cancel();
         _justTranscribed = false;
+
+        // CC: Calculate and animate to required height
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _updateTextHeight();
+        });
       } else {
         // CC: Don't collapse immediately if just transcribed
         if (!_justTranscribed) {
           _animationController.reverse();
+
+          // CC: Animate height back to single line
+          // TODO: This collapse animation is not visible - investigate why
+          // Possible issues:
+          // 1. _heightController.forward(from: 0) might be resetting animation
+          // 2. Container doesn't animate, need AnimatedContainer
+          // 3. Animation duration might be too fast
+          _currentTextHeight = 56.0;
+          _heightAnimation =
+              Tween<double>(
+                begin: _heightAnimation.value,
+                end: 56.0,
+              ).animate(
+                CurvedAnimation(
+                  parent: _heightController,
+                  curve: Curves.easeInOutCubic,
+                ),
+              );
+          _heightController.forward(from: 0);
         }
         // CC: Scroll text field to beginning when unfocused
         if (_textController.text.isNotEmpty) {
@@ -108,6 +156,73 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         _pulseController.reset();
       }
     });
+
+    // CC: Calculate required height for multi-line text
+    if (_isExpanded) {
+      _updateTextHeight();
+    }
+  }
+
+  void _updateTextHeight() {
+    // TODO: Height animation for multi-line text expansion is causing issues:
+    // 1. App bar color changes as if scrolling (Material 3 scroll behavior)
+    // 2. Consider disabling or simplifying this animation for now
+    // 3. The animation from expanded to compact view is NOT working properly:
+    //    - Not visible when tapping outside to unfocus
+    //    - Not visible when voice recording timer expires
+    //    - Seems to just snap instead of animating smoothly
+    //
+    // DEBUGGING HINTS:
+    // - Check if Container vs AnimatedContainer is the issue
+    // - Verify _heightAnimation.value is actually changing during collapse
+    // - Check if setState is being called at the right times
+    // - Consider using a single AnimatedContainer with dynamic height instead
+
+    // CC: Calculate the required height based on text content
+    final textSpan = TextSpan(
+      text: _textController.text.isEmpty ? 'Add log' : _textController.text,
+      style: Theme.of(context).textTheme.bodyLarge,
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      maxLines: 6,
+    );
+
+    // CC: Calculate available width more accurately
+    final screenWidth = MediaQuery.of(context).size.width;
+    final containerMargin = 32.0; // 16 * 2
+    final containerPadding = 16.0; // 8 * 2
+    final iconSpace = 96.0; // Space for send button and potential mic button
+    final availableWidth = (screenWidth * _widthAnimation.value) - containerMargin - containerPadding - iconSpace;
+
+    textPainter.layout(maxWidth: availableWidth > 0 ? availableWidth : 100);
+
+    // CC: Calculate height with vertical padding (16 * 2 = 32)
+    final lineHeight = textPainter.computeLineMetrics().isNotEmpty
+        ? textPainter.computeLineMetrics().first.height
+        : 24.0;
+    final numberOfLines = (textPainter.height / lineHeight).ceil().clamp(1, 6);
+    final calculatedHeight = (56.0 + ((numberOfLines - 1) * 24.0)).clamp(56.0, 200.0);
+
+    if ((calculatedHeight - _currentTextHeight).abs() > 1.0) {
+      _currentTextHeight = calculatedHeight;
+
+      // CC: Update height animation with new target
+      _heightAnimation =
+          Tween<double>(
+            begin: _heightAnimation.value,
+            end: calculatedHeight,
+          ).animate(
+            CurvedAnimation(
+              parent: _heightController,
+              curve: Curves.easeInOutCubic,
+            ),
+          );
+
+      _heightController.forward(from: 0);
+    }
   }
 
   @override
@@ -116,6 +231,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
     _animationController.dispose();
     _waveformController.dispose();
     _pulseController.dispose();
+    _heightController.dispose();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -254,6 +370,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
             _isExpanded = true;
           });
           _animationController.forward();
+
+          // CC: Calculate and animate to required height
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateTextHeight();
+          });
           // CC: Cancel any existing timer
           _transcriptionReviewTimer?.cancel();
 
@@ -265,6 +386,20 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                 _justTranscribed = false;
               });
               _animationController.reverse();
+
+              // CC: Animate height back to single line
+              _currentTextHeight = 56.0;
+              _heightAnimation =
+                  Tween<double>(
+                    begin: _heightAnimation.value,
+                    end: 56.0,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _heightController,
+                      curve: Curves.easeInOutCubic,
+                    ),
+                  );
+              _heightController.forward(from: 0);
             }
           });
         }
@@ -289,14 +424,17 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
               return FractionallySizedBox(
                 widthFactor: _widthAnimation.value,
                 child: AnimatedBuilder(
-                  animation: _pulseAnimation,
+                  animation: Listenable.merge([_pulseAnimation, _heightAnimation]),
                   builder: (context, child) {
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                    // TODO: Animation issue - changing from AnimatedContainer to Container
+                    // broke the smooth collapse animation. The height animation controller
+                    // might not be properly animating the collapse. Consider reverting to
+                    // AnimatedContainer or fixing the height animation controller logic.
+                    return Container(
                       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       constraints: BoxConstraints(
                         minHeight: 56,
-                        maxHeight: _isExpanded ? 200 : 56,
+                        maxHeight: _heightAnimation.value,
                       ),
                       decoration: BoxDecoration(
                         color: _hasText && !_isExpanded
