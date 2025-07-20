@@ -53,14 +53,6 @@ class DashboardV2Page extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Recent Entries',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
                         BlocBuilder<DashboardV2Cubit, DashboardV2State>(
                           buildWhen: (prev, current) =>
                               prev.currentInsight != current.currentInsight ||
