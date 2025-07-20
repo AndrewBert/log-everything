@@ -178,6 +178,9 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
       final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
 
+      // CC: Check if cubit is still active before emitting
+      if (isClosed) return;
+
       // Use the priority system to get the most relevant insight
       final primaryInsight = comprehensiveInsight.getPrimaryInsight();
 
@@ -192,7 +195,10 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         emit(state.copyWith(isRegeneratingInsight: false));
       }
     } catch (e) {
-      emit(state.copyWith(isRegeneratingInsight: false));
+      // CC: Check if cubit is still active before emitting
+      if (!isClosed) {
+        emit(state.copyWith(isRegeneratingInsight: false));
+      }
     }
   }
 
