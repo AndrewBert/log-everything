@@ -7,7 +7,6 @@ import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/utils/category_colors.dart';
 
 class CategoryEntriesPage extends StatelessWidget {
   final String categoryName;
@@ -27,8 +26,8 @@ class CategoryEntriesPage extends StatelessWidget {
       child: BlocBuilder<CategoryEntriesCubit, CategoryEntriesState>(
         builder: (context, state) {
           final theme = Theme.of(context);
-          // CC: Use color from state instead of fetching directly
-          final categoryColor = state.categoryColor ?? CategoryColors.getColorForCategory(categoryName);
+          // CC: Use color from state with fallback
+          final categoryColor = state.categoryColor ?? Theme.of(context).colorScheme.primary;
           final cubit = context.read<CategoryEntriesCubit>();
 
           return Scaffold(
@@ -140,6 +139,7 @@ class CategoryEntriesPage extends StatelessWidget {
                         return NewspaperEntryCard(
                           entry: entry,
                           isInGrid: true,
+                          categoryColor: categoryColor,
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(

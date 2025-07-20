@@ -100,70 +100,82 @@ class TodosPage extends StatelessWidget {
                       ),
                     ],
 
-                    // CC: Completed section header
-                    if (todoState.completedTodos.isNotEmpty) ...[
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        sliver: SliverToBoxAdapter(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Completed',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                              TextButton(
-                                key: showCompletedButtonKey,
-                                onPressed: () {
-                                  context.read<TodoCubit>().toggleShowCompleted();
-                                },
-                                child: Text(
-                                  todoState.showCompleted ? 'Hide' : 'Show',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
+                    // CC: Completed section header - only show if there are completed todos not currently animating
+                    Builder(
+                      builder: (context) {
+                        final nonAnimatingCompletedTodos = todoState.completedTodos.where((todo) {
+                          final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+                          return !pageState.completedTodoIds.contains(todoId);
+                        }).toList();
+                        
+                        if (nonAnimatingCompletedTodos.isEmpty) {
+                          return const SliverToBoxAdapter(child: SizedBox.shrink());
+                        }
+                        
+                        return SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                          sliver: SliverToBoxAdapter(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Completed',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // CC: Completed todos (shown/hidden based on state)
-                      if (todoState.showCompleted)
-                        Builder(
-                          builder: (context) {
-                            // CC: Filter out todos that are still animating in the active section
-                            final visibleCompletedTodos = todoState.completedTodos.where((todo) {
-                              final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                              return !pageState.completedTodoIds.contains(todoId);
-                            }).toList();
-
-                            return SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final todo = visibleCompletedTodos[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: RectangularTodoCard(
-                                        todo: todo,
-                                        onCheckboxTap: () {
-                                          _handleTodoCompletion(context, todo);
-                                        },
-                                      ),
-                                    );
+                                TextButton(
+                                  key: showCompletedButtonKey,
+                                  onPressed: () {
+                                    context.read<TodoCubit>().toggleShowCompleted();
                                   },
-                                  childCount: visibleCompletedTodos.length,
+                                  child: Text(
+                                    todoState.showCompleted ? 'Hide' : 'Show',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // CC: Completed todos (shown/hidden based on state)
+                    if (todoState.showCompleted) ...[
+                      Builder(
+                        builder: (context) {
+                          // CC: Filter out todos that are still animating in the active section
+                          final visibleCompletedTodos = todoState.completedTodos.where((todo) {
+                            final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+                            return !pageState.completedTodoIds.contains(todoId);
+                          }).toList();
+
+                          return SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final todo = visibleCompletedTodos[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: RectangularTodoCard(
+                                      todo: todo,
+                                      onCheckboxTap: () {
+                                        _handleTodoCompletion(context, todo);
+                                      },
+                                    ),
+                                  );
+                                },
+                                childCount: visibleCompletedTodos.length,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
 
                     // CC: Bottom padding

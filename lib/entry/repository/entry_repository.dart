@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../entry.dart';
 import '../category.dart'; // CP: Import Category model
 import '../../services/ai_service.dart';
@@ -41,6 +43,9 @@ class EntryRepository {
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
+
+    // CC: Migrate category colors from CategoryColors utility to Category model
+    await _migrateCategoryColorsIfNeeded();
 
     // CC: Emit initial entries to stream
     _entriesStreamController.add(currentEntries);
@@ -506,6 +511,75 @@ class EntryRepository {
     final timeFormat = DateFormat('h:mm a');
     final dateFormat = DateFormat('yyyy-MM-dd');
     return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
+  }
+
+  /// CC: Migrate colors from CategoryColors utility to Category model (one-time migration)
+  Future<void> _migrateCategoryColorsIfNeeded() async {
+    try {
+      // CC: Check if migration is already complete by looking for any categories with colors
+      final hasColorsInCategories = _categories.any((cat) => cat.color != null);
+      if (hasColorsInCategories) {
+        AppLogger.info("Repository: Category color migration already completed - skipping.");
+        return;
+      }
+
+      // CC: Load existing category colors from CategoryColors
+      final prefs = await SharedPreferences.getInstance();
+      const prefsKey = 'category_colors_v1';
+      final savedColors = prefs.getString(prefsKey);
+      
+      if (savedColors == null) {
+        AppLogger.info("Repository: No legacy category colors found - skipping migration.");
+        return;
+      }
+
+      Map<String, Color> legacyColors = {};
+      try {
+        final Map<String, dynamic> decodedMap = jsonDecode(savedColors);
+        for (var entry in decodedMap.entries) {
+          try {
+            final color = _colorFromHex(entry.value as String);
+            legacyColors[entry.key] = color;
+          } catch (e) {
+            AppLogger.warn('Error parsing legacy color for category "${entry.key}": $e');
+          }
+        }
+      } catch (e) {
+        AppLogger.error('Error decoding legacy category colors JSON: $e');
+        return;
+      }
+
+      if (legacyColors.isEmpty) {
+        AppLogger.info("Repository: No valid legacy category colors found - skipping migration.");
+        return;
+      }
+
+      // CC: Update categories with migrated colors
+      bool migrationMade = false;
+      for (int i = 0; i < _categories.length; i++) {
+        final category = _categories[i];
+        if (legacyColors.containsKey(category.name)) {
+          _categories[i] = category.copyWith(color: legacyColors[category.name]);
+          migrationMade = true;
+        }
+      }
+
+      if (migrationMade) {
+        await _saveCategories();
+        AppLogger.info("Repository: Successfully migrated ${legacyColors.length} category colors to Category model.");
+      }
+
+    } catch (e, stackTrace) {
+      AppLogger.error("Repository: Error during category color migration", error: e, stackTrace: stackTrace);
+    }
+  }
+
+  /// CC: Helper method to convert hex string to Color (copied from CategoryColors)
+  Color _colorFromHex(String hexString) {
+    final buffer = StringBuffer();
+    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+    buffer.write(hexString.replaceAll('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
   }
 
   /// CP: Disposes the repository and cancels all pending timers

@@ -5,7 +5,6 @@ import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/utils/category_colors.dart';
 
 part 'category_entries_state.dart';
 
@@ -35,8 +34,8 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
       orElse: () => Category(name: categoryName),
     );
 
-    // CC: Use color from category model, fallback to CategoryColors for migration
-    final categoryColor = category.color ?? CategoryColors.getColorForCategory(categoryName);
+    // CC: Use color from category model
+    final categoryColor = category.color;
 
     emit(
       state.copyWith(
@@ -57,7 +56,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
       (cat) => cat.name == categoryName,
       orElse: () => Category(name: categoryName),
     );
-    final categoryColor = category.color ?? CategoryColors.getColorForCategory(categoryName);
+    final categoryColor = category.color;
 
     emit(
       state.copyWith(

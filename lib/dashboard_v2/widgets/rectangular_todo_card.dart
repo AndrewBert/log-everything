@@ -32,7 +32,7 @@ class RectangularTodoCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            height: 72,
+            constraints: const BoxConstraints(minHeight: 72),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
@@ -87,7 +87,7 @@ class RectangularTodoCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // CC: Todo text
+                          // CC: Todo text - allow multiple lines for better readability
                           Text(
                             todo.text,
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -96,8 +96,9 @@ class RectangularTodoCard extends StatelessWidget {
                               fontSize: 15,
                               fontWeight: FontWeight.w400,
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                              height: 1.3,
                             ),
-                            maxLines: 1,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
