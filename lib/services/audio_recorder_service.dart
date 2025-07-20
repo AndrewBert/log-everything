@@ -30,8 +30,23 @@ abstract class AudioRecorderService {
 /// Implementation of [AudioRecorderService] using the 'record' package.
 class AudioRecorderServiceImpl implements AudioRecorderService {
   final AudioRecorder _recorder;
+  StreamController<RecordState>? _stateStreamController;
+  StreamSubscription<RecordState>? _recorderStateSubscription;
 
-  AudioRecorderServiceImpl() : _recorder = AudioRecorder();
+  AudioRecorderServiceImpl() : _recorder = AudioRecorder() {
+    _initializeStateStream();
+  }
+
+  void _initializeStateStream() {
+    // CC: Create a broadcast stream controller to allow multiple listeners
+    _stateStreamController = StreamController<RecordState>.broadcast();
+    
+    // CC: Forward events from the recorder to our broadcast stream
+    _recorderStateSubscription = _recorder.onStateChanged().listen(
+      (state) => _stateStreamController?.add(state),
+      onError: (error) => _stateStreamController?.addError(error),
+    );
+  }
 
   @override
   Future<void> start(RecordConfig config, {required String path}) async {
@@ -50,11 +65,14 @@ class AudioRecorderServiceImpl implements AudioRecorderService {
 
   @override
   Stream<RecordState> onStateChanged() {
-    return _recorder.onStateChanged();
+    // CC: Return the broadcast stream instead of the single-subscription stream
+    return _stateStreamController?.stream ?? const Stream.empty();
   }
 
   @override
   void dispose() {
+    _recorderStateSubscription?.cancel();
+    _stateStreamController?.close();
     _recorder.dispose();
   }
 

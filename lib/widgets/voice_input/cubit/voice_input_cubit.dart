@@ -27,6 +27,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   final PermissionService _permissionService;
 
   Timer? _recordingTimer;
+  StreamSubscription<RecordState>? _recordStateSubscription;
   static const Duration _maxRecordingDuration = Duration(minutes: 5);
   static const Duration _minRecordingDuration = Duration(seconds: 1);
 
@@ -44,8 +45,12 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   Future<void> _initialize() async {
     final status = await _permissionService.getMicrophoneStatus();
     emit(state.copyWith(micPermissionStatus: status));
+    // CC: Cancel any existing subscription before creating a new one
+    _recordStateSubscription?.cancel();
     // Listen to state changes from the service
-    _audioRecorderService.onStateChanged().listen((recordState) {});
+    _recordStateSubscription = _audioRecorderService.onStateChanged().listen((recordState) {
+      // CC: Currently not handling state changes, but keeping subscription for future use
+    });
   }
 
   Future<void> requestMicrophonePermission() async {
@@ -423,6 +428,7 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
   @override
   Future<void> close() {
     _cancelRecordingTimer();
+    _recordStateSubscription?.cancel();
     _audioRecorderService.dispose();
     return super.close();
   }

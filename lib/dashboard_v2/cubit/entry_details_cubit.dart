@@ -192,7 +192,9 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
           ),
         );
       } else {
-        emit(state.copyWith(isRegeneratingInsight: false));
+        if (!isClosed) {
+          emit(state.copyWith(isRegeneratingInsight: false));
+        }
       }
     } catch (e) {
       // CC: Check if cubit is still active before emitting

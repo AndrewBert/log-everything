@@ -17,6 +17,7 @@ export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';
 export 'widgets/rectangular_todo_card.dart';
 export 'widgets/todos_carousel.dart';
+export 'widgets/floating_input_bar.dart';
 
 // Cubit
 export 'cubit/dashboard_v2_cubit.dart';
