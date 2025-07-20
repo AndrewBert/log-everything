@@ -20,6 +20,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   bool _isExpanded = false;
   bool _hasText = false;
   bool _justTranscribed = false;
+  bool _textOverflows = false;
   Timer? _transcriptionReviewTimer;
 
   late AnimationController _animationController;
@@ -62,7 +63,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
     _widthAnimation =
         Tween<double>(
-          begin: 0.8, // CC: Start at 80% width
+          begin: 0.9, // CC: Start at 90% width (wider compact state)
           end: 1.0, // CC: Expand to full width
         ).animate(
           CurvedAnimation(
@@ -161,6 +162,51 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
     if (_isExpanded) {
       _updateTextHeight();
     }
+
+    // CC: Overflow will be checked by LayoutBuilder
+    if (_isExpanded || !_hasText) {
+      // CC: Reset overflow state when expanded or no text
+      setState(() {
+        _textOverflows = false;
+      });
+    }
+  }
+
+  void _checkTextOverflow(double availableWidth) {
+    // CC: Calculate if text overflows based on available width
+    if (!_hasText || _isExpanded) {
+      setState(() {
+        _textOverflows = false;
+      });
+      return;
+    }
+
+    final textSpan = TextSpan(
+      text: _textController.text,
+      style: Theme.of(context).textTheme.bodyLarge,
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    );
+
+    textPainter.layout(maxWidth: double.infinity);
+
+    // CC: Account for text field padding and gradient space
+    final textFieldPadding = _hasText ? 4.0 : 12.0; // Left padding
+    final rightPadding = 16.0;
+    final gradientSpace = 25.0; // Space needed for gradient/ellipsis
+    final totalPadding = textFieldPadding + rightPadding + gradientSpace;
+
+    final shouldOverflow = textPainter.width > (availableWidth - totalPadding);
+
+    if (_textOverflows != shouldOverflow) {
+      setState(() {
+        _textOverflows = shouldOverflow;
+      });
+    }
   }
 
   void _updateTextHeight() {
@@ -194,7 +240,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
     final screenWidth = MediaQuery.of(context).size.width;
     final containerMargin = 32.0; // 16 * 2
     final containerPadding = 16.0; // 8 * 2
-    final iconSpace = 96.0; // Space for send button and potential mic button
+    final iconSpace = _hasText ? 144.0 : 96.0; // Space for send button and clear button when text present
     final availableWidth = (screenWidth * _widthAnimation.value) - containerMargin - containerPadding - iconSpace;
 
     textPainter.layout(maxWidth: availableWidth > 0 ? availableWidth : 100);
@@ -424,6 +470,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                     ),
                   );
               _heightController.forward(from: 0);
+
+              // CC: Overflow will be checked by LayoutBuilder on next frame
             }
           });
         }
@@ -499,6 +547,29 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
+                                    // CC: Clear button - show when has text
+                                    if (_hasText) ...[
+                                      IconButton(
+                                        onPressed: () {
+                                          _textController.clear();
+                                          _transcriptionReviewTimer?.cancel();
+                                          setState(() {
+                                            _justTranscribed = false;
+                                            _textOverflows = false;
+                                          });
+                                          HapticFeedback.lightImpact();
+                                        },
+                                        icon: Icon(
+                                          Icons.close,
+                                          color: _hasText && !_isExpanded
+                                              ? theme.colorScheme.onPrimaryContainer
+                                              : theme.colorScheme.onSurfaceVariant,
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Clear',
+                                      ),
+                                    ],
+
                                     // CC: Voice input button - hide when focused or has text
                                     if (!_hasText && !_isExpanded) ...[
                                       IconButton(
@@ -525,36 +596,98 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                       ),
                                     ],
 
-                                    // CC: Text input field
+                                    // CC: Text input field with overflow indicator
                                     Expanded(
-                                      child: TextField(
-                                        controller: _textController,
-                                        focusNode: _focusNode,
-                                        decoration: InputDecoration(
-                                          hintText: _justTranscribed ? "Review transcription..." : "Add log",
-                                          hintStyle: TextStyle(
-                                            color: _hasText && !_isExpanded
-                                                ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
-                                                : null,
-                                          ),
-                                          border: InputBorder.none,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: _hasText ? 16 : 12,
-                                            vertical: 16,
-                                          ),
-                                        ),
-                                        style: TextStyle(
-                                          color: _hasText && !_isExpanded ? theme.colorScheme.onPrimaryContainer : null,
-                                        ),
-                                        textAlign: _isExpanded || _hasText ? TextAlign.start : TextAlign.center,
-                                        textInputAction: TextInputAction.newline,
-                                        onSubmitted: (_) => _handleSubmit(),
-                                        minLines: 1,
-                                        maxLines: _isExpanded ? 6 : 1,
-                                        keyboardType: TextInputType.multiline,
-                                        textCapitalization: TextCapitalization.sentences,
-                                        onTapOutside: (_) {
-                                          _focusNode.unfocus();
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          // CC: Check overflow whenever layout changes
+                                          if (_hasText && !_isExpanded) {
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              _checkTextOverflow(constraints.maxWidth);
+                                            });
+                                          }
+
+                                          return Stack(
+                                            alignment: Alignment.centerRight,
+                                            children: [
+                                              TextField(
+                                                controller: _textController,
+                                                focusNode: _focusNode,
+                                                decoration: InputDecoration(
+                                                  hintText: _justTranscribed ? "Review transcription..." : "Add log",
+                                                  hintStyle: TextStyle(
+                                                    color: _hasText && !_isExpanded
+                                                        ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
+                                                        : null,
+                                                  ),
+                                                  border: InputBorder.none,
+                                                  contentPadding: EdgeInsets.only(
+                                                    left: _hasText ? 4 : 12,
+                                                    right: _hasText && !_isExpanded && _textOverflows ? 25 : 16,
+                                                    top: 16,
+                                                    bottom: 16,
+                                                  ),
+                                                ),
+                                                style: TextStyle(
+                                                  color: _hasText && !_isExpanded
+                                                      ? theme.colorScheme.onPrimaryContainer
+                                                      : null,
+                                                ),
+                                                textAlign: _isExpanded || _hasText ? TextAlign.start : TextAlign.center,
+                                                textInputAction: TextInputAction.newline,
+                                                onSubmitted: (_) => _handleSubmit(),
+                                                minLines: 1,
+                                                maxLines: _isExpanded ? 6 : 1,
+                                                keyboardType: TextInputType.multiline,
+                                                textCapitalization: TextCapitalization.sentences,
+                                                onTap: () {
+                                                  // CC: Move cursor to end when tapping collapsed field with text
+                                                  if (!_isExpanded && _hasText) {
+                                                    _textController.selection = TextSelection.fromPosition(
+                                                      TextPosition(offset: _textController.text.length),
+                                                    );
+                                                  }
+                                                },
+                                                onTapOutside: (_) {
+                                                  _focusNode.unfocus();
+                                                },
+                                              ),
+                                              // CC: Gradient fade indicator for text overflow
+                                              if (_hasText && !_isExpanded && _textOverflows)
+                                                Positioned(
+                                                  right: 0,
+                                                  top: 0,
+                                                  bottom: 0,
+                                                  child: IgnorePointer(
+                                                    child: Container(
+                                                      width: 24,
+                                                      decoration: BoxDecoration(
+                                                        gradient: LinearGradient(
+                                                          begin: Alignment.centerLeft,
+                                                          end: Alignment.centerRight,
+                                                          colors: [
+                                                            theme.colorScheme.primaryContainer.withValues(alpha: 0),
+                                                            theme.colorScheme.primaryContainer.withValues(alpha: 0.9),
+                                                            theme.colorScheme.primaryContainer,
+                                                          ],
+                                                          stops: const [0.0, 0.5, 1.0],
+                                                        ),
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '…',
+                                                          style: TextStyle(
+                                                            color: theme.colorScheme.onPrimaryContainer,
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          );
                                         },
                                       ),
                                     ),
