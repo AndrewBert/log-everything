@@ -25,28 +25,27 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
 
   void _loadCategoryEntries() {
     final allEntries = _entryRepository.currentEntries;
-    final categoryEntries = allEntries
-        .where((entry) => entry.category == categoryName)
-        .toList();
-    
+    final categoryEntries = allEntries.where((entry) => entry.category == categoryName).toList();
+
     // CC: Find the category object
-    final category = _entryRepository.currentCategories
-        .firstWhere((cat) => cat.name == categoryName, 
-        orElse: () => Category(name: categoryName));
-    
-    emit(state.copyWith(
-      category: category,
-      entries: categoryEntries,
-      isLoading: false,
-    ));
+    final category = _entryRepository.currentCategories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () => Category(name: categoryName),
+    );
+
+    emit(
+      state.copyWith(
+        category: category,
+        entries: categoryEntries,
+        isLoading: false,
+      ),
+    );
   }
 
   void _onEntriesUpdated(List<Entry> allEntries) {
     // CC: Filter entries for this category
-    final categoryEntries = allEntries
-        .where((entry) => entry.category == categoryName)
-        .toList();
-    
+    final categoryEntries = allEntries.where((entry) => entry.category == categoryName).toList();
+
     emit(state.copyWith(entries: categoryEntries));
   }
 
@@ -56,12 +55,12 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
       newName,
       description: newDescription,
     );
-    
+
     // CC: Update the category name if it changed
     if (newName != categoryName) {
       categoryName = newName;
     }
-    
+
     // CC: Reload category details
     _loadCategoryEntries();
   }

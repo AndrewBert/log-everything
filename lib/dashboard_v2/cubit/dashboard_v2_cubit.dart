@@ -26,9 +26,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     emit(state.copyWith(isLoading: true));
 
     final entries = _entryRepository.currentEntries;
+    // CC: Filter out todos from the entries list
+    final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
     emit(
       state.copyWith(
-        entries: entries,
+        entries: nonTodoEntries,
         isLoading: false,
         hasMoreEntries: false, // CC: For now, load all entries at once
       ),
@@ -122,12 +124,14 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   void _onEntriesUpdated(List<Entry> entries) {
+    // CC: Filter out todos from the entries list
+    final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
-        entries: entries,
+        entries: nonTodoEntries,
         // CC: Reset selected index if it's out of bounds
-        selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
+        selectedCarouselIndex: state.selectedCarouselIndex >= nonTodoEntries.length ? 0 : state.selectedCarouselIndex,
       ),
     );
   }
