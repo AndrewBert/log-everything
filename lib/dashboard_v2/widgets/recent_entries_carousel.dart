@@ -86,7 +86,7 @@ class RecentEntriesCarousel extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 child: AspectRatio(
                   aspectRatio: 1.0,
-                  child: SquareEntryCard(
+                  child: NewspaperEntryCard(
                     entry: entry,
                     isSelected: isSelected,
                     onTap: () {

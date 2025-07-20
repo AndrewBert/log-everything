@@ -7,6 +7,7 @@ import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
+import 'package:myapp/utils/category_colors.dart';
 
 class DashboardV2Page extends StatelessWidget {
   const DashboardV2Page({super.key});
@@ -59,14 +60,19 @@ class DashboardV2Page extends StatelessWidget {
                               prev.isGeneratingInsight != current.isGeneratingInsight,
                           builder: (context, state) {
                             final primaryInsight = state.currentInsight?.getPrimaryInsight();
-                            return SimpleInsightContainer(
+                            final selectedEntry = state.selectedCarouselIndex < state.entries.length
+                                ? state.entries[state.selectedCarouselIndex]
+                                : null;
+                            final categoryColor = selectedEntry != null
+                                ? CategoryColors.getColorForCategory(selectedEntry.category)
+                                : Theme.of(context).colorScheme.primary;
+                            
+                            return NewspaperInsightContainer(
                               insight: primaryInsight,
                               isLoading: state.isGeneratingInsight,
-                              onTap: primaryInsight != null && state.selectedCarouselIndex < state.entries.length
-                                  ? () {
-                                      final entry = state.entries[state.selectedCarouselIndex];
-                                      _navigateToEntryDetails(context, entry, state);
-                                    }
+                              categoryColor: categoryColor,
+                              onTap: primaryInsight != null && selectedEntry != null
+                                  ? () => _navigateToEntryDetails(context, selectedEntry, state)
                                   : null,
                             );
                           },
@@ -168,9 +174,25 @@ class DashboardV2Page extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'All Entries',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ALL ENTRIES',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            height: 1,
+                            width: 80,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -194,8 +216,9 @@ class DashboardV2Page extends StatelessWidget {
                             );
                           }
                           final entry = state.entries[index];
-                          return SquareEntryCard(
+                          return NewspaperEntryCard(
                             entry: entry,
+                            isInGrid: true,
                             onTap: () {
                               _navigateToEntryDetails(context, entry, state);
                             },

@@ -11,6 +11,8 @@ export 'widgets/recent_entries_carousel.dart';
 export 'widgets/ai_insight_container.dart';
 export 'widgets/comprehensive_insight_container.dart';
 export 'widgets/simple_insight_container.dart';
+export 'widgets/newspaper_insight_container.dart';
+export 'widgets/newspaper_entry_card.dart';
 export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';
 export 'widgets/rectangular_todo_card.dart';

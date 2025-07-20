@@ -30,34 +30,25 @@ class RectangularTodoCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
             height: 72,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               child: Row(
                 children: [
                   // CC: Category color stripe
                   Container(
-                    width: 4,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          categoryColor,
-                          categoryColor.withValues(alpha: 0.8),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
+                    width: 3,
+                    color: categoryColor.withValues(alpha: 0.5),
                   ),
                   // CC: Checkbox
                   InkWell(
@@ -102,6 +93,9 @@ class RectangularTodoCard extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(
                               decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
                               decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -111,29 +105,24 @@ class RectangularTodoCard extends StatelessWidget {
                           Row(
                             children: [
                               // CC: Category chip
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: categoryColor.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  todo.category,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: categoryColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              Text(
+                                todo.category.toUpperCase(),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  letterSpacing: 0.8,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               // CC: Date
                               Text(
-                                dateFormatter.format(todo.timestamp),
+                                '• ${dateFormatter.format(todo.timestamp).toUpperCase()}',
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                 ),
                               ),
                             ],

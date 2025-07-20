@@ -27,45 +27,27 @@ class CategoryCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSelected
-                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
-                  : theme.colorScheme.outline.withValues(alpha: 0.2),
-              width: isSelected ? 2 : 1,
+                  ? categoryColor.withValues(alpha: 0.5)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: isSelected ? 1.5 : 1,
             ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // CC: Category color indicator
                 Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        categoryColor,
-                        categoryColor.withValues(alpha: 0.8),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                  ),
+                  height: 3,
+                  color: categoryColor.withValues(alpha: 0.6),
                 ),
                 Expanded(
                   child: Padding(
@@ -79,29 +61,23 @@ class CategoryCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                categoryName,
+                                categoryName.toUpperCase(),
                                 style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  letterSpacing: 0.8,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.onSurface,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: categoryColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                entryCount.toString(),
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: categoryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            Text(
+                              entryCount.toString(),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w300,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -151,8 +127,11 @@ class CategoryCard extends StatelessWidget {
         final entry = entriesToShow[index];
         return Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+              width: 0.5,
+            ),
+            borderRadius: BorderRadius.circular(2),
           ),
           padding: const EdgeInsets.all(4),
           child: Text(
@@ -160,6 +139,7 @@ class CategoryCard extends StatelessWidget {
             style: theme.textTheme.bodySmall?.copyWith(
               fontSize: 9,
               height: 1.2,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,

@@ -39,8 +39,13 @@ class CategoriesCarousel extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Categories',
-                  style: theme.textTheme.titleLarge,
+                  'CATEGORIES',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,

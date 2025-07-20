@@ -61,8 +61,13 @@ class TodosCarousel extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Todos',
-                            style: theme.textTheme.titleLarge,
+                            'TODOS',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
                           Row(
                             children: [
