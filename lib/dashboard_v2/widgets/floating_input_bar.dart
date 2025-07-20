@@ -547,8 +547,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
-                                    // CC: Clear button - show when has text
-                                    if (_hasText) ...[
+                                    // CC: Clear button - show when has text and not focused
+                                    if (_hasText && !_isExpanded) ...[
                                       IconButton(
                                         onPressed: () {
                                           _textController.clear();
@@ -622,7 +622,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                   ),
                                                   border: InputBorder.none,
                                                   contentPadding: EdgeInsets.only(
-                                                    left: _hasText ? 4 : 12,
+                                                    left: _isExpanded ? 16 : (_hasText ? 4 : 12),
                                                     right: _hasText && !_isExpanded && _textOverflows ? 25 : 16,
                                                     top: 16,
                                                     bottom: 16,
@@ -640,6 +640,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                 maxLines: _isExpanded ? 6 : 1,
                                                 keyboardType: TextInputType.multiline,
                                                 textCapitalization: TextCapitalization.sentences,
+                                                scrollPhysics: const NeverScrollableScrollPhysics(),
                                                 onTap: () {
                                                   // CC: Move cursor to end when tapping collapsed field with text
                                                   if (!_isExpanded && _hasText) {
