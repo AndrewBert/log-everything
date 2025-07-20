@@ -116,7 +116,7 @@ class CategoryEntriesPage extends StatelessWidget {
                 // TODO: Add AI insight container for the entire category
                 // - Generate insights about patterns, trends, and summaries for all entries in this category
                 // - Could include: most common themes, time patterns, emotional trends, suggestions
-                // - Use SimpleInsightContainer or create a new CategoryInsightContainer widget
+                // - Using NewspaperInsightContainer for insights
                 // CC: Grid of entries
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -19,7 +19,7 @@ Redesign the home screen as a modern dashboard inspired by Nothing's Space app, 
 - [ ] Add temporary navigation button to access v2
 
 ### Phase 2: Square Entry Card Design
-- [ ] Create `SquareEntryCard` widget
+- [x] Created `NewspaperEntryCard` widget (replaced SquareEntryCard)
 - [ ] Design compact layout for square format
 - [ ] Implement tap handler for navigation
 - [ ] Add to widget keys for testing
@@ -40,7 +40,7 @@ Redesign the home screen as a modern dashboard inspired by Nothing's Space app, 
 ### Phase 5: Full Entries Grid
 - [ ] Create scrollable grid view below carousel
 - [ ] Implement infinite scroll pagination
-- [ ] Reuse `SquareEntryCard` component
+- [x] Using `NewspaperEntryCard` component
 - [ ] Add proper spacing and padding
 
 ### Phase 6: Entry Details Page
