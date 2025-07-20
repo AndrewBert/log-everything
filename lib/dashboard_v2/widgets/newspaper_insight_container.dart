@@ -30,6 +30,7 @@ class NewspaperInsightContainer extends StatelessWidget {
           minHeight: insight != null || isLoading ? 100 : 0,
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: isLoading
@@ -38,53 +39,50 @@ class NewspaperInsightContainer extends StatelessWidget {
                   categoryColor: categoryColor,
                 )
               : insight != null
-                  ? IntrinsicHeight(
-                      key: ValueKey(insight),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Container(
-                            width: 3,
-                            decoration: BoxDecoration(
-                              color: categoryColor,
-                              borderRadius: BorderRadius.circular(1.5),
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '"${insight!.content}"',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      fontStyle: FontStyle.italic,
-                                      fontWeight: FontWeight.w300,
-                                      height: 1.4,
-                                      fontSize: 18,
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _getInsightLabel(insight!.type),
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      letterSpacing: 1.2,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ],
+              ? IntrinsicHeight(
+                  key: ValueKey(insight),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        width: 3,
+                        decoration: BoxDecoration(
+                          color: categoryColor,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '"${insight!.content}"',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w300,
+                                height: 1.4,
+                                fontSize: 18,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            Text(
+                              _getInsightLabel(insight!.type),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                letterSpacing: 1.2,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('empty')),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ),
     );
@@ -119,8 +117,7 @@ class _TypewriterLoader extends StatefulWidget {
   State<_TypewriterLoader> createState() => _TypewriterLoaderState();
 }
 
-class _TypewriterLoaderState extends State<_TypewriterLoader>
-    with TickerProviderStateMixin {
+class _TypewriterLoaderState extends State<_TypewriterLoader> with TickerProviderStateMixin {
   late AnimationController _typeController;
   late AnimationController _cursorController;
   late Animation<int> _charAnimation;
@@ -143,39 +140,42 @@ class _TypewriterLoaderState extends State<_TypewriterLoader>
       vsync: this,
     );
 
-    _charAnimation = IntTween(
-      begin: 0,
-      end: _loadingText.length,
-    ).animate(
-      CurvedAnimation(
-        parent: _typeController,
-        curve: const Interval(
-          0.0,
-          0.7,
-          curve: Curves.easeOut,
-        ),
-      ),
-    );
+    _charAnimation =
+        IntTween(
+          begin: 0,
+          end: _loadingText.length,
+        ).animate(
+          CurvedAnimation(
+            parent: _typeController,
+            curve: const Interval(
+              0.0,
+              0.7,
+              curve: Curves.easeOut,
+            ),
+          ),
+        );
 
-    _progressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _typeController,
-        curve: Curves.linear,
-      ),
-    );
+    _progressAnimation =
+        Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _typeController,
+            curve: Curves.linear,
+          ),
+        );
 
-    _cursorOpacity = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _cursorController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _cursorOpacity =
+        Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _cursorController,
+            curve: Curves.easeInOut,
+          ),
+        );
 
     _typeController.repeat();
     _cursorController.repeat(reverse: true);
@@ -212,57 +212,49 @@ class _TypewriterLoaderState extends State<_TypewriterLoader>
               ),
               const SizedBox(width: 20),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w300,
-                            height: 1.4,
-                            fontSize: 18,
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
-                          ),
-                          children: [
-                            TextSpan(text: displayText),
-                            if (showCursor)
-                              TextSpan(
-                                text: '|',
-                                style: TextStyle(
-                                  color: widget.categoryColor.withValues(
-                                    alpha: isTypingComplete
-                                        ? _cursorOpacity.value
-                                        : 1.0,
-                                  ),
-                                  fontWeight: FontWeight.w400,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w300,
+                          height: 1.4,
+                          fontSize: 18,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                        children: [
+                          TextSpan(text: displayText),
+                          if (showCursor)
+                            TextSpan(
+                              text: '|',
+                              style: TextStyle(
+                                color: widget.categoryColor.withValues(
+                                  alpha: isTypingComplete ? _cursorOpacity.value : 1.0,
                                 ),
+                                fontWeight: FontWeight.w400,
                               ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(1),
-                        child: SizedBox(
-                          height: 2,
-                          width: 120,
-                          child: LinearProgressIndicator(
-                            value: _progressAnimation.value,
-                            backgroundColor: theme.colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              widget.categoryColor.withValues(alpha: 0.4),
                             ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(1),
+                      child: SizedBox(
+                        height: 2,
+                        width: 120,
+                        child: LinearProgressIndicator(
+                          value: _progressAnimation.value,
+                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            widget.categoryColor.withValues(alpha: 0.4),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],

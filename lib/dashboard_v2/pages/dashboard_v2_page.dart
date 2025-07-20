@@ -180,17 +180,11 @@ class DashboardV2Page extends StatelessWidget {
                           Text(
                             'ALL ENTRIES',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.2,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            height: 1,
-                            width: 80,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                           ),
                         ],
                       ),

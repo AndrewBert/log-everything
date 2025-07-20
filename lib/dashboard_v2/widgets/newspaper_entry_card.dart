@@ -34,13 +34,13 @@ class NewspaperEntryCard extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-              : theme.colorScheme.surface,
+              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
-                ? categoryColor.withValues(alpha: 0.5)
-                : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ? categoryColor.withValues(alpha: 0.6)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -88,33 +88,48 @@ class NewspaperEntryCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         // Date and time
-                        Text(
-                          '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 11,
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        Flexible(
+                          flex: 1,
+                          child: Text(
+                            '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         
+                        const SizedBox(width: 4),
+                        
                         // Category label
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            entry.category.toUpperCase(),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 9,
-                              letterSpacing: 0.8,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        Flexible(
+                          flex: 0,
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.3,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              entry.category.toUpperCase(),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 9,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ),

@@ -28,7 +28,7 @@ class ConnectingLine extends StatelessWidget {
               width: 3,
               height: 16,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(1.5),
               ),
             ),

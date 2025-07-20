@@ -127,19 +127,21 @@ class CategoryCard extends StatelessWidget {
         final entry = entriesToShow[index];
         return Container(
           decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               width: 0.5,
             ),
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(4),
           ),
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.all(6),
           child: Text(
             entry.text,
             style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 9,
-              height: 1.2,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              fontSize: 11,
+              height: 1.3,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+              fontWeight: FontWeight.w400,
             ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
