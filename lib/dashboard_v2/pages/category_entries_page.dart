@@ -4,7 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/cubit/category_entries_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
-import 'package:myapp/dashboard_v2/widgets/square_entry_card.dart';
+import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -43,7 +43,6 @@ class CategoryEntriesPage extends StatelessWidget {
                 ],
               ),
               elevation: 0,
-              backgroundColor: categoryColor.withValues(alpha: 0.1),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit),
@@ -67,17 +66,8 @@ class CategoryEntriesPage extends StatelessWidget {
                 // CC: Category header with color indicator
                 SliverToBoxAdapter(
                   child: Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          categoryColor,
-                          categoryColor.withValues(alpha: 0.8),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
+                    height: 3,
+                    color: categoryColor.withValues(alpha: 0.6),
                   ),
                 ),
                 // CC: Category description
@@ -88,35 +78,32 @@ class CategoryEntriesPage extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: categoryColor.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: categoryColor.withValues(alpha: 0.2),
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 16,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'About this category',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              'ABOUT THIS CATEGORY',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                letterSpacing: 1.2,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               state.category!.description,
-                              style: theme.textTheme.bodyMedium,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 15,
+                                height: 1.4,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                              ),
                             ),
                           ],
                         ),
@@ -149,8 +136,9 @@ class CategoryEntriesPage extends StatelessWidget {
                         }
 
                         final entry = state.entries[index];
-                        return SquareEntryCard(
+                        return NewspaperEntryCard(
                           entry: entry,
+                          isInGrid: true,
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
