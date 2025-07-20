@@ -22,6 +22,7 @@ export 'cubit/entry_details_cubit.dart';
 export 'cubit/category_entries_cubit.dart';
 export 'cubit/todo_cubit.dart';
 export 'cubit/todos_carousel_cubit.dart';
+export 'cubit/todos_page_cubit.dart';
 
 // Models
 export 'model/insight.dart';
