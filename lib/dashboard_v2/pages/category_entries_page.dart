@@ -29,9 +29,6 @@ class CategoryEntriesPage extends StatelessWidget {
           final theme = Theme.of(context);
           // CC: Use color from state instead of fetching directly
           final categoryColor = state.categoryColor ?? CategoryColors.getColorForCategory(categoryName);
-          print(
-            '[CategoryEntriesPage] Building with categoryName: $categoryName, color from state: ${state.categoryColor}, final color: $categoryColor',
-          );
           final cubit = context.read<CategoryEntriesCubit>();
 
           return Scaffold(

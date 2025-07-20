@@ -8,6 +8,7 @@ class NewspaperEntryCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isSelected;
   final bool isInGrid;
+  final Color? categoryColor; // CC: Accept color from parent
 
   const NewspaperEntryCard({
     super.key,
@@ -15,12 +16,13 @@ class NewspaperEntryCard extends StatelessWidget {
     this.onTap,
     this.isSelected = false,
     this.isInGrid = false,
+    this.categoryColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(entry.category);
+    final categoryColor = this.categoryColor ?? CategoryColors.getColorForCategory(entry.category);
     final dateFormat = DateFormat('MMM d');
     final timeFormat = DateFormat('h:mm a');
     

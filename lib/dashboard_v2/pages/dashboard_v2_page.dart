@@ -9,7 +9,6 @@ import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
-import 'package:myapp/utils/category_colors.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
@@ -164,7 +163,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       ? state.entries[state.selectedCarouselIndex]
                                       : null;
                                   final categoryColor = selectedEntry != null
-                                      ? CategoryColors.getColorForCategory(selectedEntry.category)
+                                      ? state.getCategoryColor(selectedEntry.category)
                                       : Theme.of(context).colorScheme.primary;
 
                                   return NewspaperInsightContainer(
@@ -195,6 +194,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                   return RecentEntriesCarousel(
                                     entries: state.entries.take(10).toList(), // CP: Show only recent 10
                                     selectedIndex: state.selectedCarouselIndex,
+                                    getCategoryColor: state.getCategoryColor,
                                     onPageChanged: (index) {
                                       context.read<DashboardV2Cubit>().selectCarouselEntry(index);
                                     },
@@ -239,6 +239,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 children: [
                                   CategoriesCarousel(
                                     categorizedEntries: categorizedEntries,
+                                    getCategoryColor: state.getCategoryColor,
                                     onCategoryTap: (categoryName, entries) {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
@@ -308,6 +309,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 return NewspaperEntryCard(
                                   entry: entry,
                                   isInGrid: true,
+                                  categoryColor: state.getCategoryColor(entry.category),
                                   onTap: () {
                                     _navigateToEntryDetails(context, entry, state);
                                   },

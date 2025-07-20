@@ -9,6 +9,7 @@ class RecentEntriesCarousel extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onPageChanged;
   final Function(Entry)? onEntryTap;
+  final Color? Function(String)? getCategoryColor;
 
   const RecentEntriesCarousel({
     super.key,
@@ -16,6 +17,7 @@ class RecentEntriesCarousel extends StatelessWidget {
     required this.selectedIndex,
     required this.onPageChanged,
     this.onEntryTap,
+    this.getCategoryColor,
   });
 
   @override
@@ -89,6 +91,7 @@ class RecentEntriesCarousel extends StatelessWidget {
                   child: NewspaperEntryCard(
                     entry: entry,
                     isSelected: isSelected,
+                    categoryColor: getCategoryColor?.call(entry.category),
                     onTap: () {
                       // CP: If we have a navigation callback, use it
                       if (onEntryTap != null) {

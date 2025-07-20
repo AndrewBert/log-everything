@@ -1,7 +1,10 @@
 part of 'dashboard_v2_cubit.dart';
 
+// CC: Import needed for Color type
+
 class DashboardV2State extends Equatable {
   final List<Entry> entries;
+  final List<Category> categories; // CC: Add categories to state for color lookup
   final bool isLoading;
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
@@ -9,6 +12,7 @@ class DashboardV2State extends Equatable {
 
   const DashboardV2State({
     this.entries = const [],
+    this.categories = const [],
     this.isLoading = false,
     this.hasMoreEntries = true,
     this.selectedCarouselIndex = 0,
@@ -25,6 +29,7 @@ class DashboardV2State extends Equatable {
 
   DashboardV2State copyWith({
     List<Entry>? entries,
+    List<Category>? categories,
     bool? isLoading,
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
@@ -32,6 +37,7 @@ class DashboardV2State extends Equatable {
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
+      categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
       hasMoreEntries: hasMoreEntries ?? this.hasMoreEntries,
       selectedCarouselIndex: selectedCarouselIndex ?? this.selectedCarouselIndex,
@@ -51,9 +57,19 @@ class DashboardV2State extends Equatable {
     return result;
   }
 
+  // CC: Get color for a category from state
+  Color getCategoryColor(String categoryName) {
+    final category = categories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () => Category(name: categoryName),
+    );
+    return category.color ?? CategoryColors.getColorForCategory(categoryName);
+  }
+
   @override
   List<Object?> get props => [
     entries,
+    categories,
     isLoading,
     hasMoreEntries,
     selectedCarouselIndex,

@@ -44,18 +44,12 @@ class CategoryColors {
   /// If the category doesn't have a color assigned, it will automatically
   /// assign and save a random color from the predefined set
   static Color getColorForCategory(String category) {
-    print('[CategoryColors] getColorForCategory called for "$category"');
-    print('[CategoryColors] Current mappings: $_categoryColors');
-
     // If we don't have a color for this category yet, assign one
     if (!_categoryColors.containsKey(category)) {
-      print('[CategoryColors] No color found for "$category", assigning new one');
       _assignColorToCategory(category);
     }
 
-    final color = _categoryColors[category]!;
-    print('[CategoryColors] Returning color for "$category": $color');
-    return color;
+    return _categoryColors[category]!;
   }
 
   /// Get a darker version of the category color for text
@@ -108,22 +102,14 @@ class CategoryColors {
 
   /// Manually set a color for a category (for future user customization)
   static Future<void> setColorForCategory(String category, Color color) async {
-    print('[CategoryColors] Setting color for "$category" to $color');
-    print('[CategoryColors] Current mappings before: $_categoryColors');
     _categoryColors[category] = color;
-    print('[CategoryColors] Current mappings after: $_categoryColors');
     await _saveCategoryColors();
-    print('[CategoryColors] Color saved to preferences');
   }
 
   /// Remove a color mapping for a category
   static Future<void> removeColorForCategory(String category) async {
-    print('[CategoryColors] Removing color for "$category"');
-    print('[CategoryColors] Current mappings before: $_categoryColors');
     _categoryColors.remove(category);
-    print('[CategoryColors] Current mappings after: $_categoryColors');
     await _saveCategoryColors();
-    print('[CategoryColors] Changes saved to preferences');
   }
 
   /// Load saved category colors from SharedPreferences

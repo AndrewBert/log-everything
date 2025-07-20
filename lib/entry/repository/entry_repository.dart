@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../entry.dart';
 import '../category.dart'; // CP: Import Category model
@@ -381,6 +382,7 @@ class EntryRepository {
     String newName, {
     String? description,
     bool? isChecklist,
+    Color? color,
   }) async {
     final trimmedNewName = newName.trim();
     final oldCategoryIndex = _categories.indexWhere((cat) => cat.name == oldName);
@@ -398,6 +400,7 @@ class EntryRepository {
       name: trimmedNewName,
       description: description ?? oldCategory.description,
       isChecklist: isChecklist ?? oldCategory.isChecklist,
+      color: color ?? oldCategory.color,
     );
     bool entriesChanged = false;
     final Set<DateTime> affectedDates = {};
@@ -503,13 +506,6 @@ class EntryRepository {
     final timeFormat = DateFormat('h:mm a');
     final dateFormat = DateFormat('yyyy-MM-dd');
     return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
-  }
-
-  /// CC: Notify listeners that category metadata (like colors) has changed
-  void notifyColorChanges() {
-    // CC: Emit current entries to trigger UI rebuilds when colors change
-    _entriesStreamController.add(currentEntries);
-    AppLogger.info("[EntryRepository] Notified listeners of color changes");
   }
 
   /// CP: Disposes the repository and cancels all pending timers

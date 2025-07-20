@@ -8,6 +8,7 @@ class CategoryCard extends StatelessWidget {
   final List<Entry> recentEntries;
   final VoidCallback? onTap;
   final bool isSelected;
+  final Color? categoryColor;
 
   const CategoryCard({
     super.key,
@@ -16,12 +17,13 @@ class CategoryCard extends StatelessWidget {
     required this.recentEntries,
     this.onTap,
     this.isSelected = false,
+    this.categoryColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(categoryName);
+    final categoryColor = this.categoryColor ?? CategoryColors.getColorForCategory(categoryName);
 
     return Material(
       color: Colors.transparent,

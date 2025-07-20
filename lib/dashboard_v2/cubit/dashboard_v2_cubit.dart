@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
+import 'package:myapp/utils/category_colors.dart';
 import 'package:get_it/get_it.dart';
 
 part 'dashboard_v2_state.dart';
@@ -26,11 +29,13 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     emit(state.copyWith(isLoading: true));
 
     final entries = _entryRepository.currentEntries;
+    final categories = _entryRepository.currentCategories;
     // CC: Filter out todos from the entries list
     final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
     emit(
       state.copyWith(
         entries: nonTodoEntries,
+        categories: categories,
         isLoading: false,
         hasMoreEntries: false, // CC: For now, load all entries at once
       ),
@@ -126,6 +131,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   void _onEntriesUpdated(List<Entry> entries) {
     // CC: Filter out todos from the entries list
     final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
+    final categories = _entryRepository.currentCategories;
 
     // CC: Check if we have new entries
     final hasNewEntries = nonTodoEntries.length > state.entries.length;
@@ -134,6 +140,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     emit(
       state.copyWith(
         entries: nonTodoEntries,
+        categories: categories,
         // CC: Reset selected index if it's out of bounds
         selectedCarouselIndex: state.selectedCarouselIndex >= nonTodoEntries.length ? 0 : state.selectedCarouselIndex,
       ),

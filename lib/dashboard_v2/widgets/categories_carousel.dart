@@ -6,11 +6,13 @@ class CategoriesCarousel extends StatelessWidget {
   final Map<String, List<Entry>> categorizedEntries;
   final Function(String category, List<Entry> entries) onCategoryTap;
   final VoidCallback? onSeeAllTap;
+  final Color? Function(String) getCategoryColor;
 
   const CategoriesCarousel({
     super.key,
     required this.categorizedEntries,
     required this.onCategoryTap,
+    required this.getCategoryColor,
     this.onSeeAllTap,
   });
 
@@ -78,6 +80,7 @@ class CategoriesCarousel extends StatelessWidget {
                     categoryName: category.key,
                     entryCount: category.value.length,
                     recentEntries: category.value.take(4).toList(),
+                    categoryColor: getCategoryColor(category.key),
                     onTap: () => onCategoryTap(category.key, category.value),
                   ),
                 ),

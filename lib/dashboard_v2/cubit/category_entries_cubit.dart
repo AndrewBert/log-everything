@@ -26,7 +26,6 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
   }
 
   void _loadCategoryEntries() {
-    print('[CategoryEntriesCubit] _loadCategoryEntries() called');
     final allEntries = _entryRepository.currentEntries;
     final categoryEntries = allEntries.where((entry) => entry.category == categoryName).toList();
 
@@ -36,11 +35,9 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
       orElse: () => Category(name: categoryName),
     );
 
-    // CC: Fetch current color for this category
-    final categoryColor = CategoryColors.getColorForCategory(categoryName);
-    print('[CategoryEntriesCubit] Fetched color for $categoryName: $categoryColor');
+    // CC: Use color from category model, fallback to CategoryColors for migration
+    final categoryColor = category.color ?? CategoryColors.getColorForCategory(categoryName);
 
-    print('[CategoryEntriesCubit] About to emit new state');
     emit(
       state.copyWith(
         category: category,
@@ -49,24 +46,34 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
         categoryColor: categoryColor,
       ),
     );
-    print('[CategoryEntriesCubit] New state emitted');
   }
 
   void _onEntriesUpdated(List<Entry> allEntries) {
     // CC: Filter entries for this category
     final categoryEntries = allEntries.where((entry) => entry.category == categoryName).toList();
 
-    // CC: Also fetch current color to ensure state is up to date
-    final categoryColor = CategoryColors.getColorForCategory(categoryName);
+    // CC: Get updated category and its color
+    final category = _entryRepository.currentCategories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () => Category(name: categoryName),
+    );
+    final categoryColor = category.color ?? CategoryColors.getColorForCategory(categoryName);
 
-    emit(state.copyWith(entries: categoryEntries, categoryColor: categoryColor));
+    emit(
+      state.copyWith(
+        category: category,
+        entries: categoryEntries,
+        categoryColor: categoryColor,
+      ),
+    );
   }
 
-  Future<void> updateCategory(String newName, String newDescription) async {
+  Future<void> updateCategory(String newName, String newDescription, {Color? color}) async {
     await _entryRepository.renameCategory(
       categoryName,
       newName,
       description: newDescription,
+      color: color,
     );
 
     // CC: Update the category name if it changed
@@ -80,9 +87,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
 
   // CC: Refresh the cubit state to pick up external changes (like color updates)
   void refreshState() {
-    print('[CategoryEntriesCubit] refreshState() called - will reload category entries');
     _loadCategoryEntries();
-    print('[CategoryEntriesCubit] refreshState() completed');
   }
 
   @override
