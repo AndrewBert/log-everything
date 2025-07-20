@@ -250,6 +250,30 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       _textController.clear();
       _focusNode.unfocus();
       HapticFeedback.mediumImpact();
+
+      // CC: Reset transcription state and cancel timer when submitting
+      _transcriptionReviewTimer?.cancel();
+      setState(() {
+        _justTranscribed = false;
+        _isExpanded = false;
+      });
+      _animationController.reverse();
+      _pulseController.stop();
+      _pulseController.reset();
+
+      // CC: Animate height back to single line
+      _currentTextHeight = 56.0;
+      _heightAnimation =
+          Tween<double>(
+            begin: _heightAnimation.value,
+            end: 56.0,
+          ).animate(
+            CurvedAnimation(
+              parent: _heightController,
+              curve: Curves.easeInOutCubic,
+            ),
+          );
+      _heightController.forward(from: 0);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
