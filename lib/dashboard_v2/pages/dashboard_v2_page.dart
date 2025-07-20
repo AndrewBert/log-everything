@@ -10,6 +10,9 @@ import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:myapp/dialogs/help_dialog.dart';
+import 'package:myapp/dialogs/whats_new_dialog.dart';
 
 class DashboardV2Page extends StatefulWidget {
   const DashboardV2Page({super.key});
@@ -20,11 +23,29 @@ class DashboardV2Page extends StatefulWidget {
 
 class _DashboardV2PageState extends State<DashboardV2Page> {
   final ScrollController _scrollController = ScrollController();
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = packageInfo.version;
+      });
+    } catch (e) {
+      // Handle error silently
+    }
   }
 
   @override
@@ -58,8 +79,46 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
         key: dashboardV2PageKey,
         appBar: AppBar(
           key: dashboardV2AppBarKey,
-          title: const Text('Dashboard'),
           elevation: 0,
+          title: RichText(
+            text: TextSpan(
+              style: Theme.of(context).appBarTheme.titleTextStyle ??
+                  Theme.of(context).textTheme.titleLarge,
+              children: <TextSpan>[
+                TextSpan(
+                  text: 'Log',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextSpan(
+                  text: ' / Splitter',
+                  style: TextStyle(
+                    color: Theme.of(context).appBarTheme.titleTextStyle?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (_appVersion.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Center(
+                  child: Text(
+                    _appVersion,
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                ),
+              ),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'Help / About',
+              onPressed: () => _showHelpDialog(context),
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         body: Stack(
           children: [
@@ -301,6 +360,22 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
           cachedInsight: summaryInsight,
         ),
       ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return HelpDialog(onShowWhatsNewPressed: () => _showWhatsNewDialog(context));
+      },
+    );
+  }
+
+  Future<void> _showWhatsNewDialog(BuildContext context, [String? version]) async {
+    await showDialog(
+      context: context,
+      builder: (context) => WhatsNewDialog(currentVersion: version ?? _appVersion),
     );
   }
 }
