@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
-import 'package:myapp/pages/cubit/home_page_cubit.dart';
+// import 'package:myapp/pages/cubit/home_page_cubit.dart'; // CC: Commented out for staged replacement
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
-import 'package:myapp/pages/home_page.dart';
+// import 'package:myapp/pages/home_page.dart'; // CC: Commented out for staged replacement
+import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,7 +46,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
         BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
         BlocProvider<ChatCubit>(create: (context) => ChatCubit(aiService: getIt<AiService>())),
-        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())),
+        // BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())), // CC: Commented out for staged replacement
         BlocProvider<OnboardingCubit>(
           create:
               (context) => OnboardingCubit(
@@ -93,7 +94,7 @@ class AppRoot extends StatelessWidget {
           final onboardingCubit = context.read<OnboardingCubit>();
 
           if (onboardingCubit.isOnboardingCompleted()) {
-            return HomePage();
+            return const DashboardV2Page();
           } else {
             return const OnboardingPage();
           }
