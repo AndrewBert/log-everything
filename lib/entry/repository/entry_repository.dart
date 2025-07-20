@@ -19,7 +19,7 @@ class EntryRepository {
   // CP: Map to store debounce timers for each month's sync
   final Map<String, Timer> _syncDebounceTimers = {};
   static const _syncDebounceMs = 2000; // CP: 2 second debounce
-  
+
   // CC: Stream controller for reactive updates
   final _entriesStreamController = StreamController<List<Entry>>.broadcast();
   Stream<List<Entry>> get entriesStream => _entriesStreamController.stream;
@@ -40,7 +40,7 @@ class EntryRepository {
   Future<void> initialize() async {
     await _loadCategories();
     await _loadEntries();
-    
+
     // CC: Emit initial entries to stream
     _entriesStreamController.add(currentEntries);
 
@@ -140,7 +140,13 @@ class EntryRepository {
 
     final List<Entry> addedEntries = [];
     if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(text: text, timestamp: processingTimestamp, category: 'Misc', isNew: true, isTask: false);
+      final fallbackEntry = Entry(
+        text: text,
+        timestamp: processingTimestamp,
+        category: 'Misc',
+        isNew: true,
+        isTask: false,
+      );
       addedEntries.add(fallbackEntry);
     } else {
       for (var data in extractedData) {
@@ -213,7 +219,10 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<({List<Entry> entries, int splitCount})> processCombinedEntry(String combinedText, DateTime tempEntryTimestamp) async {
+  Future<({List<Entry> entries, int splitCount})> processCombinedEntry(
+    String combinedText,
+    DateTime tempEntryTimestamp,
+  ) async {
     AppLogger.info(
       '[Repo.processCombinedEntry] Processing combined text: "$combinedText" for temp timestamp: $tempEntryTimestamp',
     );
@@ -271,13 +280,13 @@ class EntryRepository {
     }
 
     await _saveEntries();
-    
+
     // CP: Log split information for debugging
     final splitCount = addedEntries.length;
     if (splitCount > 1) {
       AppLogger.info("Repository: Combined entry was split into $splitCount parts");
     }
-    
+
     _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((e, stackTrace) {
       AppLogger.error(
         "Repository: Background vector store sync failed for processCombinedEntry",
@@ -299,7 +308,11 @@ class EntryRepository {
     return currentCategories;
   }
 
-  Future<List<Category>> addCustomCategoryWithDescription(String name, String description, {bool isChecklist = false}) async {
+  Future<List<Category>> addCustomCategoryWithDescription(
+    String name,
+    String description, {
+    bool isChecklist = false,
+  }) async {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
     if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
@@ -319,15 +332,14 @@ class EntryRepository {
       _categories.removeAt(categoryIndex);
       bool entriesChanged = false;
       final Set<DateTime> affectedDates = {};
-      _entries =
-          _entries.map((entry) {
-            if (entry.category == categoryToDelete) {
-              entriesChanged = true;
-              affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
-              return entry.copyWith(category: 'Misc');
-            }
-            return entry;
-          }).toList();
+      _entries = _entries.map((entry) {
+        if (entry.category == categoryToDelete) {
+          entriesChanged = true;
+          affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
+          return entry.copyWith(category: 'Misc');
+        }
+        return entry;
+      }).toList();
 
       await _saveCategories();
       if (entriesChanged) {
@@ -342,6 +354,9 @@ class EntryRepository {
           });
         }
       }
+
+      // CC: Emit updated entries to stream to notify listeners of category changes
+      _entriesStreamController.add(currentEntries);
     }
     return (entries: currentEntries, categories: currentCategories);
   }
@@ -387,15 +402,14 @@ class EntryRepository {
     bool entriesChanged = false;
     final Set<DateTime> affectedDates = {};
     if (isNameChanged) {
-      _entries =
-          _entries.map((entry) {
-            if (entry.category == oldName) {
-              entriesChanged = true;
-              affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
-              return entry.copyWith(category: trimmedNewName);
-            }
-            return entry;
-          }).toList();
+      _entries = _entries.map((entry) {
+        if (entry.category == oldName) {
+          entriesChanged = true;
+          affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
+          return entry.copyWith(category: trimmedNewName);
+        }
+        return entry;
+      }).toList();
     }
     await _saveCategories();
     if (entriesChanged) {
@@ -410,6 +424,10 @@ class EntryRepository {
         });
       }
     }
+
+    // CC: Emit updated entries to stream to notify listeners of category changes
+    _entriesStreamController.add(currentEntries);
+
     return (entries: currentEntries, categories: currentCategories);
   }
 
@@ -444,10 +462,9 @@ class EntryRepository {
           return;
         }
 
-        final List<Entry> entriesForMonth =
-            _entries.where((entry) {
-              return entry.timestamp.year == monthToSync.year && entry.timestamp.month == monthToSync.month;
-            }).toList();
+        final List<Entry> entriesForMonth = _entries.where((entry) {
+          return entry.timestamp.year == monthToSync.year && entry.timestamp.month == monthToSync.month;
+        }).toList();
 
         entriesForMonth.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 

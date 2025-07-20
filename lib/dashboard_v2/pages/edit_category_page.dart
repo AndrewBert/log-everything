@@ -7,7 +7,7 @@ import 'package:myapp/utils/category_colors.dart';
 
 class EditCategoryPage extends StatelessWidget {
   final Category category;
-  
+
   const EditCategoryPage({
     super.key,
     required this.category,
@@ -16,7 +16,7 @@ class EditCategoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentColor = CategoryColors.getColorForCategory(category.name);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Category'),
@@ -28,22 +28,41 @@ class EditCategoryPage extends StatelessWidget {
         initialColor: currentColor,
         submitButtonText: 'Save Changes',
         onSubmit: (name, description, color) async {
+          print('[EditCategoryPage] SUBMIT STARTED');
+          print('[EditCategoryPage] Original category: ${category.name}');
+          print('[EditCategoryPage] New name: $name');
+          print('[EditCategoryPage] New description: $description');
+          print('[EditCategoryPage] New color: $color');
+          
           final cubit = context.read<CategoryEntriesCubit>();
-          
-          // CC: Update category name and description
-          cubit.updateCategory(name, description);
-          
-          // CC: Update the color
+
+          // CC: Update the color first (before category name changes)
+          print('[EditCategoryPage] Setting color for category "$name" to $color');
           await CategoryColors.setColorForCategory(name, color);
-          
-          // CC: If the name changed, also update the color mapping
+          print('[EditCategoryPage] Color set successfully');
+
+          // CC: If the name changed, remove the old color mapping
           if (name != category.name) {
-            await CategoryColors.setColorForCategory(category.name, color);
+            print('[EditCategoryPage] Name changed, removing old color mapping for "${category.name}"');
+            await CategoryColors.removeColorForCategory(category.name);
+            print('[EditCategoryPage] Old color mapping removed');
+          } else {
+            print('[EditCategoryPage] Name unchanged, keeping same color mapping');
           }
-          
+
+          // CC: Update category name and description
+          print('[EditCategoryPage] Updating category via cubit');
+          await cubit.updateCategory(name, description);
+          print('[EditCategoryPage] Category updated via cubit');
+
+          // CC: Force UI refresh by reloading the cubit state to pick up color changes
+          print('[EditCategoryPage] Triggering cubit refresh');
+          cubit.refreshState();
+          print('[EditCategoryPage] Cubit refresh completed');
+
           if (context.mounted) {
             Navigator.of(context).pop();
-            
+
             // CC: Show success message
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -52,6 +71,8 @@ class EditCategoryPage extends StatelessWidget {
               ),
             );
           }
+          
+          print('[EditCategoryPage] SUBMIT COMPLETED');
         },
         onCancel: () => Navigator.of(context).pop(),
       ),

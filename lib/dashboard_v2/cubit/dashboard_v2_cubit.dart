@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
+import 'package:myapp/utils/category_colors.dart';
 import 'package:get_it/get_it.dart';
 
 part 'dashboard_v2_state.dart';
@@ -13,6 +15,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
   final AiService _aiService = GetIt.instance<AiService>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
+  StreamSubscription<Map<String, Color>>? _colorsSubscription;
 
   DashboardV2Cubit({
     required EntryRepository entryRepository,
@@ -20,6 +23,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
        super(const DashboardV2State()) {
     // CC: Subscribe to entries stream
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
+
+    // CC: Subscribe to color changes to trigger rebuilds
+    _colorsSubscription = CategoryColors.colorsStream.listen(_onColorsUpdated);
   }
 
   void loadEntries() {
@@ -126,7 +132,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   void _onEntriesUpdated(List<Entry> entries) {
     // CC: Filter out todos from the entries list
     final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
-    
+
     // CC: Check if we have new entries
     final hasNewEntries = nonTodoEntries.length > state.entries.length;
 
@@ -148,9 +154,21 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     }
   }
 
+  void _onColorsUpdated(Map<String, Color> colorsMap) {
+    print('[DashboardV2Cubit] Colors updated, triggering UI refresh');
+    // CC: Force a rebuild by re-emitting current state with a timestamp
+    emit(
+      state.copyWith(
+        colorChangeTimestamp: DateTime.now(),
+      ),
+    );
+    print('[DashboardV2Cubit] UI refresh triggered for color changes');
+  }
+
   @override
   Future<void> close() {
     _entriesSubscription?.cancel();
+    _colorsSubscription?.cancel();
     return super.close();
   }
 }
