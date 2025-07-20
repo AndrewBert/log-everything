@@ -6,7 +6,6 @@ class DashboardV2State extends Equatable {
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
   final bool isGeneratingInsight;
-  final DateTime? colorChangeTimestamp; // CC: Track color changes to force rebuilds
 
   const DashboardV2State({
     this.entries = const [],
@@ -14,7 +13,6 @@ class DashboardV2State extends Equatable {
     this.hasMoreEntries = true,
     this.selectedCarouselIndex = 0,
     this.isGeneratingInsight = false,
-    this.colorChangeTimestamp,
   });
 
   // CC: Derive current insight from selected entry
@@ -31,7 +29,6 @@ class DashboardV2State extends Equatable {
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
     bool? isGeneratingInsight,
-    DateTime? colorChangeTimestamp,
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
@@ -39,7 +36,6 @@ class DashboardV2State extends Equatable {
       hasMoreEntries: hasMoreEntries ?? this.hasMoreEntries,
       selectedCarouselIndex: selectedCarouselIndex ?? this.selectedCarouselIndex,
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
-      colorChangeTimestamp: colorChangeTimestamp ?? this.colorChangeTimestamp,
     );
   }
 
@@ -62,6 +58,5 @@ class DashboardV2State extends Equatable {
     hasMoreEntries,
     selectedCarouselIndex,
     isGeneratingInsight,
-    colorChangeTimestamp,
   ];
 }

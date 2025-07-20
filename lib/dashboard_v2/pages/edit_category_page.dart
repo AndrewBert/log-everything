@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/cubit/category_entries_cubit.dart';
 import 'package:myapp/dashboard_v2/widgets/category_form.dart';
 import 'package:myapp/entry/category.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class EditCategoryPage extends StatelessWidget {
@@ -33,8 +35,9 @@ class EditCategoryPage extends StatelessWidget {
           print('[EditCategoryPage] New name: $name');
           print('[EditCategoryPage] New description: $description');
           print('[EditCategoryPage] New color: $color');
-          
+
           final cubit = context.read<CategoryEntriesCubit>();
+          final repository = GetIt.instance<EntryRepository>();
 
           // CC: Update the color first (before category name changes)
           print('[EditCategoryPage] Setting color for category "$name" to $color');
@@ -50,15 +53,15 @@ class EditCategoryPage extends StatelessWidget {
             print('[EditCategoryPage] Name unchanged, keeping same color mapping');
           }
 
-          // CC: Update category name and description
+          // CC: Update category name and description (this already emits to entriesStream)
           print('[EditCategoryPage] Updating category via cubit');
           await cubit.updateCategory(name, description);
           print('[EditCategoryPage] Category updated via cubit');
 
-          // CC: Force UI refresh by reloading the cubit state to pick up color changes
-          print('[EditCategoryPage] Triggering cubit refresh');
-          cubit.refreshState();
-          print('[EditCategoryPage] Cubit refresh completed');
+          // CC: Trigger existing repository stream to notify all listeners of color changes
+          print('[EditCategoryPage] Triggering repository stream for color changes');
+          repository.notifyColorChanges();
+          print('[EditCategoryPage] Repository stream notified of color changes');
 
           if (context.mounted) {
             Navigator.of(context).pop();
@@ -71,7 +74,7 @@ class EditCategoryPage extends StatelessWidget {
               ),
             );
           }
-          
+
           print('[EditCategoryPage] SUBMIT COMPLETED');
         },
         onCancel: () => Navigator.of(context).pop(),

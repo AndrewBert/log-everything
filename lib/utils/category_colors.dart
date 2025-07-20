@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -35,11 +34,6 @@ class CategoryColors {
   // Map to store category -> color mappings
   static Map<String, Color> _categoryColors = {};
   static final Random _random = Random();
-
-  // CC: Stream controller to notify listeners when colors change
-  static final StreamController<Map<String, Color>> _colorsStreamController =
-      StreamController<Map<String, Color>>.broadcast();
-  static Stream<Map<String, Color>> get colorsStream => _colorsStreamController.stream;
 
   /// Initialize the color manager by loading saved colors from preferences
   static Future<void> initialize() async {
@@ -120,10 +114,6 @@ class CategoryColors {
     print('[CategoryColors] Current mappings after: $_categoryColors');
     await _saveCategoryColors();
     print('[CategoryColors] Color saved to preferences');
-
-    // CC: Notify listeners that colors have changed
-    print('[CategoryColors] Notifying listeners of color change');
-    _colorsStreamController.add(Map.unmodifiable(_categoryColors));
   }
 
   /// Remove a color mapping for a category
@@ -134,10 +124,6 @@ class CategoryColors {
     print('[CategoryColors] Current mappings after: $_categoryColors');
     await _saveCategoryColors();
     print('[CategoryColors] Changes saved to preferences');
-
-    // CC: Notify listeners that colors have changed
-    print('[CategoryColors] Notifying listeners of color removal');
-    _colorsStreamController.add(Map.unmodifiable(_categoryColors));
   }
 
   /// Load saved category colors from SharedPreferences
@@ -210,10 +196,5 @@ class CategoryColors {
     int argb = color.toARGB32();
     String hex = argb.toRadixString(16).padLeft(8, '0');
     return '#${hex.substring(2)}';
-  }
-
-  /// Dispose resources (for testing or app cleanup)
-  static void dispose() {
-    _colorsStreamController.close();
   }
 }

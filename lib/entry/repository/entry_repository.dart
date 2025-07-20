@@ -505,6 +505,13 @@ class EntryRepository {
     return "${dateFormat.format(timestamp)} ${timeFormat.format(timestamp)}:${timestamp.second.toString().padLeft(2, '0')}";
   }
 
+  /// CC: Notify listeners that category metadata (like colors) has changed
+  void notifyColorChanges() {
+    // CC: Emit current entries to trigger UI rebuilds when colors change
+    _entriesStreamController.add(currentEntries);
+    AppLogger.info("[EntryRepository] Notified listeners of color changes");
+  }
+
   /// CP: Disposes the repository and cancels all pending timers
   void dispose() {
     for (final timer in _syncDebounceTimers.values) {
