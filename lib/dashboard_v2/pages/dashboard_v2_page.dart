@@ -147,7 +147,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                     slivers: [
                       if (state.entries.isNotEmpty) ...[
                         const SliverToBoxAdapter(
-                          child: SizedBox(height: 16),
+                          child: SizedBox(height: 8),
                         ),
                         SliverToBoxAdapter(
                           child: Column(

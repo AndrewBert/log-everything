@@ -341,85 +341,90 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   Widget _buildRecordingIndicator(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        // CC: Eye-catching amber/yellow background
+        color: const Color(0xFFFBBF24),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // CC: Editorial accent line (newspaper style)
-            Container(
-              width: 4,
-              height: 56,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
+            // CC: Cancel button (X) on the left
+            GestureDetector(
+              onTap: () {
+                context.read<VoiceInputCubit>().stopRecording();
+              },
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.black,
+                  size: 18,
+                ),
               ),
             ),
             const SizedBox(width: 16),
-            // CC: Minimalist recording indicator
+
+            // CC: Voice-reactive waveform in center
             Expanded(
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  // CC: Warm amber recording dot - complements brown palette
-                  AnimatedBuilder(
-                    animation: _waveformController,
-                    builder: (context, child) {
+              child: AnimatedBuilder(
+                animation: _waveformController,
+                builder: (context, child) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(8, (index) {
+                      // CC: Simulate voice reactivity with varying delays and amplitudes
+                      final delay = index * 0.15;
+                      final baseValue = (_waveformController.value + delay) % 1.0;
+                      // CC: Add some randomness to simulate voice variations
+                      final voiceVariation = (index * 0.3 + _waveformController.value * 2) % 1.0;
+                      final height = 4 + (baseValue * 16) + (voiceVariation * 8);
+
                       return Container(
-                        width: 8,
-                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        width: 3,
+                        height: height.clamp(4.0, 24.0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withValues(
-                            alpha: 0.8 + (_waveformController.value * 0.2),
-                          ),
-                          shape: BoxShape.circle,
+                          color: Colors.black.withValues(alpha: 0.6 + (baseValue * 0.4)),
+                          borderRadius: BorderRadius.circular(1.5),
                         ),
                       );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  // CC: Clean recording text
-                  Expanded(
-                    child: Text(
-                      'Recording...',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 16,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ),
-                  // CC: Simple stop button
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.stop_rounded,
-                      color: theme.colorScheme.primary,
-                      size: 14,
-                    ),
-                  ),
-                ],
+                    }),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(width: 16),
+            // CC: Stop button on the right
+            GestureDetector(
+              onTap: () {
+                context.read<VoiceInputCubit>().stopRecording();
+              },
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.stop_rounded,
+                  color: Colors.black,
+                  size: 18,
+                ),
               ),
             ),
           ],

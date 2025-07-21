@@ -25,7 +25,10 @@ class NewspaperInsightContainer extends StatelessWidget {
       child: AnimatedContainer(
         key: aiInsightContainerKey,
         duration: const Duration(milliseconds: 300),
-        height: insight != null || isLoading ? 160 : 0,
+        constraints: BoxConstraints(
+          minHeight: insight != null || isLoading ? 60 : 0,
+          maxHeight: insight != null || isLoading ? 200 : 0,
+        ),
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: AnimatedSwitcher(
@@ -36,10 +39,11 @@ class NewspaperInsightContainer extends StatelessWidget {
                   categoryColor: categoryColor,
                 )
               : insight != null
-              ? Row(
-                  key: ValueKey(insight),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+              ? IntrinsicHeight(
+                  child: Row(
+                    key: ValueKey(insight),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     Container(
                       width: 3,
                       decoration: BoxDecoration(
@@ -52,6 +56,7 @@ class NewspaperInsightContainer extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             '"${insight!.content}"',
@@ -79,7 +84,8 @@ class NewspaperInsightContainer extends StatelessWidget {
                       ),
                     ),
                   ],
-                )
+                ),
+              )
               : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ),
@@ -212,6 +218,7 @@ class _TypewriterLoaderState extends State<_TypewriterLoader> with TickerProvide
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     RichText(
                       text: TextSpan(
