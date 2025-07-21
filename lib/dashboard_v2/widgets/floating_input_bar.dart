@@ -341,71 +341,109 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   Widget _buildRecordingIndicator(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.error.withValues(alpha: 0.1),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
-      child: Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
         child: Row(
           children: [
-            const SizedBox(width: 16),
-            // CC: Recording icon with subtle animation
-            AnimatedBuilder(
-              animation: _waveformController,
-              builder: (context, child) {
-                return Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.colorScheme.error.withValues(
-                      alpha: 0.15 + (_waveformController.value * 0.1),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.mic,
-                    color: theme.colorScheme.error,
-                    size: 24,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Recording...',
-                    style: TextStyle(
-                      color: theme.colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    'Tap to stop',
-                    style: TextStyle(
-                      color: theme.colorScheme.error.withValues(alpha: 0.7),
-                      fontSize: 12,
-                    ),
+            // CC: Editorial accent line (newspaper style)
+            Container(
+              width: 4,
+              height: 56,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.error.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(2, 0),
                   ),
                 ],
               ),
             ),
-            // CC: Stop button
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: theme.colorScheme.error,
-              ),
-              child: Icon(
-                Icons.stop_rounded,
-                color: theme.colorScheme.onError,
-                size: 24,
+            const SizedBox(width: 16),
+            // CC: Minimal recording indicator with sound wave
+            Expanded(
+              child: Row(
+                children: [
+                  // CC: Animated sound wave bars
+                  AnimatedBuilder(
+                    animation: _waveformController,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(3, (index) {
+                          final delay = index * 0.2;
+                          final value = ((_waveformController.value + delay) % 1.0);
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 1),
+                            width: 3,
+                            height: 12 + (value * 8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.error.withValues(
+                                alpha: 0.6 + (value * 0.4),
+                              ),
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  // CC: Editorial style text
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recording...',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                            letterSpacing: 0.5,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'TAP ANYWHERE TO STOP',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            letterSpacing: 1.2,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // CC: Minimal stop indicator
+                  Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.error.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.stop_rounded,
+                      color: theme.colorScheme.error,
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
