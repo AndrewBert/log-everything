@@ -768,12 +768,26 @@ Analyze this log entry and provide a comprehensive multi-dimensional analysis in
 
 ${vectorStoreId != null ? "IMPORTANT: Use the File Search tool to search through the user's historical log entries to identify patterns, recurring themes, and behavioral trends across their entire log history. Do not analyze this entry in isolation." : ""}
 
-Provide the following insights (CRITICAL: Each insight must be 1-2 sentences maximum, brief and impactful):
+IMPORTANT: Refer to the user as "you".
+
+Provide the following insights (CRITICAL: Each insight must be brief, actionable, and suggest clear next steps):
 1. Summary: One sentence capturing the essence of this entry
 2. Emotion: State the primary emotion in 1-3 words, with intensity (e.g., "Excited - high", "Anxious - medium")
-3. Pattern: ${vectorStoreId != null ? "One sentence about recurring behaviors across MULTIPLE historical entries (not within this single entry)" : "Leave empty - patterns require historical data"} (leave empty if none)
+3. Pattern: ${vectorStoreId != null ? "Actionable insight with suggested next step based on recurring behaviors across MULTIPLE historical entries" : "Leave empty - patterns require historical data"} (leave empty if none found)
 4. Theme: The topic in 1-5 words (e.g., "Work stress", "Family time", "Personal growth")
-5. Recommendation: One specific, actionable step in 1-2 sentences (leave empty if none needed)
+5. Recommendation: One specific, actionable step the user should take next (leave empty if none needed)
+
+MAKE INSIGHTS ACTIONABLE: Instead of just stating what happened, suggest what the user should DO about it.
+
+Examples of actionable insights:
+- Instead of: "You've been logging food reactions frequently"
+- Write: "You've logged 12 food reactions this month. Track symptoms to identify triggers?"
+
+- Instead of: "You often work late and feel tired"
+- Write: "Late work sessions causing fatigue. Set a 9pm work cutoff this week?"
+
+- Instead of: "You're consistently exercising"
+- Write: "5 workouts this week! Add strength training to your routine?"
 
 Additionally, analyze the entry type and choose the most valuable insight to show as "priority".
 
@@ -787,14 +801,14 @@ First, identify the entry type:
 Then set priority based on what helps most:
 - "summary": Best for brainstorming, complex thoughts, or decision-making (distills the core idea)
 - "recommendation": Best when there's a clear problem to solve or decision point
-- "pattern": ONLY when you find recurring behaviors across their history (not single-entry patterns)
+- "pattern": ONLY when you find actionable patterns across their history with suggested next steps
 
 Example priority selection:
 - Brainstorming note → "summary" (e.g., "Considering auto-clean vs manual button for text editing")
 - "Should I apply for this job?" → "recommendation" (e.g., "List pros/cons, then decide by Friday")
-- Daily workout logs showing consistency → "pattern" (e.g., "Working out 5x/week for past month")
+- Multiple food logs → "pattern" (e.g., "12 food reactions logged. Track symptoms to identify triggers?")
 
-BREVITY IS CRITICAL: Keep all responses extremely concise for display on small cards.
+BREVITY + ACTION: Keep responses extremely concise but always suggest a clear next step when possible.
 
 Return ONLY a JSON object with this structure:
 {
@@ -804,17 +818,17 @@ Return ONLY a JSON object with this structure:
     "secondary": [],
     "intensity": "high"
   },
-  "pattern": "Brief pattern statement or empty string",
+  "pattern": "Actionable pattern insight with suggested next step or empty string",
   "theme": "Work productivity",
-  "recommendation": "Specific action in 1-2 sentences or empty string",
+  "recommendation": "Specific action the user should take next or empty string",
   "priority": "pattern|recommendation|summary"
 }
 ''';
 
-    // CC: Build system instructions with file search capability
+    // CC: Build system instructions with file search capability for actionable insights
     final systemContent = vectorStoreId != null
-        ? "You are a concise assistant that analyzes personal log entries. Use the File Search tool to search historical entries for patterns. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards. The logs are organized into daily files.$dateString"
-        : "You are a concise assistant that analyzes personal log entries. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards.$dateString";
+        ? "You are a concise assistant that analyzes personal log entries and provides actionable insights with clear next steps. Use the File Search tool to search historical entries for patterns. Focus on what the user should DO, not just what happened. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards. The logs are organized into daily files.$dateString"
+        : "You are a concise assistant that analyzes personal log entries and provides actionable insights with clear next steps. Focus on what the user should DO, not just what happened. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards.$dateString";
 
     final requestBody = {
       'model': vectorStoreId != null ? _chatModelId : _defaultModelId, // CC: Use chat model for file search

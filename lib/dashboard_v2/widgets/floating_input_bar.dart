@@ -357,10 +357,10 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
               width: 4,
               height: 56,
               decoration: BoxDecoration(
-                color: theme.colorScheme.error,
+                color: theme.colorScheme.primary,
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.error.withValues(alpha: 0.3),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(2, 0),
                   ),
@@ -368,79 +368,55 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
               ),
             ),
             const SizedBox(width: 16),
-            // CC: Minimal recording indicator with sound wave
+            // CC: Minimalist recording indicator
             Expanded(
               child: Row(
                 children: [
-                  // CC: Animated sound wave bars
+                  const SizedBox(width: 16),
+                  // CC: Warm amber recording dot - complements brown palette
                   AnimatedBuilder(
                     animation: _waveformController,
                     builder: (context, child) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(3, (index) {
-                          final delay = index * 0.2;
-                          final value = ((_waveformController.value + delay) % 1.0);
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
-                            width: 3,
-                            height: 12 + (value * 8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.error.withValues(
-                                alpha: 0.6 + (value * 0.4),
-                              ),
-                              borderRadius: BorderRadius.circular(1.5),
-                            ),
-                          );
-                        }),
+                      return Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withValues(
+                            alpha: 0.8 + (_waveformController.value * 0.2),
+                          ),
+                          shape: BoxShape.circle,
+                        ),
                       );
                     },
                   ),
-                  const SizedBox(width: 12),
-                  // CC: Editorial style text
+                  const SizedBox(width: 16),
+                  // CC: Clean recording text
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Recording...',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                            letterSpacing: 0.5,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'TAP ANYWHERE TO STOP',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            letterSpacing: 1.2,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Recording...',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                      ),
                     ),
                   ),
-                  // CC: Minimal stop indicator
+                  // CC: Simple stop button
                   Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(right: 16),
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: theme.colorScheme.error.withValues(alpha: 0.3),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
                         width: 1.5,
                       ),
                     ),
                     child: Icon(
                       Icons.stop_rounded,
-                      color: theme.colorScheme.error,
-                      size: 20,
+                      color: theme.colorScheme.primary,
+                      size: 14,
                     ),
                   ),
                 ],

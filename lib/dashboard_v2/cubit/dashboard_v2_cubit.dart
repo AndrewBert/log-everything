@@ -128,6 +128,21 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     }
   }
 
+  // CC: Generate insights for entries 1 and 2 (skip entry 0 to avoid duplicate with selectCarouselEntry)
+  void _generateInsightsForOtherRecentEntries() async {
+    final entries = state.entries;
+
+    // CC: Only check entries 1 and 2 (skip 0 to avoid duplicate generation)
+    final entriesToCheck = entries.length < 3 ? entries.length : 3;
+
+    for (int i = 1; i < entriesToCheck; i++) {
+      if (entries[i].insight == null) {
+        // Don't await - let them generate in parallel
+        _generateInsightForEntry(i);
+      }
+    }
+  }
+
   void _onEntriesUpdated(List<Entry> entries) {
     // CC: Filter out todos from the entries list
     final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
@@ -146,12 +161,12 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       ),
     );
 
-    // CC: If we have new entries, trigger insight generation for the most recent one
+    // CC: If we have new entries, select the first entry and generate insights for others
     if (hasNewEntries && nonTodoEntries.isNotEmpty) {
       // CC: Select the first entry (most recent) to trigger insight generation
       selectCarouselEntry(0);
-      // CC: Also generate insights for other recent entries
-      _generateInsightsForRecentEntries();
+      // CC: Generate insights for other recent entries (skip index 0 to avoid duplicate)
+      _generateInsightsForOtherRecentEntries();
     }
   }
 

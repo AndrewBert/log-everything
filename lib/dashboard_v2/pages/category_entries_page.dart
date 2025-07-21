@@ -145,7 +145,7 @@ class CategoryEntriesPage extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (context) => EntryDetailsPage(
                                   entry: entry,
-                                  cachedInsight: entry.insight?.getInsightByType(InsightType.summary),
+                                  cachedInsight: entry.insight?.getPrimaryInsight(),
                                 ),
                               ),
                             );
