@@ -527,7 +527,7 @@ class EntryRepository {
       final prefs = await SharedPreferences.getInstance();
       const prefsKey = 'category_colors_v1';
       final savedColors = prefs.getString(prefsKey);
-      
+
       if (savedColors == null) {
         AppLogger.info("Repository: No legacy category colors found - skipping migration.");
         return;
@@ -568,7 +568,6 @@ class EntryRepository {
         await _saveCategories();
         AppLogger.info("Repository: Successfully migrated ${legacyColors.length} category colors to Category model.");
       }
-
     } catch (e, stackTrace) {
       AppLogger.error("Repository: Error during category color migration", error: e, stackTrace: stackTrace);
     }

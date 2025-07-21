@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:intl/intl.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
 import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
@@ -81,8 +82,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
           elevation: 0,
           title: RichText(
             text: TextSpan(
-              style: Theme.of(context).appBarTheme.titleTextStyle ??
-                  Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
               children: <TextSpan>[
                 TextSpan(
                   text: 'Log',
@@ -289,33 +289,105 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                         const SliverToBoxAdapter(
                           child: SizedBox(height: 12),
                         ),
+                        // CC: Grid with date headers
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          sliver: SliverGrid(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 1,
-                            ),
+                          sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                if (index >= state.entries.length) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
+                                final items = _buildItemsWithDateHeaders(state.entries);
+                                if (index >= items.length) {
+                                  if (state.hasMoreEntries) {
+                                    return const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }
+
+                                final item = items[index];
+
+                                // Date header
+                                if (item is String) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 24, bottom: 12),
+                                    child: Text(
+                                      item,
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.5,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
                                   );
                                 }
-                                final entry = state.entries[index];
-                                return NewspaperEntryCard(
-                                  entry: entry,
-                                  isInGrid: true,
-                                  categoryColor: state.getCategoryColor(entry.category),
-                                  onTap: () {
-                                    _navigateToEntryDetails(context, entry, state);
-                                  },
-                                );
+
+                                // Entry grid row
+                                if (item is Entry) {
+                                  // Count entries in current row (check if we're first in a row)
+                                  int entriesInCurrentRow = 0;
+                                  for (int i = index - 1; i >= 0 && items[i] is Entry; i--) {
+                                    entriesInCurrentRow++;
+                                  }
+
+                                  // Skip if we're the second entry in a row (already rendered with first)
+                                  if (entriesInCurrentRow % 2 == 1) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  // Find next entry for the row
+                                  Entry? nextEntry;
+                                  if (index + 1 < items.length && items[index + 1] is Entry) {
+                                    nextEntry = items[index + 1] as Entry;
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: AspectRatio(
+                                            aspectRatio: 1,
+                                            child: NewspaperEntryCard(
+                                              entry: item,
+                                              isInGrid: true,
+                                              categoryColor: state.getCategoryColor(item.category),
+                                              onTap: () {
+                                                _navigateToEntryDetails(context, item, state);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: nextEntry != null
+                                              ? AspectRatio(
+                                                  aspectRatio: 1,
+                                                  child: NewspaperEntryCard(
+                                                    entry: nextEntry,
+                                                    isInGrid: true,
+                                                    categoryColor: state.getCategoryColor(nextEntry.category),
+                                                    onTap: () {
+                                                      _navigateToEntryDetails(context, nextEntry!, state);
+                                                    },
+                                                  ),
+                                                )
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                return const SizedBox.shrink();
                               },
-                              childCount: state.hasMoreEntries ? state.entries.length + 1 : state.entries.length,
+                              childCount:
+                                  _buildItemsWithDateHeaders(state.entries).length + (state.hasMoreEntries ? 1 : 0),
                             ),
                           ),
                         ),
@@ -379,5 +451,40 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
       context: context,
       builder: (context) => WhatsNewDialog(currentVersion: version ?? _appVersion),
     );
+  }
+
+  // CC: Helper method to get date label
+  String _getDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final entryDate = DateTime(date.year, date.month, date.day);
+
+    if (entryDate == today) {
+      return 'TODAY';
+    } else if (entryDate == yesterday) {
+      return 'YESTERDAY';
+    } else {
+      return DateFormat('MMMM d, yyyy').format(date).toUpperCase();
+    }
+  }
+
+  // CC: Helper to build items list with date headers
+  List<dynamic> _buildItemsWithDateHeaders(List<Entry> entries) {
+    if (entries.isEmpty) return [];
+
+    final items = <dynamic>[];
+    String? lastDateLabel;
+
+    for (final entry in entries) {
+      final dateLabel = _getDateLabel(entry.timestamp);
+      if (dateLabel != lastDateLabel) {
+        items.add(dateLabel); // Add date header
+        lastDateLabel = dateLabel;
+      }
+      items.add(entry);
+    }
+
+    return items;
   }
 }

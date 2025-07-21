@@ -85,54 +85,41 @@ class NewspaperEntryCard extends StatelessWidget {
                     
                     const SizedBox(height: 8),
                     
-                    // Bottom metadata row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Bottom metadata - vertical stack
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Date and time
-                        Flexible(
-                          flex: 1,
+                        // Category label
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                           child: Text(
-                            '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
+                            entry.category.toUpperCase(),
                             style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 11,
-                              letterSpacing: 0.5,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              fontSize: 9,
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
                           ),
                         ),
                         
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 4),
                         
-                        // Category label
-                        Flexible(
-                          flex: 0,
-                          child: Container(
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.3,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: categoryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              entry.category.toUpperCase(),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 9,
-                                letterSpacing: 0.8,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
+                        // Date and time
+                        Text(
+                          '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
