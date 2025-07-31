@@ -4,7 +4,7 @@ import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
-class RecentEntriesCarousel extends StatelessWidget {
+class RecentEntriesCarousel extends StatefulWidget {
   final List<Entry> entries;
   final int selectedIndex;
   final Function(int) onPageChanged;
@@ -21,8 +21,42 @@ class RecentEntriesCarousel extends StatelessWidget {
   });
 
   @override
+  State<RecentEntriesCarousel> createState() => _RecentEntriesCarouselState();
+}
+
+class _RecentEntriesCarouselState extends State<RecentEntriesCarousel> {
+  late CarouselSliderController _carouselController;
+  int? _lastSelectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _carouselController = CarouselSliderController();
+    _lastSelectedIndex = widget.selectedIndex;
+  }
+
+  @override
+  void didUpdateWidget(RecentEntriesCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // CC: Animate to new index when selectedIndex changes externally
+    if (widget.selectedIndex != _lastSelectedIndex && widget.entries.isNotEmpty) {
+      _lastSelectedIndex = widget.selectedIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.selectedIndex < widget.entries.length) {
+          _carouselController.animateToPage(
+            widget.selectedIndex,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) {
+    if (widget.entries.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -39,8 +73,6 @@ class RecentEntriesCarousel extends StatelessWidget {
     // Add extra space for gap to ensure proper peek visibility
     final viewportFraction = (cardWidth + cardGap) / screenWidth;
 
-    final carouselController = CarouselSliderController();
-
     // CC: Wrap in Container with margin to maintain alignment
     // TODO: Left side peek has minor glitching/offloading issue - revisit later
     return Container(
@@ -48,16 +80,17 @@ class RecentEntriesCarousel extends StatelessWidget {
       height: cardWidth,
       margin: EdgeInsets.only(left: containerPadding),
       child: CarouselSlider.builder(
-        carouselController: carouselController,
+        carouselController: _carouselController,
         options: CarouselOptions(
           height: cardWidth,
           viewportFraction: viewportFraction,
           clipBehavior: Clip.none,
-          initialPage: selectedIndex,
+          initialPage: widget.selectedIndex,
           enableInfiniteScroll: false,
           onPageChanged: (index, reason) {
-            if (index < entries.length) {
-              onPageChanged(index);
+            if (index < widget.entries.length) {
+              _lastSelectedIndex = index;
+              widget.onPageChanged(index);
             }
           },
           disableCenter: true,
@@ -66,15 +99,15 @@ class RecentEntriesCarousel extends StatelessWidget {
           pageSnapping: true,
           scrollDirection: Axis.horizontal,
         ),
-        itemCount: entries.length + 1, // CC: Add ghost item for scrolling
+        itemCount: widget.entries.length + 1, // CC: Add ghost item for scrolling
         itemBuilder: (context, index, realIndex) {
           // CC: Return empty container for ghost item
-          if (index >= entries.length) {
+          if (index >= widget.entries.length) {
             return SizedBox(width: cardWidth);
           }
 
-          final entry = entries[index];
-          final isSelected = index == selectedIndex;
+          final entry = widget.entries[index];
+          final isSelected = index == widget.selectedIndex;
 
           return Padding(
             padding: EdgeInsets.symmetric(
@@ -91,14 +124,14 @@ class RecentEntriesCarousel extends StatelessWidget {
                   child: NewspaperEntryCard(
                     entry: entry,
                     isSelected: isSelected,
-                    categoryColor: getCategoryColor?.call(entry.category),
+                    categoryColor: widget.getCategoryColor?.call(entry.category),
                     onTap: () {
                       // CP: If we have a navigation callback, use it
-                      if (onEntryTap != null) {
-                        onEntryTap!(entry);
+                      if (widget.onEntryTap != null) {
+                        widget.onEntryTap!(entry);
                       } else {
                         // CP: Otherwise, animate to tapped card
-                        carouselController.animateToPage(
+                        _carouselController.animateToPage(
                           index,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -113,5 +146,10 @@ class RecentEntriesCarousel extends StatelessWidget {
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

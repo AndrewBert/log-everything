@@ -48,21 +48,24 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   void selectCarouselEntry(int index) {
+    // CC: Check if new entry needs insight generation
+    bool needsInsight = false;
+    if (index < state.entries.length) {
+      final entry = state.entries[index];
+      needsInsight = entry.insight == null;
+    }
+
     emit(
       state.copyWith(
         selectedCarouselIndex: index,
-        // CC: Clear generating flag when switching entries
-        isGeneratingInsight: false,
+        // CC: Set loading state immediately if entry needs insight
+        isGeneratingInsight: needsInsight,
       ),
     );
 
-    // CC: Check if entry already has insight
-    if (index < state.entries.length) {
-      final entry = state.entries[index];
-      if (entry.insight == null) {
-        // CC: Generate insight for selected entry
-        _generateInsightForEntry(index);
-      }
+    // CC: Generate insight if needed
+    if (needsInsight && index < state.entries.length) {
+      _generateInsightForEntry(index);
     }
   }
 
@@ -174,8 +177,17 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     // CC: Only trigger insight generation for truly new entries
     if (newestEntryIsNew) {
-      // CC: Select the first entry (most recent) to trigger insight generation
-      selectCarouselEntry(0);
+      // CC: Always reset to index 0 when new entry is added for smooth UX
+      // Set isGeneratingInsight immediately to prevent white box flash
+      emit(
+        state.copyWith(
+          selectedCarouselIndex: 0,
+          isGeneratingInsight: true,
+        ),
+      );
+
+      // CC: Generate insight for the new entry
+      _generateInsightForEntry(0);
       // CC: Generate insights for other recent entries (skip index 0 to avoid duplicate)
       _generateInsightsForOtherRecentEntries();
     }
