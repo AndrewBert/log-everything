@@ -298,7 +298,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                           ),
                         ),
                         const SliverToBoxAdapter(
-                          child: SizedBox(height: 12),
+                          child: SizedBox(height: 8),
                         ),
                         // CC: Grid with date headers
                         SliverPadding(
@@ -324,7 +324,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 // Date header
                                 if (item is String) {
                                   return Padding(
-                                    padding: const EdgeInsets.only(top: 24, bottom: 12),
+                                    padding: const EdgeInsets.only(top: 12, bottom: 12),
                                     child: Text(
                                       item,
                                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
