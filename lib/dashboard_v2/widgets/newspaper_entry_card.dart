@@ -70,16 +70,26 @@ class NewspaperEntryCard extends StatelessWidget {
                   children: [
                     // Entry text with newspaper-style typography
                     Expanded(
-                      child: Text(
-                        entry.text,
-                        maxLines: isInGrid ? 5 : 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 15,
-                          height: 1.4,
-                          fontWeight: FontWeight.w400,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Calculate how many lines can fit based on available height
+                          final textStyle = theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 15,
+                            height: 1.4,
+                            fontWeight: FontWeight.w400,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                          );
+                          // Approximate line height: fontSize * height
+                          final lineHeight = 15 * 1.4;
+                          final maxLines = (constraints.maxHeight / lineHeight).floor();
+
+                          return Text(
+                            entry.text,
+                            maxLines: maxLines > 0 ? maxLines : 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textStyle,
+                          );
+                        },
                       ),
                     ),
 

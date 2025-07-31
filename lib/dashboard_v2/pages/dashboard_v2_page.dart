@@ -181,8 +181,11 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                     prev.currentInsight != current.currentInsight ||
                                     prev.isGeneratingInsight != current.isGeneratingInsight,
                                 builder: (context, state) {
-                                  return ConnectingLine(
-                                    isVisible: state.currentInsight != null || state.isGeneratingInsight,
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    child: ConnectingLine(
+                                      isVisible: state.currentInsight != null || state.isGeneratingInsight,
+                                    ),
                                   );
                                 },
                               ),
