@@ -28,8 +28,8 @@ class RecentEntriesCarousel extends StatelessWidget {
 
     final screenWidth = MediaQuery.of(context).size.width;
     // CC: Requirements: 2 full cards visible, left-aligned with insight, peeking on sides
-    final containerPadding = 16.0;
-    final cardGap = 8.0;
+    final containerPadding = 12.0;
+    final cardGap = 4.0;
 
     // CC: Calculate card width to fit 2 cards within container
     final availableWidth = screenWidth - (containerPadding * 2);

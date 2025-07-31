@@ -25,14 +25,14 @@ class NewspaperEntryCard extends StatelessWidget {
     final categoryColor = this.categoryColor ?? CategoryColors.getColorForCategory(entry.category);
     final dateFormat = DateFormat('MMM d');
     final timeFormat = DateFormat('h:mm a');
-    
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: EdgeInsets.symmetric(
-          horizontal: isInGrid ? 4 : 8,
-          vertical: isInGrid ? 4 : 8,
+          horizontal: isInGrid ? 4 : 2,
+          vertical: isInGrid ? 4 : 2,
         ),
         decoration: BoxDecoration(
           color: isSelected
@@ -60,11 +60,11 @@ class NewspaperEntryCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -82,9 +82,9 @@ class NewspaperEntryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Bottom metadata - vertical stack
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,9 +109,9 @@ class NewspaperEntryCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 4),
-                        
+
                         // Date and time
                         Text(
                           '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
@@ -124,16 +124,14 @@ class NewspaperEntryCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     // Task indicator if applicable
                     if (entry.isTask) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           Icon(
-                            entry.isCompleted
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
+                            entry.isCompleted ? Icons.check_circle : Icons.circle_outlined,
                             size: 14,
                             color: entry.isCompleted
                                 ? theme.colorScheme.primary.withValues(alpha: 0.7)
