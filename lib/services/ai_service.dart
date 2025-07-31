@@ -831,7 +831,7 @@ Return ONLY a JSON object with this structure:
         : "You are a concise assistant that analyzes personal log entries and provides actionable insights with clear next steps. Focus on what the user should DO, not just what happened. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards.$dateString";
 
     final requestBody = {
-      'model': vectorStoreId != null ? _chatModelId : _defaultModelId, // CC: Use chat model for file search
+      'model': _defaultModelId, // CC: Always use gpt-4o-mini for insights
       'input': [
         {
           'role': 'system',
@@ -852,7 +852,7 @@ Return ONLY a JSON object with this structure:
         'app_name': 'log-everything',
         'has_vector_store': vectorStoreId != null && vectorStoreId.isNotEmpty ? 'true' : 'false',
         'timestamp': DateTime.now().toIso8601String(),
-        'model_used': vectorStoreId != null ? _chatModelId : _defaultModelId,
+        'model_used': _defaultModelId,
       },
       'temperature': 0.5, // CC: Balanced temperature for nuanced priority selection while staying concise
     };
