@@ -25,10 +25,7 @@ class NewspaperInsightContainer extends StatelessWidget {
       child: AnimatedContainer(
         key: aiInsightContainerKey,
         duration: const Duration(milliseconds: 300),
-        constraints: BoxConstraints(
-          minHeight: insight != null || isLoading ? 60 : 0,
-          maxHeight: insight != null || isLoading ? 200 : 0,
-        ),
+        height: 140, // Fixed height - increased to prevent overflow
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: AnimatedSwitcher(
@@ -39,13 +36,13 @@ class NewspaperInsightContainer extends StatelessWidget {
                   categoryColor: categoryColor,
                 )
               : insight != null
-              ? IntrinsicHeight(
-                  child: Row(
-                    key: ValueKey(insight),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+              ? Row(
+                  key: ValueKey(insight),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Container(
                       width: 3,
+                      height: double.infinity,
                       decoration: BoxDecoration(
                         color: categoryColor,
                         borderRadius: BorderRadius.circular(1.5),
@@ -53,39 +50,41 @@ class NewspaperInsightContainer extends StatelessWidget {
                     ),
                     const SizedBox(width: 20),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '"${insight!.content}"',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w300,
-                              height: 1.4,
-                              fontSize: 18,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                      child: SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '"${insight!.content}"',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w300,
+                                height: 1.4,
+                                fontSize: 18,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                              ),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _getInsightLabel(insight!.type),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              letterSpacing: 1.2,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            const SizedBox(height: 8),
+                            Text(
+                              _getInsightLabel(insight!.type),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                letterSpacing: 1.2,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],
-                ),
-              )
+                )
               : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ),
