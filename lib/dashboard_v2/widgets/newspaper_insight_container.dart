@@ -202,67 +202,66 @@ class _TypewriterLoaderState extends State<_TypewriterLoader> with TickerProvide
         final isTypingComplete = _charAnimation.value == _loadingText.length;
         final showCursor = !isTypingComplete || _typeController.value > 0.8;
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 3,
-                decoration: BoxDecoration(
-                  color: widget.categoryColor.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(1.5),
-                ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 3,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: widget.categoryColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(1.5),
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w300,
-                          height: 1.4,
-                          fontSize: 18,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                        children: [
-                          TextSpan(text: displayText),
-                          if (showCursor)
-                            TextSpan(
-                              text: '|',
-                              style: TextStyle(
-                                color: widget.categoryColor.withValues(
-                                  alpha: isTypingComplete ? _cursorOpacity.value : 1.0,
-                                ),
-                                fontWeight: FontWeight.w400,
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w300,
+                        height: 1.4,
+                        fontSize: 18,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                      children: [
+                        TextSpan(text: displayText),
+                        if (showCursor)
+                          TextSpan(
+                            text: '|',
+                            style: TextStyle(
+                              color: widget.categoryColor.withValues(
+                                alpha: isTypingComplete ? _cursorOpacity.value : 1.0,
                               ),
+                              fontWeight: FontWeight.w400,
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(1),
-                      child: SizedBox(
-                        height: 2,
-                        width: 120,
-                        child: LinearProgressIndicator(
-                          value: _progressAnimation.value,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            widget.categoryColor.withValues(alpha: 0.4),
                           ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(1),
+                    child: SizedBox(
+                      height: 2,
+                      width: 120,
+                      child: LinearProgressIndicator(
+                        value: _progressAnimation.value,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          widget.categoryColor.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

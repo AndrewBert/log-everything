@@ -16,6 +16,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
   final AiService _aiService = GetIt.instance<AiService>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
+  // CC: Track entries currently generating insights to prevent duplicates
+  final Set<String> _generatingInsights = {};
 
   DashboardV2Cubit({
     required EntryRepository entryRepository,
@@ -68,11 +70,15 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     if (index >= state.entries.length) return;
 
     final entry = state.entries[index];
+    final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
 
-    // CC: Skip if entry already has insight
-    if (entry.insight != null) {
+    // CC: Skip if entry already has insight or is currently generating
+    if (entry.insight != null || _generatingInsights.contains(entryId)) {
       return;
     }
+
+    // CC: Mark entry as generating
+    _generatingInsights.add(entryId);
 
     // CC: Only set isGeneratingInsight if this is for the selected entry
     if (index == state.selectedCarouselIndex) {
@@ -80,7 +86,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     }
 
     try {
-      final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
       final comprehensiveInsight = await _aiService.generateEntryInsights(
         entry.text,
         entryId,
@@ -110,6 +115,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
           ),
         );
       }
+    } finally {
+      // CC: Remove from generating set
+      _generatingInsights.remove(entryId);
     }
   }
 
@@ -148,8 +156,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
     final categories = _entryRepository.currentCategories;
 
-    // CC: Check if we have new entries
+    // CC: Check if we have new entries (not just updates to existing ones)
     final hasNewEntries = nonTodoEntries.length > state.entries.length;
+
+    // CC: Check if the newest entry is actually new (no insight yet)
+    final newestEntryIsNew = hasNewEntries && nonTodoEntries.isNotEmpty && nonTodoEntries.first.insight == null;
 
     // CC: Update state with new entries from stream
     emit(
@@ -161,8 +172,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       ),
     );
 
-    // CC: If we have new entries, select the first entry and generate insights for others
-    if (hasNewEntries && nonTodoEntries.isNotEmpty) {
+    // CC: Only trigger insight generation for truly new entries
+    if (newestEntryIsNew) {
       // CC: Select the first entry (most recent) to trigger insight generation
       selectCarouselEntry(0);
       // CC: Generate insights for other recent entries (skip index 0 to avoid duplicate)
