@@ -3,9 +3,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import '../entry/entry.dart';
+import '../entry/category.dart';
 import '../entry/cubit/entry_cubit.dart';
+import '../entry/repository/entry_repository.dart';
 import '../utils/category_colors.dart';
 import '../utils/widget_keys.dart';
 
@@ -42,6 +45,21 @@ class EntryCard extends StatefulWidget {
 
   @override
   State<EntryCard> createState() => _EntryCardState();
+
+  // CC: Helper method to get text color with proper fallback
+  static Color _getTextColorForCategory(String categoryName) {
+    final categories = GetIt.instance<EntryRepository>().currentCategories;
+    final category = categories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () => Category(name: categoryName),
+    );
+    // If category has a color, use it to generate text color, otherwise fallback to CategoryColors
+    if (category.color != null) {
+      // Use the same logic as CategoryColors.getTextColorForCategory
+      return category.color!.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+    }
+    return CategoryColors.getTextColorForCategory(categoryName);
+  }
 }
 
 class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
@@ -447,7 +465,7 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                                   size: 14,
                                                   color: widget.isProcessing
                                                       ? Colors.orange[900]
-                                                      : CategoryColors.getTextColorForCategory(widget.entry.category),
+                                                      : EntryCard._getTextColorForCategory(widget.entry.category),
                                                 )
                                               : null,
                                           label: Text(
@@ -457,7 +475,7 @@ class _EntryCardState extends State<EntryCard> with TickerProviderStateMixin {
                                               fontWeight: FontWeight.w500,
                                               color: widget.isProcessing
                                                   ? Colors.orange[900]
-                                                  : CategoryColors.getTextColorForCategory(widget.entry.category),
+                                                  : EntryCard._getTextColorForCategory(widget.entry.category),
                                             ),
                                           ),
                                           backgroundColor: widget.isProcessing

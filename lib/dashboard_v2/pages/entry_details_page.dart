@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/entry_details_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -20,6 +21,21 @@ class EntryDetailsPage extends StatelessWidget {
     this.cachedInsight,
     this.allowCategoryEdit = true,
   });
+
+  // CC: Helper method to get category color with proper fallback
+  Color _getCategoryColor(String categoryName) {
+    final categories = GetIt.instance<EntryRepository>().currentCategories;
+    final category = categories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () => Category(name: categoryName),
+    );
+    return category.color ?? CategoryColors.getColorForCategory(categoryName);
+  }
+
+  // CC: Helper method to get color for a Category object
+  Color _getCategoryColorForCategory(Category category) {
+    return category.color ?? CategoryColors.getColorForCategory(category.name);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +80,7 @@ class EntryDetailsPage extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: CategoryColors.getColorForCategory(entry.category),
+                    color: _getCategoryColor(entry.category),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -116,7 +132,8 @@ class EntryDetailsPage extends StatelessWidget {
     final entry = state.entry!;
     final dateFormat = DateFormat('MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
-    final categoryColor = CategoryColors.getColorForCategory(entry.category);
+    // CC: Get category color with proper fallback to avoid sync issues
+    final categoryColor = _getCategoryColor(entry.category);
 
     return GestureDetector(
       onTap: () {
@@ -500,7 +517,7 @@ class EntryDetailsPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final category = categories[index];
                   final isSelected = category.name == currentCategory;
-                  final categoryColor = CategoryColors.getColorForCategory(category.name);
+                  final categoryColor = _getCategoryColorForCategory(category);
 
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(

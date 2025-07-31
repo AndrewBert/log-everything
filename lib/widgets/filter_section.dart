@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../entry/cubit/entry_cubit.dart';
+import '../entry/category.dart';
 import '../utils/category_colors.dart';
 
 // Helper to map backend 'Misc' to frontend 'None' and vice versa
@@ -13,24 +14,24 @@ class FilterSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<EntryCubit, EntryState>(
-      buildWhen:
-          (previous, current) =>
-              previous.categories != current.categories ||
-              previous.filterCategory != current.filterCategory ||
-              previous.recentCategories != current.recentCategories,
+      buildWhen: (previous, current) =>
+          previous.categories != current.categories ||
+          previous.filterCategory != current.filterCategory ||
+          previous.recentCategories != current.recentCategories,
       builder: (context, state) {
         // Get all categories in display format
-        final List<String> allCategories =
-            state.categories.map((cat) => categoryDisplayName(cat.name)).toList()
-              ..remove('None')
-              ..sort();
+        final List<String> allCategories = state.categories.map((cat) => categoryDisplayName(cat.name)).toList()
+          ..remove('None')
+          ..sort();
 
         // Convert recent categories to display format
         final recentDisplayCategories = state.recentCategories.map(categoryDisplayName).toList();
 
         // Filter out recent categories from main list
-        final otherCategories =
-            ['None', ...allCategories].where((cat) => !recentDisplayCategories.contains(cat)).toList();
+        final otherCategories = [
+          'None',
+          ...allCategories,
+        ].where((cat) => !recentDisplayCategories.contains(cat)).toList();
 
         return Container(
           height: 44,
@@ -93,18 +94,26 @@ class FilterSection extends StatelessWidget {
   }
 
   Widget _buildChip(BuildContext context, String category, EntryState state) {
+    // CC: Get category color from model first, then fallback to CategoryColors
+    final categoryBackend = categoryBackendValue(category);
+    final categoryModel = state.categories.firstWhere(
+      (cat) => cat.name == categoryBackend,
+      orElse: () => Category(name: categoryBackend),
+    );
+    final categoryColor = categoryModel.color ?? CategoryColors.getColorForCategory(categoryBackend);
+
     return AnimatedScale(
-      scale: state.filterCategory == categoryBackendValue(category) ? 1.05 : 1.0,
+      scale: state.filterCategory == categoryBackend ? 1.05 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: FilterChip(
-        selected: state.filterCategory == categoryBackendValue(category),
+        selected: state.filterCategory == categoryBackend,
         label: Text(category),
-        backgroundColor: CategoryColors.getColorForCategory(categoryBackendValue(category)).withValues(alpha: 0.12),
-        selectedColor: CategoryColors.getColorForCategory(categoryBackendValue(category)),
+        backgroundColor: categoryColor.withValues(alpha: 0.12),
+        selectedColor: categoryColor,
         labelStyle: TextStyle(
-          color: state.filterCategory == categoryBackendValue(category) ? Colors.white : Colors.black87,
+          color: state.filterCategory == categoryBackend ? Colors.white : Colors.black87,
         ),
-        onSelected: (_) => context.read<EntryCubit>().setFilter(categoryBackendValue(category)),
+        onSelected: (_) => context.read<EntryCubit>().setFilter(categoryBackend),
       ),
     );
   }
