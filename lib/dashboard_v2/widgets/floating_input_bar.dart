@@ -341,91 +341,65 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   Widget _buildRecordingIndicator(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        // CC: Eye-catching amber/yellow background
-        color: const Color(0xFFFBBF24),
+        color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
-            // CC: Cancel button (X) on the left
-            GestureDetector(
-              onTap: () {
-                context.read<VoiceInputCubit>().stopRecording();
+            // CC: Cancel button - similar to clear text button
+            IconButton(
+              onPressed: () {
+                context.read<VoiceInputCubit>().cancelRecording();
+                HapticFeedback.lightImpact();
               },
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.black,
-                  size: 18,
-                ),
+              icon: Icon(
+                Icons.close,
+                color: theme.colorScheme.onPrimaryContainer,
+                size: 20,
               ),
+              tooltip: 'Cancel',
             ),
-            const SizedBox(width: 16),
-
-            // CC: Voice-reactive waveform in center
+            // CC: Simple pulsing dot
+            AnimatedBuilder(
+              animation: _waveformController,
+              builder: (context, child) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(
+                      alpha: 0.5 + (_waveformController.value * 0.5),
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                );
+              },
+            ),
             Expanded(
-              child: AnimatedBuilder(
-                animation: _waveformController,
-                builder: (context, child) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(8, (index) {
-                      // CC: Simulate voice reactivity with varying delays and amplitudes
-                      final delay = index * 0.15;
-                      final baseValue = (_waveformController.value + delay) % 1.0;
-                      // CC: Add some randomness to simulate voice variations
-                      final voiceVariation = (index * 0.3 + _waveformController.value * 2) % 1.0;
-                      final height = 4 + (baseValue * 16) + (voiceVariation * 8);
-
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        width: 3,
-                        height: height.clamp(4.0, 24.0),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6 + (baseValue * 0.4)),
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      );
-                    }),
-                  );
-                },
+              child: Text(
+                'Recording...',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
-
-            const SizedBox(width: 16),
-            // CC: Stop button on the right
-            GestureDetector(
-              onTap: () {
+            // CC: Stop button - will transcribe
+            IconButton(
+              onPressed: () {
                 context.read<VoiceInputCubit>().stopRecording();
               },
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.stop_rounded,
-                  color: Colors.black,
-                  size: 18,
-                ),
+              icon: Icon(
+                Icons.stop_rounded,
+                color: theme.colorScheme.primary,
               ),
+              tooltip: 'Stop & Transcribe',
             ),
           ],
         ),
@@ -733,20 +707,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                       tooltip: 'Send',
                                     ),
                                   ],
-                                ),
-                              ),
-
-                            // CC: Make recording indicator tappable
-                            if (isRecording)
-                              Positioned.fill(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(28),
-                                    onTap: () {
-                                      context.read<VoiceInputCubit>().stopRecording();
-                                    },
-                                  ),
                                 ),
                               ),
                           ],

@@ -207,23 +207,34 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                             ],
                           ),
                         ),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 24),
-                        ),
-                        // CC: Todos carousel
+                        // CC: Todos carousel with conditional spacing
                         SliverToBoxAdapter(
-                          child: TodosCarousel(
-                            onHeaderTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const TodosPage(),
-                                ),
+                          child: BlocBuilder<TodoCubit, TodoState>(
+                            builder: (context, todoState) {
+                              // CP: Only show spacing if there are todos to display
+                              final hasTodos = todoState.activeTodos.isNotEmpty || todoState.completedTodos.isNotEmpty;
+
+                              if (!hasTodos) {
+                                return const SizedBox(height: 24);
+                              }
+
+                              return Column(
+                                children: [
+                                  const SizedBox(height: 24),
+                                  TodosCarousel(
+                                    onHeaderTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const TodosPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
                               );
                             },
                           ),
-                        ),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 24),
                         ),
                         // CC: Categories carousel
                         BlocBuilder<DashboardV2Cubit, DashboardV2State>(

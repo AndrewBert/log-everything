@@ -125,6 +125,42 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
     AppLogger.info("[startRecording] Finished.");
   }
 
+  Future<void> cancelRecording() async {
+    AppLogger.info("[cancelRecording] Called.");
+    if (!state.isRecording) return;
+    HapticFeedback.lightImpact();
+
+    _cancelRecordingTimer();
+
+    try {
+      // Use service to stop recording
+      await _audioRecorderService.stop();
+      AppLogger.info("Recording cancelled");
+
+      emit(
+        state.copyWith(
+          isRecording: false,
+          clearRecordingTime: true,
+          clearAudioPath: true,
+          clearErrorMessage: true,
+          transcriptionStatus: TranscriptionStatus.idle,
+        ),
+      );
+    } catch (e) {
+      AppLogger.error("Error cancelling recording", error: e);
+      emit(
+        state.copyWith(
+          errorMessage: 'Error cancelling recording: $e',
+          isRecording: false,
+          clearRecordingTime: true,
+          clearAudioPath: true,
+          transcriptionStatus: TranscriptionStatus.idle,
+        ),
+      );
+    }
+    AppLogger.info("[cancelRecording] Finished.");
+  }
+
   Future<void> stopRecording() async {
     AppLogger.info("[stopRecording] Called.");
     // Check service if it's recording (optional, state.isRecording should suffice)
@@ -244,8 +280,9 @@ class VoiceInputCubit extends Cubit<VoiceInputState> {
         }
       } else {
         AppLogger.warn('Combined text is empty, finalizing state without adding entry.');
-        final currentEntries =
-            _entryRepository.currentEntries.where((e) => e.timestamp != processingTimestamp).toList();
+        final currentEntries = _entryRepository.currentEntries
+            .where((e) => e.timestamp != processingTimestamp)
+            .toList();
         _entryCubit.finalizeProcessing(currentEntries);
       }
 
