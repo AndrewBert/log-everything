@@ -318,11 +318,19 @@ class EntryRepository {
     String name,
     String description, {
     bool isChecklist = false,
+    Color? color,
   }) async {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
     if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
-      _categories.add(Category(name: trimmedName, description: trimmedDescription, isChecklist: isChecklist));
+      _categories.add(
+        Category(
+          name: trimmedName,
+          description: trimmedDescription,
+          isChecklist: isChecklist,
+          color: color,
+        ),
+      );
       await _saveCategories();
     }
     return currentCategories;

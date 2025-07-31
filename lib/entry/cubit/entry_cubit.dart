@@ -49,12 +49,11 @@ class EntryCubit extends Cubit<EntryState> {
     // Ensure we have a mutable list to work with before filtering/sorting
     List<Entry> mutableEntries = List<Entry>.from(entries);
 
-    final List<Entry> filteredEntries =
-        filterCategory == null
-            ? mutableEntries // Use the mutable copy
-            : mutableEntries
-                .where((entry) => entry.category == filterCategory)
-                .toList(); // .where().toList() already creates a new mutable list
+    final List<Entry> filteredEntries = filterCategory == null
+        ? mutableEntries // Use the mutable copy
+        : mutableEntries
+              .where((entry) => entry.category == filterCategory)
+              .toList(); // .where().toList() already creates a new mutable list
 
     if (filteredEntries.isEmpty) {
       return [];
@@ -73,11 +72,11 @@ class EntryCubit extends Cubit<EntryState> {
     final List<dynamic> listItems = [];
     for (var date in sortedDates) {
       listItems.add(date);
-      
+
       // Sort all entries by timestamp (newest first) - maintain chronological order
       final dayEntries = groupedEntries[date]!;
       dayEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      
+
       listItems.addAll(dayEntries);
     }
 
@@ -158,7 +157,6 @@ class EntryCubit extends Cubit<EntryState> {
     );
     finalEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
   }
-
 
   // --- Public Methods (delegating to repository) ---
 
@@ -276,10 +274,20 @@ class EntryCubit extends Cubit<EntryState> {
     }
   }
 
-  Future<void> addCustomCategoryWithDescription(String name, String description, {bool isChecklist = false}) async {
+  Future<void> addCustomCategoryWithDescription(
+    String name,
+    String description, {
+    bool isChecklist = false,
+    Color? color,
+  }) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(name, description, isChecklist: isChecklist);
+      final updatedCategories = await _entryRepository.addCustomCategoryWithDescription(
+        name,
+        description,
+        isChecklist: isChecklist,
+        color: color,
+      );
       emit(state.copyWith(categories: updatedCategories));
     } catch (e) {
       AppLogger.error("Cubit: Error adding category with description via repository", error: e);
@@ -313,7 +321,12 @@ class EntryCubit extends Cubit<EntryState> {
   Future<void> renameCategory(String oldName, String newName, {String? description, bool? isChecklist}) async {
     emit(state.copyWith(clearLastError: true));
     try {
-      final result = await _entryRepository.renameCategory(oldName, newName, description: description, isChecklist: isChecklist);
+      final result = await _entryRepository.renameCategory(
+        oldName,
+        newName,
+        description: description,
+        isChecklist: isChecklist,
+      );
       _updateStateFromRepository(
         updatedEntries: result.entries,
         updatedCategories: result.categories,

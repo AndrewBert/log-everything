@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/category.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class RectangularTodoCard extends StatelessWidget {
@@ -20,7 +23,13 @@ class RectangularTodoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryColors.getColorForCategory(todo.category);
+    // CC: Get category color from model first, then fallback to CategoryColors
+    final categories = GetIt.instance<EntryRepository>().currentCategories;
+    final category = categories.firstWhere(
+      (cat) => cat.name == todo.category,
+      orElse: () => Category(name: todo.category),
+    );
+    final categoryColor = category.color ?? CategoryColors.getColorForCategory(todo.category);
     final dateFormatter = DateFormat('MMM d');
 
     return AnimatedOpacity(
