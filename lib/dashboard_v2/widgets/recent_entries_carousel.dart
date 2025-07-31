@@ -75,6 +75,15 @@ class SnapScrollPhysics extends ScrollPhysics {
     );
   }
 
+  @override
+  double get minFlingVelocity => 100.0; // Ultra-light swipe threshold
+
+  @override
+  double get maxFlingVelocity => 15000.0; // No speed limits
+
+  @override
+  double get dragStartDistanceMotionThreshold => 1.0; // Instant response
+
   double _getTargetPixels(double position, ScrollMetrics metrics) {
     // CC: Calculate the distance between each snap position
     final snapDistance = cardWidth + cardGap;
@@ -91,37 +100,42 @@ class SnapScrollPhysics extends ScrollPhysics {
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
     final tolerance = toleranceFor(position);
 
-    // CC: If velocity is low, snap to nearest position
-    if (velocity.abs() < tolerance.velocity) {
-      final target = _getTargetPixels(position.pixels, position);
-      if ((target - position.pixels).abs() < tolerance.distance) {
-        return null;
-      }
-      return ScrollSpringSimulation(
-        spring,
-        position.pixels,
-        target,
-        velocity,
-        tolerance: tolerance,
-      );
+    // CC: Calculate snap distance and current position
+    final snapDistance = cardWidth + cardGap;
+    final currentIndex = (position.pixels / snapDistance).round();
+
+    // CC: Determine target based on scroll direction and position
+    int targetIndex;
+
+    if (velocity.abs() < minFlingVelocity) {
+      // CC: For slow scrolls, snap to nearest
+      targetIndex = (position.pixels / snapDistance).round();
+    } else {
+      // CC: For swipes, always move exactly one card in swipe direction
+      final direction = velocity > 0 ? 1 : -1;
+      targetIndex = currentIndex + direction;
     }
 
-    // CC: For higher velocities, let it scroll with momentum then snap
-    final ballisticSimulation = super.createBallisticSimulation(position, velocity);
-    if (ballisticSimulation != null) {
-      final endPosition = ballisticSimulation.x(double.infinity);
-      final snapTarget = _getTargetPixels(endPosition, position);
+    // CC: Clamp to valid range
+    final maxIndex = (position.maxScrollExtent / snapDistance).floor();
+    targetIndex = targetIndex.clamp(0, maxIndex);
+    final targetPosition = targetIndex * snapDistance;
 
-      return ScrollSpringSimulation(
-        spring,
-        position.pixels,
-        snapTarget,
-        velocity,
-        tolerance: tolerance,
-      );
-    }
+    // CC: Create smooth animation to target
+    // Use a custom spring with less bounce for more predictable movement
+    const customSpring = SpringDescription(
+      mass: 0.4, // Ultra-light, almost no weight
+      stiffness: 250.0, // Very crisp snap
+      damping: 16.0, // Minimal resistance
+    );
 
-    return null;
+    return ScrollSpringSimulation(
+      customSpring,
+      position.pixels,
+      targetPosition,
+      velocity, // Preserve ALL swipe energy
+      tolerance: tolerance,
+    );
   }
 }
 
