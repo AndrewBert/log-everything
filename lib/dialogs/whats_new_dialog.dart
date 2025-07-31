@@ -11,16 +11,20 @@ class WhatsNewDialog extends StatelessWidget {
     // Keep this list concise, highlighting major changes.
     final List<Widget> changes = [
       _buildChangeItem(
-        '💬 Enhanced Chat Experience',
-        '''Improved AI chat with smoother animations, real-time streaming responses, and a polished look and feel.''',
+        '📰 All-New Dashboard Experience',
+        '''Completely redesigned home screen with a newspaper-inspired layout, AI-powered insights, and intuitive navigation.''',
       ),
       _buildChangeItem(
-        '✅ Smart Task Recognition',
-        '''Entries that look like tasks are automatically given checkboxes. Mark them complete with a tap!''',
+        '✨ Floating Smart Input',
+        '''New floating input bar with voice transcription and seamless entry creation.''',
       ),
       _buildChangeItem(
-        '✨ UI Refinements',
-        '''Cleaner snackbar notifications, smoother scrolling in the entries list, and various polish throughout.''',
+        '🎯 Todo Management',
+        '''Dedicated todo section and pages to track and complete your tasks. Todos are automatically filtered from your main entries.''',
+      ),
+      _buildChangeItem(
+        '🎨 Personalized Categories',
+        '''Enhanced category system with custom colors, better organization, and quick access to all your categorized entries.''',
       ),
     ];
     // --- End of What's New content ---
@@ -53,7 +57,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'The Polish Update',
+                        'The Dashboard Update',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -66,6 +70,46 @@ class WhatsNewDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ...changes,
+              const SizedBox(height: 16),
+              // CP: Personal message from developer
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline, color: Colors.amber.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Hello it\'s Andrew 👋',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.amber.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '''I've completely redesigned the app to hopefully show more valuable information and be more intuitive. I'm experimenting with the app's theme - trying a newspaper-style approach right now - and I really want your feedback!
+
+Your input has been incredibly helpful in shaping this app. Please keep the feedback coming - it truly makes a difference.''',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.amber.shade900,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
