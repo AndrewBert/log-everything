@@ -9,12 +9,7 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
-    final List<Widget> changes = [
-      const Text(
-        'Bug Fixes in v1.2.1',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
-      ),
-      const SizedBox(height: 8),
+    final List<Widget> _bugFixChanges = [
       _buildChangeItem(
         '🐛 UI Polish & Fixes',
         '''Fixed text visibility in floating input bar, improved carousel scrolling behavior, enhanced layout consistency, and resolved overflow issues in insight containers.''',
@@ -23,12 +18,9 @@ class WhatsNewDialog extends StatelessWidget {
         '🎯 Performance Improvements',
         '''Optimized AI insights with consistent model usage, removed unused dependencies, and improved color system consistency throughout the app.''',
       ),
-      const Divider(height: 24),
-      const Text(
-        'Major Features from v1.1.9',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
-      ),
-      const SizedBox(height: 8),
+    ];
+
+    final List<Widget> _majorFeatureChanges = [
       _buildChangeItem(
         '📰 All-New Dashboard Experience',
         '''Completely redesigned home screen with a newspaper-inspired layout, AI-powered insights, and intuitive navigation.''',
@@ -64,6 +56,34 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.2.1 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.bug_report, color: Colors.green.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.2.1 - The Polish Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._bugFixChanges,
+              const SizedBox(height: 20),
+              // Version 1.1.9 Header
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -76,7 +96,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'The Dashboard Update + Bug Fixes',
+                        'v1.1.9 - The Dashboard Update',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -87,8 +107,8 @@ class WhatsNewDialog extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              ...changes,
+              const SizedBox(height: 12),
+              ..._majorFeatureChanges,
               const SizedBox(height: 16),
               // CP: Personal message from developer
               Container(
