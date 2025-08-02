@@ -37,7 +37,7 @@ class NewspaperInsightContainer extends StatelessWidget {
                 )
               : insight != null
               ? Row(
-                  key: ValueKey(insight),
+                  key: ValueKey('insight_${insight!.id}'),
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(

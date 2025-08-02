@@ -37,7 +37,7 @@ class RecentEntriesCarousel extends StatelessWidget {
     return Container(
       key: recentEntriesCarouselKey,
       height: cardWidth,
-      margin: EdgeInsets.only(left: containerPadding),
+      margin: EdgeInsets.symmetric(horizontal: containerPadding),
       child: _ListViewCarousel(
         entries: entries,
         selectedIndex: selectedIndex,
@@ -122,11 +122,11 @@ class SnapScrollPhysics extends ScrollPhysics {
     final targetPosition = targetIndex * snapDistance;
 
     // CC: Create smooth animation to target
-    // Use a custom spring with less bounce for more predictable movement
+    // Use a softer spring for more relaxed, natural movement
     const customSpring = SpringDescription(
-      mass: 0.4, // Ultra-light, almost no weight
-      stiffness: 250.0, // Very crisp snap
-      damping: 16.0, // Minimal resistance
+      mass: 0.8, // Moderate weight for smoother motion
+      stiffness: 100.0, // Softer snap, more relaxed
+      damping: 20.0, // More damping for less bounce
     );
 
     return ScrollSpringSimulation(
@@ -248,6 +248,7 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
       controller: _scrollController,
       scrollDirection: Axis.horizontal,
       physics: SnapScrollPhysics(
+        parent: const BouncingScrollPhysics(),
         cardWidth: widget.cardWidth,
         cardGap: widget.cardGap,
         startOffset: widget.containerPadding,
@@ -255,8 +256,9 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
       itemCount: widget.entries.length + 1, // CC: Add ghost item for proper scrolling
       itemBuilder: (context, index) {
         // CC: Return ghost item for proper scrolling at the end
+        // CC: Ghost item needs to be wide enough to allow last item to scroll to left position
         if (index >= widget.entries.length) {
-          return SizedBox(width: widget.cardWidth);
+          return SizedBox(width: widget.cardWidth + widget.cardGap);
         }
 
         final entry = widget.entries[index];
