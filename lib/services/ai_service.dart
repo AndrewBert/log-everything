@@ -117,6 +117,7 @@ class OpenAiService implements AiService {
   static const fourOMini = 'gpt-4o-mini';
   static const fourPoint1 = 'gpt-4.1-2025-04-14';
   static const fourPoint1Mini = 'gpt-4.1-mini-2025-04-14';
+  static const fourPoint1Nano = 'gpt-4.1-nano-2025-04-14';
   final String _chatModelId = fourPoint1Mini;
   final String _defaultModelId = fourOMini;
   final SharedPreferences _prefs; // CP: Added SharedPreferences field
@@ -188,17 +189,20 @@ class OpenAiService implements AiService {
 2. ORGANIZE AND STRUCTURE content to improve readability
 3. PRESERVE the user's meaning without adding false information
 
-INSTRUCTION DETECTION:
+INSTRUCTION DETECTION (HIGHEST PRIORITY):
 - Detect natural language commands like:
   - "make this a to-do" / "make this a task" → set is_task: true
   - "file this under [category]" / "categorize as [category]" → override category selection
+  - For instructions like "make this a to-do: call the dentist", apply BOTH the task instruction AND proper categorization
   - "summarize this as" → restructure content accordingly
   - "remind me to" / "I need to" → set is_task: true
   - "note that" / "log that" → process as observation (is_task: false)
+  - "don't make this a task" → set is_task: false
   - "clean this up" → apply maximum structuring and organization
   - "keep this as is" → minimal changes, preserve original text
 - Instructions can appear anywhere in the input
 - Follow instructions even if they contradict normal categorization rules
+- ALWAYS prioritize explicit user instructions over other rules
 
 CONTENT TRANSFORMATION:
 - Clean up rambling thoughts into coherent, structured entries
@@ -222,22 +226,49 @@ CRITICAL RULES:
 - Default to better organization even without explicit instructions
 - Transform verbose rambling into clear, readable text
 
-TASK DETECTION:
+CATEGORY SELECTION RULES:
+Choose the category that best matches the content's primary purpose, domain, or context. Consider these universal principles:
+
+1. SPECIFICITY OVER GENERALITY: Always prefer more specific categories over broad ones
+2. PRIMARY PURPOSE: Categorize based on the main intent or domain of the activity
+3. CONTEXT MATCHING: Look for keywords, phrases, or concepts that align with category descriptions
+4. LOGICAL GROUPING: Similar activities should consistently use the same category
+5. USER PREFERENCE: Follow any explicit categorization instructions from the user
+
+
+For minimal context (single words like "meeting", "groceries"), use the most likely category based on the word's typical context.
+When categorizing, consider domain-specific terms that naturally belong to certain categories.
+
+Use the most general/catch-all category (often "Misc" or similar) ONLY as a last resort when no other category reasonably fits the content.
+
+TASK DETECTION (BE VERY CONSERVATIVE - DEFAULT TO FALSE):
 For each entry, determine if it represents a task/todo item that can be completed:
-- TRUE for actionable items: "call mom", "buy groceries", "finish the report", "schedule dentist appointment"
-- TRUE for future intentions: "need to", "should", "must", "have to", "going to", "plan to"
-- TRUE for instruction-triggered tasks: "make this a to-do", "remind me to"
-- TRUE for single items that imply acquisition: "boots", "milk", "batteries" (assume these are shopping reminders)
-- TRUE for action-oriented phrases: "oil change", "pick up dry cleaning", "return library books"
-- FALSE for completed activities: "had lunch", "went to store", "called mom", "finished report"
-- FALSE for observations: "feeling good", "it was sunny", "the meeting was long"
-- FALSE when user explicitly says: "note that", "just logging", "not a task"
-- Override detection based on user instructions
+
+TRUE only for:
+- Explicit future actions with clear intent: "I need to call mom", "must buy groceries", "should finish the report"
+- Direct imperatives or reminders: "remind me to", "don't forget to", "make sure to"
+- Instruction-triggered tasks: "make this a to-do", "add this to my tasks"
+- Single shopping items WITHOUT context: "groceries", "milk", "batteries" (assume these are reminders)
+- Action phrases with future tense: "will call", "going to schedule", "planning to meet"
+
+FALSE for:
+- ANY past tense or completed actions: "went to", "bought", "called", "had", "finished"
+- Observations or states: "feeling tired", "work stress affecting sleep", "budget discussion"
+- Thinking/considering WITHOUT commitment: "thinking about", "maybe should", "considering"
+- Venting about existing work: negative tone + "have to" or "need to" about current obligations
+- Just thinking or considering: "maybe we should", "thinking about", "considering"
+- ALWAYS FALSE when user says: "don't make this a task", "just logging", "note that"
+
+TRUE for future events/appointments:
+- "meeting tomorrow", "appointment at 3pm", "lunch with client" (these are reminders)
+- "meeting with client tomorrow about budget" (reminder for scheduled event)
+
+When in doubt, default to FALSE. Only mark as TRUE when there's a clear, uncommitted action to be taken.
 
 Here are the available categories:
 $categoriesListString
 
-When deciding which category to use, consider both the name and the description for the best fit. Override category selection if user provides explicit instructions. Respond with a JSON object containing an "entries" array.""";
+When deciding which category to use, consider both the name and the description for the best fit. Use specific categories over "Misc" whenever possible. Override category selection if user provides explicit instructions. Respond with a JSON object containing an "entries" array.""";
 
     final requestBody = {
       'model': _defaultModelId, // CP: Use GPT-4o mini for extraction

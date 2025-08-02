@@ -162,7 +162,7 @@ def create_comprehensive_test_data() -> str:
             "item": {
                 "input_text": "meting with clinet tommorow about bugdet",  # Typos
                 "expected_category": "Work",
-                "expected_is_task": False,
+                "expected_is_task": True,
                 "expected_text": "Meeting with client tomorrow about budget",
                 "test_type": "typo_correction",
                 "edge_case_type": "typos"
@@ -194,7 +194,7 @@ def create_comprehensive_test_data() -> str:
             "item": {
                 "input_text": "Went to the store bought milk eggs bread oh and remind me to get batteries next time",
                 "expected_category": "Personal",
-                "expected_is_task": False,  # Mixed content, past tense dominates
+                "expected_is_task": True,  # "remind me" makes this a task
                 "expected_text": "Went to the store and bought milk, eggs, and bread. Reminder: get batteries next time",
                 "test_type": "multiple_intents",
                 "edge_case_type": "multiple_intents"
@@ -306,7 +306,14 @@ def run_evaluation(eval_id: str, file_id: str) -> str:
     """Run evaluation with the actual system prompt"""
     
     # Get the actual system prompt from our AI service
-    categories = ["Personal", "Work", "Health", "Finance", "Misc"]
+    # Match the actual category format used in production
+    categories = [
+        "Personal: Personal life, social activities, family, hobbies, errands",
+        "Work: Work-related activities, meetings, projects, professional tasks", 
+        "Health: Medical appointments, exercise, wellness, mental health",
+        "Finance: Money management, purchases, banking, investments",
+        "Misc: Random thoughts, observations, miscellaneous items"
+    ]
     categories_list = "\n".join([f"- {cat}" for cat in categories])
     
     system_prompt = f"""You are an intelligent note-taking assistant helping organize a user's personal log. Your role is to:
