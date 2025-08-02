@@ -69,7 +69,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'v1.2.1 - The Polish Update',
+                        'v1.2.1 - The "Oops, We Fixed It" Update',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
