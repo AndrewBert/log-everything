@@ -25,7 +25,7 @@ class NewspaperInsightContainer extends StatelessWidget {
       child: AnimatedContainer(
         key: aiInsightContainerKey,
         duration: const Duration(milliseconds: 300),
-        height: 140, // Fixed height - increased to prevent overflow
+        height: 160,
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: AnimatedSwitcher(
