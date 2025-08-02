@@ -633,7 +633,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                 maxLines: _isExpanded ? 6 : 1,
                                                 keyboardType: TextInputType.multiline,
                                                 textCapitalization: TextCapitalization.sentences,
-                                                scrollPhysics: const NeverScrollableScrollPhysics(),
                                                 onTap: () {
                                                   // CC: Move cursor to end when tapping collapsed field with text
                                                   if (!_isExpanded && _hasText) {
