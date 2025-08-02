@@ -139,7 +139,15 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         }
         // CC: Scroll text field to beginning when unfocused
         if (_textController.text.isNotEmpty) {
-          _textController.selection = const TextSelection.collapsed(offset: 0);
+          // CC: Need postFrameCallback to fix text visibility bug where beginning is cut off
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // CC: Force TextField to scroll to start by selecting then deselecting
+            _textController.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: 1,
+            );
+            _textController.selection = const TextSelection.collapsed(offset: 0);
+          });
           _pulseController.repeat(reverse: true);
         }
       }
