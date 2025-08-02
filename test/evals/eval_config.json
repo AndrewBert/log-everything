@@ -1,0 +1,51 @@
+{
+  "name": "Log Entry Extraction Evaluation",
+  "data_source_config": {
+    "type": "custom",
+    "item_schema": {
+      "type": "object",
+      "properties": {
+        "input_text": { "type": "string" },
+        "expected_entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text_segment": { "type": "string" },
+              "category": { "type": "string" },
+              "is_task": { "type": "boolean" }
+            }
+          }
+        },
+        "test_type": { "type": "string" },
+        "instruction": { "type": "string" }
+      },
+      "required": ["input_text", "expected_entries", "test_type"]
+    },
+    "include_sample_schema": true
+  },
+  "testing_criteria": [
+    {
+      "type": "string_check",
+      "name": "Entry Count Match",
+      "input": "{{ sample.entries.length }}",
+      "operation": "eq",
+      "reference": "{{ item.expected_entries.length }}"
+    },
+    {
+      "type": "custom",
+      "name": "Instruction Following",
+      "grader": "instruction_detection"
+    },
+    {
+      "type": "custom", 
+      "name": "Content Quality",
+      "grader": "content_transformation"
+    },
+    {
+      "type": "custom",
+      "name": "Task Detection Accuracy",
+      "grader": "task_detection"
+    }
+  ]
+}
