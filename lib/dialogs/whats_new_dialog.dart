@@ -26,6 +26,20 @@ class WhatsNewDialog extends StatelessWidget {
         '🎨 Personalized Categories',
         '''Enhanced category system with custom colors, better organization, and quick access to all your categorized entries.''',
       ),
+      const Divider(height: 24),
+      const Text(
+        'Bug Fixes in v1.2.1',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
+      ),
+      const SizedBox(height: 8),
+      _buildChangeItem(
+        '🐛 UI Polish & Fixes',
+        '''Fixed text visibility in floating input bar, improved carousel scrolling behavior, enhanced layout consistency, and resolved overflow issues in insight containers.''',
+      ),
+      _buildChangeItem(
+        '🎯 Performance Improvements',
+        '''Optimized AI insights with consistent model usage, removed unused dependencies, and improved color system consistency throughout the app.''',
+      ),
     ];
     // --- End of What's New content ---
 
@@ -57,7 +71,7 @@ class WhatsNewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'The Dashboard Update',
+                        'The Dashboard Update + Bug Fixes',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
