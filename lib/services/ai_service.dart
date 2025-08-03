@@ -181,7 +181,7 @@ class OpenAiService implements AiService {
     final categoriesListString = categories
         .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
-
+    // CC: Keep rules concise and avoid overfitting on the eval data - focus on principles not specific phrases
     final systemPrompt =
         """You are an intelligent note-taking assistant helping organize a user's personal log. Your role is to:
 
@@ -242,22 +242,21 @@ When categorizing, consider domain-specific terms that naturally belong to certa
 Use the most general/catch-all category (often "Misc" or similar) ONLY as a last resort when no other category reasonably fits the content.
 
 TASK DETECTION (BE VERY CONSERVATIVE - DEFAULT TO FALSE):
-For each entry, determine if it represents a task/todo item that can be completed:
+A task must be an actionable commitment that can be checked off a todo list.
+
 
 TRUE only for:
-- Explicit future actions with clear intent: "I need to call mom", "must buy groceries", "should finish the report"
-- Direct imperatives or reminders: "remind me to", "don't forget to", "make sure to"
-- Instruction-triggered tasks: "make this a to-do", "add this to my tasks"
-- Single shopping items WITHOUT context: "groceries", "milk", "batteries" (assume these are reminders)
-- Action phrases with future tense: "will call", "going to schedule", "planning to meet"
+- Clear commitments to specific actions: "I need to", "must", "will", "going to"
+- Direct imperatives: "remind me to", "don't forget to"
+- User instructions: "make this a to-do"
+- Single items that are clearly reminders: "groceries", "dentist appointment"
 
 FALSE for:
-- ANY past tense or completed actions: "went to", "bought", "called", "had", "finished"
-- Observations or states: "feeling tired", "work stress affecting sleep", "budget discussion"
-- Thinking/considering WITHOUT commitment: "thinking about", "maybe should", "considering"
-- Venting about existing work: negative tone + "have to" or "need to" about current obligations
-- Just thinking or considering: "maybe we should", "thinking about", "considering"
-- ALWAYS FALSE when user says: "don't make this a task", "just logging", "note that"
+- Past actions (already done)
+- Current states or observations
+- Aspirations without commitment: "would like to", "hoping to", "want to someday"
+- Venting about obligations (complaining tone + "have to")
+- Vague considerations: "thinking about", "maybe", "considering"
 
 TRUE for future events/appointments:
 - "meeting tomorrow", "appointment at 3pm", "lunch with client" (these are reminders)
