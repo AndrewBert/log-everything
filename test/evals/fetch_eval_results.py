@@ -115,9 +115,15 @@ def fetch_output_items(eval_id: str, run_id: str):
         print(f"   {test_type}: {count} failures")
 
 def main():
-    # Use the most recent eval run
-    eval_id = "eval_688e67f158b48191bd2ca86fb82c1480"
-    run_id = "evalrun_688e67f261908191bf3bd2cd30c77e44"
+    import sys
+    
+    if len(sys.argv) != 3:
+        print("Usage: python fetch_eval_results.py <eval_id> <run_id>")
+        print("Example: python fetch_eval_results.py eval_688f48f275f88191b11acac9f23ac730 evalrun_688f48f3840c819196fb3865e941a768")
+        sys.exit(1)
+    
+    eval_id = sys.argv[1]
+    run_id = sys.argv[2]
     
     fetch_output_items(eval_id, run_id)
 
