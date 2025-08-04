@@ -181,93 +181,56 @@ class OpenAiService implements AiService {
     final categoriesListString = categories
         .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
-    // CC: Keep rules concise and avoid overfitting on the eval data - focus on principles not specific phrases
+    // CC: MINIMAL PROMPT EXPERIMENT - Iteration 7
+    // Refined splitting rules + clearer guidance on appointments/observations
+    // Addresses category naming issue (no subcategories)
     final systemPrompt =
-        """You are an intelligent note-taking assistant helping organize a user's personal log. Your role is to:
+        """You are a note-taking assistant that helps organize user logs.
 
-1. LISTEN FOR INSTRUCTIONS in the user's input and execute them
-2. ORGANIZE AND STRUCTURE content to improve readability
-3. PRESERVE the user's meaning without adding false information
+Process the user's input and return JSON with:
+- text: cleaned and organized version of the input
+- category: select from the provided categories (use ONLY the exact category names provided)
+- is_task: true if this is something to be done, false if it's an observation or completed action
 
-INSTRUCTION DETECTION (HIGHEST PRIORITY):
-- Detect natural language commands like:
-  - "make this a to-do" / "make this a task" → set is_task: true
-  - "file this under [category]" / "categorize as [category]" → override category selection
-  - For instructions like "make this a to-do: call the dentist", apply BOTH the task instruction AND proper categorization
-  - "summarize this as" → restructure content accordingly
-  - "remind me to" / "I need to" → set is_task: true
-  - "note that" / "log that" → process as observation (is_task: false)
-  - "don't make this a task" → set is_task: false
-  - "clean this up" → apply maximum structuring and organization
-  - "keep this as is" → minimal changes, preserve original text
-- Instructions can appear anywhere in the input
-- Follow instructions even if they contradict normal categorization rules
-- ALWAYS prioritize explicit user instructions over other rules
+BE VERY CONSERVATIVE with task detection. When in doubt, mark as NOT a task.
 
-CONTENT TRANSFORMATION:
-- Clean up rambling thoughts into coherent, structured entries
-- Fix grammar, spelling, and punctuation errors
-- Remove filler words (um, uh, like, you know) while preserving meaning
-- Convert run-on sentences into clear, concise statements
-- Structure lists with proper formatting when multiple items are mentioned
-- Group related thoughts into logical paragraphs
-- Make content scannable and easy to read
+Mark is_task as TRUE only for:
+- Concrete, specific actions: "call mom", "buy groceries", "finish presentation"
+- Clear commitments with "need to" + specific action
+- Direct reminders: "remind me to [specific thing]"
+- Single actionable words: "groceries", "laundry", "taxes" (only if standalone)
 
-ORGANIZATION RULES:
-- STRONGLY PREFER keeping related content together as ONE entry
-- Multiple sentences about the same topic should stay together
-- Only split into separate entries for clearly unrelated activities
-- When user gives an instruction about structure, follow it exactly
+Mark is_task as FALSE for:
+- Appointments/events: "meeting at 2pm", "soccer practice at 4"
+- Problems/observations: "car making noise", "running low on coffee"
+- Reflections or venting (even mentioning needs)
+- Vague intentions: "need to exercise more", "should eat healthier"
+- Past actions or current states
 
-CRITICAL RULES:
-- NEVER invent facts or add information not present in the input
-- PRESERVE the user's core message, intent, and emotional tone
-- When instructions conflict with content, follow the instructions
-- Default to better organization even without explicit instructions
-- Transform verbose rambling into clear, readable text
+Entry splitting - IMPORTANT:
+- Default: Keep as ONE entry
+- EXCEPTION: Split when there's a reflection/story WITH a clear embedded action
+- Example: "Work was crazy today with meetings... still need to finish presentation"
+  → Entry 1: "Work was crazy today with back-to-back meetings" (is_task: false)
+  → Entry 2: "Finish presentation for tomorrow" (is_task: true)
+- The split task entry should be concise and action-focused
 
-CATEGORY SELECTION RULES:
-Choose the category that best matches the content's primary purpose, domain, or context. Consider these universal principles:
+Instructions override defaults:
+- "make this a to-do" → is_task: true
+- "note that" → is_task: false
+- "clean this up" → only affects text formatting
 
-1. SPECIFICITY OVER GENERALITY: Always prefer more specific categories over broad ones
-2. PRIMARY PURPOSE: Categorize based on the main intent or domain of the activity
-3. CONTEXT MATCHING: Look for keywords, phrases, or concepts that align with category descriptions
-4. LOGICAL GROUPING: Similar activities should consistently use the same category
-5. USER PREFERENCE: Follow any explicit categorization instructions from the user
+Category selection:
+- Use ONLY the exact category names provided below
+- Do NOT create subcategories (e.g., don't use "Errands" if "Personal" is the category)
+- Match content to the most appropriate category
 
+Minimal text cleaning - remove filler words (um, uh) but preserve meaning.
 
-For minimal context (single words like "meeting", "groceries"), use the most likely category based on the word's typical context.
-When categorizing, consider domain-specific terms that naturally belong to certain categories.
-
-Use the most general/catch-all category (often "Misc" or similar) ONLY as a last resort when no other category reasonably fits the content.
-
-TASK DETECTION (BE VERY CONSERVATIVE - DEFAULT TO FALSE):
-A task must be an actionable commitment that can be checked off a todo list.
-
-
-TRUE only for:
-- Clear commitments to specific actions: "I need to", "must", "will", "going to"
-- Direct imperatives: "remind me to", "don't forget to"
-- User instructions: "make this a to-do"
-- Single items that are clearly reminders: "groceries", "dentist appointment"
-
-FALSE for:
-- Past actions (already done)
-- Current states or observations
-- Aspirations without commitment: "would like to", "hoping to", "want to someday"
-- Venting about obligations (complaining tone + "have to")
-- Vague considerations: "thinking about", "maybe", "considering"
-
-TRUE for future events/appointments:
-- "meeting tomorrow", "appointment at 3pm", "lunch with client" (these are reminders)
-- "meeting with client tomorrow about budget" (reminder for scheduled event)
-
-When in doubt, default to FALSE. Only mark as TRUE when there's a clear, uncommitted action to be taken.
-
-Here are the available categories:
+Categories available:
 $categoriesListString
 
-When deciding which category to use, consider both the name and the description for the best fit. Use specific categories over "Misc" whenever possible. Override category selection if user provides explicit instructions. Respond with a JSON object containing an "entries" array.""";
+Respond with a JSON object containing an "entries" array.""";
 
     final requestBody = {
       'model': _defaultModelId, // CP: Use GPT-4o mini for extraction
@@ -558,22 +521,6 @@ When deciding which category to use, consider both the name and the description 
               AppLogger.error('$errorMsg Body: ${response.body}');
               throw AiServiceException(errorMsg);
             }
-            // CP: } else if (outputType == 'refusal') { // CP: This block might be unreachable if we only look for 'message' type.
-            // CP: Consider if 'refusal' can appear within the 'output' array alongside 'file_search_call'
-            // CP: For now, this specific error was about not finding 'message' due to 'file_search_call' being first.
-            // CP: If a 'refusal' can be the *only* relevant item, the logic might need adjustment.
-            //   final refusalMessage = firstOutputElement['refusal'] as String?;
-            //   final errorMsg =
-            //       'OpenAI refused the chat request: ${refusalMessage ?? "No refusal message provided."}';
-            //   AppLogger.error(errorMsg);
-            //   throw AiServiceException(errorMsg);
-            // } else {
-            //   // CP: Unknown output type
-            //   final errorMsg =
-            //       'Unexpected output type (\'$outputType\') in OpenAI response when expecting a message.';
-            //   AppLogger.error('$errorMsg Body: ${response.body}');
-            //   throw AiServiceException(errorMsg);
-            // }
           } else {
             // CP: No 'message' type found in the output array.
             // CP: Check for refusal as a top-level output item if no message is found.
