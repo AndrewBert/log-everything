@@ -1,0 +1,138 @@
+{
+  "total": 61,
+  "passed": 45,
+  "failed": 16,
+  "failures": [
+    {
+      "input": "Make this a to-do: call the dentist about my appointment",
+      "expected_category": "Health",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "instruction_detection"
+    },
+    {
+      "input": "Went to the store and bought milk and eggs and bread and then I ran into Sarah and we talked for like 20 minutes about her new job and then I came home and made dinner",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "content_transformation"
+    },
+    {
+      "input": "I must call the insurance company about my claim",
+      "expected_category": "Finance",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "modal_verb_must"
+    },
+    {
+      "input": "I could reorganize my closet this weekend",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "modal_verb_could"
+    },
+    {
+      "input": "Call dentist at 3pm today",
+      "expected_category": "Health",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "temporal_specific_time"
+    },
+    {
+      "input": "If it rains tomorrow, bring umbrella",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "temporal_conditional"
+    },
+    {
+      "input": "So much laundry to do this weekend",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "obligation_observation"
+    },
+    {
+      "input": "Need to stop procrastinating so much",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "obligation_self_criticism"
+    },
+    {
+      "input": "Had a great workout this morning feeling energized need to remember to stretch more often and drink more water throughout the day",
+      "expected_category": "Health",
+      "expected_is_task": false,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "stream_consciousness_mixed"
+    },
+    {
+      "input": "boss asked me to review the proposal by monday also sarah's birthday is coming up should get her a gift",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "multi_task_no_punctuation"
+    },
+    {
+      "input": "just remembered i told mom id help her with her computer this weekend ughhhh why did i agree to that",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "reluctant_commitment"
+    },
+    {
+      "input": "Read interesting article about productivity tips one suggestion was to write everything down immediately going to try that starting now",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "learning_to_action"
+    },
+    {
+      "input": "Sooo tired today... coffee isn't helping... maybe I need to get to bed earlier? Or exercise more? Idk anymore",
+      "expected_category": "Health",
+      "expected_is_task": false,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "tired_rambling"
+    },
+    {
+      "input": "Weather's supposed to be nice this weekend thinking about going hiking or maybe just relaxing at home haven't decided yet",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "weekend_pondering"
+    },
+    {
+      "input": "We should probably discuss the new project timeline at some point",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "group_dynamic_vague"
+    },
+    {
+      "input": "Remember to use the todo app more consistently",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "meta_task"
+    }
+  ],
+  "start_time": "2025-08-04T16:49:40.153904",
+  "end_time": "2025-08-04T16:51:28.087318",
+  "pass_rate": 73.77049180327869
+}
