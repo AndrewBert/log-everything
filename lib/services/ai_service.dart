@@ -119,7 +119,7 @@ class OpenAiService implements AiService {
   static const fourPoint1Mini = 'gpt-4.1-mini-2025-04-14';
   static const fourPoint1Nano = 'gpt-4.1-nano-2025-04-14';
   final String _chatModelId = fourPoint1Mini;
-  final String _defaultModelId = fourOMini;
+  final String _defaultModelId = fourPoint1Mini;
   final SharedPreferences _prefs; // CP: Added SharedPreferences field
 
   // CP: Updated constructor to accept SharedPreferences
@@ -233,7 +233,7 @@ $categoriesListString
 Respond with a JSON object containing an "entries" array.""";
 
     final requestBody = {
-      'model': _defaultModelId, // CP: Use GPT-4o mini for extraction
+      'model': _defaultModelId, // CC: Use GPT-4.1-mini for extraction
       'input': [
         {"role": "system", "content": systemPrompt},
         {"role": "user", "content": text},
@@ -831,7 +831,7 @@ Return ONLY a JSON object with this structure:
         : "You are a concise assistant that analyzes personal log entries and provides actionable insights with clear next steps. Focus on what the user should DO, not just what happened. Keep all insights extremely brief (1-2 sentences max) for display on small UI cards.$dateString";
 
     final requestBody = {
-      'model': _defaultModelId, // CC: Always use gpt-4o-mini for insights
+      'model': _defaultModelId, // CC: Use GPT-4.1-mini for insights
       'input': [
         {
           'role': 'system',
