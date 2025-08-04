@@ -18,17 +18,45 @@ We successfully reduced the AI prompt from ~300 lines to 48 lines while improvin
 | GPT-4.1-mini | 73.8% | **Selected for production** - good balance |
 | GPT-4o-mini | 54.1% | Struggles with nuanced instructions |
 
+## Methodology for Systematic Prompt Engineering
+
+### Rules Followed:
+1. **Start with absolute minimum prompt** (5-10 lines)
+2. **Run evaluation** after each change
+3. **Analyze failures by type** to identify patterns
+4. **Add ONE instruction** to address most common failure
+5. **Re-run evaluation** to measure impact
+6. **Keep instruction only if >5% improvement**
+7. **Repeat until target accuracy** or diminishing returns
+
+### Key Principles:
+- **Minimal changes**: One change at a time
+- **Data-driven**: Let failures guide improvements
+- **No overfitting**: Avoid test-specific instructions
+- **Clear purpose**: Each line must earn its place
+- **Measure everything**: Track prompt size and accuracy
+
 ## Iteration History
 
 ### Baseline (300 lines)
 - Very detailed, lots of examples
 - ~60% accuracy baseline
 
+### Iteration 0 (8 lines)
+- Absolute minimum: 36.1% accuracy
+- Too aggressive on task detection
+
+### Iterations 1-6
+- Gradually added guidance
+- Some regressions (iteration 3: 39.3%)
+- Learned what doesn't work
+
 ### Iteration 7 (Final - 48 lines)
 - Conservative task detection philosophy
 - Clear rules for appointments vs tasks
 - Improved entry splitting logic
 - Dynamic category handling
+- 96.4% accuracy with GPT-4.1
 
 ## Key Learnings
 
