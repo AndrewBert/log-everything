@@ -1,0 +1,290 @@
+{
+  "total": 61,
+  "passed": 30,
+  "failed": 31,
+  "errors": 0,
+  "failures": [
+    {
+      "input": "Remind me to pick up groceries after work",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Errands",
+      "actual_is_task": true,
+      "test_type": "instruction_detection"
+    },
+    {
+      "input": "Called mom about dinner plans need to call dad too",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "multiple_entries"
+    },
+    {
+      "input": "Note that I finished the report but make this a to-do: send it to the team",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "mixed_instructions"
+    },
+    {
+      "input": "I must call the insurance company about my claim",
+      "expected_category": "Finance",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "modal_verb_must"
+    },
+    {
+      "input": "I should probably check my blood pressure more often",
+      "expected_category": "Health",
+      "expected_is_task": true,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "modal_verb_should"
+    },
+    {
+      "input": "I want to learn Spanish someday",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "modal_verb_want_vague"
+    },
+    {
+      "input": "If it rains tomorrow, bring umbrella",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": true,
+      "test_type": "temporal_conditional"
+    },
+    {
+      "input": "Always forgetting to take my vitamins",
+      "expected_category": "Health",
+      "expected_is_task": true,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "temporal_recurring_issue"
+    },
+    {
+      "input": "Have to submit expense report by 5pm",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Finance",
+      "actual_is_task": true,
+      "test_type": "obligation_deadline"
+    },
+    {
+      "input": "Need to stop procrastinating so much",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "obligation_self_criticism"
+    },
+    {
+      "input": "Went to grocery store but forgot to buy milk",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Errands",
+      "actual_is_task": false,
+      "test_type": "embedded_task_forgot_item"
+    },
+    {
+      "input": "Meeting with client is at 2pm conference room B",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": false,
+      "test_type": "embedded_task_appointment"
+    },
+    {
+      "input": "Car is making weird noise again",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "embedded_task_problem"
+    },
+    {
+      "input": "Running low on coffee",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "embedded_task_supplies"
+    },
+    {
+      "input": "When should I schedule the team meeting?",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": false,
+      "test_type": "question_planning"
+    },
+    {
+      "input": "Don't forget to lock the door",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "question_self_reminder"
+    },
+    {
+      "input": "Wonder if I should apply for that job",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "question_uncertainty"
+    },
+    {
+      "input": "Remember to set alarm for 6am tomorrow",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Misc",
+      "actual_is_task": true,
+      "test_type": "question_imperative"
+    },
+    {
+      "input": "work was crazy today back to back meetings barely had time to breathe still need to finish that presentation for tomorrow",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "venting_plus_task"
+    },
+    {
+      "input": "kids have soccer practice at 4 then piano at 6 husband picking up dinner thank god",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "family_schedule_mixed"
+    },
+    {
+      "input": "Started cleaning out the garage found a bunch of old photos need to scan them before they deteriorate more also found dad's tools wonder if I should keep them",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "narrative_embedded_tasks"
+    },
+    {
+      "input": "budget meeting @ 10am, lunch w/ jen 12:30, gym after work if time",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": false,
+      "test_type": "shorthand_schedule"
+    },
+    {
+      "input": "just remembered i told mom id help her with her computer this weekend ughhhh why did i agree to that",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "reluctant_commitment"
+    },
+    {
+      "input": "Been putting off calling the dentist for weeks really should do it but hate making appointments maybe I'll do it tomorrow or next week",
+      "expected_category": "Health",
+      "expected_is_task": true,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "procrastination_pattern"
+    },
+    {
+      "input": "Read interesting article about productivity tips one suggestion was to write everything down immediately going to try that starting now",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "learning_to_action"
+    },
+    {
+      "input": "Oh great, another meeting to attend tomorrow \ud83d\ude44 just what I needed",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": false,
+      "test_type": "sarcasm_but_real_task"
+    },
+    {
+      "input": "Need to get my life together",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "metaphorical_language"
+    },
+    {
+      "input": "Started the monthly report, still need to add Q3 numbers and executive summary",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "partial_completion"
+    },
+    {
+      "input": "Remember to use the todo app more consistently",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "meta_task"
+    },
+    {
+      "input": "Taxes.",
+      "expected_category": "Finance",
+      "expected_is_task": true,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "single_word_context_dependent"
+    },
+    {
+      "input": "Working on improving communication skills through daily practice",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "ongoing_process"
+    }
+  ],
+  "failure_types": {
+    "instruction_detection": 1,
+    "multiple_entries": 1,
+    "mixed_instructions": 1,
+    "modal_verb_must": 1,
+    "modal_verb_should": 1,
+    "modal_verb_want_vague": 1,
+    "temporal_conditional": 1,
+    "temporal_recurring_issue": 1,
+    "obligation_deadline": 1,
+    "obligation_self_criticism": 1,
+    "embedded_task_forgot_item": 1,
+    "embedded_task_appointment": 1,
+    "embedded_task_problem": 1,
+    "embedded_task_supplies": 1,
+    "question_planning": 1,
+    "question_self_reminder": 1,
+    "question_uncertainty": 1,
+    "question_imperative": 1,
+    "venting_plus_task": 1,
+    "family_schedule_mixed": 1,
+    "narrative_embedded_tasks": 1,
+    "shorthand_schedule": 1,
+    "reluctant_commitment": 1,
+    "procrastination_pattern": 1,
+    "learning_to_action": 1,
+    "sarcasm_but_real_task": 1,
+    "metaphorical_language": 1,
+    "partial_completion": 1,
+    "meta_task": 1,
+    "single_word_context_dependent": 1,
+    "ongoing_process": 1
+  },
+  "pass_rate": 49.18032786885246
+}
