@@ -470,6 +470,8 @@ class EntryDetailsPage extends StatelessWidget {
 
     final categories = GetIt.instance<EntryRepository>().currentCategories;
     final currentCategory = state.entry!.category;
+    // CC: Capture the cubit reference before entering the modal sheet context
+    final entryDetailsCubit = context.read<EntryDetailsCubit>();
 
     showModalBottomSheet(
       context: context,
@@ -482,7 +484,7 @@ class EntryDetailsPage extends StatelessWidget {
         minChildSize: 0.3,
         maxChildSize: 0.8,
         expand: false,
-        builder: (context, scrollController) => Column(
+        builder: (_, scrollController) => Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
@@ -555,7 +557,7 @@ class EntryDetailsPage extends StatelessWidget {
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       if (!isSelected) {
-                        context.read<EntryDetailsCubit>().updateCategory(category.name);
+                        entryDetailsCubit.updateCategory(category.name);
                       }
                     },
                   );
