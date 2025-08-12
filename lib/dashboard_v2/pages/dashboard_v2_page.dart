@@ -4,7 +4,6 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
-import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
@@ -266,15 +265,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                     onSeeAllTap: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (context) => AllCategoriesPage(
-                                            onAddCategory: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) => const AddCategoryPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
+                                          builder: (context) => const AllCategoriesPage(),
                                         ),
                                       );
                                     },

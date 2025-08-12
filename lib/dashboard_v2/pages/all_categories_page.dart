@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
+import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/category_card.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 
 class AllCategoriesPage extends StatelessWidget {
-  final VoidCallback? onAddCategory;
-
   const AllCategoriesPage({
     super.key,
-    this.onAddCategory,
   });
 
   @override
@@ -35,16 +33,25 @@ class AllCategoriesPage extends StatelessWidget {
               title: const Text('All Categories'),
               elevation: 0,
               actions: [
-                if (onAddCategory != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: IconButton(
-                      icon: const Icon(Icons.add),
-                      iconSize: 32,
-                      onPressed: onAddCategory,
-                      tooltip: 'Add Category',
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    icon: const Icon(Icons.add),
+                    iconSize: 32,
+                    onPressed: () async {
+                      // CC: Navigate to add category page and reload on return
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AddCategoryPage(),
+                        ),
+                      );
+                      if (context.mounted) {
+                        context.read<DashboardV2Cubit>().loadEntries();
+                      }
+                    },
+                    tooltip: 'Add Category',
                   ),
+                ),
               ],
             ),
             body: CustomScrollView(
