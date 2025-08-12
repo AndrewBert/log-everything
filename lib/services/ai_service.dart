@@ -118,8 +118,11 @@ class OpenAiService implements AiService {
   static const fourPoint1 = 'gpt-4.1-2025-04-14';
   static const fourPoint1Mini = 'gpt-4.1-mini-2025-04-14';
   static const fourPoint1Nano = 'gpt-4.1-nano-2025-04-14';
-  final String _chatModelId = fourPoint1Mini;
-  final String _defaultModelId = fourPoint1Mini;
+  static const gpt5 = 'gpt-5';
+  static const gpt5Mini = 'gpt-5-mini';
+  static const gpt5Nano = 'gpt-5-nano';
+  final String _chatModelId = gpt5Mini; // Using GPT-5-mini for chat (good balance)
+  final String _defaultModelId = gpt5Mini; // Using GPT-5-mini for extraction (best accuracy in tests)
   final SharedPreferences _prefs; // CP: Added SharedPreferences field
 
   // CP: Updated constructor to accept SharedPreferences

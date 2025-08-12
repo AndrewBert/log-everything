@@ -1,0 +1,138 @@
+{
+  "total": 61,
+  "passed": 45,
+  "failed": 16,
+  "failures": [
+    {
+      "input": "Called mom about dinner plans need to call dad too",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "multiple_entries"
+    },
+    {
+      "input": "Things to buy at store milk eggs bread cheese yogurt apples bananas oh and paper towels",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "list_detection"
+    },
+    {
+      "input": "If it rains tomorrow, bring umbrella",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "temporal_conditional"
+    },
+    {
+      "input": "Have to submit expense report by 5pm",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Finance",
+      "actual_is_task": true,
+      "test_type": "obligation_deadline"
+    },
+    {
+      "input": "Car is making weird noise again",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "embedded_task_problem"
+    },
+    {
+      "input": "Had a great workout this morning feeling energized need to remember to stretch more often and drink more water throughout the day",
+      "expected_category": "Health",
+      "expected_is_task": false,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "stream_consciousness_mixed"
+    },
+    {
+      "input": "boss asked me to review the proposal by monday also sarah's birthday is coming up should get her a gift",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "multi_task_no_punctuation"
+    },
+    {
+      "input": "kids have soccer practice at 4 then piano at 6 husband picking up dinner thank god",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "family_schedule_mixed"
+    },
+    {
+      "input": "Started cleaning out the garage found a bunch of old photos need to scan them before they deteriorate more also found dad's tools wonder if I should keep them",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Personal",
+      "actual_is_task": true,
+      "test_type": "narrative_embedded_tasks"
+    },
+    {
+      "input": "budget meeting @ 10am, lunch w/ jen 12:30, gym after work if time",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": false,
+      "test_type": "shorthand_schedule"
+    },
+    {
+      "input": "just remembered i told mom id help her with her computer this weekend ughhhh why did i agree to that",
+      "expected_category": "Personal",
+      "expected_is_task": true,
+      "actual_category": "Personal",
+      "actual_is_task": false,
+      "test_type": "reluctant_commitment"
+    },
+    {
+      "input": "Been putting off calling the dentist for weeks really should do it but hate making appointments maybe I'll do it tomorrow or next week",
+      "expected_category": "Health",
+      "expected_is_task": false,
+      "actual_category": "Health",
+      "actual_is_task": false,
+      "test_type": "procrastination_pattern"
+    },
+    {
+      "input": "Read interesting article about productivity tips one suggestion was to write everything down immediately going to try that starting now",
+      "expected_category": "Personal",
+      "expected_is_task": false,
+      "actual_category": "Misc",
+      "actual_is_task": false,
+      "test_type": "learning_to_action"
+    },
+    {
+      "input": "ok so heres the plan: finish reports today, email client tomorrow morning, then prep for friday meeting",
+      "expected_category": "Work",
+      "expected_is_task": true,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "action_plan_informal"
+    },
+    {
+      "input": "Started the monthly report, still need to add Q3 numbers and executive summary",
+      "expected_category": "Work",
+      "expected_is_task": false,
+      "actual_category": "Work",
+      "actual_is_task": true,
+      "test_type": "partial_completion"
+    },
+    {
+      "input": "Taxes.",
+      "expected_category": "Finance",
+      "expected_is_task": true,
+      "actual_category": "Finance",
+      "actual_is_task": false,
+      "test_type": "single_word_context_dependent"
+    }
+  ],
+  "start_time": "2025-08-07T16:33:56.798265",
+  "end_time": "2025-08-07T16:40:59.574887",
+  "pass_rate": 73.77049180327869
+}
