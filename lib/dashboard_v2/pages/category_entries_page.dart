@@ -61,106 +61,200 @@ class CategoryEntriesPage extends StatelessWidget {
                 ),
               ],
             ),
-            body: CustomScrollView(
-              slivers: [
-                // CC: Category header with color indicator
-                SliverToBoxAdapter(
-                  child: Container(
-                    height: 3,
-                    color: categoryColor.withValues(alpha: 0.6),
-                  ),
-                ),
-                // CC: Category description
-                if (state.category?.description != null && state.category!.description.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            body: state.entries.isEmpty && !state.isLoading
+                ? Column(
+                    children: [
+                      // CC: Category header with color indicator
+                      Container(
+                        height: 3,
+                        color: categoryColor.withValues(alpha: 0.6),
+                      ),
+                      // CC: Category description if exists
+                      if (state.category?.description != null && state.category!.description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ABOUT THIS CATEGORY',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 11,
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  state.category!.description,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 15,
+                                    height: 1.4,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ABOUT THIS CATEGORY',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 11,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                              ),
+                      // CC: Empty state
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.note_alt_outlined,
+                                  size: 80,
+                                  color: categoryColor.withValues(alpha: 0.3),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'No Entries Yet',
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Start adding entries to the "${state.category?.name ?? categoryName}" category',
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 32),
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    // CC: Navigate back to main page to add entry
+                                    Navigator.of(context).popUntil((route) => route.isFirst);
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add First Entry'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: categoryColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              state.category!.description,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: 15,
-                                height: 1.4,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 16),
-                ),
-                // TODO: Add AI insight container for the entire category
-                // - Generate insights about patterns, trends, and summaries for all entries in this category
-                // - Could include: most common themes, time patterns, emotional trends, suggestions
-                // - Using NewspaperInsightContainer for insights
-                // CC: Grid of entries
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (state.isLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        final entry = state.entries[index];
-                        return NewspaperEntryCard(
-                          entry: entry,
-                          isInGrid: true,
-                          categoryColor: categoryColor,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => EntryDetailsPage(
-                                  entry: entry,
-                                  cachedInsight: entry.insight?.getPrimaryInsight(),
+                    ],
+                  )
+                : CustomScrollView(
+                    slivers: [
+                      // CC: Category header with color indicator
+                      SliverToBoxAdapter(
+                        child: Container(
+                          height: 3,
+                          color: categoryColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      // CC: Category description
+                      if (state.category?.description != null && state.category!.description.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                                 ),
                               ),
-                            );
-                          },
-                        );
-                      },
-                      childCount: state.entries.length,
-                    ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'ABOUT THIS CATEGORY',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      fontSize: 11,
+                                      letterSpacing: 1.2,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    state.category!.description,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontSize: 15,
+                                      height: 1.4,
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 16),
+                      ),
+                      // TODO: Add AI insight container for the entire category
+                      // - Generate insights about patterns, trends, and summaries for all entries in this category
+                      // - Could include: most common themes, time patterns, emotional trends, suggestions
+                      // - Using NewspaperInsightContainer for insights
+                      // CC: Grid of entries
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (state.isLoading) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              final entry = state.entries[index];
+                              return NewspaperEntryCard(
+                                entry: entry,
+                                isInGrid: true,
+                                categoryColor: categoryColor,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => EntryDetailsPage(
+                                        entry: entry,
+                                        cachedInsight: entry.insight?.getPrimaryInsight(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            childCount: state.entries.length,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 24),
+                      ),
+                    ],
                   ),
-                ),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 24),
-                ),
-              ],
-            ),
           );
         },
       ),

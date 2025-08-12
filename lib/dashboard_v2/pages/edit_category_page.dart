@@ -22,6 +22,60 @@ class EditCategoryPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Edit Category'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.delete_outline,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () async {
+              // CC: Show confirmation dialog
+              final shouldDelete = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext dialogContext) {
+                  return AlertDialog(
+                    title: const Text('Delete Category'),
+                    content: Text(
+                      'Are you sure you want to delete "${category.name}"? All entries in this category will be moved to "Misc".',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldDelete == true && context.mounted) {
+                final cubit = context.read<CategoryEntriesCubit>();
+                await cubit.deleteCategory();
+
+                if (context.mounted) {
+                  // CC: Pop twice to go back to category list
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Category "${category.name}" deleted'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              }
+            },
+            tooltip: 'Delete Category',
+          ),
+        ],
       ),
       body: CategoryForm(
         initialName: category.name,

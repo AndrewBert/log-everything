@@ -84,6 +84,11 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
     _loadCategoryEntries();
   }
 
+  // CC: Delete the category
+  Future<void> deleteCategory() async {
+    await _entryRepository.deleteCategory(categoryName);
+  }
+
   // CC: Refresh the cubit state to pick up external changes (like color updates)
   void refreshState() {
     _loadCategoryEntries();
