@@ -267,7 +267,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) => AllCategoriesPage(
-                                            categorizedEntries: categorizedEntries,
                                             onAddCategory: () {
                                               Navigator.of(context).push(
                                                 MaterialPageRoute(

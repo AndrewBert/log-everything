@@ -26,8 +26,19 @@ class CategoriesCarousel extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     // CC: Same sizing as RecentEntriesCarousel
     final cardWidth = (screenWidth - 48) / 1.9;
+    // CC: Sort by most recent entry timestamp (newest first)
     final sortedCategories = categorizedEntries.entries.toList()
-      ..sort((a, b) => b.value.length.compareTo(a.value.length)); // CC: Sort by count
+      ..sort((a, b) {
+        // CC: Handle empty categories - put them at the end
+        if (a.value.isEmpty && b.value.isEmpty) return 0;
+        if (a.value.isEmpty) return 1;
+        if (b.value.isEmpty) return -1;
+
+        // CC: Sort by most recent entry's timestamp
+        final aLatest = a.value.first.timestamp;
+        final bLatest = b.value.first.timestamp;
+        return bLatest.compareTo(aLatest);
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

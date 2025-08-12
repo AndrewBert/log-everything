@@ -45,10 +45,16 @@ class DashboardV2State extends Equatable {
     );
   }
 
-  // CC: Get entries organized by category
+  // CC: Get entries organized by category, including empty categories
   Map<String, List<Entry>> get categorizedEntries {
     final Map<String, List<Entry>> result = {};
 
+    // CC: First, add all categories (including empty ones)
+    for (final category in categories) {
+      result[category.name] = [];
+    }
+
+    // CC: Then populate with entries
     for (final entry in entries) {
       final category = entry.category;
       result.putIfAbsent(category, () => []).add(entry);
