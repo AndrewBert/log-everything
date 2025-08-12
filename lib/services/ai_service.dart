@@ -276,13 +276,17 @@ Respond with a JSON object containing an "entries" array.""";
           throw AiServiceException(errorMsg);
         }
 
-        if (responseBody['output'] != null &&
-            responseBody['output'] is List &&
-            responseBody['output'].isNotEmpty &&
-            responseBody['output'][0]['content'] != null &&
-            responseBody['output'][0]['content'] is List &&
-            responseBody['output'][0]['content'].isNotEmpty) {
-          final contentItem = responseBody['output'][0]['content'][0];
+        // CC: GPT-5 returns output with reasoning as first item, message as second
+        Map<String, dynamic>? messageOutput;
+        for (var output in responseBody['output']) {
+          if (output['type'] == 'message' && output['content'] != null) {
+            messageOutput = output;
+            break;
+          }
+        }
+
+        if (messageOutput != null && messageOutput['content'] is List && messageOutput['content'].isNotEmpty) {
+          final contentItem = messageOutput['content'][0];
 
           if (contentItem['type'] == 'output_text' && contentItem['text'] != null) {
             final jsonOutputString = contentItem['text'];
@@ -857,7 +861,7 @@ Return ONLY a JSON object with this structure:
         'timestamp': DateTime.now().toIso8601String(),
         'model_used': _defaultModelId,
       },
-      'temperature': 0.5, // CC: Balanced temperature for nuanced priority selection while staying concise
+      // CC: GPT-5 doesn't support temperature parameter
     };
 
     // CC: Conditionally add tools for File Search
