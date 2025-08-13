@@ -39,15 +39,12 @@ class AllCategoriesPage extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     iconSize: 32,
                     onPressed: () async {
-                      // CC: Navigate to add category page and reload on return
+                      // CC: Navigate to add category page - stream will handle updates
                       await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const AddCategoryPage(),
                         ),
                       );
-                      if (context.mounted) {
-                        context.read<DashboardV2Cubit>().loadEntries();
-                      }
                     },
                     tooltip: 'Add Category',
                   ),
@@ -90,9 +87,6 @@ class AllCategoriesPage extends StatelessWidget {
                                   builder: (context) => const AddCategoryPage(),
                                 ),
                               );
-                              if (context.mounted) {
-                                context.read<DashboardV2Cubit>().loadEntries();
-                              }
                             },
                             icon: const Icon(Icons.add),
                             label: const Text('Create Category'),

@@ -332,6 +332,8 @@ class EntryRepository {
         ),
       );
       await _saveCategories();
+      // CC: Emit updated entries to stream to notify listeners of category changes
+      _entriesStreamController.add(currentEntries);
     }
     return currentCategories;
   }

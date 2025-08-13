@@ -32,11 +32,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     final entries = _entryRepository.currentEntries;
     final categories = _entryRepository.currentCategories;
-    // CC: Filter out todos from the entries list
-    final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
+    // CC: Include all entries (both regular entries and todos)
     emit(
       state.copyWith(
-        entries: nonTodoEntries,
+        entries: entries,
         categories: categories,
         isLoading: false,
         hasMoreEntries: false, // CC: For now, load all entries at once
@@ -155,23 +154,22 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   void _onEntriesUpdated(List<Entry> entries) {
-    // CC: Filter out todos from the entries list
-    final nonTodoEntries = entries.where((entry) => !entry.isTask).toList();
+    // CC: Include all entries (both regular entries and todos)
     final categories = _entryRepository.currentCategories;
 
     // CC: Check if we have new entries (not just updates to existing ones)
-    final hasNewEntries = nonTodoEntries.length > state.entries.length;
+    final hasNewEntries = entries.length > state.entries.length;
 
     // CC: Check if the newest entry is actually new (no insight yet)
-    final newestEntryIsNew = hasNewEntries && nonTodoEntries.isNotEmpty && nonTodoEntries.first.insight == null;
+    final newestEntryIsNew = hasNewEntries && entries.isNotEmpty && entries.first.insight == null;
 
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
-        entries: nonTodoEntries,
+        entries: entries,
         categories: categories,
         // CC: Reset selected index if it's out of bounds
-        selectedCarouselIndex: state.selectedCarouselIndex >= nonTodoEntries.length ? 0 : state.selectedCarouselIndex,
+        selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
       ),
     );
 
