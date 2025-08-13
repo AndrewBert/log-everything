@@ -27,23 +27,55 @@ class TodosCarousel extends StatelessWidget {
         builder: (context, todoState) {
           return BlocBuilder<TodosCarouselCubit, TodosCarouselState>(
             builder: (context, carouselState) {
-              // CC: Filter out todos that are being removed
+              print('🔍 TodosCarousel rebuild:');
+              print('  - todoState.activeTodos: ${todoState.activeTodos.length}');
+              print('  - todoState.completedTodos: ${todoState.completedTodos.length}');
+              print('  - carouselState.completedTodoIds: ${carouselState.completedTodoIds}');
+
+              // CC: Filter out todos that are being removed (but keep if still transitioning)
               final activeTodos = todoState.activeTodos.where((todo) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                return !carouselState.completedTodoIds.contains(todoId);
+                // Keep active todos that are NOT in completedTodoIds
+                final shouldInclude = !carouselState.completedTodoIds.contains(todoId);
+                print(
+                  '  - Active todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) included: $shouldInclude',
+                );
+                return shouldInclude;
               }).toList();
 
               // CC: Include completed todos that are still showing (within 3 seconds)
               final recentlyCompleted = todoState.completedTodos.where((todo) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                return carouselState.completedTodoIds.contains(todoId);
+                final shouldInclude = carouselState.completedTodoIds.contains(todoId);
+                print(
+                  '  - Completed todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) included: $shouldInclude',
+                );
+                return shouldInclude;
               }).toList();
 
-              // CC: Combine and sort by timestamp
-              final allTodos = [...activeTodos, ...recentlyCompleted];
+              // CC: Also check activeTodos for items that are in completedTodoIds (transitioning state)
+              final transitioningTodos = todoState.activeTodos.where((todo) {
+                final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+                final isTransitioning = carouselState.completedTodoIds.contains(todoId);
+                if (isTransitioning) {
+                  print(
+                    '  - TRANSITIONING todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId)',
+                  );
+                }
+                return isTransitioning;
+              }).toList();
+
+              print('  - Filtered activeTodos: ${activeTodos.length}');
+              print('  - Filtered recentlyCompleted: ${recentlyCompleted.length}');
+              print('  - Transitioning todos: ${transitioningTodos.length}');
+
+              // CC: Combine all three lists and sort by timestamp
+              final allTodos = [...activeTodos, ...recentlyCompleted, ...transitioningTodos];
               allTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
               final displayTodos = allTodos.take(maxTodos).toList();
+              print('  - Final displayTodos: ${displayTodos.length}');
+              print('---');
 
               if (displayTodos.isEmpty && todoState.activeTodos.isEmpty) {
                 return const SizedBox.shrink();
@@ -142,13 +174,20 @@ class TodosCarousel extends StatelessWidget {
   }
 
   void _handleTodoCompletion(BuildContext context, Entry todo) {
+    print('🎯 _handleTodoCompletion called:');
+    print('  - Todo: ${todo.text.substring(0, 20.clamp(0, todo.text.length))}...');
+    print('  - Current isCompleted: ${todo.isCompleted}');
+    print('  - Will set to: ${!todo.isCompleted}');
+
     final todoCubit = context.read<TodoCubit>();
     final carouselCubit = context.read<TodosCarouselCubit>();
 
     // CC: Toggle completion in TodoCubit
+    print('  - Calling todoCubit.toggleTodoCompletion...');
     todoCubit.toggleTodoCompletion(todo);
 
     // CC: Handle carousel state for animation
+    print('  - Calling carouselCubit.handleTodoCompletion...');
     carouselCubit.handleTodoCompletion(todo, !todo.isCompleted);
   }
 }
