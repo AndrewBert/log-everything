@@ -30,50 +30,46 @@ class TodosCarousel extends StatelessWidget {
               print('🔍 TodosCarousel rebuild:');
               print('  - todoState.activeTodos: ${todoState.activeTodos.length}');
               print('  - todoState.completedTodos: ${todoState.completedTodos.length}');
-              print('  - carouselState.completedTodoIds: ${carouselState.completedTodoIds}');
+              print('  - carouselState.todoStates: ${carouselState.todoStates}');
 
-              // CC: Filter out todos that are being removed (but keep if still transitioning)
-              final activeTodos = todoState.activeTodos.where((todo) {
-                final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                // Keep active todos that are NOT in completedTodoIds
-                final shouldInclude = !carouselState.completedTodoIds.contains(todoId);
-                print(
-                  '  - Active todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) included: $shouldInclude',
-                );
-                return shouldInclude;
-              }).toList();
+              // CC: Filter todos based on their actual state and transition state
+              final displayableTodos = <Entry>[];
 
-              // CC: Include completed todos that are still showing (within 3 seconds)
-              final recentlyCompleted = todoState.completedTodos.where((todo) {
+              // CC: Add active todos (unless they're marked as completed in transition)
+              for (final todo in todoState.activeTodos) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                final shouldInclude = carouselState.completedTodoIds.contains(todoId);
-                print(
-                  '  - Completed todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) included: $shouldInclude',
-                );
-                return shouldInclude;
-              }).toList();
+                final transitionState = carouselState.todoStates[todoId];
 
-              // CC: Also check activeTodos for items that are in completedTodoIds (transitioning state)
-              final transitioningTodos = todoState.activeTodos.where((todo) {
+                // CC: Show active todos unless they're fully completed
+                if (transitionState != TodoTransitionState.completed) {
+                  displayableTodos.add(todo);
+                  if (transitionState != null) {
+                    print(
+                      '  - Active todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) state: $transitionState',
+                    );
+                  }
+                }
+              }
+
+              // CC: Add completed todos ONLY if they're transitioning back to active
+              for (final todo in todoState.completedTodos) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                final isTransitioning = carouselState.completedTodoIds.contains(todoId);
-                if (isTransitioning) {
+                final transitionState = carouselState.todoStates[todoId];
+
+                // CC: Only show completed todos if they're transitioning
+                if (transitionState == TodoTransitionState.uncompleting ||
+                    transitionState == TodoTransitionState.completing) {
+                  displayableTodos.add(todo);
                   print(
-                    '  - TRANSITIONING todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId)',
+                    '  - Transitioning completed todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) state: $transitionState',
                   );
                 }
-                return isTransitioning;
-              }).toList();
+              }
 
-              print('  - Filtered activeTodos: ${activeTodos.length}');
-              print('  - Filtered recentlyCompleted: ${recentlyCompleted.length}');
-              print('  - Transitioning todos: ${transitioningTodos.length}');
+              // CC: Sort by timestamp (newest first)
+              displayableTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-              // CC: Combine all three lists and sort by timestamp
-              final allTodos = [...activeTodos, ...recentlyCompleted, ...transitioningTodos];
-              allTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-              final displayTodos = allTodos.take(maxTodos).toList();
+              final displayTodos = displayableTodos.take(maxTodos).toList();
               print('  - Final displayTodos: ${displayTodos.length}');
               print('---');
 

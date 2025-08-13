@@ -6,7 +6,7 @@ import 'package:myapp/entry/entry.dart';
 part 'todos_carousel_state.dart';
 
 class TodosCarouselCubit extends Cubit<TodosCarouselState> {
-  final Map<String, Timer> _removalTimers = {};
+  final Map<String, Timer> _transitionTimers = {};
 
   TodosCarouselCubit() : super(const TodosCarouselState());
 
@@ -16,80 +16,49 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
     print('  - todoId: $todoId');
     print('  - isCompleting: $isCompleting');
 
+    // CC: Cancel any existing timer for this todo
+    _transitionTimers[todoId]?.cancel();
+    _transitionTimers.remove(todoId);
+
+    // CC: Update the todo's transition state
+    final newStates = Map<String, TodoTransitionState>.from(state.todoStates);
+
     if (isCompleting) {
-      // CC: Mark todo as completed and schedule removal
-      print('  - Scheduling removal...');
-      _scheduleRemoval(todoId);
+      print('  - Setting state to completing');
+      // CC: Mark as completing, then after delay mark as completed
+      newStates[todoId] = TodoTransitionState.completing;
+      emit(state.copyWith(todoStates: newStates));
+
+      // CC: After 3 seconds, mark as fully completed (remove from display)
+      _transitionTimers[todoId] = Timer(const Duration(seconds: 3), () {
+        final updatedStates = Map<String, TodoTransitionState>.from(state.todoStates);
+        updatedStates[todoId] = TodoTransitionState.completed;
+        emit(state.copyWith(todoStates: updatedStates));
+        _transitionTimers.remove(todoId);
+      });
     } else {
-      // CC: Cancel removal if todo is being uncompleted
-      print('  - Canceling removal...');
-      _cancelRemoval(todoId);
+      print('  - Setting state to uncompleting');
+      // CC: Mark as uncompleting, then after delay mark as active
+      newStates[todoId] = TodoTransitionState.uncompleting;
+      emit(state.copyWith(todoStates: newStates));
+
+      // CC: After 1 second, mark as fully active (normal display)
+      _transitionTimers[todoId] = Timer(const Duration(seconds: 1), () {
+        final updatedStates = Map<String, TodoTransitionState>.from(state.todoStates);
+        updatedStates[todoId] = TodoTransitionState.active;
+        emit(state.copyWith(todoStates: updatedStates));
+        _transitionTimers.remove(todoId);
+      });
     }
-  }
-
-  void _scheduleRemoval(String todoId) {
-    // CC: Add to completed IDs immediately
-    print('  📅 _scheduleRemoval for $todoId');
-    print('    - Before: completedTodoIds = ${state.completedTodoIds}');
-
-    final newCompletedIds = Set<String>.from(state.completedTodoIds)..add(todoId);
-    final newRemovalSchedule = Map<String, DateTime>.from(state.removalSchedule)
-      ..[todoId] = DateTime.now().add(const Duration(seconds: 3));
-
-    print('    - After: completedTodoIds = $newCompletedIds');
-
-    emit(
-      state.copyWith(
-        completedTodoIds: newCompletedIds,
-        removalSchedule: newRemovalSchedule,
-      ),
-    );
-
-    // CC: Schedule removal after 3 seconds
-    _removalTimers[todoId] = Timer(const Duration(seconds: 3), () {
-      _removeCompletedTodo(todoId);
-    });
-  }
-
-  void _cancelRemoval(String todoId) {
-    // CC: Cancel the timer if it exists
-    _removalTimers[todoId]?.cancel();
-    _removalTimers.remove(todoId);
-
-    // CC: Remove from completed IDs and removal schedule
-    final newCompletedIds = Set<String>.from(state.completedTodoIds)..remove(todoId);
-    final newRemovalSchedule = Map<String, DateTime>.from(state.removalSchedule)..remove(todoId);
-
-    emit(
-      state.copyWith(
-        completedTodoIds: newCompletedIds,
-        removalSchedule: newRemovalSchedule,
-      ),
-    );
-  }
-
-  void _removeCompletedTodo(String todoId) {
-    // CC: Remove from completed IDs and removal schedule
-    final newCompletedIds = Set<String>.from(state.completedTodoIds)..remove(todoId);
-    final newRemovalSchedule = Map<String, DateTime>.from(state.removalSchedule)..remove(todoId);
-
-    emit(
-      state.copyWith(
-        completedTodoIds: newCompletedIds,
-        removalSchedule: newRemovalSchedule,
-      ),
-    );
-
-    _removalTimers.remove(todoId);
   }
 
   @override
   Future<void> close() {
     // CC: Cancel all timers
-    for (final timer in _removalTimers.values) {
+    for (final timer in _transitionTimers.values) {
       timer.cancel();
     }
-    _removalTimers.clear();
+    _transitionTimers.clear();
     return super.close();
   }
 }

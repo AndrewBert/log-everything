@@ -1,27 +1,29 @@
 part of 'todos_carousel_cubit.dart';
 
+enum TodoTransitionState {
+  active, // Normal active todo
+  completing, // Just marked complete, animating
+  completed, // Fully completed, removed from display
+  uncompleting, // Just marked active, transitioning back
+}
+
 class TodosCarouselState extends Equatable {
-  final Set<String> completedTodoIds;
-  final Map<String, DateTime> removalSchedule;
+  final Map<String, TodoTransitionState> todoStates;
 
   const TodosCarouselState({
-    this.completedTodoIds = const {},
-    this.removalSchedule = const {},
+    this.todoStates = const {},
   });
 
   TodosCarouselState copyWith({
-    Set<String>? completedTodoIds,
-    Map<String, DateTime>? removalSchedule,
+    Map<String, TodoTransitionState>? todoStates,
   }) {
     return TodosCarouselState(
-      completedTodoIds: completedTodoIds ?? this.completedTodoIds,
-      removalSchedule: removalSchedule ?? this.removalSchedule,
+      todoStates: todoStates ?? this.todoStates,
     );
   }
 
   @override
   List<Object?> get props => [
-        completedTodoIds,
-        removalSchedule,
-      ];
+    todoStates,
+  ];
 }
