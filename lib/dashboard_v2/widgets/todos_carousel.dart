@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_carousel_cubit.dart';
+import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
@@ -114,6 +115,16 @@ class TodosCarousel extends StatelessWidget {
                             todo: todo,
                             onCheckboxTap: () {
                               _handleTodoCompletion(context, todo);
+                            },
+                            onEntryTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => EntryDetailsPage(
+                                    entry: todo,
+                                    cachedInsight: todo.insight?.getPrimaryInsight(),
+                                  ),
+                                ),
+                              );
                             },
                             onTap: onHeaderTap,
                           ),

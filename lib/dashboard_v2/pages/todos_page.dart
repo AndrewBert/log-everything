@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_page_cubit.dart';
+import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
@@ -91,6 +92,16 @@ class TodosPage extends StatelessWidget {
                                   onCheckboxTap: () {
                                     _handleTodoCompletion(context, todo);
                                   },
+                                  onEntryTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => EntryDetailsPage(
+                                          entry: todo,
+                                          cachedInsight: todo.insight?.getPrimaryInsight(),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               );
                             },
@@ -107,11 +118,11 @@ class TodosPage extends StatelessWidget {
                           final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
                           return !pageState.completedTodoIds.contains(todoId);
                         }).toList();
-                        
+
                         if (nonAnimatingCompletedTodos.isEmpty) {
                           return const SliverToBoxAdapter(child: SizedBox.shrink());
                         }
-                        
+
                         return SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                           sliver: SliverToBoxAdapter(

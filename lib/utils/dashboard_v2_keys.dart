@@ -19,5 +19,6 @@ const Key entriesGridKey = ValueKey('entries_grid');
 const Key todosCarouselKey = ValueKey('todos_carousel');
 const Key todosPageKey = ValueKey('todos_page');
 const Key todoCardKey = ValueKey('todo_card');
+const Key todoCardTapAreaKey = ValueKey('todo_card_tap_area');
 const Key todoCheckboxKey = ValueKey('todo_checkbox');
 const Key showCompletedButtonKey = ValueKey('show_completed_button');

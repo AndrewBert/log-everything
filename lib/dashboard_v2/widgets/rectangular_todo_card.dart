@@ -9,6 +9,7 @@ import 'package:myapp/utils/category_colors.dart';
 class RectangularTodoCard extends StatelessWidget {
   final Entry todo;
   final VoidCallback? onTap;
+  final VoidCallback? onEntryTap;
   final VoidCallback? onCheckboxTap;
   final bool isAnimatingOut;
 
@@ -16,6 +17,7 @@ class RectangularTodoCard extends StatelessWidget {
     super.key,
     required this.todo,
     this.onTap,
+    this.onEntryTap,
     this.onCheckboxTap,
     this.isAnimatingOut = false,
   });
@@ -38,7 +40,7 @@ class RectangularTodoCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: onEntryTap ?? onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
             constraints: const BoxConstraints(minHeight: 72),
