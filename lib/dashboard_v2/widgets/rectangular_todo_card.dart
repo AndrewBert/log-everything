@@ -43,7 +43,7 @@ class RectangularTodoCard extends StatelessWidget {
           onTap: onEntryTap ?? onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 72),
+            constraints: const BoxConstraints(minHeight: 64),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
@@ -61,11 +61,14 @@ class RectangularTodoCard extends StatelessWidget {
                     width: 3,
                     color: categoryColor.withValues(alpha: 0.5),
                   ),
-                  // CC: Checkbox
+                  // CC: Checkbox with expanded touch target
                   InkWell(
                     onTap: onCheckboxTap,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      width: 56,
+                      height: 48,
+                      alignment: Alignment.center,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: 24,
@@ -143,7 +146,7 @@ class RectangularTodoCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                 ],
               ),
             ),
