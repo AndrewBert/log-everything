@@ -589,7 +589,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                 controller: _textController,
                                                 focusNode: _focusNode,
                                                 decoration: InputDecoration(
-                                                  hintText: _justTranscribed ? "Review transcription..." : "Add log",
+                                                  hintText: _justTranscribed
+                                                      ? "Review transcription..."
+                                                      : "What's on your mind?",
                                                   hintStyle: TextStyle(
                                                     color: _hasText && !_isExpanded
                                                         ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)

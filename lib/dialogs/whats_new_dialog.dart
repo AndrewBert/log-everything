@@ -9,6 +9,25 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> _v122Changes = [
+      _buildChangeItem(
+        '🚀 Upgraded to GPT-5',
+        '''Switched from GPT-4 to GPT-5 (just released last week). Early testing shows it's better at understanding context, but we'll see how it performs in real use.''',
+      ),
+      _buildChangeItem(
+        '🤖 Simplified AI instructions by 85%',
+        '''Rewrote the AI prompt from scratch - went from 300+ lines to 40. It now acts as your personal note-taking assistant that follows your instructions: "make this a todo", "format as bullets", etc.''',
+      ),
+      _buildChangeItem(
+        '✅ More conservative todo detection',
+        '''The streamlined prompt is way more conservative. Only explicit actions become todos. Hopefully fewer false todos - let me know how it works for you!''',
+      ),
+      _buildChangeItem(
+        '📁 Basic functionality that was missing',
+        '''Todos are now tappable for details (finally!). Categories can be deleted and sort by recency. Just bringing these features up to par with the rest of the app.''',
+      ),
+    ];
+
     final List<Widget> _bugFixChanges = [
       _buildChangeItem(
         '🐛 UI Polish & Fixes',
@@ -56,6 +75,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.2.2 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: Colors.purple.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.2.2 - The AI Overhaul',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.purple.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._v122Changes,
+              const SizedBox(height: 20),
               // Version 1.2.1 Header
               Container(
                 padding: const EdgeInsets.all(12),

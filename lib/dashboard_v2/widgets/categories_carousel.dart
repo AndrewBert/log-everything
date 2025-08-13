@@ -47,7 +47,7 @@ class CategoriesCarousel extends StatelessWidget {
         InkWell(
           onTap: onSeeAllTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -69,7 +69,7 @@ class CategoriesCarousel extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 12),
         SizedBox(
           height: cardWidth,
           child: ListView.builder(
