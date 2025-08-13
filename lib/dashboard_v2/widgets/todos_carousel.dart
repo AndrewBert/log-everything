@@ -27,11 +27,6 @@ class TodosCarousel extends StatelessWidget {
         builder: (context, todoState) {
           return BlocBuilder<TodosCarouselCubit, TodosCarouselState>(
             builder: (context, carouselState) {
-              print('🔍 TodosCarousel rebuild:');
-              print('  - todoState.activeTodos: ${todoState.activeTodos.length}');
-              print('  - todoState.completedTodos: ${todoState.completedTodos.length}');
-              print('  - carouselState.todoStates: ${carouselState.todoStates}');
-
               // CC: Filter todos based on their actual state and transition state
               final displayableTodos = <Entry>[];
 
@@ -43,11 +38,6 @@ class TodosCarousel extends StatelessWidget {
                 // CC: Show active todos unless they're fully completed
                 if (transitionState != TodoTransitionState.completed) {
                   displayableTodos.add(todo);
-                  if (transitionState != null) {
-                    print(
-                      '  - Active todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) state: $transitionState',
-                    );
-                  }
                 }
               }
 
@@ -60,9 +50,6 @@ class TodosCarousel extends StatelessWidget {
                 if (transitionState == TodoTransitionState.uncompleting ||
                     transitionState == TodoTransitionState.completing) {
                   displayableTodos.add(todo);
-                  print(
-                    '  - Transitioning completed todo ${todo.text.substring(0, 20.clamp(0, todo.text.length))}... (id: $todoId) state: $transitionState',
-                  );
                 }
               }
 
@@ -70,8 +57,6 @@ class TodosCarousel extends StatelessWidget {
               displayableTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
               final displayTodos = displayableTodos.take(maxTodos).toList();
-              print('  - Final displayTodos: ${displayTodos.length}');
-              print('---');
 
               if (displayTodos.isEmpty && todoState.activeTodos.isEmpty) {
                 return const SizedBox.shrink();
@@ -170,20 +155,13 @@ class TodosCarousel extends StatelessWidget {
   }
 
   void _handleTodoCompletion(BuildContext context, Entry todo) {
-    print('🎯 _handleTodoCompletion called:');
-    print('  - Todo: ${todo.text.substring(0, 20.clamp(0, todo.text.length))}...');
-    print('  - Current isCompleted: ${todo.isCompleted}');
-    print('  - Will set to: ${!todo.isCompleted}');
-
     final todoCubit = context.read<TodoCubit>();
     final carouselCubit = context.read<TodosCarouselCubit>();
 
     // CC: Toggle completion in TodoCubit
-    print('  - Calling todoCubit.toggleTodoCompletion...');
     todoCubit.toggleTodoCompletion(todo);
 
     // CC: Handle carousel state for animation
-    print('  - Calling carouselCubit.handleTodoCompletion...');
     carouselCubit.handleTodoCompletion(todo, !todo.isCompleted);
   }
 }

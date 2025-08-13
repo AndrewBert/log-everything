@@ -12,9 +12,6 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
 
   void handleTodoCompletion(Entry todo, bool isCompleting) {
     final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-    print('📦 TodosCarouselCubit.handleTodoCompletion:');
-    print('  - todoId: $todoId');
-    print('  - isCompleting: $isCompleting');
 
     // CC: Cancel any existing timer for this todo
     _transitionTimers[todoId]?.cancel();
@@ -24,7 +21,6 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
     final newStates = Map<String, TodoTransitionState>.from(state.todoStates);
 
     if (isCompleting) {
-      print('  - Setting state to completing');
       // CC: Mark as completing, then after delay mark as completed
       newStates[todoId] = TodoTransitionState.completing;
       emit(state.copyWith(todoStates: newStates));
@@ -37,7 +33,6 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
         _transitionTimers.remove(todoId);
       });
     } else {
-      print('  - Setting state to uncompleting');
       // CC: Mark as uncompleting, then after delay mark as active
       newStates[todoId] = TodoTransitionState.uncompleting;
       emit(state.copyWith(todoStates: newStates));
