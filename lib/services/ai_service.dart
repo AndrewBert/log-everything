@@ -184,10 +184,50 @@ class OpenAiService implements AiService {
     final categoriesListString = categories
         .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
+
+    // CC: Check if experimental AI mode is enabled
+    final useExperimentalPrompt = _prefs.getBool('use_experimental_ai_prompt') ?? false;
+
+    // CC: Original detailed prompt (default)
+    final originalPrompt =
+        """You are helping organize a user's personal log. Your job is to clean up the input text and organize it into entries without adding any new information or elaborating on what the user said.
+
+CRITICAL RULES:
+- DO NOT add, infer, or elaborate on the user's input
+- DO NOT make assumptions about what the user might have meant
+- Use ONLY the exact words and information provided by the user
+- STRONGLY PREFER keeping related content together as ONE entry
+- Multiple sentences about the same activity/topic should stay together
+- Only create separate entries if they are completely unrelated activities or clearly different topics that belong to different categories
+- Clean up grammar and remove filler words, but preserve the user's original meaning and tone
+
+SPLITTING GUIDELINES:
+- If all sentences relate to the same activity (like volleyball), keep them as ONE entry
+- If all sentences relate to the same topic or experience, keep them as ONE entry  
+- If sentences are thoughts/reflections about the same thing, keep them as ONE entry
+- Only split if you have clearly different activities (like "played volleyball" AND "went grocery shopping")
+
+TASK DETECTION:
+For each entry, determine if it represents a task/todo item that can be completed:
+- TRUE for actionable items: "call mom", "buy groceries", "finish the report", "schedule dentist appointment", "respond to email"
+- TRUE for future intentions: "need to", "should", "must", "have to", "going to", "plan to"
+- TRUE for single items that are commonly acquired/bought: "boots", "tshirt", "milk", "batteries", "toothpaste", "shampoo" (assume these are reminders to get/buy)
+- TRUE for single nouns that could be tasks without context: "haircut", "dentist", "groceries", "laundry", "dishes"
+- TRUE for short phrases that imply action: "oil change", "pick up dry cleaning", "return library books"
+- FALSE for completed activities with past tense verbs: "had lunch", "went to store", "called mom", "finished report", "bought groceries"
+- FALSE for clearly observational statements: "feeling good", "it was sunny", "the meeting was long", "saw a movie"
+- FALSE for passive statements: "the car needs repair" (unless phrased as "need to repair the car")
+- WHEN IN DOUBT for ambiguous single items or short phrases, lean toward TRUE (task) since users often log reminders in shorthand
+
+Here are the available categories:
+$categoriesListString
+
+When deciding which category to use, consider both the name and the description for the best fit. When returning your answer, use only the category name from the provided list, not the description. Respond with a JSON object containing an "entries" array.""";
+
     // CC: MINIMAL PROMPT EXPERIMENT - Iteration 7
     // Refined splitting rules + clearer guidance on appointments/observations
     // Addresses category naming issue (no subcategories)
-    final systemPrompt =
+    final experimentalPrompt =
         """You are a note-taking assistant that helps organize user logs.
 
 Process the user's input and return JSON with:
@@ -235,8 +275,11 @@ $categoriesListString
 
 Respond with a JSON object containing an "entries" array.""";
 
+    // CC: Select which prompt to use based on user preference
+    final systemPrompt = useExperimentalPrompt ? experimentalPrompt : originalPrompt;
+
     final requestBody = {
-      'model': _defaultModelId, // CC: Use GPT-4.1-mini for extraction
+      'model': _defaultModelId, // CC: Use GPT-5-mini for extraction
       'input': [
         {"role": "system", "content": systemPrompt},
         {"role": "user", "content": text},

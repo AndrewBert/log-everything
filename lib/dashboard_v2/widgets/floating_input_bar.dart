@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FloatingInputBar extends StatefulWidget {
   const FloatingInputBar({super.key});
@@ -22,6 +24,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   bool _justTranscribed = false;
   bool _textOverflows = false;
   Timer? _transcriptionReviewTimer;
+  bool _useExperimentalAi = false;
 
   late AnimationController _animationController;
   late AnimationController _waveformController;
@@ -40,6 +43,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   @override
   void initState() {
     super.initState();
+    _loadExperimentalPreference();
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -96,6 +100,34 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
     _focusNode.addListener(_onFocusChange);
     _textController.addListener(_onTextChanged);
+  }
+
+  Future<void> _loadExperimentalPreference() async {
+    final prefs = GetIt.instance<SharedPreferences>();
+    setState(() {
+      _useExperimentalAi = prefs.getBool('use_experimental_ai_prompt') ?? false;
+    });
+  }
+
+  Future<void> _toggleExperimentalMode() async {
+    final prefs = GetIt.instance<SharedPreferences>();
+    final newValue = !_useExperimentalAi;
+    await prefs.setBool('use_experimental_ai_prompt', newValue);
+    setState(() {
+      _useExperimentalAi = newValue;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newValue ? '🧪 Experimental AI enabled - Help us improve!' : 'Standard AI processing restored',
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _onFocusChange() {
@@ -548,8 +580,23 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
+                                    // CC: Experimental AI toggle - show when not recording
+                                    if (!isRecording) ...[
+                                      IconButton(
+                                        onPressed: _toggleExperimentalMode,
+                                        icon: Icon(
+                                          Icons.science_outlined,
+                                          color: _useExperimentalAi
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.onSurfaceVariant,
+                                          size: 20,
+                                        ),
+                                        tooltip: _useExperimentalAi ? 'Experimental AI (ON)' : 'Experimental AI (OFF)',
+                                      ),
+                                    ],
+
                                     // CC: Clear button - show when has text and not focused
-                                    if (_hasText && !_isExpanded) ...[
+                                    if (_hasText && !_isExpanded && !isRecording) ...[
                                       IconButton(
                                         onPressed: () {
                                           _textController.clear();
@@ -568,32 +615,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                           size: 20,
                                         ),
                                         tooltip: 'Clear',
-                                      ),
-                                    ],
-
-                                    // CC: Voice input button - hide when focused or has text
-                                    if (!_hasText && !_isExpanded) ...[
-                                      IconButton(
-                                        onPressed: isTranscribing
-                                            ? null
-                                            : () {
-                                                context.read<VoiceInputCubit>().startRecording();
-                                                _focusNode.unfocus();
-                                              },
-                                        icon: isTranscribing
-                                            ? SizedBox(
-                                                width: 24,
-                                                height: 24,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2.5,
-                                                  color: theme.colorScheme.primary,
-                                                ),
-                                              )
-                                            : Icon(
-                                                Icons.mic,
-                                                color: theme.colorScheme.onSurfaceVariant,
-                                              ),
-                                        tooltip: 'Start Recording',
                                       ),
                                     ],
 
@@ -693,26 +714,51 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                       ),
                                     ),
 
-                                    // CC: Send button
-                                    IconButton(
-                                      onPressed: (_isSubmitting || isTranscribing || !_hasText) ? null : _handleSubmit,
-                                      icon: _isSubmitting
-                                          ? SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.5,
+                                    // CC: Send button when has text, Mic button when empty
+                                    if (_hasText) ...[
+                                      // Send button
+                                      IconButton(
+                                        onPressed: (_isSubmitting || isTranscribing) ? null : _handleSubmit,
+                                        icon: _isSubmitting
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.5,
+                                                  color: theme.colorScheme.primary,
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.send_rounded,
                                                 color: theme.colorScheme.primary,
                                               ),
-                                            )
-                                          : Icon(
-                                              Icons.send_rounded,
-                                              color: _hasText
-                                                  ? theme.colorScheme.primary
-                                                  : theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                                            ),
-                                      tooltip: 'Send',
-                                    ),
+                                        tooltip: 'Send',
+                                      ),
+                                    ] else ...[
+                                      // Mic button when no text
+                                      IconButton(
+                                        onPressed: isTranscribing
+                                            ? null
+                                            : () {
+                                                context.read<VoiceInputCubit>().startRecording();
+                                                _focusNode.unfocus();
+                                              },
+                                        icon: isTranscribing
+                                            ? SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.5,
+                                                  color: theme.colorScheme.primary,
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.mic,
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                              ),
+                                        tooltip: 'Start Recording',
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
