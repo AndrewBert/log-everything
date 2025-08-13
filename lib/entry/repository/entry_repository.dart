@@ -310,6 +310,8 @@ class EntryRepository {
         !_categories.any((cat) => cat.name == trimmedCategory)) {
       _categories.add(Category(name: trimmedCategory));
       await _saveCategories();
+      // CC: Emit updated entries to stream to notify listeners of category changes
+      _entriesStreamController.add(currentEntries);
     }
     return currentCategories;
   }
@@ -332,6 +334,8 @@ class EntryRepository {
         ),
       );
       await _saveCategories();
+      // CC: Emit updated entries to stream to notify listeners of category changes
+      _entriesStreamController.add(currentEntries);
     }
     return currentCategories;
   }

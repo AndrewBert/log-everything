@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_carousel_cubit.dart';
+import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
@@ -26,23 +27,36 @@ class TodosCarousel extends StatelessWidget {
         builder: (context, todoState) {
           return BlocBuilder<TodosCarouselCubit, TodosCarouselState>(
             builder: (context, carouselState) {
-              // CC: Filter out todos that are being removed
-              final activeTodos = todoState.activeTodos.where((todo) {
+              // CC: Filter todos based on their actual state and transition state
+              final displayableTodos = <Entry>[];
+
+              // CC: Add active todos (unless they're marked as completed in transition)
+              for (final todo in todoState.activeTodos) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                return !carouselState.completedTodoIds.contains(todoId);
-              }).toList();
+                final transitionState = carouselState.todoStates[todoId];
 
-              // CC: Include completed todos that are still showing (within 3 seconds)
-              final recentlyCompleted = todoState.completedTodos.where((todo) {
+                // CC: Show active todos unless they're fully completed
+                if (transitionState != TodoTransitionState.completed) {
+                  displayableTodos.add(todo);
+                }
+              }
+
+              // CC: Add completed todos ONLY if they're transitioning back to active
+              for (final todo in todoState.completedTodos) {
                 final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                return carouselState.completedTodoIds.contains(todoId);
-              }).toList();
+                final transitionState = carouselState.todoStates[todoId];
 
-              // CC: Combine and sort by timestamp
-              final allTodos = [...activeTodos, ...recentlyCompleted];
-              allTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+                // CC: Only show completed todos if they're transitioning
+                if (transitionState == TodoTransitionState.uncompleting ||
+                    transitionState == TodoTransitionState.completing) {
+                  displayableTodos.add(todo);
+                }
+              }
 
-              final displayTodos = allTodos.take(maxTodos).toList();
+              // CC: Sort by timestamp (newest first)
+              displayableTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+              final displayTodos = displayableTodos.take(maxTodos).toList();
 
               if (displayTodos.isEmpty && todoState.activeTodos.isEmpty) {
                 return const SizedBox.shrink();
@@ -114,6 +128,16 @@ class TodosCarousel extends StatelessWidget {
                             todo: todo,
                             onCheckboxTap: () {
                               _handleTodoCompletion(context, todo);
+                            },
+                            onEntryTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => EntryDetailsPage(
+                                    entry: todo,
+                                    cachedInsight: todo.insight?.getPrimaryInsight(),
+                                  ),
+                                ),
+                              );
                             },
                             onTap: onHeaderTap,
                           ),
