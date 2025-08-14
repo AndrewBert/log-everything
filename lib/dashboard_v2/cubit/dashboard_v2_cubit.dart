@@ -94,9 +94,17 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         currentDate: DateTime.now(), // CC: Pass current date for temporal context
       );
 
-      // CC: Update entry with insight
-      final updatedEntry = entry.copyWith(insight: comprehensiveInsight);
-      await _entryRepository.updateEntry(entry, updatedEntry);
+      // CC: Re-fetch the current entry to avoid overwriting user changes made during insight generation
+      final currentEntries = _entryRepository.currentEntries;
+      // CC: Match by timestamp first, then fall back to text matching if timestamps are unique
+      final currentEntry = currentEntries.firstWhere(
+        (e) => e.timestamp == entry.timestamp,
+        orElse: () => entry,
+      );
+
+      // CC: Update entry with insight, preserving any user changes
+      final updatedEntry = currentEntry.copyWith(insight: comprehensiveInsight);
+      await _entryRepository.updateEntry(currentEntry, updatedEntry);
 
       // CC: Update local state with new entries list
       final updatedEntries = _entryRepository.currentEntries;
