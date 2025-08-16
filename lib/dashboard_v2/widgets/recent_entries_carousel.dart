@@ -9,6 +9,7 @@ class RecentEntriesCarousel extends StatelessWidget {
   final Function(int) onPageChanged;
   final Function(Entry)? onEntryTap;
   final Color? Function(String)? getCategoryColor;
+  final Function(Entry)? onCategoryTap; // CC: Callback for category changes
 
   const RecentEntriesCarousel({
     super.key,
@@ -17,6 +18,7 @@ class RecentEntriesCarousel extends StatelessWidget {
     required this.onPageChanged,
     this.onEntryTap,
     this.getCategoryColor,
+    this.onCategoryTap,
   });
 
   @override
@@ -44,6 +46,7 @@ class RecentEntriesCarousel extends StatelessWidget {
         onPageChanged: onPageChanged,
         onEntryTap: onEntryTap,
         getCategoryColor: getCategoryColor,
+        onCategoryTap: onCategoryTap,
         cardWidth: cardWidth,
         cardGap: cardGap,
         containerPadding: containerPadding,
@@ -145,6 +148,7 @@ class _ListViewCarousel extends StatefulWidget {
   final Function(int) onPageChanged;
   final Function(Entry)? onEntryTap;
   final Color? Function(String)? getCategoryColor;
+  final Function(Entry)? onCategoryTap;
   final double cardWidth;
   final double cardGap;
   final double containerPadding;
@@ -155,6 +159,7 @@ class _ListViewCarousel extends StatefulWidget {
     required this.onPageChanged,
     this.onEntryTap,
     this.getCategoryColor,
+    this.onCategoryTap,
     required this.cardWidth,
     required this.cardGap,
     required this.containerPadding,
@@ -281,6 +286,7 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
                   entry: entry,
                   isSelected: isSelected,
                   categoryColor: widget.getCategoryColor?.call(entry.category),
+                  onCategoryTap: widget.onCategoryTap,
                   onTap: () {
                     // CC: If we have a navigation callback, use it
                     if (widget.onEntryTap != null) {

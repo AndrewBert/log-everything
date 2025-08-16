@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/category_colors.dart';
 
@@ -9,6 +8,7 @@ class NewspaperEntryCard extends StatelessWidget {
   final bool isSelected;
   final bool isInGrid;
   final Color? categoryColor; // CC: Accept color from parent
+  final Function(Entry)? onCategoryTap; // CC: Callback for category chip tap
 
   const NewspaperEntryCard({
     super.key,
@@ -17,14 +17,13 @@ class NewspaperEntryCard extends StatelessWidget {
     this.isSelected = false,
     this.isInGrid = false,
     this.categoryColor,
+    this.onCategoryTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final categoryColor = this.categoryColor ?? CategoryColors.getColorForCategory(entry.category);
-    final dateFormat = DateFormat('MMM d');
-    final timeFormat = DateFormat('h:mm a');
 
     return GestureDetector(
       onTap: onTap,
@@ -95,41 +94,55 @@ class NewspaperEntryCard extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Bottom metadata - vertical stack
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // Bottom metadata - larger category chip
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Category label
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            entry.category.toUpperCase(),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 9,
-                              letterSpacing: 0.8,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        // CC: Larger, more prominent category chip with edit affordance
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: onCategoryTap != null
+                                ? () {
+                                    onCategoryTap!(entry);
+                                  }
+                                : null,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: categoryColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: categoryColor.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    entry.category.toUpperCase(),
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontSize: 11,
+                                      letterSpacing: 0.8,
+                                      fontWeight: FontWeight.w600,
+                                      color: categoryColor.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                  if (onCategoryTap != null) ...[
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      size: 12,
+                                      color: categoryColor.withValues(alpha: 0.7),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        // Date and time
-                        Text(
-                          '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 11,
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                           ),
                         ),
                       ],

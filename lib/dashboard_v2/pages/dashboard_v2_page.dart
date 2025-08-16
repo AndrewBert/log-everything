@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
+import 'package:myapp/utils/category_colors.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
@@ -251,6 +253,9 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       },
                                       onEntryTap: (entry) {
                                         _navigateToEntryDetails(context, entry, state);
+                                      },
+                                      onCategoryTap: (entry) {
+                                        _showCategoryPicker(context, entry);
                                       },
                                     );
                                   },
@@ -541,5 +546,100 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     }
 
     return items;
+  }
+
+  // CC: Show category picker bottom sheet for changing entry category
+  void _showCategoryPicker(BuildContext context, Entry entry) {
+    final entryCubit = context.read<EntryCubit>();
+    final categories = entryCubit.state.categories;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.only(top: 8, bottom: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // CC: Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // CC: Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Text(
+                  'Change Category',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              // CC: Category list
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final isSelected = category.name == entry.category;
+                    final categoryColor = category.color ?? CategoryColors.getColorForCategory(category.name);
+
+                    return ListTile(
+                      leading: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: categoryColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      title: Text(
+                        category.name,
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? Icon(
+                              Icons.check,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () {
+                        if (!isSelected) {
+                          // CC: Update entry category
+                          final updatedEntry = entry.copyWith(category: category.name);
+                          entryCubit.updateEntry(entry, updatedEntry);
+
+                          // CC: Provide haptic feedback
+                          HapticFeedback.lightImpact();
+                        }
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
