@@ -150,12 +150,15 @@ class EntryDetailsPage extends StatelessWidget {
           children: [
             // AI Insight with refined visual design
             if (state.primaryInsight != null || state.isRegeneratingInsight)
-              Container(
-                margin: const EdgeInsets.only(bottom: 32),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
                 child: InsightDisplay(
                   insight: state.primaryInsight,
                   isLoading: state.isRegeneratingInsight,
                   categoryColor: categoryColor,
+                  margin: EdgeInsets.zero,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  allowReadMore: true,
                 ),
               ),
 
