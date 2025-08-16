@@ -94,85 +94,83 @@ class NewspaperEntryCard extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Bottom metadata - larger category chip
+                    // Bottom metadata row with todo indicator and category
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // CC: Larger, more prominent category chip with edit affordance
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: onCategoryTap != null
-                                ? () {
-                                    onCategoryTap!(entry);
-                                  }
-                                : null,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                        // CC: Todo indicator on the left
+                        if (entry.isTask)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                entry.isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                                size: 14,
+                                color: entry.isCompleted
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.7)
+                                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                               ),
-                              decoration: BoxDecoration(
-                                color: categoryColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: categoryColor.withValues(alpha: 0.3),
-                                  width: 1,
+                              const SizedBox(width: 4),
+                              Text(
+                                entry.isCompleted ? 'DONE' : 'TODO',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  letterSpacing: 0.8,
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    entry.category.toUpperCase(),
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      fontSize: 11,
-                                      letterSpacing: 0.8,
-                                      fontWeight: FontWeight.w600,
-                                      color: categoryColor.withValues(alpha: 0.9),
-                                    ),
-                                  ),
-                                  if (onCategoryTap != null) ...[
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      Icons.edit_outlined,
-                                      size: 12,
-                                      color: categoryColor.withValues(alpha: 0.7),
-                                    ),
-                                  ],
-                                ],
+                            ],
+                          )
+                        else
+                          const SizedBox(), // Empty space when not a task
+                        // CC: Category chip on the right
+                        GestureDetector(
+                          onTap: onCategoryTap != null
+                              ? () {
+                                  onCategoryTap!(entry);
+                                }
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: categoryColor.withValues(alpha: 0.3),
+                                width: 1,
                               ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  entry.category.toUpperCase(),
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontSize: 11,
+                                    letterSpacing: 0.8,
+                                    fontWeight: FontWeight.w600,
+                                    color: categoryColor.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                                if (onCategoryTap != null) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 12,
+                                    color: categoryColor.withValues(alpha: 0.7),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
-
-                    // Task indicator if applicable
-                    if (entry.isTask) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            entry.isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                            size: 14,
-                            color: entry.isCompleted
-                                ? theme.colorScheme.primary.withValues(alpha: 0.7)
-                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            entry.isCompleted ? 'COMPLETED' : 'TODO',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              letterSpacing: 0.8,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
