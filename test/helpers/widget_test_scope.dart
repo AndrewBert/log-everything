@@ -4,9 +4,9 @@ import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
-import 'package:myapp/pages/home_page.dart';
+// import 'package:myapp/pages/home_page.dart'; // CC: HomePage removed
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
-import 'package:myapp/pages/cubit/home_page_cubit.dart';
+// import 'package:myapp/pages/cubit/home_page_cubit.dart'; // CC: HomePageCubit removed
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
@@ -56,10 +56,10 @@ class WidgetTestScope {
         BlocProvider<ChatCubit>.value(value: mockChatCubit),
         BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
         BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
-        BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())),
+        // BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())), // CC: HomePageCubit removed
         BlocProvider.value(value: getIt<SnackbarCubit>()),
       ],
-      child: MaterialApp(home: HomePage()),
+      child: MaterialApp(home: Container()), // CC: HomePage replaced with Container stub
     );
   }
 
@@ -140,21 +140,25 @@ class WidgetTestScope {
   }
 
   void stubChatResponse(String responseText, {String? responseId}) {
-    when(mockAiService.getChatResponse(
-      messages: anyNamed('messages'),
-      currentDate: anyNamed('currentDate'),
-      store: anyNamed('store'),
-      previousResponseId: anyNamed('previousResponseId'),
-    )).thenAnswer((_) async => (responseText, responseId));
+    when(
+      mockAiService.getChatResponse(
+        messages: anyNamed('messages'),
+        currentDate: anyNamed('currentDate'),
+        store: anyNamed('store'),
+        previousResponseId: anyNamed('previousResponseId'),
+      ),
+    ).thenAnswer((_) async => (responseText, responseId));
   }
 
   void stubChatError(Exception error) {
-    when(mockAiService.getChatResponse(
-      messages: anyNamed('messages'),
-      currentDate: anyNamed('currentDate'),
-      store: anyNamed('store'),
-      previousResponseId: anyNamed('previousResponseId'),
-    )).thenThrow(error);
+    when(
+      mockAiService.getChatResponse(
+        messages: anyNamed('messages'),
+        currentDate: anyNamed('currentDate'),
+        store: anyNamed('store'),
+        previousResponseId: anyNamed('previousResponseId'),
+      ),
+    ).thenThrow(error);
   }
 
   void stubChatCubitWithMessages(List<ChatMessage> messages, {bool isLoading = false, String? lastResponseId}) {

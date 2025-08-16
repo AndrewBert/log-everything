@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
-import 'package:myapp/pages/cubit/home_page_cubit.dart';
 import 'package:myapp/utils/widget_keys.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import flutter_markdown
 import 'package:myapp/snackbar/widgets/contextual_snackbar_overlay.dart';
@@ -34,16 +33,17 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
           final targetPosition = _scrollController.position.maxScrollExtent;
           final currentPosition = _scrollController.position.pixels;
           final distance = (targetPosition - currentPosition).abs();
-          
+
           // CP: Adjust animation based on distance and streaming state
-          final duration = isStreaming 
-            ? Duration(milliseconds: (150 + distance * 0.5).round().clamp(150, 400))
-            : const Duration(milliseconds: 300);
-            
-          final curve = isStreaming 
-            ? Curves.linearToEaseOut  // CP: Smoother for streaming
-            : Curves.easeOutCubic;    // CP: Bouncier for new messages
-          
+          final duration = isStreaming
+              ? Duration(milliseconds: (150 + distance * 0.5).round().clamp(150, 400))
+              : const Duration(milliseconds: 300);
+
+          final curve = isStreaming
+              ? Curves
+                    .linearToEaseOut // CP: Smoother for streaming
+              : Curves.easeOutCubic; // CP: Bouncier for new messages
+
           _scrollController.animateTo(
             targetPosition,
             duration: duration,
@@ -58,13 +58,13 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
     // CP: Only show thinking indicator if we're loading and haven't started streaming
     if (!chatCubit.state.isLoading) return false;
     if (chatCubit.state.streamingMessageId == null) return true;
-    
+
     // CP: Check if the streaming message has any text yet
     final streamingMessage = chatCubit.state.messages.firstWhere(
       (msg) => msg.id == chatCubit.state.streamingMessageId,
       orElse: () => ChatMessage(id: '', text: '', sender: ChatSender.ai, timestamp: DateTime.now()),
     );
-    
+
     return streamingMessage.text.isEmpty;
   }
 
@@ -78,10 +78,9 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
 
     // CP: Scroll to bottom when new messages are added or streaming updates
     return BlocListener<ChatCubit, ChatState>(
-      listenWhen: (previous, current) => 
-        previous.messages.length < current.messages.length ||
-        (current.streamingMessageId != null && 
-         previous.messages != current.messages),
+      listenWhen: (previous, current) =>
+          previous.messages.length < current.messages.length ||
+          (current.streamingMessageId != null && previous.messages != current.messages),
       listener: (context, state) {
         final isStreaming = state.streamingMessageId != null;
         _scrollToBottom(isStreaming: isStreaming);
@@ -115,7 +114,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
                           icon: const Icon(Icons.close),
                           tooltip: 'Close Chat',
                           onPressed: () {
-                            context.read<HomePageCubit>().toggleChatOpen();
+                            Navigator.of(context).pop();
                           },
                         ),
                         Expanded(
@@ -332,6 +331,4 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
       ],
     );
   }
-
-
 }
