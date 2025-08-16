@@ -31,10 +31,11 @@ When triggered, Claude should:
 FEATURE_NAME="generated-or-provided-name" && \
 git checkout main && \
 git pull origin main && \
-git branch "$FEATURE_NAME" && \
-git worktree add "../$FEATURE_NAME" "$FEATURE_NAME" && \
-cp .env "../$FEATURE_NAME/.env" 2>/dev/null || echo "No .env file found" && \
-code-insiders "../$FEATURE_NAME"
+git checkout -b "$FEATURE_NAME" && \
+git worktree add "../log-everything.worktrees/$FEATURE_NAME" "$FEATURE_NAME" && \
+ln -s ../../log-everything/.env "../log-everything.worktrees/$FEATURE_NAME/.env" && \
+echo "✅ .env symlinked to main repository" && \
+code-insiders "../log-everything.worktrees/$FEATURE_NAME"
 ```
 
 ## Branch Naming Conventions

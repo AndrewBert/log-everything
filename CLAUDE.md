@@ -31,19 +31,6 @@ flutter clean && flutter pub get
 flutter build ipa --release
 ```
 
-### Feature Development Workflow
-```bash
-# Start new feature development
-# Creates branch, worktree, opens VS Code Insiders, and copies .env
-FEATURE_NAME="feature-name" && \
-git checkout main && \
-git pull origin main && \
-git checkout -b "$FEATURE_NAME" && \
-git worktree add "../smart-todo.worktrees/$FEATURE_NAME" "$FEATURE_NAME" && \
-cp .env "../smart-todo.worktrees/$FEATURE_NAME/.env" && \
-code-insiders "../smart-todo.worktrees/$FEATURE_NAME"
-```
-
 ### Testing Policy
 - Claude does not build or run the Flutter app - user handles testing
 - Focus on implementation and code analysis only
