@@ -158,7 +158,7 @@ class EntryDetailsPage extends StatelessWidget {
                   categoryColor: categoryColor,
                   margin: EdgeInsets.zero,
                   padding: const EdgeInsets.only(bottom: 8),
-                  allowReadMore: true,
+                  useVariableHeight: true,
                 ),
               ),
 
