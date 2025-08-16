@@ -7,15 +7,9 @@ import '../entry/entry.dart';
 // void cleanupEntryCardKeys() { ... }
 
 // CP: Keys for widgets within entries (EntriesList removed)
-// CP: Entry action keys (old widgets removed, keeping for potential future use)
-// ValueKey<String> entryCategoryChipKey(Entry entry) =>
-//     ValueKey('entryCategoryChip_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-// ValueKey<String> entryActionsWidgetKey(Entry entry) =>
-//     ValueKey('entryActionsWidget_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-// ValueKey<String> entryEditIconKey(Entry entry) =>
-//     ValueKey('entryEditIcon_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-// ValueKey<String> entryDeleteIconKey(Entry entry) =>
-//     ValueKey('entryDeleteIcon_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
+// CP: Entry action keys - entryCategoryChipKey still used by checklist_test
+ValueKey<String> entryCategoryChipKey(Entry entry) =>
+    ValueKey('entryCategoryChip_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
 
 // Keys for EditEntryDialog
 const Key editEntryDialog = ValueKey('editEntryDialog');
