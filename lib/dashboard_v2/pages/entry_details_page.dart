@@ -144,7 +144,7 @@ class EntryDetailsPage extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

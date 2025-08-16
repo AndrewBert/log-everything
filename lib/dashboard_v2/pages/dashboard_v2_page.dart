@@ -145,9 +145,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                     controller: _scrollController,
                     slivers: [
                       if (state.entries.isNotEmpty) ...[
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 8),
-                        ),
                         SliverToBoxAdapter(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
