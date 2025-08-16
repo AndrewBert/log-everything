@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/dashboard_v2/cubit/insight_display_cubit.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
-class InsightDisplay extends StatefulWidget {
+class InsightDisplay extends StatelessWidget {
   final Insight? insight;
   final bool isLoading;
   final VoidCallback? onTap;
@@ -23,133 +25,169 @@ class InsightDisplay extends StatefulWidget {
   });
 
   @override
-  State<InsightDisplay> createState() => _InsightDisplayState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => InsightDisplayCubit(),
+      child: _InsightDisplayContent(
+        insight: insight,
+        isLoading: isLoading,
+        onTap: onTap,
+        categoryColor: categoryColor,
+        margin: margin,
+        padding: padding,
+        allowReadMore: allowReadMore,
+      ),
+    );
+  }
 }
 
-class _InsightDisplayState extends State<InsightDisplay> {
-  bool isExpanded = false;
-  bool isTruncated = false;
+class _InsightDisplayContent extends StatelessWidget {
+  final Insight? insight;
+  final bool isLoading;
+  final VoidCallback? onTap;
+  final Color categoryColor;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? padding;
+  final bool allowReadMore;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Check if text would be truncated at 4 lines
-    // Rough estimate: ~50 chars per line at current font size
-    if (widget.insight != null) {
-      isTruncated = widget.insight!.content.length > 150;
-    }
-  }
-
-  @override
-  void didUpdateWidget(InsightDisplay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.insight != widget.insight && widget.insight != null) {
-      isTruncated = widget.insight!.content.length > 150;
-      isExpanded = false; // Reset expansion when insight changes
-    }
-  }
+  const _InsightDisplayContent({
+    this.insight,
+    this.isLoading = false,
+    this.onTap,
+    required this.categoryColor,
+    this.margin,
+    this.padding,
+    this.allowReadMore = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final bool showReadMore = widget.allowReadMore && isTruncated && !isExpanded;
-    final bool showReadLess = widget.allowReadMore && isExpanded;
+    return BlocBuilder<InsightDisplayCubit, InsightDisplayState>(
+      builder: (context, state) {
+        final cubit = context.read<InsightDisplayCubit>();
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        key: aiInsightContainerKey,
-        duration: const Duration(milliseconds: 300),
-        height: (isExpanded && widget.allowReadMore) ? null : 160,
-        margin: widget.margin ?? const EdgeInsets.symmetric(horizontal: 16),
-        padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 16),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: widget.isLoading
-              ? _TypewriterLoader(
-                  key: const ValueKey('loading'),
-                  categoryColor: widget.categoryColor,
-                )
-              : widget.insight != null
-              ? IntrinsicHeight(
-                  child: Row(
-                    key: ValueKey('insight_${widget.insight!.id}'),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 3,
-                        height: double.infinity,
-                        decoration: BoxDecoration(
-                          color: widget.categoryColor,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isExpanded ? '"${widget.insight!.content}"' : '"${widget.insight!.content}"',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontStyle: FontStyle.italic,
-                                fontWeight: FontWeight.w300,
-                                height: 1.4,
-                                fontSize: 18,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            key: aiInsightContainerKey,
+            duration: const Duration(milliseconds: 300),
+            height: (state.isExpanded && allowReadMore) ? null : 160,
+            margin: margin ?? const EdgeInsets.symmetric(horizontal: 16),
+            padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: isLoading
+                  ? _TypewriterLoader(
+                      key: const ValueKey('loading'),
+                      categoryColor: categoryColor,
+                    )
+                  : insight != null
+                  ? LayoutBuilder(
+                      key: ValueKey('insight_${insight!.id}'),
+                      builder: (context, constraints) {
+                        // CP: Calculate available width for text
+                        final leftSpacing = 23.0; // Border width (3) + spacing (20)
+                        final availableWidth = constraints.maxWidth - leftSpacing;
+
+                        // CP: Get text style for measurement
+                        final textStyle =
+                            theme.textTheme.bodyLarge?.copyWith(
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w300,
+                              height: 1.4,
+                              fontSize: 18,
+                            ) ??
+                            const TextStyle();
+
+                        // CP: Check truncation with actual constraints
+                        cubit.checkTruncation(
+                          availableWidth: availableWidth,
+                          insight: insight,
+                          textStyle: textStyle,
+                        );
+
+                        final showReadMore = allowReadMore && state.isTruncated && !state.isExpanded;
+                        final showReadLess = allowReadMore && state.isExpanded;
+
+                        return IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 3,
+                                height: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: categoryColor,
+                                  borderRadius: BorderRadius.circular(1.5),
+                                ),
                               ),
-                              maxLines: isExpanded ? null : 4,
-                              overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                            ),
-                            if (showReadMore) ...[
-                              const SizedBox(height: 4),
-                              GestureDetector(
-                                onTap: () => setState(() => isExpanded = true),
-                                child: Text(
-                                  'read more',
-                                  style: TextStyle(
-                                    color: widget.categoryColor,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '"${insight!.content}"',
+                                      style: textStyle.copyWith(
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                                      ),
+                                      maxLines: state.isExpanded ? null : 4,
+                                      overflow: state.isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                                    ),
+                                    if (showReadMore) ...[
+                                      const SizedBox(height: 4),
+                                      GestureDetector(
+                                        onTap: () => cubit.expand(),
+                                        child: Text(
+                                          'read more',
+                                          style: TextStyle(
+                                            color: categoryColor,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    if (showReadLess) ...[
+                                      const SizedBox(height: 4),
+                                      GestureDetector(
+                                        onTap: () => cubit.collapse(),
+                                        child: Text(
+                                          'read less',
+                                          style: TextStyle(
+                                            color: categoryColor,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _getInsightLabel(insight!.type),
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        letterSpacing: 1.2,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
-                            if (showReadLess) ...[
-                              const SizedBox(height: 4),
-                              GestureDetector(
-                                onTap: () => setState(() => isExpanded = false),
-                                child: Text(
-                                  'read less',
-                                  style: TextStyle(
-                                    color: widget.categoryColor,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Text(
-                              _getInsightLabel(widget.insight!.type),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                letterSpacing: 1.2,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('empty')),
-        ),
-      ),
+                          ),
+                        );
+                      },
+                    )
+                  : const SizedBox.shrink(key: ValueKey('empty')),
+            ),
+          ),
+        );
+      },
     );
   }
 
