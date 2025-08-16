@@ -113,7 +113,8 @@ class AiServiceException implements Exception {
 // Concrete implementation using OpenAI
 class OpenAiService implements AiService {
   final String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? 'YOUR_API_KEY_NOT_FOUND';
-  final String _apiUrl = 'https://api.openai.com/v1/responses';
+  final String _apiUrl =
+      'https://api.openai.com/v1/responses'; // IMPORTANT: Uses Responses API, NOT Chat Completions API (/v1/chat/completions)
   static const fourOMini = 'gpt-4o-mini';
   static const fourPoint1 = 'gpt-4.1-2025-04-14';
   static const fourPoint1Mini = 'gpt-4.1-mini-2025-04-14';

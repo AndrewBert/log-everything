@@ -69,6 +69,7 @@ External APIs (OpenAI, Local Storage)
 - **AudioRecorderService & SpeechService**: Voice-to-text input pipeline
 - **EntryRepository**: Coordinates between UI and services, main business logic hub
 
+
 ### Dependency Injection
 - Uses **GetIt** service locator pattern
 - Services registered in `lib/locator.dart` via `configureDependencies()`
@@ -179,3 +180,4 @@ When asked to create an IPA for iOS release, Claude should:
 - Remove commented imports
 - Update/remove old tests that reference deleted components
 - Clean up any remaining old dependencies
+- use opanais responses API like we currently do instead of chat completions
