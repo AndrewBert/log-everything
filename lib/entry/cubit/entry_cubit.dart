@@ -176,6 +176,10 @@ class EntryCubit extends Cubit<EntryState> {
       final splitCount = result.splitCount;
       final originalText = result.originalText;
       final batchId = result.batchId;
+      final addedEntries = result.addedEntries;
+
+      // CC: Track entries marked as todos from the newly added entries
+      final todoEntries = addedEntries.where((e) => e.isTask).toList();
 
       // CP: Handle split notification and store undo info
       if (splitCount > 1 && batchId != null) {
@@ -185,6 +189,17 @@ class EntryCubit extends Cubit<EntryState> {
             splitNotification: 'Entry split into $splitCount items',
             undoBatchId: batchId,
             undoOriginalText: originalText,
+          ),
+        );
+      }
+
+      // CC: Handle todo notification if entries were marked as tasks
+      if (todoEntries.isNotEmpty) {
+        final todoCount = todoEntries.length;
+        emit(
+          state.copyWith(
+            todoNotification: todoCount == 1 ? 'Entry marked as todo' : '$todoCount entries marked as todos',
+            todoMarkedEntries: todoEntries,
           ),
         );
       }
@@ -418,6 +433,63 @@ class EntryCubit extends Cubit<EntryState> {
   // CP: Clear split notification after toast is shown
   void clearSplitNotification() {
     emit(state.copyWith(clearSplitNotification: true));
+  }
+
+  // CC: Clear only the notification text, keep the batch info for undo
+  void clearSplitNotificationOnly() {
+    // Just clear the text, not the batch info
+    emit(state.copyWith(splitNotification: null));
+  }
+
+  // CC: Clear todo notification after toast is shown
+  void clearTodoNotification() {
+    emit(state.copyWith(clearTodoInfo: true));
+  }
+
+  // CC: Clear only the notification text, keep the entries for undo
+  void clearTodoNotificationOnly() {
+    // Use the clear flag to set notification to null while keeping entries
+    emit(state.copyWith(clearTodoNotificationOnly: true));
+  }
+
+  // CC: Undo todo marking - remove isTask flag from entries
+  Future<void> undoTodoMarking() async {
+    if (state.todoMarkedEntries == null || state.todoMarkedEntries!.isEmpty) {
+      AppLogger.warn("Cubit: Cannot undo todo marking - no entries to unmark");
+      return;
+    }
+
+    emit(state.copyWith(isLoading: true, clearLastError: true));
+    try {
+      // CC: Update each entry to remove the isTask flag
+      for (final entry in state.todoMarkedEntries!) {
+        final updatedEntry = entry.copyWith(isTask: false);
+        await _entryRepository.updateEntry(entry, updatedEntry);
+      }
+
+      // CC: Get updated entries and refresh state
+      final updatedEntries = _entryRepository.currentEntries;
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+
+      AppLogger.info("Cubit: Successfully unmarked ${state.todoMarkedEntries?.length ?? 0} entries as todos");
+
+      // CC: Clear todo undo info
+      emit(
+        state.copyWith(
+          clearTodoInfo: true,
+        ),
+      );
+
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      AppLogger.error("Cubit: Error undoing todo marking", error: e);
+      emit(
+        state.copyWith(
+          isLoading: false,
+          lastErrorMessage: "Failed to undo todo marking.",
+        ),
+      );
+    }
   }
 
   // CC: Undo split - merge entries back to original text

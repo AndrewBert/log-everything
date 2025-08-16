@@ -118,28 +118,55 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
             const SizedBox(width: 8),
           ],
         ),
-        body: BlocListener<EntryCubit, EntryState>(
-          listenWhen: (prev, current) =>
-              current.splitNotification != null && prev.splitNotification != current.splitNotification,
-          listener: (context, state) {
-            // CC: Show snackbar with undo option when split occurs
-            if (state.splitNotification != null && state.undoBatchId != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.splitNotification!),
-                  duration: const Duration(seconds: 6),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    onPressed: () {
-                      context.read<EntryCubit>().undoSplit();
-                    },
-                  ),
-                ),
-              );
-              // CC: Clear notification after showing
-              context.read<EntryCubit>().clearSplitNotification();
-            }
-          },
+        body: MultiBlocListener(
+          listeners: [
+            // CC: Listener for split notifications
+            BlocListener<EntryCubit, EntryState>(
+              listenWhen: (prev, current) =>
+                  current.splitNotification != null && prev.splitNotification != current.splitNotification,
+              listener: (context, state) {
+                // CC: Show snackbar with undo option when split occurs
+                if (state.splitNotification != null && state.undoBatchId != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.splitNotification!),
+                      duration: const Duration(seconds: 6),
+                      action: SnackBarAction(
+                        label: 'Undo',
+                        onPressed: () {
+                          context.read<EntryCubit>().undoSplit();
+                        },
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            // CC: Listener for todo marking notifications
+            BlocListener<EntryCubit, EntryState>(
+              listenWhen: (prev, current) =>
+                  current.todoNotification != null && prev.todoNotification != current.todoNotification,
+              listener: (context, state) {
+                // CC: Show snackbar with undo option when entries marked as todos
+                if (state.todoNotification != null && state.todoMarkedEntries != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.todoNotification!),
+                      duration: const Duration(seconds: 6),
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      action: SnackBarAction(
+                        label: 'Undo',
+                        textColor: Theme.of(context).colorScheme.onSecondary,
+                        onPressed: () {
+                          context.read<EntryCubit>().undoTodoMarking();
+                        },
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
           child: Stack(
             children: [
               BlocBuilder<DashboardV2Cubit, DashboardV2State>(

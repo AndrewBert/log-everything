@@ -127,8 +127,10 @@ class EntryRepository {
     }
   }
 
-  Future<({List<Entry> entries, int splitCount, String originalText, String? batchId})> addEntry(String text) async {
-    if (text.isEmpty) return (entries: _entries, splitCount: 0, originalText: text, batchId: null);
+  Future<({List<Entry> entries, int splitCount, String originalText, String? batchId, List<Entry> addedEntries})>
+  addEntry(String text) async {
+    if (text.isEmpty)
+      return (entries: _entries, splitCount: 0, originalText: text, batchId: null, addedEntries: <Entry>[]);
 
     final DateTime processingTimestamp = DateTime.now();
     List<EntryPrototype> extractedData = [];
@@ -186,7 +188,13 @@ class EntryRepository {
       AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
     });
 
-    return (entries: currentEntries, splitCount: splitCount, originalText: text, batchId: batchId);
+    return (
+      entries: currentEntries,
+      splitCount: splitCount,
+      originalText: text,
+      batchId: batchId,
+      addedEntries: addedEntries,
+    );
   }
 
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
