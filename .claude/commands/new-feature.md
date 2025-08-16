@@ -24,19 +24,34 @@ When triggered, Claude should:
 
 1. **Parse the input** - extract feature description or ask for it
 2. **Generate branch name** - convert description to kebab-case branch name (e.g., "Add dark mode" → "add-dark-mode")
-3. **Confirm with user** - show the proposed branch name and ask for approval
+3. **Check for existing branches** - verify the branch doesn't already exist
 4. **Execute workflow**:
 
 ```bash
-FEATURE_NAME="generated-or-provided-name" && \
+# Stay on main branch to avoid checkout conflicts
 git checkout main && \
 git pull origin main && \
-git checkout -b "$FEATURE_NAME" && \
+FEATURE_NAME="generated-or-provided-name" && \
+# Create branch without checking it out
+git branch "$FEATURE_NAME" && \
+# Create worktree (this will checkout the branch in the worktree)
 git worktree add "../log-everything.worktrees/$FEATURE_NAME" "$FEATURE_NAME" && \
+# Symlink the .env file
 ln -s ../../log-everything/.env "../log-everything.worktrees/$FEATURE_NAME/.env" && \
 echo "✅ .env symlinked to main repository" && \
-code-insiders "../log-everything.worktrees/$FEATURE_NAME"
+echo "✅ Feature branch '$FEATURE_NAME' created with worktree" && \
+# Try VS Code Insiders first, fall back to regular VS Code
+(code-insiders "../log-everything.worktrees/$FEATURE_NAME" 2>/dev/null || \
+ code "../log-everything.worktrees/$FEATURE_NAME" 2>/dev/null || \
+ echo "⚠️  Please open '../log-everything.worktrees/$FEATURE_NAME' in your editor")
 ```
+
+## Important Notes
+
+- **Branch Creation**: Use `git branch` instead of `git checkout -b` to avoid conflicts when creating worktrees
+- **Stay on Main**: The main repository should remain on the main branch while worktrees handle feature branches
+- **VS Code Fallback**: Try VS Code Insiders first, then regular VS Code, then provide manual instructions
+- **Clean Up**: If a branch already exists, ask user if they want to delete and recreate it
 
 ## Branch Naming Conventions
 - Use kebab-case (lowercase with hyphens)
