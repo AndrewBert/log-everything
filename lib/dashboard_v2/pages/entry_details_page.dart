@@ -342,6 +342,39 @@ class EntryDetailsPage extends StatelessWidget {
               ),
             ),
 
+            // CC: Save/Cancel buttons when editing
+            if (state.isEditing) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => context.read<EntryDetailsCubit>().cancelEditing(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(
+                    onPressed: () => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: categoryColor,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 40),
 
             // Magazine-style date and metadata section (at the very bottom)
