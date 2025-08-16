@@ -39,6 +39,9 @@ git worktree add "../log-everything.worktrees/$FEATURE_NAME" "$FEATURE_NAME" && 
 # Symlink the .env file
 ln -s ../../log-everything/.env "../log-everything.worktrees/$FEATURE_NAME/.env" && \
 echo "✅ .env symlinked to main repository" && \
+# Set up FVM for the worktree and run pub get
+(cd "../log-everything.worktrees/$FEATURE_NAME" && fvm use stable && fvm flutter pub get) && \
+echo "✅ FVM configured (stable) and dependencies installed" && \
 echo "✅ Feature branch '$FEATURE_NAME' created with worktree" && \
 # Try VS Code Insiders first, fall back to regular VS Code
 (code-insiders "../log-everything.worktrees/$FEATURE_NAME" 2>/dev/null || \
