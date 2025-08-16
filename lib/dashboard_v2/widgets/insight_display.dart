@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
-class NewspaperInsightContainer extends StatelessWidget {
+class InsightDisplay extends StatelessWidget {
   final Insight? insight;
   final bool isLoading;
   final VoidCallback? onTap;
   final Color categoryColor;
 
-  const NewspaperInsightContainer({
+  const InsightDisplay({
     super.key,
     this.insight,
     this.isLoading = false,

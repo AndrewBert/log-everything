@@ -165,7 +165,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       ? state.getCategoryColor(selectedEntry.category)
                                       : Theme.of(context).colorScheme.primary;
 
-                                  return NewspaperInsightContainer(
+                                  return InsightDisplay(
                                     insight: primaryInsight,
                                     isLoading: state.isGeneratingInsight,
                                     categoryColor: categoryColor,
