@@ -193,8 +193,8 @@ class EntryCubit extends Cubit<EntryState> {
         );
       }
 
-      // CC: Handle todo notification if entries were marked as tasks
-      if (todoEntries.isNotEmpty) {
+      // CC: Handle todo notification only if there was no split (mutually exclusive)
+      if (todoEntries.isNotEmpty && splitCount <= 1) {
         final todoCount = todoEntries.length;
         emit(
           state.copyWith(
