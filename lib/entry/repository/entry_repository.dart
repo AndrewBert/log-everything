@@ -155,10 +155,14 @@ class EntryRepository {
       );
       addedEntries.add(fallbackEntry);
     } else {
-      for (var data in extractedData) {
+      // CC: Add microsecond offsets to ensure unique timestamps for each entry
+      for (var i = 0; i < extractedData.length; i++) {
+        final data = extractedData[i];
+        // CC: Add i microseconds to ensure each entry has a unique timestamp
+        final uniqueTimestamp = processingTimestamp.add(Duration(microseconds: i));
         final newEntry = Entry(
           text: data.textSegment,
-          timestamp: processingTimestamp,
+          timestamp: uniqueTimestamp,
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
           isTask: data.isTask,
@@ -268,10 +272,14 @@ class EntryRepository {
       final fallbackEntry = Entry(text: combinedText, timestamp: tempEntryTimestamp, category: 'Misc', isNew: true);
       addedEntries.add(fallbackEntry);
     } else {
-      for (var data in extractedData) {
+      // CC: Add microsecond offsets to ensure unique timestamps for each entry
+      for (var i = 0; i < extractedData.length; i++) {
+        final data = extractedData[i];
+        // CC: Add i microseconds to ensure each entry has a unique timestamp
+        final uniqueTimestamp = tempEntryTimestamp.add(Duration(microseconds: i));
         final newEntry = Entry(
           text: data.textSegment,
-          timestamp: tempEntryTimestamp,
+          timestamp: uniqueTimestamp,
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
         );
