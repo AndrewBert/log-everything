@@ -3,7 +3,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 // import 'package:myapp/widgets/entries_list.dart'; // CC: EntriesList removed
-import 'package:myapp/widgets/entry_card.dart';
+// import 'package:myapp/widgets/entry_card.dart'; // CC: EntryCard removed
 import 'package:myapp/locator.dart';
 
 import '../mock_path_provider_platform.dart';
