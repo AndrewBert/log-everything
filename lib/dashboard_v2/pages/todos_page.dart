@@ -122,8 +122,22 @@ class TodosPage extends StatelessWidget {
                     // CC: Completed section header - only show if there are completed todos not currently animating
                     Builder(
                       builder: (context) {
+                        // CC: Check if there are any completed todos at all
+                        if (todoState.completedTodos.isEmpty) {
+                          return const SliverToBoxAdapter(child: SizedBox.shrink());
+                        }
+
+                        // CC: Check if ALL completed todos are currently animating
+                        final allCompletedAreAnimating = todoState.completedTodos.every((todo) {
+                          return pageState.completedTodoIds.contains(todo.id);
+                        });
+
+                        // CC: Don't show the section if all completed todos are animating
+                        if (allCompletedAreAnimating) {
+                          return const SliverToBoxAdapter(child: SizedBox.shrink());
+                        }
+
                         final nonAnimatingCompletedTodos = todoState.completedTodos.where((todo) {
-                          // CC: Use the entry's unique ID
                           return !pageState.completedTodoIds.contains(todo.id);
                         }).toList();
 
@@ -212,23 +226,13 @@ class TodosPage extends StatelessWidget {
   }
 
   void _handleTodoCompletion(BuildContext context, Entry todo) {
-    // CC: Debug logging
-    print('[TodosPage] _handleTodoCompletion called for todo:');
-    print('  - Text: ${todo.text.substring(0, todo.text.length.clamp(0, 50))}...');
-    print('  - Timestamp: ${todo.timestamp}');
-    print('  - Current isCompleted: ${todo.isCompleted}');
-    print('  - Will toggle to: ${!todo.isCompleted}');
-
     final todoCubit = context.read<TodoCubit>();
     final pagesCubit = context.read<TodosPageCubit>();
 
     // CC: Toggle completion in TodoCubit
-    print('[TodosPage] Calling todoCubit.toggleTodoCompletion');
     todoCubit.toggleTodoCompletion(todo);
 
     // CC: Handle page state for animation
-    print('[TodosPage] Calling pagesCubit.handleTodoCompletion with isCompleting: ${!todo.isCompleted}');
     pagesCubit.handleTodoCompletion(todo, !todo.isCompleted);
-    print('[TodosPage] _handleTodoCompletion finished');
   }
 }

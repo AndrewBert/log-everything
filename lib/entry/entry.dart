@@ -97,18 +97,10 @@ class Entry extends Equatable {
 
   // Convenience method to toggle completion status
   Entry toggleCompletion() {
-    // CC: Debug logging
-    print('[Entry] toggleCompletion called');
-    print('  - Current isCompleted: $isCompleted');
-    print('  - Current completedAt: $completedAt');
-
     // CC: If completing, set completedAt; if uncompleting, clear it
     if (!isCompleted) {
-      final now = DateTime.now();
-      print('  - Marking as completed with completedAt: $now');
-      return copyWith(isCompleted: true, completedAt: now);
+      return copyWith(isCompleted: true, completedAt: DateTime.now());
     } else {
-      print('  - Marking as uncompleted, clearing completedAt');
       return copyWith(isCompleted: false, clearCompletedAt: true);
     }
   }
