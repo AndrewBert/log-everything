@@ -174,11 +174,19 @@ class EntryCubit extends Cubit<EntryState> {
       final result = await _entryRepository.addEntry(text);
       final finalEntries = result.entries;
       final splitCount = result.splitCount;
+      final originalText = result.originalText;
+      final batchId = result.batchId;
 
-      // CP: Handle split notification
-      if (splitCount > 1) {
-        AppLogger.info('[Split Detection] Repository detected $splitCount split entries');
-        emit(state.copyWith(splitNotification: 'Entry split into $splitCount items'));
+      // CP: Handle split notification and store undo info
+      if (splitCount > 1 && batchId != null) {
+        AppLogger.info('[Split Detection] Repository detected $splitCount split entries with batch ID: $batchId');
+        emit(
+          state.copyWith(
+            splitNotification: 'Entry split into $splitCount items',
+            undoBatchId: batchId,
+            undoOriginalText: originalText,
+          ),
+        );
       }
 
       finalizeProcessing(finalEntries);
@@ -410,6 +418,39 @@ class EntryCubit extends Cubit<EntryState> {
   // CP: Clear split notification after toast is shown
   void clearSplitNotification() {
     emit(state.copyWith(clearSplitNotification: true));
+  }
+
+  // CC: Undo split - merge entries back to original text
+  Future<void> undoSplit() async {
+    if (state.undoBatchId == null || state.undoOriginalText == null) {
+      AppLogger.warn("Cubit: Cannot undo split - missing batch ID or original text");
+      return;
+    }
+
+    emit(state.copyWith(isLoading: true, clearLastError: true));
+    try {
+      final updatedEntries = await _entryRepository.undoSplit(state.undoBatchId!, state.undoOriginalText!);
+      _updateStateFromRepository(updatedEntries: updatedEntries);
+
+      // CC: Clear undo info and show success message
+      emit(
+        state.copyWith(
+          clearUndoInfo: true,
+          clearSplitNotification: true,
+        ),
+      );
+
+      HapticFeedback.mediumImpact();
+      AppLogger.info("Cubit: Successfully undid split for batch ${state.undoBatchId}");
+    } catch (e) {
+      AppLogger.error("Cubit: Error undoing split", error: e);
+      emit(
+        state.copyWith(
+          isLoading: false,
+          lastErrorMessage: "Failed to undo split.",
+        ),
+      );
+    }
   }
 
   // CP: Toggle completion status for checklist items

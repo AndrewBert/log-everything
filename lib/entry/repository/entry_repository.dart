@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../entry.dart';
 import '../category.dart'; // CP: Import Category model
 import '../../services/ai_service.dart';
@@ -126,8 +127,8 @@ class EntryRepository {
     }
   }
 
-  Future<({List<Entry> entries, int splitCount})> addEntry(String text) async {
-    if (text.isEmpty) return (entries: _entries, splitCount: 0);
+  Future<({List<Entry> entries, int splitCount, String originalText, String? batchId})> addEntry(String text) async {
+    if (text.isEmpty) return (entries: _entries, splitCount: 0, originalText: text, batchId: null);
 
     final DateTime processingTimestamp = DateTime.now();
     List<EntryPrototype> extractedData = [];
@@ -145,6 +146,9 @@ class EntryRepository {
     }
 
     final List<Entry> addedEntries = [];
+    // CC: Generate UUID batch ID if we have multiple entries from split
+    final String? batchId = (extractedData.length > 1) ? const Uuid().v4() : null;
+
     if (serviceError != null || extractedData.isEmpty) {
       final fallbackEntry = Entry(
         text: text,
@@ -152,6 +156,7 @@ class EntryRepository {
         category: 'Misc',
         isNew: true,
         isTask: false,
+        batchId: null, // CC: No batch ID for single fallback entry
       );
       addedEntries.add(fallbackEntry);
     } else {
@@ -162,6 +167,7 @@ class EntryRepository {
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
           isTask: data.isTask,
+          batchId: batchId, // CC: Assign batch ID to all split entries
         );
         addedEntries.add(newEntry);
       }
@@ -180,13 +186,54 @@ class EntryRepository {
       AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
     });
 
-    return (entries: currentEntries, splitCount: splitCount);
+    return (entries: currentEntries, splitCount: splitCount, originalText: text, batchId: batchId);
   }
 
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
     _entries.add(entryToAdd);
     await _saveEntries();
     AppLogger.info("Repository: Added entry object - ${entryToAdd.text}");
+    return currentEntries;
+  }
+
+  // CC: Undo split by merging entries with same batch ID back into single entry
+  Future<List<Entry>> undoSplit(String batchId, String originalText) async {
+    // CC: Find all entries with this batch ID
+    final splitEntries = _entries.where((e) => e.batchId == batchId).toList();
+    if (splitEntries.isEmpty) {
+      AppLogger.warn("Repository: No entries found with batch ID $batchId");
+      return currentEntries;
+    }
+
+    // CC: Remove all split entries
+    _entries.removeWhere((e) => e.batchId == batchId);
+
+    // CC: Create single merged entry using first entry's category and timestamp
+    final firstEntry = splitEntries.first;
+    final mergedEntry = Entry(
+      text: originalText,
+      timestamp: firstEntry.timestamp,
+      category: firstEntry.category,
+      isNew: firstEntry.isNew,
+      isTask: false, // CC: Don't assume task status after merge
+      batchId: null, // CC: Clear batch ID since it's no longer split
+    );
+
+    // CC: Insert merged entry at the position of the first split entry
+    final insertIndex = _entries.isEmpty ? 0 : 0; // CC: Add at top like new entries
+    _entries.insert(insertIndex, mergedEntry);
+
+    await _saveEntries();
+    AppLogger.info("Repository: Undid split for batch $batchId, merged ${splitEntries.length} entries");
+
+    _triggerVectorStoreSyncForMonth(firstEntry.timestamp).catchError((e, stackTrace) {
+      AppLogger.error(
+        "Repository: Background vector store sync failed for undoSplit",
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
+
     return currentEntries;
   }
 

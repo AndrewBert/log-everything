@@ -18,6 +18,9 @@ class EntryState extends Equatable {
   final Entry? contextMenuEntry;
   // CP: Add split notification for toast messages
   final String? splitNotification;
+  // CC: Add undo split information
+  final String? undoBatchId;
+  final String? undoOriginalText;
 
   const EntryState({
     this.categories = const [],
@@ -31,6 +34,8 @@ class EntryState extends Equatable {
     this.editingIsTask,
     this.contextMenuEntry,
     this.splitNotification,
+    this.undoBatchId,
+    this.undoOriginalText,
   });
 
   // Implement props getter
@@ -47,6 +52,8 @@ class EntryState extends Equatable {
     editingIsTask,
     contextMenuEntry,
     splitNotification,
+    undoBatchId,
+    undoOriginalText,
   ];
 
   // copyWith remains the same, but without entries
@@ -62,12 +69,15 @@ class EntryState extends Equatable {
     bool? editingIsTask,
     Entry? contextMenuEntry,
     String? splitNotification,
+    String? undoBatchId,
+    String? undoOriginalText,
     bool clearLastError = false,
     bool clearFilter = false,
     bool clearEditingEntry = false,
     bool clearEditingIsTask = false,
     bool clearContextMenuEntry = false,
     bool clearSplitNotification = false,
+    bool clearUndoInfo = false,
   }) {
     return EntryState(
       categories: categories ?? this.categories,
@@ -81,6 +91,8 @@ class EntryState extends Equatable {
       editingIsTask: clearEditingIsTask ? null : (editingIsTask ?? this.editingIsTask),
       contextMenuEntry: clearContextMenuEntry ? null : (contextMenuEntry ?? this.contextMenuEntry),
       splitNotification: clearSplitNotification ? null : (splitNotification ?? this.splitNotification),
+      undoBatchId: clearUndoInfo ? null : (undoBatchId ?? this.undoBatchId),
+      undoOriginalText: clearUndoInfo ? null : (undoOriginalText ?? this.undoOriginalText),
     );
   }
 }
