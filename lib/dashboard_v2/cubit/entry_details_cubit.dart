@@ -309,18 +309,19 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       final primaryInsight = comprehensiveInsight.getPrimaryInsight();
       AppLogger.info('[EntryDetailsCubit] Primary insight extracted: ${primaryInsight != null ? primaryInsight.type : "null"}');
 
-      if (primaryInsight != null) {
-        AppLogger.info('[EntryDetailsCubit] Emitting primary insight: ${primaryInsight.content.substring(0, primaryInsight.content.length > 100 ? 100 : primaryInsight.content.length)}...');
-        emit(
-          state.copyWith(
-            entry: updatedEntry,
-            primaryInsight: primaryInsight,
-            isRegeneratingInsight: false,
-          ),
-        );
-      } else {
-        AppLogger.warn('[EntryDetailsCubit] No primary insight found, setting isRegeneratingInsight to false');
-        if (!isClosed) {
+      // Only emit state if cubit is still active
+      if (!isClosed) {
+        if (primaryInsight != null) {
+          AppLogger.info('[EntryDetailsCubit] Emitting primary insight: ${primaryInsight.content.substring(0, primaryInsight.content.length > 100 ? 100 : primaryInsight.content.length)}...');
+          emit(
+            state.copyWith(
+              entry: updatedEntry,
+              primaryInsight: primaryInsight,
+              isRegeneratingInsight: false,
+            ),
+          );
+        } else {
+          AppLogger.warn('[EntryDetailsCubit] No primary insight found, setting isRegeneratingInsight to false');
           emit(
             state.copyWith(
               entry: updatedEntry,
@@ -328,6 +329,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
             ),
           );
         }
+      } else {
+        AppLogger.info('[EntryDetailsCubit] Cubit is closed, skipping state emit (insight already saved to repository)');
       }
     } catch (e, stackTrace) {
       AppLogger.error('[EntryDetailsCubit] Error generating primary insight', error: e, stackTrace: stackTrace);
