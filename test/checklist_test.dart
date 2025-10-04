@@ -43,14 +43,14 @@ void main() {
 
     await getIt.reset();
     await scope.dispose();
-    
+
     await Future.delayed(Duration.zero);
   });
 
   // =============================================================================
   // CATEGORY MANAGEMENT TESTS
   // =============================================================================
-  
+
   group('Checklist Category Management', () {
     testWidgets(
       'Given user opens add category dialog, When dialog is displayed, Then checklist toggle is visible and defaults to false',
@@ -85,7 +85,7 @@ void main() {
         await givenHomePageIsDisplayed(tester, scope);
         await whenManageCategoriesDialogIsOpened(tester);
         await whenAddCategoryButtonIsTapped(tester);
-        
+
         await whenCategoryNameIsEntered(tester, 'My TodoList');
         await whenCategoryDescriptionIsEntered(tester, 'Personal tasks and todos');
         await whenChecklistToggleIsEnabled(tester);
@@ -102,7 +102,7 @@ void main() {
         await givenHomePageWithRegularCategory(tester, scope);
         await whenManageCategoriesDialogIsOpened(tester);
         await whenExistingRegularCategoryIsEdited(tester);
-        
+
         await whenChecklistToggleIsEnabled(tester);
         await whenEditCategorySaveButtonIsTapped(tester);
 
@@ -125,7 +125,7 @@ void main() {
   // =============================================================================
   // ENTRY SORTING TESTS
   // =============================================================================
-  
+
   group('Checklist Entry Sorting', () {
     testWidgets(
       'Given user has mixed completed and incomplete checklist entries, When entries are displayed, Then all entries maintain chronological order',
@@ -179,7 +179,7 @@ void main() {
   // =============================================================================
   // UI INTERACTION TESTS
   // =============================================================================
-  
+
   group('Checklist UI Interactions', () {
     testWidgets(
       'Given user has checklist entry, When entry is displayed, Then checkbox is visible and unchecked',
@@ -230,7 +230,7 @@ void main() {
         await whenEntryCheckboxIsTapped(tester, TestData.checklistEntryIncomplete);
 
         await thenCompletionStateIsPersisted(tester, scope);
-        
+
         await tester.pump(const Duration(seconds: 3));
       },
     );
@@ -239,7 +239,7 @@ void main() {
   // =============================================================================
   // VISUAL STYLING TESTS
   // =============================================================================
-  
+
   group('Checklist Visual Styling', () {
     testWidgets(
       'Given user has completed checklist entry, When entry is displayed, Then text has strikethrough styling',
@@ -290,7 +290,7 @@ void main() {
   // =============================================================================
   // INTEGRATION WORKFLOW TESTS
   // =============================================================================
-  
+
   group('Checklist Integration Workflows', () {
     testWidgets(
       'Given user wants to create a checklist category, When they go through the complete workflow, Then they can create, add items, and manage completion',
@@ -384,7 +384,7 @@ Finder findCategoryInManagementList(WidgetTester tester, String categoryName) {
   if (keyFinder.evaluate().isNotEmpty) {
     return keyFinder;
   }
-  
+
   // Fallback: find text within the dialog context
   final textFinder = find.text(categoryName);
   return findInManageCategoriesDialog(tester, textFinder);
@@ -395,7 +395,7 @@ Future<void> safeTap(WidgetTester tester, Finder finder, {String? description}) 
   if (finder.evaluate().isEmpty) {
     throw TestFailure('No widgets found for ${description ?? finder.toString()}');
   }
-  
+
   if (finder.evaluate().length > 1) {
     // Multiple widgets found, tap the first one
     await tester.tap(finder.first);
@@ -465,7 +465,7 @@ Future<void> whenCategoryDescriptionIsEntered(WidgetTester tester, String descri
 Future<void> whenChecklistToggleIsEnabled(WidgetTester tester) async {
   final addToggleFinder = find.byKey(addCategoryChecklistToggle);
   final editToggleFinder = find.byKey(editCategoryChecklistToggle);
-  
+
   Finder toggleFinder;
   if (addToggleFinder.evaluate().isNotEmpty) {
     toggleFinder = addToggleFinder;
@@ -474,7 +474,7 @@ Future<void> whenChecklistToggleIsEnabled(WidgetTester tester) async {
   } else {
     throw Exception('Could not find checklist toggle in add or edit dialog');
   }
-  
+
   final toggle = tester.widget<Switch>(toggleFinder);
   if (!toggle.value) {
     await tester.tap(toggleFinder);
@@ -586,7 +586,7 @@ Future<void> whenEntryIsMarkedComplete(WidgetTester tester, Entry entry) async {
 Future<void> whenEntryCheckboxIsTapped(WidgetTester tester, Entry entry) async {
   final checkboxKey = entryCheckboxKey(entry);
   final checkboxFinder = find.byKey(checkboxKey);
-  
+
   if (checkboxFinder.evaluate().isNotEmpty) {
     await tester.tap(checkboxFinder);
   } else {
@@ -607,10 +607,10 @@ Future<void> whenEntryCheckboxIsTapped(WidgetTester tester, Entry entry) async {
 Future<void> thenEntriesAreSortedChronologically(WidgetTester tester) async {
   final incompleteEntryFinder = find.text(TestData.checklistEntryIncomplete.text);
   final completedEntryFinder = find.text(TestData.checklistEntryCompleted.text);
-  
+
   expect(incompleteEntryFinder, findsWidgets);
   expect(completedEntryFinder, findsWidgets);
-  
+
   // Entries should maintain chronological order regardless of completion status
 }
 
@@ -633,7 +633,11 @@ Future<void> thenSortingIsAppliedWithinEachDay(WidgetTester tester) async {
 }
 
 // UI Interaction Helpers
-Future<void> givenHomePageWithChecklistEntry(WidgetTester tester, WidgetTestScope scope, {required bool isCompleted}) async {
+Future<void> givenHomePageWithChecklistEntry(
+  WidgetTester tester,
+  WidgetTestScope scope, {
+  required bool isCompleted,
+}) async {
   final entry = isCompleted ? TestData.checklistEntryCompleted : TestData.checklistEntryIncomplete;
   scope.stubPersistenceWithChecklistEntries([entry]);
   await givenHomePageIsDisplayed(tester, scope);
@@ -647,27 +651,29 @@ Future<void> givenHomePageWithRegularEntry(WidgetTester tester, WidgetTestScope 
 Future<void> thenEntryCheckboxIsVisible(WidgetTester tester, entry) async {
   final checkboxKey = entryCheckboxKey(entry);
   final checkboxFinder = find.byKey(checkboxKey);
-  
+
   if (checkboxFinder.evaluate().isEmpty) {
     final entryTextFinder = find.text(entry.text);
     if (entryTextFinder.evaluate().isNotEmpty) {
-      final entryCardFinder = find.ancestor(
-        of: entryTextFinder,
-        matching: find.byType(Widget),
-      ).first;
-      
+      final entryCardFinder = find
+          .ancestor(
+            of: entryTextFinder,
+            matching: find.byType(Widget),
+          )
+          .first;
+
       final anyCheckboxFinder = find.descendant(
         of: entryCardFinder,
         matching: find.byType(AnimatedContainer),
       );
-      
+
       if (anyCheckboxFinder.evaluate().isNotEmpty) {
         expect(anyCheckboxFinder, findsAtLeastNWidgets(1));
         return;
       }
     }
   }
-  
+
   expect(checkboxFinder, findsOneWidget);
 }
 
@@ -702,7 +708,7 @@ Future<void> thenCompletionStateIsPersisted(WidgetTester tester, WidgetTestScope
 Future<void> thenEntryTextHasStrikethrough(WidgetTester tester, entry) async {
   final entryTextFinder = find.text(entry.text);
   expect(entryTextFinder, findsAtLeastNWidgets(1));
-  
+
   final textWidget = tester.widget<Text>(entryTextFinder.first);
   expect(textWidget.style?.decoration, TextDecoration.lineThrough);
 }
@@ -710,7 +716,7 @@ Future<void> thenEntryTextHasStrikethrough(WidgetTester tester, entry) async {
 Future<void> thenEntryTextHasNormalStyling(WidgetTester tester, entry) async {
   final entryTextFinder = find.text(entry.text);
   expect(entryTextFinder, findsAtLeastNWidgets(1));
-  
+
   final textWidget = tester.widget<Text>(entryTextFinder.first);
   expect(textWidget.style?.decoration, isNot(TextDecoration.lineThrough));
 }
@@ -718,13 +724,13 @@ Future<void> thenEntryTextHasNormalStyling(WidgetTester tester, entry) async {
 Future<void> thenEntryHasReducedOpacity(WidgetTester tester, entry) async {
   final entryTextFinder = find.text(entry.text);
   expect(entryTextFinder, findsAtLeastNWidgets(1));
-  
+
   final opacityFinder = find.ancestor(
     of: entryTextFinder.first,
     matching: find.byType(AnimatedOpacity),
   );
   expect(opacityFinder, findsOneWidget);
-  
+
   final opacityWidget = tester.widget<AnimatedOpacity>(opacityFinder);
   expect(opacityWidget.opacity, lessThan(1.0));
 }
@@ -733,7 +739,7 @@ Future<void> thenCategoryChipShowsChecklistIcon(WidgetTester tester, entry) asyn
   final categoryChipKey = entryCategoryChipKey(entry);
   final chipFinder = find.byKey(categoryChipKey);
   expect(chipFinder, findsOneWidget);
-  
+
   final iconFinder = find.descendant(
     of: chipFinder,
     matching: find.byIcon(Icons.checklist),
@@ -745,7 +751,7 @@ Future<void> thenCategoryChipDoesNotShowChecklistIcon(WidgetTester tester, entry
   final categoryChipKey = entryCategoryChipKey(entry);
   final chipFinder = find.byKey(categoryChipKey);
   expect(chipFinder, findsOneWidget);
-  
+
   final iconFinder = find.descendant(
     of: chipFinder,
     matching: find.byIcon(Icons.checklist),
@@ -756,21 +762,21 @@ Future<void> thenCategoryChipDoesNotShowChecklistIcon(WidgetTester tester, entry
 // Integration Workflow Helpers
 Future<void> whenUserCreatesChecklistCategory(WidgetTester tester, String name, String description) async {
   await whenManageCategoriesDialogIsOpened(tester);
-  
+
   await whenAddCategoryButtonIsTapped(tester);
-  
+
   // Use specific field keys for text entry
   await tester.enterText(find.byKey(addCategoryNameField), name);
   await tester.enterText(find.byKey(addCategoryDescriptionField), description);
-  
+
   // Find switch within add category dialog context
   final switchFinder = findInAddCategoryDialog(tester, find.byType(Switch));
   await safeTap(tester, switchFinder, description: 'Checklist toggle in add category dialog');
-  
+
   // Use key-based button finding
   await tester.tap(find.byKey(addCategoryAddButton));
   await tester.pumpAndSettle();
-  
+
   // Find Done button within manage categories dialog
   final doneButtonFinder = findInManageCategoriesDialog(tester, find.text('Done'));
   await safeTap(tester, doneButtonFinder, description: 'Done button in manage categories dialog');
@@ -796,12 +802,12 @@ Future<void> whenUserCompletesChecklistItem(WidgetTester tester, String itemText
     }
     return;
   }
-  
+
   // Try to find the checkbox associated with this specific entry
   // Look for AnimatedContainer widgets near the entry text
   final entryElement = entryTextFinder.first;
   final entryCard = find.ancestor(of: entryElement, matching: find.byType(Card));
-  
+
   if (entryCard.evaluate().isNotEmpty) {
     final checkboxInCard = find.descendant(of: entryCard, matching: find.byType(AnimatedContainer));
     if (checkboxInCard.evaluate().isNotEmpty) {
@@ -810,7 +816,7 @@ Future<void> whenUserCompletesChecklistItem(WidgetTester tester, String itemText
       return;
     }
   }
-  
+
   // Fallback: just tap any checkbox
   final anyCheckbox = find.byType(AnimatedContainer);
   if (anyCheckbox.evaluate().isNotEmpty) {
@@ -823,7 +829,7 @@ Future<void> thenCompletedItemsHaveStrikethrough(WidgetTester tester, List<Strin
   // Since AI might change the text, just verify that SOME text has strikethrough
   final allTextWidgets = find.byType(Text);
   bool foundStrikethrough = false;
-  
+
   for (int i = 0; i < allTextWidgets.evaluate().length; i++) {
     final textWidget = tester.widget<Text>(allTextWidgets.at(i));
     if (textWidget.style?.decoration == TextDecoration.lineThrough) {
@@ -831,7 +837,7 @@ Future<void> thenCompletedItemsHaveStrikethrough(WidgetTester tester, List<Strin
       break;
     }
   }
-  
+
   expect(foundStrikethrough, true, reason: 'Should find at least one text widget with strikethrough decoration');
 }
 
@@ -839,7 +845,7 @@ Future<void> thenCompletedItemsHaveReducedOpacity(WidgetTester tester, List<Stri
   // Since AI might change the text, just verify that SOME AnimatedOpacity has reduced opacity
   final allOpacityWidgets = find.byType(AnimatedOpacity);
   bool foundReducedOpacity = false;
-  
+
   for (int i = 0; i < allOpacityWidgets.evaluate().length; i++) {
     final opacityWidget = tester.widget<AnimatedOpacity>(allOpacityWidgets.at(i));
     if (opacityWidget.opacity < 1.0) {
@@ -847,17 +853,17 @@ Future<void> thenCompletedItemsHaveReducedOpacity(WidgetTester tester, List<Stri
       break;
     }
   }
-  
+
   expect(foundReducedOpacity, true, reason: 'Should find at least one AnimatedOpacity widget with reduced opacity');
 }
 
 Future<void> thenCheckForCompletionEffects(WidgetTester tester) async {
   // Check if any completion effects are present - if so, verify they work correctly
   // This is more flexible than expecting specific items to be completed
-  
+
   final allTextWidgets = find.byType(Text);
   bool foundStrikethrough = false;
-  
+
   for (int i = 0; i < allTextWidgets.evaluate().length; i++) {
     final textWidget = tester.widget<Text>(allTextWidgets.at(i));
     if (textWidget.style?.decoration == TextDecoration.lineThrough) {
@@ -865,12 +871,12 @@ Future<void> thenCheckForCompletionEffects(WidgetTester tester) async {
       break;
     }
   }
-  
+
   // If we found strikethrough text, also check for reduced opacity
   if (foundStrikethrough) {
     final allOpacityWidgets = find.byType(AnimatedOpacity);
     bool foundReducedOpacity = false;
-    
+
     for (int i = 0; i < allOpacityWidgets.evaluate().length; i++) {
       final opacityWidget = tester.widget<AnimatedOpacity>(allOpacityWidgets.at(i));
       if (opacityWidget.opacity < 1.0) {
@@ -878,10 +884,10 @@ Future<void> thenCheckForCompletionEffects(WidgetTester tester) async {
         break;
       }
     }
-    
+
     expect(foundReducedOpacity, true, reason: 'Found strikethrough text but no reduced opacity');
   }
-  
+
   // Test passes regardless of whether completion effects are found
   // This allows the workflow test to focus on the workflow rather than specific completion details
 }
@@ -893,18 +899,18 @@ Future<void> givenUserHasRegularCategoryWithEntries(WidgetTester tester, WidgetT
 
 Future<void> whenUserConvertsRegularCategoryToChecklist(WidgetTester tester, String categoryName) async {
   await whenManageCategoriesDialogIsOpened(tester);
-  
+
   // Use context-aware category finder
   final categoryFinder = findCategoryInManagementList(tester, categoryName);
   await safeTap(tester, categoryFinder, description: '$categoryName category in management dialog');
-  
+
   // Find switch within edit dialog context
   final switchFinder = findInEditCategoryDialog(tester, find.byType(Switch));
   await safeTap(tester, switchFinder, description: 'Checklist toggle in edit dialog');
-  
+
   // Use context-aware save button
   await whenEditCategorySaveButtonIsTapped(tester);
-  
+
   // Find Done button within manage categories dialog
   final doneButtonFinder = findInManageCategoriesDialog(tester, find.text('Done'));
   await safeTap(tester, doneButtonFinder, description: 'Done button in manage categories dialog');
@@ -948,7 +954,7 @@ Future<void> thenOnlyChecklistEntriesShowCompletionEffects(WidgetTester tester) 
 Future<void> thenRegularEntriesRemainUnaffected(WidgetTester tester, String regularEntryText) async {
   final entryFinder = find.text(regularEntryText);
   expect(entryFinder, findsWidgets);
-  
+
   final textWidget = tester.widget<Text>(entryFinder.first);
   expect(textWidget.style?.decoration, isNot(TextDecoration.lineThrough));
 }
@@ -981,7 +987,7 @@ List<Entry> createMultipleChecklistEntries() {
 List<Entry> createMultiDayChecklistEntries() {
   final today = DateTime.now();
   final yesterday = today.subtract(const Duration(days: 1));
-  
+
   return [
     Entry(
       text: 'Today incomplete',

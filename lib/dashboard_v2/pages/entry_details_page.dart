@@ -52,10 +52,18 @@ class EntryDetailsPage extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          return Scaffold(
-            key: entryDetailsPageKey,
-            appBar: _buildAppBar(context, state),
-            body: _buildBody(context, state),
+          return PopScope(
+            canPop: true,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop && state.isEditing) {
+                await context.read<EntryDetailsCubit>().finalizeEdit();
+              }
+            },
+            child: Scaffold(
+              key: entryDetailsPageKey,
+              appBar: _buildAppBar(context, state),
+              body: _buildBody(context, state),
+            ),
           );
         },
       ),
@@ -144,59 +152,22 @@ class EntryDetailsPage extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // AI Insight with refined visual design
-            if (state.primaryInsight != null || state.isRegeneratingInsight)
-              Container(
-                margin: const EdgeInsets.only(bottom: 32),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        width: 3,
-                        decoration: BoxDecoration(
-                          color: categoryColor,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!state.isRegeneratingInsight && state.primaryInsight != null) ...[
-                              Text(
-                                '"${state.primaryInsight!.content}"',
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  fontStyle: FontStyle.italic,
-                                  fontWeight: FontWeight.w300,
-                                  height: 1.4,
-                                  fontSize: 18,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _getInsightLabel(state.primaryInsight!.type),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  letterSpacing: 1.2,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ] else
-                              // Typewriter Loading Animation
-                              _TypewriterLoader(categoryColor: categoryColor),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+            // Check both cubit state AND entry's persistent flag
+            if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: InsightDisplay(
+                  insight: state.primaryInsight,
+                  isLoading: state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false),
+                  categoryColor: categoryColor,
+                  margin: EdgeInsets.zero,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  useVariableHeight: true,
                 ),
               ),
 
@@ -223,6 +194,7 @@ class EntryDetailsPage extends StatelessWidget {
                           controller: context.read<EntryDetailsCubit>().textController,
                           focusNode: context.read<EntryDetailsCubit>().textFocusNode,
                           maxLines: null,
+                          textInputAction: TextInputAction.newline,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontSize: 18,
                             height: 1.5,
@@ -239,7 +211,6 @@ class EntryDetailsPage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
-                          onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
                         ),
                       )
                     : Container(
@@ -393,6 +364,38 @@ class EntryDetailsPage extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // Save status indicator
+                      if (state.saveStatus != SaveStatus.idle)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (state.saveStatus == SaveStatus.saving)
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            if (state.saveStatus == SaveStatus.saved)
+                              Icon(
+                                Icons.check_circle,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            const SizedBox(width: 4),
+                            Text(
+                              state.saveStatus == SaveStatus.saving ? 'Saving...' : 'Saved',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: state.saveStatus == SaveStatus.saving
+                                    ? theme.colorScheme.onSurfaceVariant
+                                    : theme.colorScheme.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       // Category chip
                       InkWell(
                         onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
@@ -619,169 +622,6 @@ class EntryDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  String _getInsightLabel(InsightType type) {
-    switch (type) {
-      case InsightType.summary:
-        return 'AI INSIGHT';
-      case InsightType.emotion:
-        return 'EMOTIONAL INSIGHT';
-      case InsightType.pattern:
-        return 'PATTERN DETECTED';
-      case InsightType.theme:
-        return 'KEY THEME';
-      case InsightType.recommendation:
-        return 'RECOMMENDATION';
-    }
-  }
-}
-
-// Typewriter Loading Animation Widget
-class _TypewriterLoader extends StatefulWidget {
-  final Color categoryColor;
-
-  const _TypewriterLoader({required this.categoryColor});
-
-  @override
-  State<_TypewriterLoader> createState() => _TypewriterLoaderState();
-}
-
-class _TypewriterLoaderState extends State<_TypewriterLoader> with TickerProviderStateMixin {
-  late AnimationController _typeController;
-  late AnimationController _cursorController;
-  late Animation<int> _charAnimation;
-  late Animation<double> _cursorOpacity;
-  late Animation<double> _progressAnimation;
-
-  final String _loadingText = "Analyzing your entry...";
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Typewriter animation controller
-    _typeController = AnimationController(
-      duration: const Duration(milliseconds: 2500),
-      vsync: this,
-    );
-
-    // Cursor blink animation controller
-    _cursorController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    // Character animation with custom curve for natural typing
-    _charAnimation =
-        IntTween(
-          begin: 0,
-          end: _loadingText.length,
-        ).animate(
-          CurvedAnimation(
-            parent: _typeController,
-            curve: const Interval(
-              0.0,
-              0.7,
-              curve: Curves.easeOut,
-            ),
-          ),
-        );
-
-    // Progress bar animation
-    _progressAnimation =
-        Tween<double>(
-          begin: 0.0,
-          end: 1.0,
-        ).animate(
-          CurvedAnimation(
-            parent: _typeController,
-            curve: Curves.linear,
-          ),
-        );
-
-    // Cursor opacity animation
-    _cursorOpacity =
-        Tween<double>(
-          begin: 1.0,
-          end: 0.0,
-        ).animate(
-          CurvedAnimation(
-            parent: _cursorController,
-            curve: Curves.easeInOut,
-          ),
-        );
-
-    // Start animations
-    _typeController.repeat();
-    _cursorController.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _typeController.dispose();
-    _cursorController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([_typeController, _cursorController]),
-      builder: (context, child) {
-        final displayText = _loadingText.substring(0, _charAnimation.value);
-        final isTypingComplete = _charAnimation.value == _loadingText.length;
-        final showCursor = !isTypingComplete || _typeController.value > 0.8;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RichText(
-              text: TextSpan(
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w300,
-                  height: 1.4,
-                  fontSize: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                children: [
-                  TextSpan(text: displayText),
-                  if (showCursor)
-                    TextSpan(
-                      text: '|',
-                      style: TextStyle(
-                        color: widget.categoryColor.withValues(
-                          alpha: isTypingComplete ? _cursorOpacity.value : 1.0,
-                        ),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Smooth progress indicator
-            ClipRRect(
-              borderRadius: BorderRadius.circular(1),
-              child: SizedBox(
-                height: 2,
-                width: 120,
-                child: LinearProgressIndicator(
-                  value: _progressAnimation.value,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    widget.categoryColor.withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

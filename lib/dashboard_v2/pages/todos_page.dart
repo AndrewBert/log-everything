@@ -55,15 +55,23 @@ class TodosPage extends StatelessWidget {
                   );
                 }
 
-                // CC: Combine active todos and recently completed todos
-                // Include todos that are either active OR recently completed (within 3 seconds)
-                final allVisibleTodos = [
-                  ...todoState.activeTodos,
-                  ...todoState.completedTodos.where((todo) {
-                    final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                    return pageState.completedTodoIds.contains(todoId);
-                  }),
-                ]..sort((a, b) => b.timestamp.compareTo(a.timestamp)); // CC: Keep original sort order
+                // CC: Combine active and animating completed todos, then sort by timestamp
+                // Now that we have unique timestamps, todos will maintain their positions
+                final allVisibleTodos = <Entry>[];
+
+                // CC: Add all active todos
+                allVisibleTodos.addAll(todoState.activeTodos);
+
+                // CC: Add completed todos that are still animating (within 3 seconds)
+                for (final todo in todoState.completedTodos) {
+                  if (pageState.completedTodoIds.contains(todo.id)) {
+                    allVisibleTodos.add(todo);
+                  }
+                }
+
+                // CC: Sort by timestamp to maintain original order
+                // With unique timestamps, completed todos stay in their original position
+                allVisibleTodos.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
                 return CustomScrollView(
                   slivers: [
@@ -123,9 +131,23 @@ class TodosPage extends StatelessWidget {
                     // CC: Completed section header - only show if there are completed todos not currently animating
                     Builder(
                       builder: (context) {
+                        // CC: Check if there are any completed todos at all
+                        if (todoState.completedTodos.isEmpty) {
+                          return const SliverToBoxAdapter(child: SizedBox.shrink());
+                        }
+
+                        // CC: Check if ALL completed todos are currently animating
+                        final allCompletedAreAnimating = todoState.completedTodos.every((todo) {
+                          return pageState.completedTodoIds.contains(todo.id);
+                        });
+
+                        // CC: Don't show the section if all completed todos are animating
+                        if (allCompletedAreAnimating) {
+                          return const SliverToBoxAdapter(child: SizedBox.shrink());
+                        }
+
                         final nonAnimatingCompletedTodos = todoState.completedTodos.where((todo) {
-                          final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                          return !pageState.completedTodoIds.contains(todoId);
+                          return !pageState.completedTodoIds.contains(todo.id);
                         }).toList();
 
                         if (nonAnimatingCompletedTodos.isEmpty) {
@@ -170,8 +192,8 @@ class TodosPage extends StatelessWidget {
                         builder: (context) {
                           // CC: Filter out todos that are still animating in the active section
                           final visibleCompletedTodos = todoState.completedTodos.where((todo) {
-                            final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-                            return !pageState.completedTodoIds.contains(todoId);
+                            // CC: Use the entry's unique ID
+                            return !pageState.completedTodoIds.contains(todo.id);
                           }).toList();
 
                           return SliverPadding(

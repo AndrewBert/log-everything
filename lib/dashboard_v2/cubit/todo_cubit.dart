@@ -12,8 +12,8 @@ class TodoCubit extends Cubit<TodoState> {
 
   TodoCubit({
     required EntryRepository entryRepository,
-  })  : _entryRepository = entryRepository,
-        super(const TodoState()) {
+  }) : _entryRepository = entryRepository,
+       super(const TodoState()) {
     // CC: Subscribe to entries stream
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
     // CC: Load initial todos
@@ -32,17 +32,18 @@ class TodoCubit extends Cubit<TodoState> {
   void _updateTodosFromEntries(List<Entry> entries) {
     // CC: Filter entries where isTask is true
     final allTodos = entries.where((entry) => entry.isTask).toList();
-    
+
     // CC: Separate active and completed todos
-    final activeTodos = allTodos
-        .where((todo) => !todo.isCompleted)
-        .toList()
+    final activeTodos = allTodos.where((todo) => !todo.isCompleted).toList()
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp)); // CC: Newest first
-    
-    final completedTodos = allTodos
-        .where((todo) => todo.isCompleted)
-        .toList()
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp)); // CC: Newest first
+
+    final completedTodos = allTodos.where((todo) => todo.isCompleted).toList()
+      ..sort((a, b) {
+        // CC: Sort by completedAt if available, otherwise fall back to timestamp
+        final aCompletedAt = a.completedAt ?? a.timestamp;
+        final bCompletedAt = b.completedAt ?? b.timestamp;
+        return bCompletedAt.compareTo(aCompletedAt); // CC: Recently completed first
+      });
 
     emit(
       state.copyWith(

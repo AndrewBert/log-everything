@@ -11,17 +11,20 @@ class TodosPageCubit extends Cubit<TodosPageState> {
   TodosPageCubit() : super(const TodosPageState());
 
   void handleTodoCompletion(Entry todo, bool isCompleting) {
-    final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
-    
+    // CC: Use the entry's unique ID
+    final todoId = todo.id;
+
     if (isCompleting) {
       // CC: Cancel any existing timer for this todo
-      _removalTimers[todoId]?.cancel();
-      _removalTimers.remove(todoId);
-      
+      if (_removalTimers.containsKey(todoId)) {
+        _removalTimers[todoId]?.cancel();
+        _removalTimers.remove(todoId);
+      }
+
       // CC: Add to completed set
       final newCompletedIds = Set<String>.from(state.completedTodoIds)..add(todoId);
       emit(state.copyWith(completedTodoIds: newCompletedIds));
-      
+
       // CC: Schedule removal after 3 seconds
       _removalTimers[todoId] = Timer(const Duration(seconds: 3), () {
         final updatedIds = Set<String>.from(state.completedTodoIds)..remove(todoId);
@@ -30,9 +33,11 @@ class TodosPageCubit extends Cubit<TodosPageState> {
       });
     } else {
       // CC: If uncompleting, cancel timer and remove from completed set
-      _removalTimers[todoId]?.cancel();
-      _removalTimers.remove(todoId);
-      
+      if (_removalTimers.containsKey(todoId)) {
+        _removalTimers[todoId]?.cancel();
+        _removalTimers.remove(todoId);
+      }
+
       final updatedIds = Set<String>.from(state.completedTodoIds)..remove(todoId);
       emit(state.copyWith(completedTodoIds: updatedIds));
     }

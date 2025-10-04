@@ -155,10 +155,14 @@ class EntryRepository {
       );
       addedEntries.add(fallbackEntry);
     } else {
-      for (var data in extractedData) {
+      // CC: Add microsecond offsets to ensure unique timestamps for each entry
+      for (var i = 0; i < extractedData.length; i++) {
+        final data = extractedData[i];
+        // CC: Add i microseconds to ensure each entry has a unique timestamp
+        final uniqueTimestamp = processingTimestamp.add(Duration(microseconds: i));
         final newEntry = Entry(
           text: data.textSegment,
-          timestamp: processingTimestamp,
+          timestamp: uniqueTimestamp,
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
           isTask: data.isTask,
@@ -206,7 +210,7 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<Entry>> updateEntry(Entry originalEntry, Entry updatedEntry) async {
+  Future<List<Entry>> updateEntry(Entry originalEntry, Entry updatedEntry, {bool skipAiRegeneration = false}) async {
     final index = _entries.indexWhere(
       (entry) => entry.timestamp == originalEntry.timestamp && entry.text == originalEntry.text,
     );
@@ -214,13 +218,15 @@ class EntryRepository {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
       await _saveEntries();
-      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
-        AppLogger.error(
-          "Repository: Background vector store sync failed for updateEntry",
-          error: e,
-          stackTrace: stackTrace,
-        );
-      });
+      if (!skipAiRegeneration) {
+        _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Background vector store sync failed for updateEntry",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
+      }
     }
     return currentEntries;
   }
@@ -268,10 +274,14 @@ class EntryRepository {
       final fallbackEntry = Entry(text: combinedText, timestamp: tempEntryTimestamp, category: 'Misc', isNew: true);
       addedEntries.add(fallbackEntry);
     } else {
-      for (var data in extractedData) {
+      // CC: Add microsecond offsets to ensure unique timestamps for each entry
+      for (var i = 0; i < extractedData.length; i++) {
+        final data = extractedData[i];
+        // CC: Add i microseconds to ensure each entry has a unique timestamp
+        final uniqueTimestamp = tempEntryTimestamp.add(Duration(microseconds: i));
         final newEntry = Entry(
           text: data.textSegment,
-          timestamp: tempEntryTimestamp,
+          timestamp: uniqueTimestamp,
           category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
           isNew: true,
         );

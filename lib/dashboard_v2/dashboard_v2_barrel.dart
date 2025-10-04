@@ -7,7 +7,7 @@ export 'pages/todos_page.dart';
 
 // Widgets
 export 'widgets/recent_entries_carousel.dart';
-export 'widgets/newspaper_insight_container.dart';
+export 'widgets/insight_display.dart';
 export 'widgets/newspaper_entry_card.dart';
 export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';

@@ -1,35 +1,15 @@
 import 'package:flutter/material.dart';
 import '../entry/entry.dart';
 
-// CP: Updated approach to handle GlobalKeys with filter context to prevent duplicates
-final Map<String, GlobalKey> _entryCardKeys = <String, GlobalKey>{};
+// CP: EntryCard removed - these functions are no longer used
+// final Map<String, GlobalKey> _entryCardKeys = <String, GlobalKey>{};
+// GlobalKey entryCardKey(Entry entry, {String? filterContext}) { ... }
+// void cleanupEntryCardKeys() { ... }
 
-// CP: Function to get or create a GlobalKey for an entry card with filter context
-GlobalKey entryCardKey(Entry entry, {String? filterContext}) {
-  // CP: Include filter context in key to prevent duplicates when filtering
-  final filterSuffix = filterContext != null ? '_filter_$filterContext' : '_all';
-  final keyString = 'entryCard_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}$filterSuffix';
-  return _entryCardKeys.putIfAbsent(keyString, () => GlobalKey());
-}
-
-// CP: Function to cleanup old keys when they're no longer needed (optional, for memory management)
-void cleanupEntryCardKeys() {
-  // CP: Remove keys that might be orphaned - this can be called periodically
-  _entryCardKeys.removeWhere((key, globalKey) {
-    return globalKey.currentContext == null;
-  });
-}
-
-// Keys for widgets within the EntriesList item
-// Using unique strings based on entry data to ensure key uniqueness per item
+// CP: Keys for widgets within entries (EntriesList removed)
+// CP: Entry action keys - entryCategoryChipKey still used by checklist_test
 ValueKey<String> entryCategoryChipKey(Entry entry) =>
     ValueKey('entryCategoryChip_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-ValueKey<String> entryActionsWidgetKey(Entry entry) =>
-    ValueKey('entryActionsWidget_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-ValueKey<String> entryEditIconKey(Entry entry) =>
-    ValueKey('entryEditIcon_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
-ValueKey<String> entryDeleteIconKey(Entry entry) =>
-    ValueKey('entryDeleteIcon_${entry.timestamp.toIso8601String()}_${entry.text.hashCode}');
 
 // Keys for EditEntryDialog
 const Key editEntryDialog = ValueKey('editEntryDialog');
@@ -84,8 +64,7 @@ const Key addCategoryCancelButton = ValueKey('addCategoryCancelButton');
 const Key editCategoryChecklistToggle = ValueKey('editCategoryChecklistToggle');
 
 // CP: Keys for Category Card indicators
-ValueKey<String> categoryChecklistIconKey(String categoryName) =>
-    ValueKey('categoryChecklistIcon_$categoryName');
+ValueKey<String> categoryChecklistIconKey(String categoryName) => ValueKey('categoryChecklistIcon_$categoryName');
 
 // CP: Keys for Manage Categories Dialog
 const Key manageCategoriesDialogDoneButton = ValueKey('manageCategoriesDialogDoneButton');
@@ -99,8 +78,7 @@ const Key editCategorySaveButton = ValueKey('editCategorySaveButton');
 const Key editCategoryCancelButton = ValueKey('editCategoryCancelButton');
 
 // CP: Keys for Category List Items in Management Dialog
-ValueKey<String> categoryListItemKey(String categoryName) =>
-    ValueKey('categoryListItem_$categoryName');
+ValueKey<String> categoryListItemKey(String categoryName) => ValueKey('categoryListItem_$categoryName');
 
 // CP: Keys for generic dialog buttons (fallback)
 const Key dialogSaveActionButton = ValueKey('dialogSaveActionButton');
