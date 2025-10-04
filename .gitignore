@@ -23,5 +23,5 @@ android/app/.cxx/
 
 coverage
 
-# Spec Kit - Claude agent folder (may contain credentials)
-.claude/
+# Spec Kit - Local settings may contain user-specific permissions
+.claude/settings.local.json
