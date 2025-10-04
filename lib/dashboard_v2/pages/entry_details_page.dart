@@ -55,9 +55,7 @@ class EntryDetailsPage extends StatelessWidget {
           return PopScope(
             canPop: true,
             onPopInvokedWithResult: (didPop, result) async {
-              print('[EntryDetailsPage] PopScope onPopInvokedWithResult - didPop: $didPop, isEditing: ${state.isEditing}');
               if (didPop && state.isEditing) {
-                print('[EntryDetailsPage] Calling finalizeEdit from PopScope');
                 await context.read<EntryDetailsCubit>().finalizeEdit();
               }
             },

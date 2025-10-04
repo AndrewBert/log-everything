@@ -66,8 +66,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       ),
     );
 
-    AppLogger.info('[EntryDetailsCubit] startEditing - captured originalEntryText: "${state.entry!.text}"');
-
     // CP: Request focus after state update
     WidgetsBinding.instance.addPostFrameCallback((_) {
       textFocusNode.requestFocus();
@@ -129,16 +127,7 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
   }
 
   Future<void> finalizeEdit() async {
-    AppLogger.info('[EntryDetailsCubit] finalizeEdit called');
-    AppLogger.info('[EntryDetailsCubit] state.entry.text: ${state.entry?.text}');
-    AppLogger.info('[EntryDetailsCubit] state.isEditing: ${state.isEditing}');
-    AppLogger.info('[EntryDetailsCubit] state.editedText: ${state.editedText}');
-    AppLogger.info('[EntryDetailsCubit] state.originalEntryText: ${state.originalEntryText}');
-
-    if (state.entry == null) {
-      AppLogger.warn('[EntryDetailsCubit] finalizeEdit - entry is null, returning');
-      return;
-    }
+    if (state.entry == null) return;
 
     // Cancel any pending auto-save
     _autoSaveTimer?.cancel();
@@ -146,13 +135,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     final originalText = state.originalEntryText ?? state.entry!.text;
     final newText = state.editedText?.trim() ?? state.entry!.text;
 
-    AppLogger.info('[EntryDetailsCubit] originalText (from originalEntryText): "$originalText"');
-    AppLogger.info('[EntryDetailsCubit] newText (from editedText): "$newText"');
-    AppLogger.info('[EntryDetailsCubit] text changed: ${originalText != newText}');
-
     // If text hasn't changed, just exit edit mode
     if (originalText == newText) {
-      AppLogger.info('[EntryDetailsCubit] Text unchanged, exiting edit mode without AI regeneration');
       emit(
         state.copyWith(
           isEditing: false,
@@ -164,12 +148,10 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     }
 
     try {
-      AppLogger.info('[EntryDetailsCubit] Text changed! Saving updated entry to repository');
       // Mark entry as generating insight before updating
       final updatedEntry = state.entry!.copyWith(text: newText, isGeneratingInsight: true);
       // Full save with AI regeneration
       await _entryRepository.updateEntry(state.entry!, updatedEntry);
-      AppLogger.info('[EntryDetailsCubit] Entry saved with isGeneratingInsight=true');
 
       emit(
         state.copyWith(
@@ -181,10 +163,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       );
 
       // Regenerate insight when text changes
-      AppLogger.info('[EntryDetailsCubit] Calling _generatePrimaryInsight for updated entry');
       _generatePrimaryInsight(updatedEntry);
     } catch (e) {
-      AppLogger.error('[EntryDetailsCubit] Error in finalizeEdit', error: e);
       if (!isClosed) {
         emit(
           state.copyWith(
@@ -203,7 +183,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
   }
 
   void cancelEditing() {
-    AppLogger.info('[EntryDetailsCubit] cancelEditing - clearing edit state');
     textController.clear();
     emit(
       state.copyWith(
@@ -275,17 +254,11 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
   }
 
   Future<void> _generatePrimaryInsight(Entry entry) async {
-    AppLogger.info('[EntryDetailsCubit] _generatePrimaryInsight called for entry: "${entry.text.substring(0, entry.text.length > 50 ? 50 : entry.text.length)}..."');
-    AppLogger.info('[EntryDetailsCubit] Setting isRegeneratingInsight to true');
-
     emit(state.copyWith(isRegeneratingInsight: true));
 
     try {
       final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
-      AppLogger.info('[EntryDetailsCubit] Calling AI service to generate insights for entryId: $entryId');
-
       final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
-      AppLogger.info('[EntryDetailsCubit] AI service returned comprehensiveInsight');
 
       // Re-fetch the current entry to avoid overwriting user changes made during insight generation
       final currentEntries = _entryRepository.currentEntries;
@@ -294,7 +267,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         orElse: () => entry,
       );
 
-      AppLogger.info('[EntryDetailsCubit] Saving insight to repository for entry: $entryId');
       // Update entry with insight AND clear generating flag, preserving any user changes
       final updatedEntry = currentEntry.copyWith(
         insight: comprehensiveInsight,
@@ -303,16 +275,12 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       // Skip AI regeneration (vector store sync) for insight-only updates
       await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
 
-      AppLogger.info('[EntryDetailsCubit] Insight saved successfully to repository with isGeneratingInsight=false');
-
       // Use the priority system to get the most relevant insight
       final primaryInsight = comprehensiveInsight.getPrimaryInsight();
-      AppLogger.info('[EntryDetailsCubit] Primary insight extracted: ${primaryInsight != null ? primaryInsight.type : "null"}');
 
       // Only emit state if cubit is still active
       if (!isClosed) {
         if (primaryInsight != null) {
-          AppLogger.info('[EntryDetailsCubit] Emitting primary insight: ${primaryInsight.content.substring(0, primaryInsight.content.length > 100 ? 100 : primaryInsight.content.length)}...');
           emit(
             state.copyWith(
               entry: updatedEntry,
@@ -321,7 +289,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
             ),
           );
         } else {
-          AppLogger.warn('[EntryDetailsCubit] No primary insight found, setting isRegeneratingInsight to false');
           emit(
             state.copyWith(
               entry: updatedEntry,
@@ -329,12 +296,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
             ),
           );
         }
-      } else {
-        AppLogger.info('[EntryDetailsCubit] Cubit is closed, skipping state emit (insight already saved to repository)');
       }
     } catch (e, stackTrace) {
-      AppLogger.error('[EntryDetailsCubit] Error generating primary insight', error: e, stackTrace: stackTrace);
-
       // Clear generating flag even on error
       try {
         final currentEntries = _entryRepository.currentEntries;
@@ -344,9 +307,8 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         );
         final updatedEntry = currentEntry.copyWith(isGeneratingInsight: false);
         await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
-        AppLogger.info('[EntryDetailsCubit] Cleared isGeneratingInsight flag after error');
       } catch (updateError) {
-        AppLogger.error('[EntryDetailsCubit] Failed to clear isGeneratingInsight flag', error: updateError);
+        // Ignore cleanup errors
       }
 
       // CC: Check if cubit is still active before emitting
