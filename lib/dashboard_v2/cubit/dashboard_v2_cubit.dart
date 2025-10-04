@@ -52,7 +52,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     bool needsInsight = false;
     if (index < state.entries.length) {
       final entry = state.entries[index];
-      needsInsight = entry.insight == null;
+      needsInsight = entry.getCurrentInsight() == null;
+      AppLogger.info('[DASHBOARD-CUBIT] selectCarouselEntry index: $index, needsInsight: $needsInsight');
     }
 
     emit(

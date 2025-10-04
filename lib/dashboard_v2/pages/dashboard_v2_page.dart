@@ -427,9 +427,17 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
   }
 
   void _navigateToEntryDetails(BuildContext context, Entry entry, DashboardV2State state) {
-    // CC: Get primary insight using priority system instead of always showing summary
-    final comprehensiveInsight = entry.insight;
-    final primaryInsight = comprehensiveInsight?.getPrimaryInsight();
+    // CC: Get current insight (new format preferred over old)
+    final simpleInsight = entry.getCurrentInsight();
+    final primaryInsight = simpleInsight != null
+        ? Insight(
+            id: entry.timestamp.millisecondsSinceEpoch.toString(),
+            type: InsightType.summary,
+            title: 'Insight',
+            content: simpleInsight.content,
+            generatedAt: simpleInsight.generatedAt,
+          )
+        : null;
 
     Navigator.of(context).push(
       MaterialPageRoute(
