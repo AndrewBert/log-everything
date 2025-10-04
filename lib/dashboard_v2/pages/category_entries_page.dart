@@ -239,7 +239,15 @@ class CategoryEntriesPage extends StatelessWidget {
                                     MaterialPageRoute(
                                       builder: (context) => EntryDetailsPage(
                                         entry: entry,
-                                        cachedInsight: entry.insight?.getPrimaryInsight(),
+                                        cachedInsight: entry.getCurrentInsight() != null
+                                            ? Insight(
+                                                id: entry.timestamp.millisecondsSinceEpoch.toString(),
+                                                type: InsightType.summary,
+                                                title: 'Insight',
+                                                content: entry.getCurrentInsight()!.content,
+                                                generatedAt: entry.getCurrentInsight()!.generatedAt,
+                                              )
+                                            : null,
                                       ),
                                     ),
                                   );

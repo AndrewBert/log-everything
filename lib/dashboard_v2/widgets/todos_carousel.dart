@@ -4,6 +4,7 @@ import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_carousel_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
+import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
@@ -134,7 +135,15 @@ class TodosCarousel extends StatelessWidget {
                                 MaterialPageRoute(
                                   builder: (context) => EntryDetailsPage(
                                     entry: todo,
-                                    cachedInsight: todo.insight?.getPrimaryInsight(),
+                                    cachedInsight: todo.getCurrentInsight() != null
+                                        ? Insight(
+                                            id: todo.timestamp.millisecondsSinceEpoch.toString(),
+                                            type: InsightType.summary,
+                                            title: 'Insight',
+                                            content: todo.getCurrentInsight()!.content,
+                                            generatedAt: todo.getCurrentInsight()!.generatedAt,
+                                          )
+                                        : null,
                                   ),
                                 ),
                               );

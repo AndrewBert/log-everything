@@ -8,6 +8,7 @@ import '../utils/logger.dart';
 import '../chat/model/chat_message.dart';
 import '../utils/sse_parser.dart';
 import '../dashboard_v2/model/insight.dart';
+import '../dashboard_v2/model/simple_insight.dart';
 
 // Rename field in typedef to follow Dart conventions
 typedef EntryPrototype = ({String textSegment, String category, bool isTask});
@@ -92,6 +93,23 @@ abstract class AiService {
   /// Returns a [ComprehensiveInsight] object with the analysis results.
   /// Throws an [AiServiceException] if the process fails.
   Future<ComprehensiveInsight> generateEntryInsights(String entryText, String entryId, {DateTime? currentDate});
+
+  /// Generates a simple, playful insight for a log entry.
+  ///
+  /// Takes the [entryText] to analyze and [entryId] for identification.
+  /// Optionally takes [currentDate] to provide temporal context.
+  /// Returns a [SimpleInsight] with a brief (1-2 sentence) helpful insight.
+  ///
+  /// The AI uses a playful, friendly tone by default, with sensitivity on
+  /// serious topics (health, anxiety, relationships).
+  ///
+  /// Note: This method does NOT use vector store search for pattern detection.
+  /// Historical pattern analysis may be added in a future update.
+  Future<SimpleInsight> generateSimpleInsight(
+    String entryText,
+    String entryId,
+    {DateTime? currentDate}
+  );
 }
 
 // Custom Exception for the service
@@ -1080,5 +1098,168 @@ Return ONLY a JSON object with this structure:
       generatedAt: now,
       priority: priority,
     );
+  }
+
+  @override
+  Future<SimpleInsight> generateSimpleInsight(
+    String entryText,
+    String entryId,
+    {DateTime? currentDate}
+  ) async {
+    AppLogger.info("[INSIGHT-GEN] Starting simple insight generation for entryId: $entryId");
+
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      AppLogger.error("[INSIGHT-GEN] API key not found for entryId: $entryId");
+      throw AiServiceException('OpenAI API Key not found.');
+    }
+
+    AppLogger.info(
+      "[INSIGHT-GEN] Entry text for $entryId: '${entryText.substring(0, entryText.length > 50 ? 50 : entryText.length)}...'",
+    );
+
+    final dateString = currentDate != null
+      ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
+      : "";
+
+    final prompt = '''Analyze this log entry and provide a brief, helpful insight.
+
+"$entryText"
+
+Default tone: Playful and warm, like a witty friend who cares.
+Be helpful when there's something actionable. Be encouraging for wins.
+Avoid sarcasm on sensitive topics (health issues, sadness, anxiety, relationships).
+
+Keep it to 1-2 sentences max.
+
+Return ONLY a JSON object with this structure:
+{
+  "content": "Your brief insight here"
+}''';
+
+    final systemContent = "You are a helpful assistant that provides brief, engaging insights on personal log entries. Keep responses to 1-2 sentences for display on small UI cards.$dateString";
+
+    final requestBody = {
+      'model': _defaultModelId,
+      'input': [
+        {
+          'role': 'system',
+          'content': systemContent,
+        },
+        {
+          'role': 'user',
+          'content': prompt,
+        },
+      ],
+      'text': {
+        'format': {
+          'type': 'json_object',
+        },
+      },
+      'metadata': {
+        'request_type': 'simple_insight_generation',
+        'app_name': 'log-everything',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': _defaultModelId,
+      },
+    };
+
+    AppLogger.info('[INSIGHT-GEN] Sending simple insight request for entryId: $entryId with model: ${requestBody['model']}');
+
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      AppLogger.info('[INSIGHT-GEN] API response received for entryId: $entryId. Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
+          final errorMsg =
+              'OpenAI request failed or returned an error. Status: ${responseBody['status']}. Error: ${responseBody['error']}';
+          AppLogger.error(errorMsg);
+          throw AiServiceException(errorMsg);
+        }
+
+        if (responseBody['output'] != null &&
+            responseBody['output'] is List &&
+            (responseBody['output'] as List).isNotEmpty) {
+
+          Map<String, dynamic>? messageOutputElement;
+          for (final item in responseBody['output'] as List) {
+            if (item is Map<String, dynamic> && item['type'] == 'message') {
+              messageOutputElement = item;
+              break;
+            }
+          }
+
+          if (messageOutputElement != null) {
+            final dynamic content = messageOutputElement['content'];
+            if (content != null && content is List && content.isNotEmpty) {
+              String? jsonOutputString;
+              for (final item in content) {
+                if (item is Map<String, dynamic> &&
+                    item['type'] == 'output_text' &&
+                    item['text'] != null) {
+                  jsonOutputString = item['text'] as String;
+                  break;
+                }
+              }
+
+              if (jsonOutputString != null) {
+                AppLogger.info('[INSIGHT-GEN] Successfully generated simple insight for entryId: $entryId');
+
+                try {
+                  final json = jsonDecode(jsonOutputString);
+                  final content = json['content'] as String? ?? 'Insight generated.';
+
+                  final insight = SimpleInsight(
+                    content: content,
+                    generatedAt: DateTime.now(),
+                  );
+
+                  AppLogger.info('[INSIGHT-GEN] Created SimpleInsight for entryId: $entryId - content: "${content.substring(0, content.length > 50 ? 50 : content.length)}..."');
+
+                  return insight;
+                } catch (e) {
+                  AppLogger.error('[INSIGHT-GEN] Failed to parse simple insight JSON for entryId: $entryId', error: e);
+                  throw AiServiceException('Failed to parse insight response', underlyingError: e);
+                }
+              }
+            }
+          }
+        }
+
+        throw AiServiceException('Unexpected response format from OpenAI');
+      } else {
+        String errorMessage;
+        try {
+          final errorBody = jsonDecode(response.body);
+          errorMessage = errorBody['error']?['message'] ?? 'Unknown error occurred';
+        } catch (_) {
+          errorMessage = 'HTTP ${response.statusCode}: ${response.body}';
+        }
+        AppLogger.error('Failed to generate simple insight. Status: ${response.statusCode}, Error: $errorMessage');
+        throw AiServiceException(
+          'Failed to generate insight: $errorMessage',
+          underlyingError: response.body,
+        );
+      }
+    } catch (e, stackTrace) {
+      if (e is AiServiceException) {
+        rethrow;
+      }
+      AppLogger.error('Error generating simple insight', error: e, stackTrace: stackTrace);
+      throw AiServiceException(
+        'Failed to generate insight: ${e.toString()}',
+        underlyingError: e,
+      );
+    }
   }
 }

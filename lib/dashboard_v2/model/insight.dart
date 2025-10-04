@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'simple_insight.dart';
 
 enum InsightType {
   summary,
@@ -115,6 +116,17 @@ class ComprehensiveInsight extends Equatable {
     if (recommendation != null && recommendation.content.isNotEmpty) return recommendation;
 
     return getInsightByType(InsightType.summary);
+  }
+
+  SimpleInsight toSimpleInsight() {
+    final primaryInsight = getPrimaryInsight();
+
+    final content = primaryInsight?.content ?? 'No insight available';
+
+    return SimpleInsight(
+      content: content,
+      generatedAt: generatedAt,
+    );
   }
 
   @override
