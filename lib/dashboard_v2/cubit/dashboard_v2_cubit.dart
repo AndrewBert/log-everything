@@ -110,15 +110,17 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       final updatedEntries = _entryRepository.currentEntries;
 
       // CC: Only update isGeneratingInsight if this was for the selected entry
-      emit(
-        state.copyWith(
-          entries: updatedEntries,
-          isGeneratingInsight: index == state.selectedCarouselIndex ? false : null,
-        ),
-      );
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            entries: updatedEntries,
+            isGeneratingInsight: index == state.selectedCarouselIndex ? false : null,
+          ),
+        );
+      }
     } catch (e) {
       // CC: Only update isGeneratingInsight if this was for the selected entry
-      if (index == state.selectedCarouselIndex) {
+      if (index == state.selectedCarouselIndex && !isClosed) {
         emit(
           state.copyWith(
             isGeneratingInsight: false,
