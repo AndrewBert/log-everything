@@ -52,10 +52,20 @@ class EntryDetailsPage extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          return Scaffold(
-            key: entryDetailsPageKey,
-            appBar: _buildAppBar(context, state),
-            body: _buildBody(context, state),
+          return PopScope(
+            canPop: true,
+            onPopInvokedWithResult: (didPop, result) async {
+              print('[EntryDetailsPage] PopScope onPopInvokedWithResult - didPop: $didPop, isEditing: ${state.isEditing}');
+              if (didPop && state.isEditing) {
+                print('[EntryDetailsPage] Calling finalizeEdit from PopScope');
+                await context.read<EntryDetailsCubit>().finalizeEdit();
+              }
+            },
+            child: Scaffold(
+              key: entryDetailsPageKey,
+              appBar: _buildAppBar(context, state),
+              body: _buildBody(context, state),
+            ),
           );
         },
       ),
@@ -185,6 +195,7 @@ class EntryDetailsPage extends StatelessWidget {
                           controller: context.read<EntryDetailsCubit>().textController,
                           focusNode: context.read<EntryDetailsCubit>().textFocusNode,
                           maxLines: null,
+                          textInputAction: TextInputAction.newline,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontSize: 18,
                             height: 1.5,
@@ -201,7 +212,6 @@ class EntryDetailsPage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
-                          onSubmitted: (_) => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
                         ),
                       )
                     : Container(
@@ -304,39 +314,6 @@ class EntryDetailsPage extends StatelessWidget {
               ),
             ),
 
-            // CC: Save/Cancel buttons when editing
-            if (state.isEditing) ...[
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => context.read<EntryDetailsCubit>().cancelEditing(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: () => context.read<EntryDetailsCubit>().saveAndExitEditMode(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: categoryColor,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Save'),
-                  ),
-                ],
-              ),
-            ],
-
             const SizedBox(height: 40),
 
             // Magazine-style date and metadata section (at the very bottom)
@@ -388,6 +365,38 @@ class EntryDetailsPage extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // Save status indicator
+                      if (state.saveStatus != SaveStatus.idle)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (state.saveStatus == SaveStatus.saving)
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            if (state.saveStatus == SaveStatus.saved)
+                              Icon(
+                                Icons.check_circle,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            const SizedBox(width: 4),
+                            Text(
+                              state.saveStatus == SaveStatus.saving ? 'Saving...' : 'Saved',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: state.saveStatus == SaveStatus.saving
+                                    ? theme.colorScheme.onSurfaceVariant
+                                    : theme.colorScheme.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       // Category chip
                       InkWell(
                         onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,

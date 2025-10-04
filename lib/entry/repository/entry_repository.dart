@@ -210,7 +210,7 @@ class EntryRepository {
     return currentEntries;
   }
 
-  Future<List<Entry>> updateEntry(Entry originalEntry, Entry updatedEntry) async {
+  Future<List<Entry>> updateEntry(Entry originalEntry, Entry updatedEntry, {bool skipAiRegeneration = false}) async {
     final index = _entries.indexWhere(
       (entry) => entry.timestamp == originalEntry.timestamp && entry.text == originalEntry.text,
     );
@@ -218,13 +218,15 @@ class EntryRepository {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
       await _saveEntries();
-      _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
-        AppLogger.error(
-          "Repository: Background vector store sync failed for updateEntry",
-          error: e,
-          stackTrace: stackTrace,
-        );
-      });
+      if (!skipAiRegeneration) {
+        _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
+          AppLogger.error(
+            "Repository: Background vector store sync failed for updateEntry",
+            error: e,
+            stackTrace: stackTrace,
+          );
+        });
+      }
     }
     return currentEntries;
   }
