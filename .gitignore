@@ -22,3 +22,6 @@ android/app/.cxx/
 .fvm/
 
 coverage
+
+# Spec Kit - Claude agent folder (may contain credentials)
+.claude/
