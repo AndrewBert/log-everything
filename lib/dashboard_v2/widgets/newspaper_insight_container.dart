@@ -94,7 +94,7 @@ class NewspaperInsightContainer extends StatelessWidget {
   String _getInsightLabel(InsightType type) {
     switch (type) {
       case InsightType.summary:
-        return 'SUMMARY';
+        return 'AI INSIGHT';
       case InsightType.emotion:
         return 'EMOTIONAL INSIGHT';
       case InsightType.pattern:
