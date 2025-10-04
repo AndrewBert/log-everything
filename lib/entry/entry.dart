@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart'; // Add equatable import
 import '../dashboard_v2/model/insight.dart'; // CC: Import for ComprehensiveInsight
 import '../dashboard_v2/model/simple_insight.dart';
-import '../utils/logger.dart';
 
 // Represents a single entry with text, a timestamp, and a category.
 class Entry extends Equatable {
@@ -104,22 +103,16 @@ class Entry extends Equatable {
   /// Returns the current insight, preferring new format over old.
   /// Converts old ComprehensiveInsight to SimpleInsight on-the-fly if needed.
   SimpleInsight? getCurrentInsight() {
-    final entryId = timestamp.millisecondsSinceEpoch.toString();
-
     // Prefer new format
     if (simpleInsight != null) {
-      AppLogger.info('[INSIGHT-READ] Entry $entryId: Using NEW simpleInsight format - "${simpleInsight!.content.substring(0, simpleInsight!.content.length > 30 ? 30 : simpleInsight!.content.length)}..."');
       return simpleInsight;
     }
 
     // Fallback: convert old format on-the-fly
     if (insight != null) {
-      final converted = insight!.toSimpleInsight();
-      AppLogger.info('[INSIGHT-READ] Entry $entryId: Converting OLD insight to SimpleInsight - "${converted.content.substring(0, converted.content.length > 30 ? 30 : converted.content.length)}..."');
-      return converted;
+      return insight!.toSimpleInsight();
     }
 
-    AppLogger.info('[INSIGHT-READ] Entry $entryId: NO insight available (both simpleInsight and insight are null)');
     return null;
   }
 

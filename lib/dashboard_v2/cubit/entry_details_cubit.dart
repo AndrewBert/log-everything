@@ -6,7 +6,6 @@ import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
-import 'package:myapp/utils/logger.dart';
 
 part 'entry_details_state.dart';
 
@@ -183,26 +182,21 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
 
   Future<void> _generatePrimaryInsight(Entry entry) async {
     final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
-    AppLogger.info('[ENTRY-DETAILS] Starting insight generation for entryId: $entryId');
 
     emit(state.copyWith(isRegeneratingInsight: true));
 
     try {
       final simpleInsight = await _aiService.generateSimpleInsight(entry.text, entryId);
-      AppLogger.info('[ENTRY-DETAILS] Received SimpleInsight for entryId: $entryId');
 
       // CC: Check if cubit is still active before emitting
       if (isClosed) {
-        AppLogger.info('[ENTRY-DETAILS] Cubit closed, aborting insight save for entryId: $entryId');
         return;
       }
 
       // Update entry with new simpleInsight
       final updatedEntry = entry.copyWith(simpleInsight: simpleInsight);
       await _entryRepository.updateEntry(entry, updatedEntry);
-      AppLogger.info('[ENTRY-DETAILS] Saved SimpleInsight to repository for entryId: $entryId');
 
-      AppLogger.info('[ENTRY-DETAILS] Emitting state with new insight for entryId: $entryId');
       emit(
         state.copyWith(
           primaryInsight: Insight(
@@ -216,7 +210,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         ),
       );
     } catch (e) {
-      AppLogger.error('[ENTRY-DETAILS] Error generating insight for entryId: $entryId', error: e);
       // CC: Check if cubit is still active before emitting
       if (!isClosed) {
         emit(state.copyWith(isRegeneratingInsight: false));

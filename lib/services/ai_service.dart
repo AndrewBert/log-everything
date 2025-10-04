@@ -1106,16 +1106,9 @@ Return ONLY a JSON object with this structure:
     String entryId,
     {DateTime? currentDate}
   ) async {
-    AppLogger.info("[INSIGHT-GEN] Starting simple insight generation for entryId: $entryId");
-
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
-      AppLogger.error("[INSIGHT-GEN] API key not found for entryId: $entryId");
       throw AiServiceException('OpenAI API Key not found.');
     }
-
-    AppLogger.info(
-      "[INSIGHT-GEN] Entry text for $entryId: '${entryText.substring(0, entryText.length > 50 ? 50 : entryText.length)}...'",
-    );
 
     final dateString = currentDate != null
       ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
@@ -1163,8 +1156,6 @@ Return ONLY a JSON object with this structure:
       },
     };
 
-    AppLogger.info('[INSIGHT-GEN] Sending simple insight request for entryId: $entryId with model: ${requestBody['model']}');
-
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
@@ -1174,8 +1165,6 @@ Return ONLY a JSON object with this structure:
         },
         body: jsonEncode(requestBody),
       );
-
-      AppLogger.info('[INSIGHT-GEN] API response received for entryId: $entryId. Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -1213,22 +1202,15 @@ Return ONLY a JSON object with this structure:
               }
 
               if (jsonOutputString != null) {
-                AppLogger.info('[INSIGHT-GEN] Successfully generated simple insight for entryId: $entryId');
-
                 try {
                   final json = jsonDecode(jsonOutputString);
                   final content = json['content'] as String? ?? 'Insight generated.';
 
-                  final insight = SimpleInsight(
+                  return SimpleInsight(
                     content: content,
                     generatedAt: DateTime.now(),
                   );
-
-                  AppLogger.info('[INSIGHT-GEN] Created SimpleInsight for entryId: $entryId - content: "${content.substring(0, content.length > 50 ? 50 : content.length)}..."');
-
-                  return insight;
                 } catch (e) {
-                  AppLogger.error('[INSIGHT-GEN] Failed to parse simple insight JSON for entryId: $entryId', error: e);
                   throw AiServiceException('Failed to parse insight response', underlyingError: e);
                 }
               }
