@@ -19,10 +19,34 @@ class DashboardV2State extends Equatable {
     this.isGeneratingInsight = false,
   });
 
-  // CC: Derive current insight from selected entry
+  // CC: Derive current insight from selected entry (converts from SimpleInsight if needed)
   ComprehensiveInsight? get currentInsight {
     if (selectedCarouselIndex < entries.length) {
-      return entries[selectedCarouselIndex].insight;
+      final entry = entries[selectedCarouselIndex];
+
+      // Prefer old format if it exists (for backwards compatibility)
+      if (entry.insight != null) {
+        return entry.insight;
+      }
+
+      // Convert new SimpleInsight to ComprehensiveInsight for display
+      final simpleInsight = entry.simpleInsight;
+      if (simpleInsight != null) {
+        return ComprehensiveInsight(
+          entryId: entry.timestamp.millisecondsSinceEpoch.toString(),
+          entryText: entry.text,
+          insights: [
+            Insight(
+              id: entry.timestamp.millisecondsSinceEpoch.toString(),
+              type: InsightType.summary,
+              title: 'Insight',
+              content: simpleInsight.content,
+              generatedAt: simpleInsight.generatedAt,
+            ),
+          ],
+          generatedAt: simpleInsight.generatedAt,
+        );
+      }
     }
     return null;
   }
