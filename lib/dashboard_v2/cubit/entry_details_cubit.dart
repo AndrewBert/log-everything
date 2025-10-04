@@ -165,9 +165,11 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
 
     try {
       AppLogger.info('[EntryDetailsCubit] Text changed! Saving updated entry to repository');
-      final updatedEntry = state.entry!.copyWith(text: newText);
+      // Mark entry as generating insight before updating
+      final updatedEntry = state.entry!.copyWith(text: newText, isGeneratingInsight: true);
       // Full save with AI regeneration
       await _entryRepository.updateEntry(state.entry!, updatedEntry);
+      AppLogger.info('[EntryDetailsCubit] Entry saved with isGeneratingInsight=true');
 
       emit(
         state.copyWith(
@@ -285,12 +287,6 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       final comprehensiveInsight = await _aiService.generateEntryInsights(entry.text, entryId);
       AppLogger.info('[EntryDetailsCubit] AI service returned comprehensiveInsight');
 
-      // CC: Check if cubit is still active before emitting
-      if (isClosed) {
-        AppLogger.warn('[EntryDetailsCubit] Cubit is closed, skipping insight save');
-        return;
-      }
-
       // Re-fetch the current entry to avoid overwriting user changes made during insight generation
       final currentEntries = _entryRepository.currentEntries;
       final currentEntry = currentEntries.firstWhere(
@@ -299,12 +295,15 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       );
 
       AppLogger.info('[EntryDetailsCubit] Saving insight to repository for entry: $entryId');
-      // Update entry with insight, preserving any user changes
-      final updatedEntry = currentEntry.copyWith(insight: comprehensiveInsight);
+      // Update entry with insight AND clear generating flag, preserving any user changes
+      final updatedEntry = currentEntry.copyWith(
+        insight: comprehensiveInsight,
+        isGeneratingInsight: false,
+      );
       // Skip AI regeneration (vector store sync) for insight-only updates
       await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
 
-      AppLogger.info('[EntryDetailsCubit] Insight saved successfully to repository');
+      AppLogger.info('[EntryDetailsCubit] Insight saved successfully to repository with isGeneratingInsight=false');
 
       // Use the priority system to get the most relevant insight
       final primaryInsight = comprehensiveInsight.getPrimaryInsight();
@@ -332,6 +331,21 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       }
     } catch (e, stackTrace) {
       AppLogger.error('[EntryDetailsCubit] Error generating primary insight', error: e, stackTrace: stackTrace);
+
+      // Clear generating flag even on error
+      try {
+        final currentEntries = _entryRepository.currentEntries;
+        final currentEntry = currentEntries.firstWhere(
+          (e) => e.timestamp == entry.timestamp,
+          orElse: () => entry,
+        );
+        final updatedEntry = currentEntry.copyWith(isGeneratingInsight: false);
+        await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
+        AppLogger.info('[EntryDetailsCubit] Cleared isGeneratingInsight flag after error');
+      } catch (updateError) {
+        AppLogger.error('[EntryDetailsCubit] Failed to clear isGeneratingInsight flag', error: updateError);
+      }
+
       // CC: Check if cubit is still active before emitting
       if (!isClosed) {
         emit(state.copyWith(isRegeneratingInsight: false));

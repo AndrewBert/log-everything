@@ -15,6 +15,7 @@ class Entry extends Equatable {
   final bool isTask; // Track whether this entry is AI-detected as a task/todo
   final DateTime? completedAt; // CC: Track when the task was completed
   final ComprehensiveInsight? insight; // CC: AI-generated insights for this entry
+  final bool isGeneratingInsight; // CC: Track if insight is being generated (initial or regeneration)
 
   Entry({
     String? id,
@@ -26,6 +27,7 @@ class Entry extends Equatable {
     this.isTask = false, // Default to false
     this.completedAt, // CC: When the task was completed
     this.insight, // CC: Optional insight
+    this.isGeneratingInsight = false, // CC: Default to false
   }) : id = id ?? const Uuid().v4(); // CC: Generate UUID if not provided
 
   // Factory constructor to create an Entry from a JSON map
@@ -44,6 +46,7 @@ class Entry extends Equatable {
       insight: json['insight'] != null
           ? ComprehensiveInsight.fromJson(json['insight'] as Map<String, dynamic>)
           : null, // CC: Parse insight if present
+      isGeneratingInsight: json['isGeneratingInsight'] as bool? ?? false, // CC: Default to false if missing
     );
   }
 
@@ -59,6 +62,7 @@ class Entry extends Equatable {
       'isTask': isTask, // Add isTask to JSON
       'completedAt': completedAt?.toIso8601String(), // CC: Add completedAt to JSON
       'insight': insight?.toJson(), // CC: Add insight to JSON
+      'isGeneratingInsight': isGeneratingInsight, // CC: Add isGeneratingInsight to JSON
     };
   }
 
@@ -81,6 +85,7 @@ class Entry extends Equatable {
     bool clearCompletedAt = false,
     ComprehensiveInsight? insight,
     bool clearInsight = false,
+    bool? isGeneratingInsight,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -92,6 +97,7 @@ class Entry extends Equatable {
       isTask: isTask ?? this.isTask,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt), // CC: Support clearing completedAt
       insight: clearInsight ? null : (insight ?? this.insight), // CC: Support clearing insight
+      isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
     );
   }
 
@@ -106,5 +112,5 @@ class Entry extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight]; // Add props for Equatable
+  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, isGeneratingInsight]; // Add props for Equatable
 }

@@ -152,7 +152,8 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                               BlocBuilder<DashboardV2Cubit, DashboardV2State>(
                                 buildWhen: (prev, current) =>
                                     prev.currentInsight != current.currentInsight ||
-                                    prev.isGeneratingInsight != current.isGeneratingInsight,
+                                    prev.isGeneratingInsight != current.isGeneratingInsight ||
+                                    prev.entries != current.entries,
                                 builder: (context, state) {
                                   final primaryInsight = state.currentInsight?.getPrimaryInsight();
                                   final selectedEntry = state.selectedCarouselIndex < state.entries.length
@@ -162,9 +163,12 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       ? state.getCategoryColor(selectedEntry.category)
                                       : Theme.of(context).colorScheme.primary;
 
+                                  // Check both cubit state AND entry's persistent flag
+                                  final isGenerating = state.isGeneratingInsight || (selectedEntry?.isGeneratingInsight ?? false);
+
                                   return InsightDisplay(
                                     insight: primaryInsight,
-                                    isLoading: state.isGeneratingInsight,
+                                    isLoading: isGenerating,
                                     categoryColor: categoryColor,
                                     onTap: primaryInsight != null && selectedEntry != null
                                         ? () => _navigateToEntryDetails(context, selectedEntry, state)

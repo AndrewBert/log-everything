@@ -75,16 +75,20 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
 
     // CC: Skip if entry already has insight or is currently generating
-    if (entry.insight != null || _generatingInsights.contains(entryId)) {
+    if (entry.insight != null || _generatingInsights.contains(entryId) || entry.isGeneratingInsight) {
       return;
     }
 
-    // CC: Mark entry as generating
+    // CC: Mark entry as generating both in memory and persistently
     _generatingInsights.add(entryId);
+
+    // Mark entry as generating insight and save to repository
+    final generatingEntry = entry.copyWith(isGeneratingInsight: true);
+    await _entryRepository.updateEntry(entry, generatingEntry, skipAiRegeneration: true);
 
     // CC: Only set isGeneratingInsight if this is for the selected entry
     if (index == state.selectedCarouselIndex) {
-      emit(state.copyWith(isGeneratingInsight: true));
+      emit(state.copyWith(isGeneratingInsight: true, entries: _entryRepository.currentEntries));
     }
 
     try {
@@ -102,9 +106,12 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         orElse: () => entry,
       );
 
-      // CC: Update entry with insight, preserving any user changes
-      final updatedEntry = currentEntry.copyWith(insight: comprehensiveInsight);
-      await _entryRepository.updateEntry(currentEntry, updatedEntry);
+      // CC: Update entry with insight AND clear generating flag, preserving any user changes
+      final updatedEntry = currentEntry.copyWith(
+        insight: comprehensiveInsight,
+        isGeneratingInsight: false,
+      );
+      await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
 
       // CC: Update local state with new entries list
       final updatedEntries = _entryRepository.currentEntries;
@@ -117,11 +124,25 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         ),
       );
     } catch (e) {
+      // Clear generating flag even on error
+      try {
+        final currentEntries = _entryRepository.currentEntries;
+        final currentEntry = currentEntries.firstWhere(
+          (e) => e.timestamp == entry.timestamp,
+          orElse: () => entry,
+        );
+        final updatedEntry = currentEntry.copyWith(isGeneratingInsight: false);
+        await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
+      } catch (updateError) {
+        // Ignore cleanup errors
+      }
+
       // CC: Only update isGeneratingInsight if this was for the selected entry
       if (index == state.selectedCarouselIndex) {
         emit(
           state.copyWith(
             isGeneratingInsight: false,
+            entries: _entryRepository.currentEntries,
           ),
         );
       }
