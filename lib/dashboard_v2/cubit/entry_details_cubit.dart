@@ -30,15 +30,24 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       ),
     );
 
-    // CP: If no cached insight, generate one
-    if (cachedInsight == null && entry.insight != null) {
-      // Use the priority system to get the best insight
-      final primaryInsight = entry.insight!.getPrimaryInsight();
-      if (primaryInsight != null) {
-        emit(state.copyWith(primaryInsight: primaryInsight));
+    // CP: If no cached insight, check if entry has one
+    if (cachedInsight == null) {
+      final currentInsight = entry.getCurrentInsight();
+      if (currentInsight != null) {
+        // Convert SimpleInsight to Insight for display
+        emit(state.copyWith(
+          primaryInsight: Insight(
+            id: entry.timestamp.millisecondsSinceEpoch.toString(),
+            type: InsightType.summary,
+            title: 'Insight',
+            content: currentInsight.content,
+            generatedAt: currentInsight.generatedAt,
+          ),
+        ));
+      } else {
+        // No insight exists, generate one
+        _generatePrimaryInsight(entry);
       }
-    } else if (cachedInsight == null) {
-      _generatePrimaryInsight(entry);
     }
   }
 

@@ -26,7 +26,7 @@ class NewspaperEntryCard extends StatelessWidget {
     final currentInsight = entry.getCurrentInsight();
 
     AppLogger.info('[UI-CARD] NewspaperEntryCard build for entryId: $entryId');
-    AppLogger.info('[UI-CARD] Entry $entryId has simpleInsight: ${entry.simpleInsight != null}, has old insight: ${entry.insight != null}');
+    AppLogger.info('[UI-CARD] Entry $entryId has simpleInsight: ${entry.simpleInsight != null}, getCurrentInsight: ${currentInsight != null}');
     AppLogger.info('[UI-CARD] getCurrentInsight() returned: ${currentInsight != null ? "\"${currentInsight.content.substring(0, currentInsight.content.length > 30 ? 30 : currentInsight.content.length)}...\"" : "null"}');
 
     final theme = Theme.of(context);

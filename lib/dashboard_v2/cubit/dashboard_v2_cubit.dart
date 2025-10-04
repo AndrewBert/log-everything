@@ -77,7 +77,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
 
     AppLogger.info('[DASHBOARD-CUBIT] generateInsightForEntry called for entryId: $entryId at index: $index');
-    AppLogger.info('[DASHBOARD-CUBIT] Entry has simpleInsight: ${entry.simpleInsight != null}, has old insight: ${entry.insight != null}');
+    AppLogger.info('[DASHBOARD-CUBIT] Entry has simpleInsight: ${entry.simpleInsight != null}, getCurrentInsight: ${entry.getCurrentInsight() != null}');
     AppLogger.info('[DASHBOARD-CUBIT] Currently generating insights: $_generatingInsights');
 
     // CC: Skip if entry already has insight (check BOTH formats!) or is currently generating
@@ -166,7 +166,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final entriesToCheck = entries.length < 3 ? entries.length : 3;
 
     for (int i = 0; i < entriesToCheck; i++) {
-      if (entries[i].insight == null) {
+      if (entries[i].getCurrentInsight() == null) {
         // Don't await - let them generate in parallel
         _generateInsightForEntry(i);
       }
@@ -181,7 +181,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final entriesToCheck = entries.length < 3 ? entries.length : 3;
 
     for (int i = 1; i < entriesToCheck; i++) {
-      if (entries[i].insight == null) {
+      if (entries[i].getCurrentInsight() == null) {
         // Don't await - let them generate in parallel
         _generateInsightForEntry(i);
       }
@@ -196,7 +196,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     final hasNewEntries = entries.length > state.entries.length;
 
     // CC: Check if the newest entry is actually new (no insight yet)
-    final newestEntryIsNew = hasNewEntries && entries.isNotEmpty && entries.first.insight == null;
+    final newestEntryIsNew = hasNewEntries && entries.isNotEmpty && entries.first.getCurrentInsight() == null;
 
     // CC: Update state with new entries from stream
     emit(
