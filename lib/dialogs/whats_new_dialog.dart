@@ -9,6 +9,17 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> _v123Changes = [
+      _buildChangeItem(
+        '💾 Auto-save for note editing',
+        '''Notes now save automatically when you navigate away - no more lost changes!''',
+      ),
+      _buildChangeItem(
+        '✨ Simplified AI insights',
+        '''Removed pattern detection while we rework it. Insights are now cleaner and more focused.''',
+      ),
+    ];
+
     final List<Widget> _v122Changes = [
       _buildChangeItem(
         '🚀 Upgraded to GPT-5',
@@ -75,6 +86,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.2.3 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.save_outlined, color: Colors.orange.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.2.3 - Quality of Life',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._v123Changes,
+              const SizedBox(height: 20),
               // Version 1.2.2 Header
               Container(
                 padding: const EdgeInsets.all(12),
