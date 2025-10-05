@@ -3,31 +3,64 @@
 **Feature**: 001-chat-feature-i
 **Date**: 2025-10-05
 
-## Entity Definitions
-
-### 1. IntentType (Enum)
-**Location**: `lib/intent_detection/models/intent_type.dart`
-
-```dart
-enum IntentType {
-  note,       // User wants to log a note
-  chat,       // User wants to start a chat
-  ambiguous,  // AI cannot determine intent with confidence
-}
-```
-
-**Purpose**: Represents the three possible intent classifications from AI analysis.
-
-**Validation Rules**:
-- Must be one of the three enum values
-- No null values allowed
+## Overview
+This document defines the data entities for the dual-mode text field feature, including intent classification models and chat-related extensions.
 
 ---
 
-### 2. IntentClassification (Model)
-**Location**: `lib/intent_detection/models/intent_classification.dart`
+## 1. IntentType (Enum)
 
+**Purpose**: Represents the three possible intent classifications for user input.
+
+**Values**:
+- `note` - User input should be logged as an entry
+- `chat` - User input should trigger a chat session
+- `ambiguous` - Intent cannot be confidently determined
+
+**File Location**: `lib/intent_detection/models/intent_type.dart`
+
+**Implementation**:
 ```dart
+enum IntentType {
+  note,
+  chat,
+  ambiguous,
+}
+```
+
+**Usage**:
+```dart
+if (classification.type == IntentType.chat) {
+  // Navigate to full-screen chat
+}
+```
+
+---
+
+## 2. IntentClassification (Model)
+
+**Purpose**: Represents the AI's classification result for a given user input.
+
+**Fields**:
+| Field | Type | Required | Description | Validation |
+|-------|------|----------|-------------|------------|
+| `type` | `IntentType` | Yes | The classified intent (note/chat/ambiguous) | Must be valid enum value |
+| `confidence` | `double` | Yes | AI's confidence score | Must be 0.0 ≤ confidence ≤ 1.0 |
+| `timestamp` | `DateTime` | Yes | When classification occurred | Non-null |
+
+**File Location**: `lib/intent_detection/models/intent_classification.dart`
+
+**Immutability**: Immutable value object (extends Equatable)
+
+**Validation Rules**:
+- Confidence must be in range [0.0, 1.0]
+- Confidence < 0.7 → treat as ambiguous regardless of `type`
+
+**Implementation**:
+```dart
+import 'package:equatable/equatable.dart';
+import 'intent_type.dart';
+
 class IntentClassification extends Equatable {
   final IntentType type;
   final double confidence;
@@ -37,266 +70,160 @@ class IntentClassification extends Equatable {
     required this.type,
     required this.confidence,
     required this.timestamp,
-  });
+  }) : assert(confidence >= 0.0 && confidence <= 1.0, 'Confidence must be between 0.0 and 1.0');
 
   @override
   List<Object?> get props => [type, confidence, timestamp];
 }
 ```
 
-**Fields**:
-- `type`: The determined intent (note/chat/ambiguous)
-- `confidence`: AI confidence score (0.0 to 1.0)
-- `timestamp`: When classification was performed
-
-**Validation Rules**:
-- `confidence`: Must be between 0.0 and 1.0 inclusive
-- `type` = `ambiguous` when `confidence < 0.7`
-- `timestamp`: Must not be in the future
-
-**Relationships**:
-- Produced by `IntentDetectionService`
-- Consumed by `DashboardV2Cubit` to route user input
+**Lifecycle**: Ephemeral - not persisted, only used during intent detection flow
 
 ---
 
-### 3. ChatMessage (Existing Model - No Changes)
-**Location**: `lib/chat/model/chat_message.dart`
+## 3. DashboardV2State Extensions
 
-```dart
-class ChatMessage extends Equatable {
-  final String id;
-  final String text;
-  final ChatSender sender;  // enum: user, ai
-  final DateTime timestamp;
+**Purpose**: Extend existing `DashboardV2State` to track intent classification status.
 
-  const ChatMessage({
-    required this.id,
-    required this.text,
-    required this.sender,
-    required this.timestamp,
-  });
+**New Fields**:
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `isClassifyingIntent` | `bool` | `false` | True when AI classification is in progress |
+| `lastIntentClassification` | `IntentClassification?` | `null` | Most recent classification result |
+| `intentClassificationError` | `String?` | `null` | Error message if classification fails |
 
-  @override
-  List<Object?> get props => [id, text, sender, timestamp];
-}
+**File Location**: `lib/dashboard_v2/cubit/dashboard_v2_state.dart` (existing file)
+
+**State Transitions**:
+```
+Initial State (isClassifyingIntent: false)
+  ↓ (user submits text)
+Classifying State (isClassifyingIntent: true)
+  ↓ (classification complete)
+Success State (lastIntentClassification: result, isClassifyingIntent: false)
+  OR
+Error State (intentClassificationError: message, isClassifyingIntent: false)
 ```
 
-**Usage in Feature**:
-- Initial query displayed as first message in chat (sender: user)
-- AI responses appended to conversation (sender: ai)
-- Persisted via OpenAI API (not local storage)
-
-**No Modifications Required**: Existing model supports all feature requirements.
+**copyWith Additions**:
+```dart
+DashboardV2State copyWith({
+  bool? isClassifyingIntent,
+  IntentClassification? lastIntentClassification,
+  String? intentClassificationError,
+  bool clearLastIntentClassification = false,  // Explicit null setter
+  bool clearIntentClassificationError = false,  // Explicit null setter
+  // ... existing parameters
+}) {
+  return DashboardV2State(
+    isClassifyingIntent: isClassifyingIntent ?? this.isClassifyingIntent,
+    lastIntentClassification: clearLastIntentClassification
+        ? null
+        : (lastIntentClassification ?? this.lastIntentClassification),
+    intentClassificationError: clearIntentClassificationError
+        ? null
+        : (intentClassificationError ?? this.intentClassificationError),
+    // ... existing fields
+  );
+}
+```
 
 ---
 
-### 4. ChatState (Existing - Minor Extension)
-**Location**: `lib/chat/cubit/chat_state.dart`
+## 4. ChatMessage (Existing Model)
 
-**Current Fields** (existing):
-```dart
-class ChatState extends Equatable {
-  final List<ChatMessage> messages;
-  final bool isLoading;
-  final String? lastResponseId;
-  final String? streamingMessageId;
-  // ...
-}
-```
+**Purpose**: Represents a single message in a chat conversation.
 
-**Potential Addition** (if initial query needs tracking):
-```dart
-class ChatState extends Equatable {
-  // ... existing fields ...
-  final String? initialQuery;  // Optional: track the query that started the chat
+**File Location**: `lib/chat/model/chat_message.dart` (existing)
 
-  const ChatState({
-    this.messages = const [],
-    this.isLoading = false,
-    this.lastResponseId,
-    this.streamingMessageId,
-    this.initialQuery,  // New field
-  });
+**Fields** (no changes needed):
+- `id`: String (UUID)
+- `text`: String (message content)
+- `sender`: ChatSender (user or ai)
+- `timestamp`: DateTime
 
-  ChatState copyWith({
-    List<ChatMessage>? messages,
-    bool? isLoading,
-    String? lastResponseId,
-    String? streamingMessageId,
-    String? initialQuery,
-    bool clearStreamingMessageId = false,
-    bool clearInitialQuery = false,  // New parameter
-  }) {
-    // ... implementation ...
-  }
-}
-```
-
-**Decision**: Defer this addition to implementation phase. Current state may be sufficient if initial query is added as first ChatMessage.
+**Usage in This Feature**:
+- Initial query message created with `ChatMessage(text: userQuery, sender: ChatSender.user)`
+- AI responses appended to `ChatState.messages` list
+- Displayed in FullscreenChatPage's ListView
 
 ---
 
-### 5. DashboardV2State (Existing - Extension Required)
-**Location**: `lib/dashboard_v2/cubit/dashboard_v2_state.dart`
+## 5. ChatState Extensions
 
-**Required Extension**:
-```dart
-class DashboardV2State extends Equatable {
-  // ... existing fields (insights, entries, etc.) ...
+**Purpose**: Existing `ChatState` already supports this feature without modifications.
 
-  // NEW: Intent detection fields
-  final bool isClassifyingIntent;
-  final IntentClassification? lastIntentClassification;
-  final String? intentClassificationError;
+**Existing Fields Used**:
+| Field | Type | Usage in This Feature |
+|-------|------|----------------------|
+| `messages` | `List<ChatMessage>` | Stores conversation history including initial query |
+| `isLoading` | `bool` | Shows loading state while AI generates response |
+| `lastResponseId` | `String?` | Chains conversation across app restarts |
+| `streamingMessageId` | `String?` | Tracks which message is currently streaming |
 
-  const DashboardV2State({
-    // ... existing parameters ...
-    this.isClassifyingIntent = false,
-    this.lastIntentClassification,
-    this.intentClassificationError,
-  });
+**File Location**: `lib/chat/cubit/chat_state.dart` (existing)
 
-  DashboardV2State copyWith({
-    // ... existing parameters ...
-    bool? isClassifyingIntent,
-    IntentClassification? lastIntentClassification,
-    String? intentClassificationError,
-    bool clearLastIntentClassification = false,
-    bool clearIntentClassificationError = false,
-  }) {
-    // ... implementation ...
-  }
-
-  @override
-  List<Object?> get props => [
-    // ... existing props ...
-    isClassifyingIntent,
-    lastIntentClassification,
-    intentClassificationError,
-  ];
-}
-```
-
-**Field Purpose**:
-- `isClassifyingIntent`: Triggers loading UI in unified text field
-- `lastIntentClassification`: Stores result for routing decision
-- `intentClassificationError`: Displays error if classification fails
+**No Changes Required**: Existing fields cover all chat persistence and streaming needs.
 
 ---
 
-## State Transitions
+## 6. FloatingInputBar State Extensions
 
-### Intent Detection Flow
-```
-1. User submits text
-   ↓
-2. DashboardV2State: isClassifyingIntent = true
-   ↓
-3. IntentDetectionService.classifyIntent(text)
-   ↓
-4a. Success → DashboardV2State: lastIntentClassification = result, isClassifyingIntent = false
-4b. Error → DashboardV2State: intentClassificationError = message, isClassifyingIntent = false
-   ↓
-5. Route based on IntentType:
-   - note → Existing note-logging flow
-   - chat → Navigate to FullscreenChatPage
-   - ambiguous → Show IntentClarificationDialog
-```
+**Purpose**: Extend existing widget state to handle intent classification feedback.
 
-### Chat Session Flow
+**File Location**: `lib/dashboard_v2/widgets/floating_input_bar.dart` (existing, StatefulWidget)
+
+**Existing State Used**:
+- `_isSubmitting` → repurposed to read `DashboardV2State.isClassifyingIntent`
+- `_textController` → source of user input to classify
+- Loading indicator pattern → reused for classification feedback
+
+**No New State Fields**: All state managed in `DashboardV2State` (BLoC pattern)
+
+---
+
+## Entity Relationships
+
 ```
-1. Chat intent detected (or user selects "Start Chat")
-   ↓
-2. Navigator.push(FullscreenChatPage)
-   ↓
-3. ChatCubit.startChatWithQuery(userInput)
-   ↓
-4. ChatState: messages = [userMessage], isLoading = true
-   ↓
-5. ChatCubit.addUserMessageStreaming(userInput)
-   ↓
-6. Stream<ChatStreamEvent> from AiService
-   ↓
-7. ChatState: messages updated with AI response, isLoading = false
-   ↓
-8. User asks follow-up → Repeat steps 5-7
-   ↓
-9. User closes chat → Navigator.pop()
-   ↓
-10. ChatState persists in OpenAI (previous_response_id chaining)
+User Input (String, max 2000 chars)
+    ↓
+IntentClassification
+    ├─ type: IntentType.note → Log Entry Flow (existing)
+    ├─ type: IntentType.chat → ChatState.messages (new initial message)
+    └─ type: IntentType.ambiguous → IntentClarificationDialog → User Choice
+                                      ├─ "Note" → Log Entry Flow
+                                      └─ "Chat" → ChatState.messages
+
+ChatState.messages (List<ChatMessage>)
+    ├─ Persisted via OpenAI lastResponseId
+    └─ Displayed in FullscreenChatPage
 ```
 
 ---
 
 ## Persistence Strategy
 
-### Local Storage (SharedPreferences)
-- **Not Used**: Per clarification, chat history retrieved from OpenAI API
-- **Intent Classification**: Ephemeral, not persisted (only used for routing)
-- **Dashboard State**: Existing entry persistence unchanged
+| Entity | Storage | Lifetime | Retrieval |
+|--------|---------|----------|-----------|
+| `IntentClassification` | None (ephemeral) | Single request cycle | N/A |
+| `ChatState.messages` | OpenAI servers (via responseId) | Indefinite | Via `lastResponseId` parameter |
+| `DashboardV2State` | In-memory (BLoC) | App session | N/A |
 
-### Remote Storage (OpenAI API)
-- **Chat Sessions**:
-  - `store: true` parameter in `getChatResponse()` / `streamChatResponse()`
-  - `previous_response_id` chains conversations across app restarts
-  - Retrieved via API when user reopens chat
-
-- **Vector Store**:
-  - Existing `openai_vector_store_id` from SharedPreferences
-  - Used for File Search during chat responses
-  - No changes required
-
----
-
-## Data Flow Diagram
-
-```
-User Input (Text Field)
-    ↓
-IntentDetectionService.classifyIntent()
-    ↓
-IntentClassification { type, confidence, timestamp }
-    ↓
-    ├─→ type = note → DashboardV2Cubit.addEntry()
-    │                      ↓
-    │                  Entry saved to SharedPreferences
-    │
-    ├─→ type = chat → Navigator.push(FullscreenChatPage)
-    │                      ↓
-    │                  ChatCubit.startChatWithQuery(text)
-    │                      ↓
-    │                  ChatState { messages: [userMessage], isLoading: true }
-    │                      ↓
-    │                  AiService.streamChatResponse()
-    │                      ↓
-    │                  ChatState { messages: [userMessage, aiMessage] }
-    │                      ↓
-    │                  Session persisted to OpenAI (store: true)
-    │
-    └─→ type = ambiguous → show IntentClarificationDialog
-                               ↓
-                           User selects → Restart flow with chosen intent
-```
+**Note**: No local storage (SharedPreferences) needed for this feature per spec requirements.
 
 ---
 
 ## Validation Summary
 
-| Entity | Key Validations | Error Handling |
-|--------|----------------|----------------|
-| IntentType | Must be valid enum value | Compile-time check |
-| IntentClassification | confidence ∈ [0.0, 1.0] | Service validates |
-| ChatMessage | id is unique UUID | Cubit generates |
-| ChatState | messages list not null | Default to empty list |
-| DashboardV2State | intent fields nullable | Null = no active classification |
+| Model | Validation Rule | Error Handling |
+|-------|----------------|----------------|
+| `IntentClassification` | 0.0 ≤ confidence ≤ 1.0 | Assert in constructor |
+| `IntentClassification` | confidence < 0.7 | Treat as ambiguous (business logic) |
+| User Input | length ≤ 2000 chars | TextField maxLength enforcement |
+| User Input | Non-empty, non-whitespace | Submit button disabled |
 
 ---
 
-## Migration Notes
-
-**No Database Migration Required**:
-- New models are ephemeral (IntentClassification)
-- Chat persistence handled by OpenAI API
-- Existing SharedPreferences schema unchanged
-- No breaking changes to existing data structures
+## Next Steps
+- Phase 1 continues: Create contracts/, quickstart.md, update CLAUDE.md
+- Phase 2 (via /tasks): Generate implementation tasks from this data model

@@ -1,7 +1,7 @@
 # Implementation Plan: Unified Text Field with Chat Intent Detection
 
 **Branch**: `001-chat-feature-i` | **Date**: 2025-10-05 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `/specs/001-chat-feature-i/spec.md`
+**Input**: Feature specification from `/Users/andrewbertino/log-everything-insights/specs/001-chat-feature-i/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -25,29 +25,23 @@
 9. STOP - Ready for /tasks command
 ```
 
-**IMPORTANT**: The /plan command STOPS at step 8. Phases 2-4 are executed by other commands:
+**IMPORTANT**: The /plan command STOPS at step 9. Phases 2-4 are executed by other commands:
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Extend the existing unified text field to support dual-mode operation: note logging (existing) and chat initiation (new). Use OpenAI's GPT-4o-nano model for real-time intent classification to determine whether user input is a note to be logged or a question to start a chat. When chat intent is detected, transition to a full-screen chat interface that leverages the existing chat backend infrastructure to search user logs and provide AI-generated responses. Chat sessions persist across app restarts via OpenAI's API.
+Extend the existing unified text field to support dual-mode operation: note logging (existing) and chat initiation (new). Use OpenAI's GPT-5-nano model for real-time intent classification to determine whether user input is a note to be logged or a question to start a chat. When chat intent is detected, transition to a full-screen chat interface that leverages the existing chat backend infrastructure to search user logs and provide AI-generated responses. Chat sessions persist across app restarts via OpenAI's API.
 
 ## Technical Context
-**Language/Version**: Dart 3.x with Flutter
-**Primary Dependencies**: flutter_bloc, get_it, equatable, openai_dart (for GPT-4o-nano), existing AiService infrastructure
+**Language/Version**: Dart 3.x with Flutter SDK
+**Primary Dependencies**: flutter_bloc, get_it, equatable, openai_dart (for GPT-5-nano), existing AiService infrastructure
 **Storage**: SharedPreferences for local data, OpenAI API for chat history persistence
 **Testing**: User-led testing (no automated tests per constitution)
 **Target Platform**: iOS 15+ (mobile)
 **Project Type**: Mobile (Flutter app)
 **Performance Goals**: Intent classification < 500ms, chat response < 2s
-**Constraints**: Block UI during intent classification, graceful fallback to note-logging on service failure
+**Constraints**: Block UI during intent classification, graceful fallback to note-logging on service failure, 2000 character input limit
 **Scale/Scope**: Single user, existing chat backend reuse, new full-screen chat UI
-
-**Implementation Details from User**:
-- Use OpenAI's GPT-4o-nano model for intent detection
-- Reuse existing chat backend infrastructure (API requests already implemented)
-- Create new frontend experience for full-screen chat
-- Existing chat feature code can be repurposed
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -129,20 +123,17 @@ lib/
 ├── utils/
 │   └── chat_keys.dart (new)
 └── locator.dart (register IntentDetectionService)
-
-test/
-└── [User-led testing only]
 ```
 
 **Structure Decision**: Mobile Flutter app using feature-based organization. Intent detection is a new feature module. Chat is an existing module that needs frontend updates. Dashboard V2 contains the unified text field that orchestrates the flow.
 
 ## Phase 0: Outline & Research
-*Status: In Progress*
+*Status: Complete*
 
 ### Research Tasks
 
-1. **GPT-4o-nano Integration for Intent Classification**
-   - Research: How to use GPT-4o-nano via OpenAI API for binary classification (note vs chat)
+1. **GPT-5-nano Integration for Intent Classification**
+   - Research: How to use GPT-5-nano via OpenAI API for binary classification (note vs chat)
    - Key questions: Prompt design, response format, latency expectations, error handling
    - Output: Intent detection prompt template and API integration pattern
 
@@ -169,7 +160,7 @@ test/
 **Output**: `research.md` documenting all findings and decisions
 
 ## Phase 1: Design & Contracts
-*Status: Not Started (awaits Phase 0)*
+*Status: Complete*
 
 ### Design Artifacts to Generate
 
@@ -180,7 +171,7 @@ test/
    - Updates to ChatSession for persistence
 
 2. **contracts/**: API contracts
-   - `intent_detection_contract.yaml`: GPT-4o-nano request/response schema
+   - `intent_detection_contract.yaml`: GPT-5-nano request/response schema
    - `chat_session_contract.yaml`: Updated chat session management (if needed)
 
 3. **quickstart.md**: Manual test scenarios
@@ -191,7 +182,7 @@ test/
 
 4. **CLAUDE.md update**: Incremental context addition
    - Add intent detection service to architecture overview
-   - Document GPT-4o-nano integration pattern
+   - Document GPT-5-nano integration pattern
    - Update unified text field behavior
    - Preserve existing content between markers
 
@@ -248,8 +239,8 @@ test/
 **Gate Status**:
 - [x] Initial Constitution Check: PASS
 - [x] Post-Design Constitution Check: PASS (no violations introduced)
-- [x] All NEEDS CLARIFICATION resolved (research.md addresses remaining unknowns)
-- [x] Complexity deviations documented (none)
+- [x] All NEEDS CLARIFICATION resolved (addressed in spec.md clarifications section)
+- [x] Complexity deviations documented (none - no violations)
 
 ---
 *Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

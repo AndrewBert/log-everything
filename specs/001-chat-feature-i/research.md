@@ -1,349 +1,308 @@
 # Research: Unified Text Field with Chat Intent Detection
 
-**Date**: 2025-10-05
 **Feature**: 001-chat-feature-i
+**Date**: 2025-10-05
+**Status**: Complete
 
-## 1. GPT-4o-nano Integration for Intent Classification
+## Research Findings
 
-### Decision
-Use OpenAI's `gpt-5-nano` model (already defined in `AiService`) for real-time intent classification with a simple binary prompt.
+### 1. GPT-5-nano Integration for Intent Classification
 
-### Rationale
-- Model constant already exists: `OpenAiService.gpt5Nano` = `'gpt-5-nano'`
-- Fast, lightweight model suitable for <500ms classification target
-- Existing API infrastructure supports structured JSON output
-- Same request/response pattern as `extractEntries()` method
+**Decision**: Use GPT-5-nano via OpenAI Responses API with structured JSON output for binary classification
 
-### Implementation Pattern
+**Rationale**:
+- GPT-5-nano is optimized for fast, lightweight tasks like intent classification
+- Structured JSON output ensures consistent parsing ({"intent": "note"|"chat"|"ambiguous", "confidence": 0.0-1.0})
+- Sub-500ms latency requirement aligns with model's capabilities
+- Existing `AiService` already handles OpenAI API authentication and error patterns
+
+**Implementation Pattern**:
 ```dart
-// Prompt Design
-final systemPrompt = """You are an intent classifier that determines if user input is a NOTE or a CHAT question.
+// Prompt template for intent detection
+final systemPrompt = '''You are an intent classifier for a personal logging app.
+Classify user input as either:
+- "note": A statement to be logged (observations, activities, thoughts)
+- "chat": A question about past logs (queries, requests for information)
+- "ambiguous": Cannot confidently determine intent
 
-NOTE: A statement to be logged (e.g., "Had coffee with Sarah", "Feeling good today")
-CHAT: A question about existing logs (e.g., "When did I last have coffee?", "Show my workouts")
+Respond with JSON: {"intent": "note"|"chat"|"ambiguous", "confidence": 0.0-1.0}
 
-Return JSON: { "intent": "note" | "chat" | "ambiguous", "confidence": 0.0-1.0 }
+Examples:
+Input: "Had coffee with Sarah" → {"intent": "note", "confidence": 0.95}
+Input: "When did I last have coffee?" → {"intent": "chat", "confidence": 0.92}
+Input: "Coffee" → {"intent": "ambiguous", "confidence": 0.45}
+''';
 
-Mark as "ambiguous" if confidence < 0.7""";
-
-// Request Body
-{
-  'model': 'gpt-5-nano',
-  'input': [
-    {'role': 'system', 'content': systemPrompt},
-    {'role': 'user', 'content': userInput}
-  ],
-  'text': {
-    'format': {
-      'type': 'json_object'
-    }
-  },
-  'metadata': {
-    'request_type': 'intent_classification',
-    'app_name': 'log-everything'
-  }
-}
+// API call structure
+final response = await http.post(
+  Uri.parse('https://api.openai.com/v1/chat/completions'),
+  headers: {'Authorization': 'Bearer $apiKey', 'Content-Type': 'application/json'},
+  body: jsonEncode({
+    'model': 'gpt-5-nano',
+    'messages': [
+      {'role': 'system', 'content': systemPrompt},
+      {'role': 'user', 'content': userInput},
+    ],
+    'temperature': 0.3, // Low temperature for consistent classification
+    'max_tokens': 50, // Small response for efficiency
+  }),
+);
 ```
 
-### Expected Latency
-- Target: <500ms (per performance goals)
-- Model optimized for speed over accuracy
-- Blocking UI acceptable per clarifications
+**Error Handling**:
+- Timeout after 2 seconds → default to note-logging mode
+- Confidence < 0.7 → treat as ambiguous, show clarification dialog
+- API errors (401, 429, 500) → default to note-logging mode
 
-### Error Handling
-- API failure → Default to note-logging mode (per clarification)
-- Timeout (>2s) → Default to note-logging mode
-- Ambiguous result → Show clarification dialog (per clarification)
+**Alternatives Considered**:
+- Local ML model (TensorFlow Lite): Rejected due to larger app size and lower accuracy
+- Keyword matching: Rejected as per user clarification - AI-only classification required
+- GPT-4o: Rejected due to higher latency (>500ms typical) and cost
 
-## 2. Existing Chat Backend Analysis
+---
 
-### Reusable Components
+### 2. Existing Chat Backend Analysis
 
-#### AiService (lib/services/ai_service.dart)
-**Existing Methods**:
-- ✅ `getChatResponse()` - Non-streaming chat (lines 417-600)
-  - Takes: `List<ChatMessage>`, `DateTime?`, `bool store`, `String? previousResponseId`
-  - Returns: `(String text, String? responseId)`
-  - Features: Vector store search, conversation chaining, error handling
+**Decision**: Reuse existing `ChatCubit` and `AiService.streamChatResponse()` without modifications
 
-- ✅ `streamChatResponse()` - Streaming chat with SSE (lines 602-766)
-  - Same parameters as `getChatResponse()`
-  - Returns: `Stream<ChatStreamEvent>` (delta, completed, error events)
-  - Features: Real-time streaming, typewriter effect support
+**Rationale**:
+- `ChatCubit` already implements full chat lifecycle:
+  - Message history management (`state.messages`)
+  - AI response streaming (`addUserMessageStreaming()`)
+  - Response chaining (`state.lastResponseId`)
+  - Error handling with user-friendly messages
+- `AiService` provides:
+  - Vector store search integration (searches user logs automatically)
+  - Server-sent events (SSE) streaming for real-time responses
+  - Conversation persistence via OpenAI's response IDs
+- No backend changes needed - only frontend routing/UI updates required
 
-**Models** (lines 134-142):
+**Reusable Components**:
+1. `ChatMessage` model (lib/chat/model/chat_message.dart) - already handles user/AI messages
+2. `ChatState.messages` - conversation history
+3. `ChatState.lastResponseId` - maintains conversation context across sessions
+4. `AiService.streamChatResponse()` - streams AI responses with SSE
+5. `ChatSender` enum (user, ai) - message attribution
+
+**Required Frontend Additions**:
+- New method: `ChatCubit.startChatWithQuery(String initialQuery)`:
+  - Creates initial user message
+  - Calls `addUserMessageStreaming()` to trigger AI response
+  - Emits state with `isLoading = true` during classification
+- Full-screen chat page to display `ChatState.messages` list
+
+**Chat History Persistence**:
+- Already implemented via OpenAI's `previousResponseId` parameter
+- Each response gets a unique ID from OpenAI servers
+- On app restart, previous `lastResponseId` is passed to chain conversation
+- No local storage needed (per spec clarification)
+
+**Alternatives Considered**:
+- Creating new `IntentChatCubit`: Rejected due to duplication with existing ChatCubit
+- Local chat history storage: Rejected per spec clarification (retrieve from OpenAI only)
+
+---
+
+### 3. Full-Screen Chat UI Patterns in Flutter
+
+**Decision**: Use `MaterialPageRoute` with `fullscreenDialog: true` for iOS-style modal presentation
+
+**Rationale**:
+- `fullscreenDialog: true` provides native iOS modal behavior:
+  - Slides up from bottom
+  - Automatic "Close" button in AppBar
+  - Back gesture support
+- Maintains Flutter navigation stack for state preservation
+- Simpler than custom transitions or bottom sheets
+
+**Implementation Pattern**:
 ```dart
-static const gpt5Mini = 'gpt-5-mini';  // Current chat model
-static const gpt5Nano = 'gpt-5-nano';  // Available for intent detection
-```
-
-**Vector Store Integration** (lines 435-483):
-- Retrieves `openai_vector_store_id` from SharedPreferences
-- Enables File Search tool for log querying
-- Existing infrastructure - no changes needed
-
-#### ChatCubit (lib/chat/cubit/chat_cubit.dart)
-**Existing Functionality**:
-- ✅ `addUserMessage()` - Non-streaming chat (lines 21-70)
-- ✅ `addUserMessageStreaming()` - Streaming with typewriter effect (lines 72-254)
-- ✅ State management: messages list, loading state, response chaining
-- ✅ Error handling with user-friendly messages
-
-**ChatMessage Model** (lib/chat/model/chat_message.dart):
-```dart
-class ChatMessage extends Equatable {
-  final String id;
-  final String text;
-  final ChatSender sender;  // enum: user, ai
-  final DateTime timestamp;
-}
-```
-
-### Required Modifications
-1. **ChatCubit**: Add method to initialize chat from query text
-   ```dart
-   void startChatWithQuery(String queryText) {
-     // Clear previous messages (optional)
-     // Add initial query as user message
-     // Trigger streaming response
-   }
-   ```
-
-2. **Chat History Persistence**: Already handled via OpenAI API
-   - `store: true` parameter persists conversations server-side
-   - `previousResponseId` chains conversations
-   - Per clarification: retrieve from OpenAI, not local storage
-
-### Alternatives Considered
-- **Local chat persistence**: Rejected - per clarification, use OpenAI API
-- **WebSocket streaming**: Rejected - SSE already implemented and working
-- **Custom AI service**: Rejected - reuse existing `AiService` infrastructure
-
-## 3. Full-Screen Chat UI Patterns in Flutter
-
-### Decision
-Use `MaterialPageRoute` with `Navigator.push()` for full-screen modal transition.
-
-### Navigation Pattern
-```dart
-// From DashboardV2Cubit or UnifiedTextField
-Navigator.of(context).push(
+Navigator.push(
+  context,
   MaterialPageRoute(
+    fullscreenDialog: true,
     builder: (context) => BlocProvider(
-      create: (context) => ChatCubit(aiService: getIt<AiService>())
-        ..startChatWithQuery(initialQuery),
-      child: const FullscreenChatPage(),
+      create: (context) {
+        final chatCubit = ChatCubit(aiService: getIt<AiService>());
+        chatCubit.startChatWithQuery(initialQuery); // Trigger first response
+        return chatCubit;
+      },
+      child: FullscreenChatPage(),
     ),
-    fullscreenDialog: true,  // iOS-style modal presentation
   ),
 );
 ```
 
-### Design Pattern
-**FullscreenChatPage** (new file: `lib/chat/pages/fullscreen_chat_page.dart`):
-- StatelessWidget with Scaffold
-- AppBar with back button (auto-handled by `fullscreenDialog: true`)
-- ListView for chat messages (reuse existing `ChatMessageBubble` if available)
-- Bottom text field for follow-up questions
-- BlocBuilder<ChatCubit, ChatState> for reactive UI
+**Passing Initial Query**:
+- Create new `ChatCubit` instance in route's `BlocProvider.create()`
+- Call `chatCubit.startChatWithQuery(initialQuery)` immediately after creation
+- Initial query appears as first user message in chat history
+- AI response streams immediately (per spec requirement)
 
-### Passing Initial Query
-Per clarification: Display original query as first message
-```dart
-class ChatCubit {
-  void startChatWithQuery(String queryText) {
-    final userMessage = ChatMessage(
-      id: _uuid.v4(),
-      text: queryText,
-      sender: ChatSender.user,
-      timestamp: DateTime.now(),
-    );
-    emit(state.copyWith(messages: [userMessage], isLoading: true));
+**Back Navigation**:
+- Automatic via AppBar's back button (iOS close button)
+- Returns to dashboard with unified text field ready for new input
+- Chat state disposed when route pops (fresh state on next chat)
 
-    // Trigger AI response
-    addUserMessageStreaming(queryText);
-  }
-}
-```
-
-### Back Navigation
-- User presses back button → `Navigator.pop(context)`
-- Returns to dashboard with unified text field ready
-- Chat session persists in OpenAI (per clarification)
-
-### Alternatives Considered
-- **BottomSheet**: Rejected - not full-screen as specified
-- **Custom Route Transition**: Rejected - MaterialPageRoute sufficient
-- **Dedicated Navigator**: Rejected - single-stack navigation adequate
-
-## 4. Intent Ambiguity UX Patterns
-
-### Decision
-Use `AlertDialog` with two action buttons for binary choice.
-
-### Dialog Design
-**IntentClarificationDialog** (new file: `lib/chat/widgets/intent_clarification_dialog.dart`):
-```dart
-class IntentClarificationDialog extends StatelessWidget {
-  final String userInput;
-  final VoidCallback onNoteSelected;
-  final VoidCallback onChatSelected;
-
-  // AlertDialog with:
-  // - Title: "What would you like to do?"
-  // - Content: Display user's text with icon indicators
-  // - Actions: [Log as Note] [Start Chat]
-}
-```
-
-### User Flow
-1. User submits text → Intent detection runs (blocking)
-2. Result = "ambiguous" → Show dialog
-3. User taps "Log as Note" → Process as note entry
-4. User taps "Start Chat" → Navigate to full-screen chat
-
-### Dialog Structure
-```dart
-AlertDialog(
-  title: Text('What would you like to do?'),
-  content: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text('"$userInput"'),
-      SizedBox(height: 16),
-      Text('Is this a note to log or a question about your logs?'),
-    ],
-  ),
-  actions: [
-    TextButton(
-      onPressed: onNoteSelected,
-      child: Row(children: [
-        Icon(Icons.edit_note),
-        Text('Log as Note'),
-      ]),
-    ),
-    TextButton(
-      onPressed: onChatSelected,
-      child: Row(children: [
-        Icon(Icons.chat_bubble_outline),
-        Text('Start Chat'),
-      ]),
-    ),
-  ],
-)
-```
-
-### Accessibility
-- Clear button labels with semantic meaning
-- Icons + text for visual clarity
-- Keyboard navigation support (auto-handled by AlertDialog)
-- VoiceOver compatible (StatelessWidget pattern)
-
-### Alternatives Considered
-- **BottomSheet**: Rejected - less prominent for important decision
-- **Inline buttons**: Rejected - blocks text field UX
-- **Swipe gestures**: Rejected - not accessible, unclear affordance
-
-## 5. Loading State Management During Intent Detection
-
-### Decision
-Reuse existing AI analysis loading state from note categorization flow.
-
-### Existing Implementation
-The app already has a loading indicator for when AI analyzes user notes for categorization. This same loading state can be reused for intent detection with minimal changes.
-
-**Current State** (from existing note flow):
-- TextField disabled during AI processing
-- Loading indicator displayed (likely in suffix or as overlay)
-- User sees "Analyzing..." or similar feedback
-- Handles both success and error states
-
-### Integration Approach
-```dart
-// DashboardV2Cubit - minimal changes needed
-Future<void> handleUserInput(String text) async {
-  // Trigger existing loading state
-  emit(state.copyWith(isLoading: true));  // Existing field
-
-  try {
-    // New: Intent detection (uses same loading UI)
-    final intent = await _intentDetectionService.classifyIntent(text)
-      .timeout(Duration(seconds: 2));
-
-    // Route based on intent
-    if (intent.type == IntentType.note) {
-      // Continue with existing note flow (already has loading)
-      await _processAsNote(text);
-    } else if (intent.type == IntentType.chat) {
-      emit(state.copyWith(isLoading: false));
-      // Navigate to chat (loading stops)
-    } else {
-      // Show ambiguity dialog (loading stops)
-      emit(state.copyWith(isLoading: false));
-    }
-  } catch (e) {
-    // Existing error handling applies
-    emit(state.copyWith(isLoading: false));
-  }
-}
-```
-
-### Benefits of Reuse
-- **Consistent UX**: Same loading experience for AI operations
-- **No new UI code**: Existing loading indicator just works
-- **Error handling**: Existing timeout/error UI applies to intent detection
-- **Faster implementation**: No new loading state design needed
-
-### Visual Feedback Timeline
-1. User taps submit → Existing loading state activates
-2. Intent detection runs (0-500ms) → Same UI as note categorization
-3. Result received → Route based on intent OR continue to note flow
-4. Note flow → Loading continues through categorization (existing)
-5. Chat flow → Loading stops, navigate to chat
-6. Timeout/Error → Existing error handling, default to note
-
-### Alternatives Considered
-- **Separate loading state for intent**: Rejected - unnecessary duplication when existing state works
-- **Different visual indicator**: Rejected - consistent UX is better
-- **No loading indicator**: Rejected - user needs feedback during blocking operation
+**Alternatives Considered**:
+- BottomSheet: Rejected due to limited screen space for conversation
+- Custom route transition: Rejected for unnecessary complexity
+- Persistent chat state: Rejected per spec (fresh chat on each trigger)
 
 ---
 
-## Summary of Decisions
+### 4. Intent Ambiguity UX Patterns
 
-| Research Area | Decision | Key Rationale |
-|--------------|----------|---------------|
-| Intent Detection Model | GPT-5-nano via existing AiService | Fast, lightweight, infrastructure ready |
-| Chat Backend | Reuse existing ChatCubit + AiService | Full streaming support, vector store integrated |
-| Full-Screen Navigation | MaterialPageRoute with fullscreenDialog | Standard Flutter pattern, iOS-friendly |
-| Ambiguity Dialog | AlertDialog with binary choice | Clear, accessible, blocking UI flow |
-| Loading State | Reuse existing AI analysis loader | Consistent UX, no new UI code needed |
+**Decision**: Use `AlertDialog` with two action buttons for binary choice
 
-## Integration Architecture
+**Rationale**:
+- `AlertDialog` is familiar, accessible, and blocks background interaction (per spec requirement)
+- Two clear action buttons match the binary choice (note vs chat)
+- Built-in accessibility support (VoiceOver, TalkBack)
+- Lightweight compared to `BottomSheet` or custom modals
 
+**Implementation Pattern**:
+```dart
+void _showIntentClarificationDialog(BuildContext context, String userInput) {
+  showDialog(
+    context: context,
+    barrierDismissible: false, // Force user to make a choice
+    builder: (context) => AlertDialog(
+      title: const Text('What would you like to do?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Your input is:'),
+          const SizedBox(height: 8),
+          Text(
+            '"$userInput"',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          const Text('Would you like to log this as a note or start a chat?'),
+        ],
+      ),
+      actions: [
+        TextButton.icon(
+          icon: const Icon(Icons.edit_note),
+          label: const Text('Log as Note'),
+          onPressed: () {
+            Navigator.pop(context);
+            // Process as note
+            context.read<DashboardV2Cubit>().logAsNote(userInput);
+          },
+        ),
+        TextButton.icon(
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: const Text('Start Chat'),
+          onPressed: () {
+            Navigator.pop(context);
+            // Navigate to chat
+            context.read<DashboardV2Cubit>().navigateToChat(context, userInput);
+          },
+        ),
+      ],
+    ),
+  );
+}
 ```
-User Input (Unified Text Field)
-    ↓
-Intent Detection (GPT-5-nano, <500ms)
-    ↓
-    ├─→ "note" → Existing note-logging flow
-    ├─→ "chat" → Navigator.push(FullscreenChatPage)
-    └─→ "ambiguous" → Show IntentClarificationDialog
-            ├─→ User selects "Note" → Note-logging flow
-            └─→ User selects "Chat" → Navigator.push(FullscreenChatPage)
 
-FullscreenChatPage
-    ↓
-ChatCubit (existing)
-    ↓
-AiService.streamChatResponse() (existing)
-    ↓
-Vector Store Search (existing) → Chat Response
+**Accessibility Considerations**:
+- Icon + label buttons for visual + semantic clarity
+- VoiceOver reads title, content, and button labels in order
+- Keyboard navigation supported by default
+- High contrast mode compatible
+
+**Alternatives Considered**:
+- BottomSheet: Rejected due to accidental dismissal risk
+- Custom modal: Rejected for unnecessary complexity and accessibility burden
+- Inline toggle: Rejected per spec (always AI classification first)
+
+---
+
+### 5. Loading State Management During Intent Detection
+
+**Decision**: Reuse existing `FloatingInputBar` loading indicator pattern + disabled TextField
+
+**Rationale**:
+- `FloatingInputBar` (lib/dashboard_v2/widgets/floating_input_bar.dart) already has `_isSubmitting` state
+- Pattern: CircularProgressIndicator in suffix + disabled TextField during async operations
+- Matches existing voice input loading UX (consistent user experience)
+- No new UI components needed
+
+**Implementation Pattern**:
+```dart
+// In DashboardV2State:
+final class DashboardV2State extends Equatable {
+  final bool isClassifyingIntent; // NEW field
+  final IntentClassification? lastIntentClassification; // NEW field
+  final String? intentClassificationError; // NEW field
+  // ... existing fields
+}
+
+// In FloatingInputBar widget:
+BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+  builder: (context, state) {
+    return TextField(
+      enabled: !state.isClassifyingIntent, // Disable during classification
+      decoration: InputDecoration(
+        suffixIcon: state.isClassifyingIntent
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.send),
+      ),
+      onSubmitted: (text) {
+        context.read<DashboardV2Cubit>().handleUserInput(text, context);
+      },
+    );
+  },
+)
 ```
 
-## No Additional Dependencies Required
-All functionality implementable with:
-- ✅ Existing `flutter_bloc`, `get_it`, `equatable`
-- ✅ Existing `AiService` infrastructure
-- ✅ Existing `ChatCubit` and `ChatMessage` models
-- ✅ Standard Flutter widgets (MaterialPageRoute, AlertDialog, TextField)
+**Visual Feedback Sequence**:
+1. User types text and presses submit
+2. TextField becomes disabled (grey text cursor disappears)
+3. Send icon replaced with small CircularProgressIndicator
+4. Intent classification completes (<500ms)
+5. Either:
+   - Navigate to chat (if chat intent)
+   - Log as note (if note intent, field clears and re-enables)
+   - Show clarification dialog (if ambiguous)
+
+**Timeout Handling**:
+- If classification exceeds 2 seconds, show error snackbar
+- Default to note-logging mode (fail-safe per spec)
+- Re-enable TextField for retry
+
+**Alternatives Considered**:
+- Full-screen loading overlay: Rejected as too intrusive for <500ms operation
+- Progress bar: Rejected as circular indicator is simpler and matches existing patterns
+- Skeleton loader: Rejected as TextField state is already clear indicator
+
+---
+
+## Summary of Key Decisions
+
+| Area | Decision | Justification |
+|------|----------|---------------|
+| Intent Model | GPT-5-nano via OpenAI API | Fast (<500ms), accurate, JSON output, existing auth |
+| Chat Backend | Reuse ChatCubit + AiService | Already implements full chat lifecycle, no changes needed |
+| Chat UI | MaterialPageRoute fullscreenDialog | Native iOS modal, automatic back button, simple routing |
+| Ambiguity UX | AlertDialog with 2 buttons | Accessible, blocks interaction, familiar pattern |
+| Loading State | Existing FloatingInputBar pattern | Consistent with voice input UX, no new components |
+
+## Open Questions (Resolved in Spec)
+- ✅ Character limit: 2000 characters maximum
+- ✅ Empty input handling: Submit button disabled for whitespace
+- ✅ Empty log history: Chat still works, AI responds without log context
+- ✅ Vector store timeout: AI shows error message in chat
+- ✅ Visual feedback: Reuse existing loading indicator + disabled field
+- ✅ Keyword triggers: None - AI-only classification
+- ✅ Log attribution: No - AI responses without explicit log references
+
+## Next Phase
+Phase 1: Design & Contracts (data-model.md, contracts/, quickstart.md, CLAUDE.md update)
