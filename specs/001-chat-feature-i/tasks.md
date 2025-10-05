@@ -109,6 +109,7 @@
     2. Emit state with `messages = [userMessage]`, `isLoading = true`
     3. Call `addUserMessageStreaming(queryText)` to get AI response
   - Preserve existing methods: `addUserMessage()`, `addUserMessageStreaming()`
+  - Note: Each chat session is independent (fresh state), no persistence across app restarts
 
 ---
 
@@ -175,7 +176,7 @@
   - Use `Navigator.push()` with `MaterialPageRoute`:
     - `fullscreenDialog: true` for iOS-style modal
     - `BlocProvider` wraps `FullscreenChatPage`
-    - Create new `ChatCubit` instance with `aiService` dependency
+    - Create **fresh** `ChatCubit` instance with `aiService` dependency (no state restoration)
     - Call `chatCubit.startChatWithQuery(initialQuery)` after creation
   - Add private method: `void _showIntentClarificationDialog(BuildContext context, String userInput)`
   - Show `IntentClarificationDialog` with:
@@ -241,7 +242,7 @@
 
 - [ ] **T026** User tests Scenario 4: Chat follow-up questions (from quickstart.md)
   - Input: "Show me my workouts this month" → "Which day did I work out the most?"
-  - Expected: Conversation context preserved
+  - Expected: Conversation context preserved **within** the session (not across app restarts)
 
 - [ ] **T027** User tests Scenario 6: Intent detection failure fallback (from quickstart.md)
   - Simulate: Disable network
@@ -328,6 +329,7 @@ Task: "Remove unnecessary comments per T019"
 - **Performance Targets**: Intent classification <500ms, chat response <2s
 - **Fallback Strategy**: API failure defaults to note-logging mode
 - **Accessibility**: All UI components support VoiceOver, keyboard navigation, text scaling
+- **Chat Persistence**: Each chat session is independent and fresh (no persistence across app restarts per quickstart.md)
 
 ---
 

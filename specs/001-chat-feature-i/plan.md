@@ -30,12 +30,12 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Extend the existing unified text field to support dual-mode operation: note logging (existing) and chat initiation (new). Use OpenAI's GPT-5-nano model for real-time intent classification to determine whether user input is a note to be logged or a question to start a chat. When chat intent is detected, transition to a full-screen chat interface that leverages the existing chat backend infrastructure to search user logs and provide AI-generated responses. Chat sessions persist across app restarts via OpenAI's API.
+Extend the existing unified text field to support dual-mode operation: note logging (existing) and chat initiation (new). Use OpenAI's GPT-5-nano model for real-time intent classification to determine whether user input is a note to be logged or a question to start a chat. When chat intent is detected, transition to a full-screen chat interface that leverages the existing chat backend infrastructure to search user logs and provide AI-generated responses. Each chat session is fresh and independent with no persistence across app restarts.
 
 ## Technical Context
 **Language/Version**: Dart 3.x with Flutter SDK
 **Primary Dependencies**: flutter_bloc, get_it, equatable, openai_dart (for GPT-5-nano), existing AiService infrastructure
-**Storage**: SharedPreferences for local data, OpenAI API for chat history persistence
+**Storage**: SharedPreferences for local data, no chat session persistence (fresh sessions only)
 **Testing**: User-led testing (no automated tests per constitution)
 **Target Platform**: iOS 15+ (mobile)
 **Project Type**: Mobile (Flutter app)
@@ -168,7 +168,7 @@ lib/
    - IntentClassification (type: IntentType, confidence: double, timestamp: DateTime)
    - IntentType enum (note, chat, ambiguous)
    - ChatQuery (extends existing chat models)
-   - Updates to ChatSession for persistence
+   - ChatSession (fresh sessions only, no persistence needed)
 
 2. **contracts/**: API contracts
    - `intent_detection_contract.yaml`: GPT-5-nano request/response schema
@@ -178,7 +178,7 @@ lib/
    - Scenario 1: Type note, verify it logs
    - Scenario 2: Type question, verify chat opens
    - Scenario 3: Trigger ambiguous input, verify dialog appears
-   - Scenario 4: Chat session persists across restart
+   - Scenario 4: Chat context preserved within session (not across restarts)
 
 4. **CLAUDE.md update**: Incremental context addition
    - Add intent detection service to architecture overview
@@ -205,7 +205,7 @@ lib/
 - **Phase 1**: Models first (IntentType, IntentClassification, ChatQuery) [P]
 - **Phase 2**: Intent Detection Service (depends on models)
 - **Phase 3**: Intent Detection Cubit + State [P]
-- **Phase 4**: Chat updates (ChatCubit updates, ChatSession persistence)
+- **Phase 4**: Chat updates (ChatCubit updates for fresh session handling)
 - **Phase 5**: UI Components (IntentClarificationDialog, FullscreenChatPage) [P]
 - **Phase 6**: Dashboard V2 integration (UnifiedTextField extension, DashboardV2Cubit updates)
 - **Phase 7**: Service registration in locator.dart

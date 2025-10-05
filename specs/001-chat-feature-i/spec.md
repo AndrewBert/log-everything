@@ -57,7 +57,7 @@ When creating this spec from a user prompt:
 ### Session 2025-10-05
 - Q: When AI intent detection fails or is unavailable, what should happen? → A: Default to note-logging mode (fail-safe to existing functionality)
 - Q: When the AI cannot find relevant logs to answer a chat question, what should the user see? → A: AI responds dynamically with a chat message (no predefined error message)
-- Q: Should chat sessions persist across app restarts? → A: Yes - preserve chat history indefinitely across restarts (retrieved from OpenAI, not stored locally)
+- Q: Should chat sessions persist across app restarts? → A: No - each chat session is fresh and independent (no persistence across restarts)
 - Q: Should the full-screen chat preserve and display the original query text that triggered it? → A: Yes - show the original query as the first message in chat
 - Q: When intent detection determines the input is ambiguous (could be either note or chat), what should happen? → A: Ask user to clarify with a UI prompt (manual selection)
 - Q: How should the system handle intent detection latency - should text submission be blocked until AI classification completes? → A: Block submission until classification completes (user waits for AI)
@@ -116,7 +116,7 @@ The system automatically determines whether the user wants to log a note or star
 - **FR-010**: System MUST provide visual feedback during intent detection processing by displaying the existing input field loading state and disabling the input field.
 - **FR-011**: System MUST prompt user with a manual selection UI when intent detection determines input is ambiguous. When intent detection service is unavailable or fails, system defaults to note-logging mode.
 - **FR-012**: System MUST respond with a dynamically generated AI chat message when no relevant logs are found for a query.
-- **FR-013**: System MUST persist chat session history indefinitely across app restarts by retrieving it from the AI service (not stored locally).
+- **FR-013**: System MUST create fresh, independent chat sessions (no persistence across app restarts).
 - **FR-014**: Users MUST NOT be able to manually override AI intent classification - system relies solely on AI determination or user clarification when ambiguous.
 - **FR-015**: System MUST block user submission until intent classification completes and provide visual feedback during processing.
 - **FR-016**: System MUST rely entirely on AI model determination for intent classification without using predefined keywords or query patterns.
@@ -125,7 +125,7 @@ The system automatically determines whether the user wants to log a note or star
 ### Key Entities
 - **Text Input Message**: Represents the raw text entered by the user in the unified field (maximum 2000 characters), containing the content and timestamp of submission.
 - **Intent Classification**: Represents the AI's determination of whether a text input is a "note" or "chat". When classification is ambiguous, the user is prompted to manually select the intended mode.
-- **Chat Session**: Represents a continuous conversation between the user and the AI, containing the sequence of questions and responses within the full-screen interface. Sessions are persisted across app restarts via the AI service (not local storage). The original triggering query is displayed as the first message.
+- **Chat Session**: Represents a continuous conversation between the user and the AI, containing the sequence of questions and responses within the full-screen interface. Each session is fresh and independent with no persistence across app restarts. The original triggering query is displayed as the first message.
 - **Chat Query**: Represents a user's question asked during a chat session, including the original text and any context needed for log search.
 - **Chat Response**: Represents the AI-generated answer to a chat query, including the answer text. Log attribution is not displayed to users.
 
