@@ -47,7 +47,35 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### I. BLoC-First Architecture
+- [ ] All state management uses BLoC/Cubit pattern (no StatefulWidgets)
+- [ ] State classes extend Equatable
+- [ ] Cubit and state files use `part`/`part of` directives
+
+### II. Service Layer Separation
+- [ ] Services registered in GetIt (`lib/locator.dart`)
+- [ ] Cubits provided via BlocProvider (NOT in GetIt)
+- [ ] Clear boundaries between UI state and business logic
+
+### III. Stateless UI Only
+- [ ] All widgets are StatelessWidget
+- [ ] Private methods organized below `build()` method
+- [ ] Widget keys defined in `lib/utils/*_keys.dart` files
+
+### IV. Clean Code Standards
+- [ ] Comments prefixed with "CP" when needed
+- [ ] Using `Color.withValues()` (not withOpacity)
+- [ ] 120 char line width with trailing commas
+- [ ] No unnecessary comments
+
+### V. User-Led Testing
+- [ ] Implementation focus only (user handles testing)
+- [ ] No test files created unless explicitly requested
+
+### VI. AI-First Development
+- [ ] AI integration via `AiService` where intelligence needed
+- [ ] Vector store sync is debounced and non-blocking
+- [ ] Graceful degradation with user feedback on errors
 
 ## Project Structure
 
@@ -216,4 +244,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

@@ -52,18 +52,19 @@ When creating this spec from a user prompt:
 
 ---
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios *(mandatory)*
 
 ### Primary User Story
-[Describe the main user journey in plain language]
+[Describe the main user journey in plain language - focus on what the user experiences in the Flutter app]
 
 ### Acceptance Scenarios
 1. **Given** [initial state], **When** [action], **Then** [expected outcome]
 2. **Given** [initial state], **When** [action], **Then** [expected outcome]
 
-### Edge Cases
+### Edge Cases & Error Handling
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
+- How does UI communicate errors to user?
 
 ## Requirements *(mandatory)*
 
@@ -95,10 +96,11 @@ When creating this spec from a user prompt:
 
 ### Requirement Completeness
 - [ ] No [NEEDS CLARIFICATION] markers remain
-- [ ] Requirements are testable and unambiguous  
-- [ ] Success criteria are measurable
+- [ ] Requirements describe user-facing behavior clearly
+- [ ] Success criteria are measurable through app usage
 - [ ] Scope is clearly bounded
 - [ ] Dependencies and assumptions identified
+- [ ] UI/UX expectations defined where relevant
 
 ---
 

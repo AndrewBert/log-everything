@@ -43,85 +43,92 @@
 - Paths shown below assume single project - adjust based on plan.md structure
 
 ## Phase 3.1: Setup
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T001 Create feature structure in lib/[domain]/ per implementation plan
+- [ ] T002 Add required dependencies to pubspec.yaml if needed
+- [ ] T003 [P] Update barrel files for exports/imports
 
-## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
-**CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
-- [ ] T004 [P] Contract test POST /api/users in tests/contract/test_users_post.py
-- [ ] T005 [P] Contract test GET /api/users/{id} in tests/contract/test_users_get.py
-- [ ] T006 [P] Integration test user registration in tests/integration/test_registration.py
-- [ ] T007 [P] Integration test auth flow in tests/integration/test_auth.py
+## Phase 3.2: Models & Data
+- [ ] T004 [P] Define model classes in lib/[domain]/models/
+- [ ] T005 [P] Add JSON serialization methods (toJson/fromJson)
+- [ ] T006 [P] Ensure models extend Equatable for value equality
 
-## Phase 3.3: Core Implementation (ONLY after tests are failing)
-- [ ] T008 [P] User model in src/models/user.py
-- [ ] T009 [P] UserService CRUD in src/services/user_service.py
-- [ ] T010 [P] CLI --create-user in src/cli/user_commands.py
-- [ ] T011 POST /api/users endpoint
-- [ ] T012 GET /api/users/{id} endpoint
-- [ ] T013 Input validation
-- [ ] T014 Error handling and logging
+## Phase 3.3: Services (if external integration needed)
+- [ ] T007 [P] Create service class in lib/services/
+- [ ] T008 Register service in lib/locator.dart (GetIt)
+- [ ] T009 Implement service methods with error handling
+- [ ] T010 Add graceful degradation for AI/API failures
 
-## Phase 3.4: Integration
-- [ ] T015 Connect UserService to DB
-- [ ] T016 Auth middleware
-- [ ] T017 Request/response logging
-- [ ] T018 CORS and security headers
+## Phase 3.4: State Management (BLoC/Cubit)
+- [ ] T011 Create cubit class in lib/[domain]/cubit/
+- [ ] T012 Create state class using `part`/`part of` pattern
+- [ ] T013 State class extends Equatable with proper equality
+- [ ] T014 Implement business logic methods in cubit
+- [ ] T015 Add copyWith with null-handling bool parameters
 
-## Phase 3.5: Polish
-- [ ] T019 [P] Unit tests for validation in tests/unit/test_validation.py
-- [ ] T020 Performance tests (<200ms)
-- [ ] T021 [P] Update docs/api.md
-- [ ] T022 Remove duplication
-- [ ] T023 Run manual-testing.md
+## Phase 3.5: UI Implementation
+- [ ] T016 [P] Create StatelessWidget in lib/[domain]/widgets/ or lib/pages/
+- [ ] T017 [P] Define widget keys in lib/utils/[feature]_keys.dart
+- [ ] T018 Add BlocProvider for cubit (NOT in GetIt)
+- [ ] T019 Implement UI with BlocBuilder/BlocListener
+- [ ] T020 Private methods below build() method
+- [ ] T021 Use Color.withValues() (not withOpacity)
+- [ ] T022 Apply 120 char width with trailing commas
+
+## Phase 3.6: Polish & User Validation
+- [ ] T023 [P] Remove unnecessary comments (keep only CP-prefixed)
+- [ ] T024 Run flutter analyze to verify code quality
+- [ ] T025 User tests feature in running Flutter app
+- [ ] T026 Address user feedback and iterate
 
 ## Dependencies
-- Tests (T004-T007) before implementation (T008-T014)
-- T008 blocks T009, T015
-- T016 blocks T018
-- Implementation before polish (T019-T023)
+- Models (T004-T006) before Services (T007-T010)
+- Services (T007-T010) before State Management (T011-T015)
+- State Management (T011-T015) before UI (T016-T022)
+- Implementation complete before Polish (T023-T026)
 
 ## Parallel Example
 ```
-# Launch T004-T007 together:
-Task: "Contract test POST /api/users in tests/contract/test_users_post.py"
-Task: "Contract test GET /api/users/{id} in tests/contract/test_users_get.py"
-Task: "Integration test registration in tests/integration/test_registration.py"
-Task: "Integration test auth in tests/integration/test_auth.py"
+# Launch model tasks together:
+Task: "Define Entry model in lib/entry/models/entry.dart"
+Task: "Define Category model in lib/entry/models/category.dart"
+Task: "Add JSON serialization to models"
 ```
 
 ## Notes
 - [P] tasks = different files, no dependencies
-- Verify tests fail before implementing
-- Commit after each task
+- Follow Flutter/BLoC architecture patterns
+- User validates in running app (no test generation)
+- Commit after logical task groups
 - Avoid: vague tasks, same file conflicts
 
 ## Task Generation Rules
 *Applied during main() execution*
 
-1. **From Contracts**:
-   - Each contract file → contract test task [P]
-   - Each endpoint → implementation task
-   
-2. **From Data Model**:
+1. **From Data Model**:
    - Each entity → model creation task [P]
-   - Relationships → service layer tasks
-   
+   - Relationships → captured in model design
+
+2. **From Services**:
+   - External integrations → service class tasks
+   - Service registration → locator.dart task
+
 3. **From User Stories**:
-   - Each story → integration test [P]
-   - Quickstart scenarios → validation tasks
+   - User interactions → cubit methods
+   - UI flows → StatelessWidget tasks
+   - Each screen/widget → BlocProvider setup
 
 4. **Ordering**:
-   - Setup → Tests → Models → Services → Endpoints → Polish
+   - Setup → Models → Services → State (Cubit) → UI → Polish
    - Dependencies block parallel execution
 
 ## Validation Checklist
 *GATE: Checked by main() before returning*
 
-- [ ] All contracts have corresponding tests
 - [ ] All entities have model tasks
-- [ ] All tests come before implementation
+- [ ] Services registered in locator.dart (NOT cubits)
+- [ ] Cubits provided via BlocProvider
+- [ ] All widgets are StatelessWidget
+- [ ] Widget keys defined in utils files
 - [ ] Parallel tasks truly independent
 - [ ] Each task specifies exact file path
 - [ ] No task modifies same file as another [P] task
