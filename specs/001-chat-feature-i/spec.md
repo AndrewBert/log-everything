@@ -62,6 +62,11 @@ When creating this spec from a user prompt:
 - Q: When intent detection determines the input is ambiguous (could be either note or chat), what should happen? → A: Ask user to clarify with a UI prompt (manual selection)
 - Q: How should the system handle intent detection latency - should text submission be blocked until AI classification completes? → A: Block submission until classification completes (user waits for AI)
 - Q: Should users be able to manually override intent detection (force a message to be note or chat)? → A: No - always rely on AI classification (simpler UX)
+- Q: What specific visual feedback should be shown during intent detection processing? → A: Loading state is already built into the input field (reuse existing loading indicator)
+- Q: Are there specific keywords that should always trigger chat mode? → A: No - leave intent classification entirely up to the AI model's determination
+- Q: Is there a character limit for the unified text field? → A: Yes - 2000 characters maximum
+- Q: What happens if user's log history is empty when they try to chat? → A: User can still chat normally; AI will respond but won't have logs to reference
+- Q: Should users see which specific logs contributed to each answer? → A: No - AI provides answers without explicit log attribution in the UI
 
 ---
 
@@ -88,13 +93,13 @@ The system automatically determines whether the user wants to log a note or star
 
 ### Edge Cases & Error Handling
 - When the AI intent detection model is unavailable or fails, the system defaults to note-logging mode to preserve core functionality.
-- What happens when the user types an empty message or only whitespace?
+- When the user types an empty message or only whitespace, the submit button remains disabled (no action taken).
 - When the AI cannot find relevant information in the user's logs to answer a chat question, it responds with a dynamically generated chat message (no predefined error template).
-- User submission is blocked until intent classification completes. During this time, visual feedback indicates processing status.
+- User submission is blocked until intent classification completes. During this time, the existing input field loading state provides visual feedback.
 - Users cannot manually override AI intent classification - the system always relies on AI determination (or prompts for clarification when ambiguous).
-- How does the system handle very long text input in the unified field? [NEEDS CLARIFICATION: Is there a character limit?]
-- What happens if the user's log history is empty and they try to start a chat?
-- What happens if the vector store search times out or fails during a chat query?
+- Text input is limited to 2000 characters maximum. If user reaches the limit, input is truncated or submission is prevented.
+- If the user's log history is empty and they try to start a chat, the chat still opens normally. The AI will respond to questions but won't have any logs to reference in its answers.
+- If the vector store search times out or fails during a chat query, the AI responds with a chat message indicating it couldn't access the logs at this time.
 
 ## Requirements
 
@@ -108,21 +113,21 @@ The system automatically determines whether the user wants to log a note or star
 - **FR-007**: Users MUST be able to ask follow-up questions within the chat session.
 - **FR-008**: Users MUST be able to exit the full-screen chat interface and return to the main screen.
 - **FR-009**: System MUST preserve the unified text field's existing note-logging functionality without breaking changes.
-- **FR-010**: System MUST provide visual feedback during intent detection processing [NEEDS CLARIFICATION: What specific feedback - loading indicator, disabled state, etc.?]
+- **FR-010**: System MUST provide visual feedback during intent detection processing by displaying the existing input field loading state and disabling the input field.
 - **FR-011**: System MUST prompt user with a manual selection UI when intent detection determines input is ambiguous. When intent detection service is unavailable or fails, system defaults to note-logging mode.
 - **FR-012**: System MUST respond with a dynamically generated AI chat message when no relevant logs are found for a query.
 - **FR-013**: System MUST persist chat session history indefinitely across app restarts by retrieving it from the AI service (not stored locally).
 - **FR-014**: Users MUST NOT be able to manually override AI intent classification - system relies solely on AI determination or user clarification when ambiguous.
 - **FR-015**: System MUST block user submission until intent classification completes and provide visual feedback during processing.
-- **FR-016**: System MUST [NEEDS CLARIFICATION: Are there specific types of queries or keywords that should always trigger chat mode?]
+- **FR-016**: System MUST rely entirely on AI model determination for intent classification without using predefined keywords or query patterns.
 - **FR-017**: System MUST display the original query text as the first message when the full-screen chat opens.
 
 ### Key Entities
-- **Text Input Message**: Represents the raw text entered by the user in the unified field, containing the content and timestamp of submission.
+- **Text Input Message**: Represents the raw text entered by the user in the unified field (maximum 2000 characters), containing the content and timestamp of submission.
 - **Intent Classification**: Represents the AI's determination of whether a text input is a "note" or "chat". When classification is ambiguous, the user is prompted to manually select the intended mode.
 - **Chat Session**: Represents a continuous conversation between the user and the AI, containing the sequence of questions and responses within the full-screen interface. Sessions are persisted across app restarts via the AI service (not local storage). The original triggering query is displayed as the first message.
 - **Chat Query**: Represents a user's question asked during a chat session, including the original text and any context needed for log search.
-- **Chat Response**: Represents the AI-generated answer to a chat query, including the answer text and references to which logs were used to generate the answer [NEEDS CLARIFICATION: Should users see which specific logs contributed to the answer?].
+- **Chat Response**: Represents the AI-generated answer to a chat query, including the answer text. Log attribution is not displayed to users.
 
 ---
 
@@ -136,12 +141,12 @@ The system automatically determines whether the user wants to log a note or star
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements describe user-facing behavior clearly
-- [ ] Success criteria are measurable through app usage
+- [x] Success criteria are measurable through app usage
 - [x] Scope is clearly bounded
-- [ ] Dependencies and assumptions identified
-- [ ] UI/UX expectations defined where relevant
+- [x] Dependencies and assumptions identified
+- [x] UI/UX expectations defined where relevant
 
 ---
 
@@ -150,10 +155,10 @@ The system automatically determines whether the user wants to log a note or star
 
 - [x] User description parsed
 - [x] Key concepts extracted
-- [x] Ambiguities marked
+- [x] Ambiguities resolved
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (WARN: Spec has uncertainties - multiple NEEDS CLARIFICATION markers)
+- [x] Review checklist passed (SUCCESS: All clarifications resolved)
 
 ---
