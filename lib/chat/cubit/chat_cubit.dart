@@ -87,7 +87,7 @@ class ChatCubit extends Cubit<ChatState> {
     );
     final messagesWithAi = List<ChatMessage>.from(state.messages)..add(aiMessage);
     emit(state.copyWith(messages: messagesWithAi, isLoading: true, streamingMessageId: aiMessageId));
-    
+
     // CP: Haptic feedback when streaming starts
     HapticFeedback.lightImpact();
 
@@ -96,24 +96,23 @@ class ChatCubit extends Cubit<ChatState> {
     final StringBuffer displayedText = StringBuffer(); // CP: Buffer for displayed text
     Timer? typewriterTimer;
     int currentIndex = 0;
-    
+
     try {
-      
       // CP: Start typewriter effect with variable speed
       void startTypewriter() {
         typewriterTimer?.cancel();
-        
+
         void typeNextCharacter() {
           if (currentIndex >= receivedText.length) {
             // CP: No more characters to display yet
             return;
           }
-          
+
           final fullText = receivedText.toString();
           final char = fullText[currentIndex];
           displayedText.write(char);
           currentIndex++;
-          
+
           // CP: Update UI with smooth character reveal
           final updatedMessages = List<ChatMessage>.from(state.messages);
           final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
@@ -126,7 +125,7 @@ class ChatCubit extends Cubit<ChatState> {
             );
             emit(state.copyWith(messages: updatedMessages, streamingMessageId: aiMessageId));
           }
-          
+
           // CP: Variable delay based on character type
           Duration nextDelay;
           if (char == '.' || char == '!' || char == '?') {
@@ -140,17 +139,17 @@ class ChatCubit extends Cubit<ChatState> {
           } else {
             nextDelay = const Duration(milliseconds: 25); // CP: Normal character speed
           }
-          
+
           // CP: Schedule next character
           if (currentIndex < receivedText.length) {
             typewriterTimer = Timer(nextDelay, typeNextCharacter);
           }
         }
-        
+
         // CP: Start typing
         typeNextCharacter();
       }
-      
+
       await for (final event in _aiService.streamChatResponse(
         messages: state.messages.sublist(0, state.messages.length - 1), // CP: Exclude the empty AI message
         currentDate: DateTime.now(),
@@ -165,17 +164,17 @@ class ChatCubit extends Cubit<ChatState> {
               startTypewriter();
             }
             break;
-            
+
           case ChatStreamCompleted(:final fullText, :final responseId):
             // CP: Wait for typewriter to catch up, then show final text
             typewriterTimer?.cancel();
-            
+
             // CP: Calculate remaining time to display all text
             final remainingChars = receivedText.length - currentIndex;
             if (remainingChars > 0) {
               // CP: Speed up to finish in reasonable time
               const catchUpSpeed = Duration(milliseconds: 5);
-              
+
               // CP: Fast-forward remaining text
               Timer.periodic(catchUpSpeed, (timer) {
                 if (currentIndex >= receivedText.length) {
@@ -184,10 +183,10 @@ class ChatCubit extends Cubit<ChatState> {
                   _finishStreaming(aiMessageId, fullText, responseId);
                   return;
                 }
-                
+
                 displayedText.write(receivedText.toString()[currentIndex]);
                 currentIndex++;
-                
+
                 final updatedMessages = List<ChatMessage>.from(state.messages);
                 final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
                 if (aiMessageIndex != -1) {
@@ -205,28 +204,30 @@ class ChatCubit extends Cubit<ChatState> {
               _finishStreaming(aiMessageId, fullText, responseId);
             }
             break;
-            
+
           case ChatStreamError(:final message):
             AppLogger.error('Stream error in ChatCubit: $message');
             typewriterTimer?.cancel();
-            
+
             final updatedMessages = List<ChatMessage>.from(state.messages);
             final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
             if (aiMessageIndex != -1) {
-              final errorText = displayedText.isEmpty 
-                ? "Sorry, I couldn't get a response. Error: $message"
-                : "${displayedText.toString()}\n\n[Error: $message]";
+              final errorText = displayedText.isEmpty
+                  ? "Sorry, I couldn't get a response. Error: $message"
+                  : "${displayedText.toString()}\n\n[Error: $message]";
               updatedMessages[aiMessageIndex] = ChatMessage(
                 id: aiMessageId,
                 text: errorText,
                 sender: ChatSender.ai,
                 timestamp: DateTime.now(),
               );
-              emit(state.copyWith(
-                messages: updatedMessages,
-                isLoading: false,
-                clearStreamingMessageId: true,
-              ));
+              emit(
+                state.copyWith(
+                  messages: updatedMessages,
+                  isLoading: false,
+                  clearStreamingMessageId: true,
+                ),
+              );
             }
             break;
         }
@@ -234,7 +235,7 @@ class ChatCubit extends Cubit<ChatState> {
     } catch (e, stackTrace) {
       AppLogger.error('Unexpected error in streaming chat: $e', stackTrace: stackTrace);
       typewriterTimer?.cancel();
-      
+
       final updatedMessages = List<ChatMessage>.from(state.messages);
       final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
       if (aiMessageIndex != -1) {
@@ -244,11 +245,13 @@ class ChatCubit extends Cubit<ChatState> {
           sender: ChatSender.ai,
           timestamp: DateTime.now(),
         );
-        emit(state.copyWith(
-          messages: updatedMessages,
-          isLoading: false,
-          clearStreamingMessageId: true,
-        ));
+        emit(
+          state.copyWith(
+            messages: updatedMessages,
+            isLoading: false,
+            clearStreamingMessageId: true,
+          ),
+        );
       }
     }
   }
@@ -263,13 +266,15 @@ class ChatCubit extends Cubit<ChatState> {
         sender: ChatSender.ai,
         timestamp: DateTime.now(),
       );
-      emit(state.copyWith(
-        messages: updatedMessages,
-        isLoading: false,
-        lastResponseId: responseId,
-        clearStreamingMessageId: true,
-      ));
-      
+      emit(
+        state.copyWith(
+          messages: updatedMessages,
+          isLoading: false,
+          lastResponseId: responseId,
+          clearStreamingMessageId: true,
+        ),
+      );
+
       // CP: Haptic feedback when streaming completes
       HapticFeedback.selectionClick();
     }
@@ -277,6 +282,10 @@ class ChatCubit extends Cubit<ChatState> {
 
   // CP: _addAIMessage is no longer needed as AI responses are handled by addUserMessage
   // void _addAIMessage(String text) { ... }
+
+  void startChatWithQuery(String queryText) {
+    addUserMessageStreaming(queryText);
+  }
 
   // CP: Dummy messages for initial UI (commented out as per previous request)
   void loadDummyMessages() {

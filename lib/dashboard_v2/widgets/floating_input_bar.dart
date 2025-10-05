@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart';
+import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 
 class FloatingInputBar extends StatefulWidget {
   const FloatingInputBar({super.key});
@@ -300,7 +300,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
     });
 
     try {
-      await context.read<EntryCubit>().addEntry(text);
+      await context.read<DashboardV2Cubit>().handleUserInput(text, context);
       _textController.clear();
       _focusNode.unfocus();
       HapticFeedback.mediumImpact();
@@ -332,7 +332,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding entry: $e'),
+            content: Text('Error submitting: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );

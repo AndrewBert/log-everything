@@ -6,6 +6,7 @@ import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/category_card.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 
 class AllCategoriesPage extends StatelessWidget {
   const AllCategoriesPage({
@@ -17,6 +18,7 @@ class AllCategoriesPage extends StatelessWidget {
     return BlocProvider(
       create: (context) => DashboardV2Cubit(
         entryRepository: GetIt.instance<EntryRepository>(),
+        intentDetectionService: GetIt.instance<IntentDetectionService>(),
       )..loadEntries(),
       child: BlocBuilder<DashboardV2Cubit, DashboardV2State>(
         builder: (context, state) {

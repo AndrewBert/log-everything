@@ -9,11 +9,17 @@ import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:get_it/get_it.dart';
+import 'package:myapp/intent_detection/models/models.dart';
+import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/chat/cubit/chat_cubit.dart';
+import 'package:myapp/chat/pages/fullscreen_chat_page.dart';
+import 'package:myapp/chat/widgets/intent_clarification_dialog.dart';
 
 part 'dashboard_v2_state.dart';
 
 class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
+  final IntentDetectionService _intentDetectionService;
   final AiService _aiService = GetIt.instance<AiService>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
   // CC: Track entries currently generating insights to prevent duplicates
@@ -21,7 +27,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
   DashboardV2Cubit({
     required EntryRepository entryRepository,
+    required IntentDetectionService intentDetectionService,
   }) : _entryRepository = entryRepository,
+       _intentDetectionService = intentDetectionService,
        super(const DashboardV2State()) {
     // CC: Subscribe to entries stream (handles entry AND color changes)
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
@@ -220,6 +228,100 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       // CC: Generate insights for other recent entries (skip index 0 to avoid duplicate)
       _generateInsightsForOtherRecentEntries();
     }
+  }
+
+  Future<void> handleUserInput(String text, BuildContext context) async {
+    if (text.trim().isEmpty) return;
+
+    emit(
+      state.copyWith(
+        isClassifyingIntent: true,
+        clearLastIntentClassification: true,
+        clearIntentClassificationError: true,
+      ),
+    );
+
+    try {
+      final classification = await _intentDetectionService.classifyIntent(text);
+
+      emit(
+        state.copyWith(
+          lastIntentClassification: classification,
+          isClassifyingIntent: false,
+        ),
+      );
+
+      switch (classification.type) {
+        case IntentType.note:
+          _logAsNote(text);
+          break;
+        case IntentType.chat:
+          if (context.mounted) {
+            _navigateToChat(context, text);
+          }
+          break;
+        case IntentType.ambiguous:
+          if (context.mounted) {
+            _showIntentClarificationDialog(context, text);
+          }
+          break;
+      }
+    } on IntentDetectionException catch (e) {
+      emit(
+        state.copyWith(
+          intentClassificationError: e.message,
+          isClassifyingIntent: false,
+        ),
+      );
+      _logAsNote(text);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          intentClassificationError: 'Unexpected error during intent classification',
+          isClassifyingIntent: false,
+        ),
+      );
+      _logAsNote(text);
+    }
+  }
+
+  Future<void> _logAsNote(String text) async {
+    await _entryRepository.addEntry(text);
+  }
+
+  void _navigateToChat(BuildContext context, String initialQuery) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => BlocProvider(
+          create: (context) {
+            final chatCubit = ChatCubit(aiService: GetIt.instance<AiService>());
+            chatCubit.startChatWithQuery(initialQuery);
+            return chatCubit;
+          },
+          child: const FullscreenChatPage(),
+        ),
+      ),
+    );
+  }
+
+  void _showIntentClarificationDialog(BuildContext context, String userInput) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => IntentClarificationDialog(
+        userInput: userInput,
+        onNoteSelected: () {
+          Navigator.pop(context);
+          _logAsNote(userInput);
+        },
+        onChatSelected: () {
+          Navigator.pop(context);
+          _navigateToChat(context, userInput);
+        },
+      ),
+    );
   }
 
   @override

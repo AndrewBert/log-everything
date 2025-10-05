@@ -38,24 +38,24 @@
 
 ## Phase 3.1: Setup & Models
 
-- [ ] **T001 [P]** Define `IntentType` enum in `lib/intent_detection/models/intent_type.dart`
+- [X] **T001 [P]** Define `IntentType` enum in `lib/intent_detection/models/intent_type.dart`
   - Values: `note`, `chat`, `ambiguous`
   - No JSON serialization needed (enum)
 
-- [ ] **T002 [P]** Define `IntentClassification` model in `lib/intent_detection/models/intent_classification.dart`
+- [X] **T002 [P]** Define `IntentClassification` model in `lib/intent_detection/models/intent_classification.dart`
   - Fields: `type` (IntentType), `confidence` (double), `timestamp` (DateTime)
   - Extend Equatable
   - Add validation: confidence ∈ [0.0, 1.0]
   - No JSON serialization needed (ephemeral model)
 
-- [ ] **T003 [P]** Create barrel file `lib/intent_detection/models/models.dart`
+- [X] **T003 [P]** Create barrel file `lib/intent_detection/models/models.dart`
   - Export `intent_type.dart` and `intent_classification.dart`
 
 ---
 
 ## Phase 3.2: Intent Detection Service
 
-- [ ] **T004** Create `IntentDetectionService` in `lib/intent_detection/services/intent_detection_service.dart`
+- [X] **T004** Create `IntentDetectionService` in `lib/intent_detection/services/intent_detection_service.dart`
   - Method: `Future<IntentClassification> classifyIntent(String userInput)`
   - Use GPT-5-nano via OpenAI Responses API (per research.md)
   - Implement prompt from contract: system message + user input
@@ -63,7 +63,7 @@
   - Add timeout: 2 seconds (per research.md fallback strategy)
   - Validate confidence threshold: <0.7 = ambiguous
 
-- [ ] **T005** Register `IntentDetectionService` in `lib/locator.dart`
+- [X] **T005** Register `IntentDetectionService` in `lib/locator.dart`
   - Add as lazy singleton in GetIt
   - Inject dependencies (if any, likely just config)
 
@@ -71,7 +71,7 @@
 
 ## Phase 3.3: Dashboard V2 State Extensions
 
-- [ ] **T006** Extend `DashboardV2State` in `lib/dashboard_v2/cubit/dashboard_v2_state.dart`
+- [X] **T006** Extend `DashboardV2State` in `lib/dashboard_v2/cubit/dashboard_v2_state.dart`
   - Add fields:
     - `isClassifyingIntent` (bool, default: false)
     - `lastIntentClassification` (IntentClassification?, nullable)
@@ -81,7 +81,7 @@
     - `clearIntentClassificationError` (bool)
   - Add new fields to `props` list for Equatable
 
-- [ ] **T007** Update `DashboardV2Cubit` in `lib/dashboard_v2/cubit/dashboard_v2_cubit.dart`
+- [X] **T007** Update `DashboardV2Cubit` in `lib/dashboard_v2/cubit/dashboard_v2_cubit.dart`
   - Inject `IntentDetectionService` via constructor
   - Create method: `Future<void> handleUserInput(String text, BuildContext context)`
   - Implement flow:
@@ -102,7 +102,7 @@
 
 ## Phase 3.4: Chat State & Cubit Updates
 
-- [ ] **T008** Update `ChatCubit` in `lib/chat/cubit/chat_cubit.dart`
+- [X] **T008** Update `ChatCubit` in `lib/chat/cubit/chat_cubit.dart`
   - Add method: `void startChatWithQuery(String queryText)`
   - Implementation:
     1. Create initial `ChatMessage` with user's query
@@ -115,7 +115,7 @@
 
 ## Phase 3.5: UI Components - Dialogs & Pages
 
-- [ ] **T009 [P]** Create `IntentClarificationDialog` in `lib/chat/widgets/intent_clarification_dialog.dart`
+- [X] **T009 [P]** Create `IntentClarificationDialog` in `lib/chat/widgets/intent_clarification_dialog.dart`
   - StatelessWidget
   - Parameters: `userInput` (String), `onNoteSelected` (VoidCallback), `onChatSelected` (VoidCallback)
   - Use `AlertDialog` with:
@@ -126,7 +126,7 @@
       - "Start Chat" button with icon (Icons.chat_bubble_outline)
   - Accessible: Clear labels, supports VoiceOver
 
-- [ ] **T010 [P]** Create `FullscreenChatPage` in `lib/chat/pages/fullscreen_chat_page.dart`
+- [X] **T010 [P]** Create `FullscreenChatPage` in `lib/chat/pages/fullscreen_chat_page.dart`
   - StatelessWidget with Scaffold
   - AppBar: Back button (auto-handled by MaterialPageRoute fullscreenDialog)
   - Body: `BlocBuilder<ChatCubit, ChatState>` for reactive messages list
@@ -135,7 +135,7 @@
   - Private method: `_buildMessageList()` below `build()`
   - Private method: `_buildInputField()` below `_buildMessageList()`
 
-- [ ] **T011 [P]** Define widget keys in `lib/utils/chat_keys.dart`
+- [X] **T011 [P]** Define widget keys in `lib/utils/chat_keys.dart`
   - Keys for:
     - `intentClarificationDialog`
     - `intentClarificationNoteButton`
@@ -149,7 +149,7 @@
 
 ## Phase 3.6: Dashboard Integration - Unified Text Field
 
-- [ ] **T012** Update `UnifiedTextField` widget in `lib/dashboard_v2/widgets/unified_text_field.dart`
+- [X] **T012** Update `UnifiedTextField` widget in `lib/dashboard_v2/widgets/unified_text_field.dart`
   - Add `BlocListener<DashboardV2Cubit, DashboardV2State>` for navigation:
     - Listen to `lastIntentClassification` changes
     - When `type == IntentType.chat`: Navigate to `FullscreenChatPage`
@@ -162,7 +162,7 @@
     - Call `context.read<DashboardV2Cubit>().handleUserInput(text, context)`
     - Clear field after submission
 
-- [ ] **T013** Update `DashboardV2Page` in `lib/dashboard_v2/pages/dashboard_v2_page.dart`
+- [X] **T013** Update `DashboardV2Page` in `lib/dashboard_v2/pages/dashboard_v2_page.dart`
   - Ensure `DashboardV2Cubit` is provided via `BlocProvider`
   - Pass `IntentDetectionService` to cubit during provider creation
   - No other changes needed (existing structure supports new flow)
@@ -171,7 +171,7 @@
 
 ## Phase 3.7: Navigation & Routing
 
-- [ ] **T014** Implement navigation helper in `lib/dashboard_v2/cubit/dashboard_v2_cubit.dart`
+- [X] **T014** Implement navigation helper in `lib/dashboard_v2/cubit/dashboard_v2_cubit.dart`
   - Add private method: `void _navigateToChat(BuildContext context, String initialQuery)`
   - Use `Navigator.push()` with `MaterialPageRoute`:
     - `fullscreenDialog: true` for iOS-style modal
@@ -187,13 +187,13 @@
 
 ## Phase 3.8: Error Handling & Fallbacks
 
-- [ ] **T015** Add error handling to `IntentDetectionService`
+- [X] **T015** Add error handling to `IntentDetectionService`
   - Catch API errors (400, 401, 429) and throw custom exceptions
   - Catch timeout exceptions
   - Catch JSON parsing errors
   - Return user-friendly error messages
 
-- [ ] **T016** Add error UI to `UnifiedTextField`
+- [X] **T016** Add error UI to `UnifiedTextField`
   - Listen to `intentClassificationError` in `DashboardV2State`
   - Show SnackBar with error message if present
   - Clear error after displaying
@@ -202,25 +202,25 @@
 
 ## Phase 3.9: Polish & Code Quality
 
-- [ ] **T017 [P]** Add barrel file `lib/intent_detection/intent_detection.dart`
+- [X] **T017 [P]** Add barrel file `lib/intent_detection/intent_detection.dart`
   - Export models, services, and any utilities
 
-- [ ] **T018 [P]** Add barrel file `lib/chat/chat.dart` (if not exists)
+- [X] **T018 [P]** Add barrel file `lib/chat/chat.dart` (if not exists)
   - Export pages, widgets, models, cubit
 
-- [ ] **T019 [P]** Remove unnecessary comments from new code
+- [X] **T019 [P]** Remove unnecessary comments from new code
   - Keep only CP-prefixed comments where needed
   - Ensure code is self-documenting
 
-- [ ] **T020** Run `flutter analyze`
+- [X] **T020** Run `flutter analyze`
   - Fix all lints and warnings
   - Ensure code quality standards met
 
-- [ ] **T021** Run `dart format lib/`
+- [X] **T021** Run `dart format lib/`
   - Apply 120 char line width
   - Preserve trailing commas
 
-- [ ] **T022** Verify `Color.withValues()` usage
+- [X] **T022** Verify `Color.withValues()` usage
   - Replace any `withOpacity()` calls with `withValues(alpha: ...)`
 
 ---

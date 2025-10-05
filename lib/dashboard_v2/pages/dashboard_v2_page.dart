@@ -12,6 +12,7 @@ import 'package:myapp/utils/dashboard_v2_keys.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
+import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 
 class DashboardV2Page extends StatefulWidget {
   const DashboardV2Page({super.key});
@@ -50,12 +51,14 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
   @override
   Widget build(BuildContext context) {
     final entryRepository = GetIt.instance<EntryRepository>();
+    final intentDetectionService = GetIt.instance<IntentDetectionService>();
 
     return MultiBlocProvider(
       providers: [
         BlocProvider(
           create: (context) => DashboardV2Cubit(
             entryRepository: entryRepository,
+            intentDetectionService: intentDetectionService,
           )..loadEntries(),
         ),
         BlocProvider(
@@ -164,7 +167,8 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       : Theme.of(context).colorScheme.primary;
 
                                   // Check both cubit state AND entry's persistent flag
-                                  final isGenerating = state.isGeneratingInsight || (selectedEntry?.isGeneratingInsight ?? false);
+                                  final isGenerating =
+                                      state.isGeneratingInsight || (selectedEntry?.isGeneratingInsight ?? false);
 
                                   return InsightDisplay(
                                     insight: primaryInsight,
