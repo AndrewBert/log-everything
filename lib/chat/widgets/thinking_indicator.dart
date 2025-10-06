@@ -64,6 +64,7 @@ class _ThinkingIndicatorState extends State<ThinkingIndicator> with TickerProvid
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Thinking',
@@ -73,20 +74,23 @@ class _ThinkingIndicatorState extends State<ThinkingIndicator> with TickerProvid
             fontStyle: FontStyle.italic,
           ),
         ),
-        const SizedBox(width: 2),
+        const SizedBox(width: 4),
         ...List.generate(3, (index) {
           return AnimatedBuilder(
             animation: _animations[index],
             builder: (context, child) {
               return Transform.translate(
                 offset: Offset(0, _animations[index].value),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               );

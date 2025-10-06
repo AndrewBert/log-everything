@@ -105,11 +105,7 @@ abstract class AiService {
   ///
   /// Note: This method does NOT use vector store search for pattern detection.
   /// Historical pattern analysis may be added in a future update.
-  Future<SimpleInsight> generateSimpleInsight(
-    String entryText,
-    String entryId,
-    {DateTime? currentDate}
-  );
+  Future<SimpleInsight> generateSimpleInsight(String entryText, String entryId, {DateTime? currentDate});
 }
 
 // Custom Exception for the service
@@ -410,7 +406,7 @@ Respond with a JSON object containing an "entries" array.""";
   String _buildSystemInstructions(DateTime? currentDate) {
     // CP: Helper to build system instructions for chat
     final dateString = currentDate != null ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}." : "";
-    return "You are a helpful AI assistant. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString";
+    return "You are a helpful AI assistant named Trilby. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString When answering, speak directly about what the user did rather than referencing 'your logs show' or 'according to your data' - just state the facts naturally.";
   }
 
   @override
@@ -1101,20 +1097,15 @@ Return ONLY a JSON object with this structure:
   }
 
   @override
-  Future<SimpleInsight> generateSimpleInsight(
-    String entryText,
-    String entryId,
-    {DateTime? currentDate}
-  ) async {
+  Future<SimpleInsight> generateSimpleInsight(String entryText, String entryId, {DateTime? currentDate}) async {
     if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
       throw AiServiceException('OpenAI API Key not found.');
     }
 
-    final dateString = currentDate != null
-      ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}."
-      : "";
+    final dateString = currentDate != null ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}." : "";
 
-    final prompt = '''Analyze this log entry and provide a brief, helpful insight.
+    final prompt =
+        '''Analyze this log entry and provide a brief, helpful insight.
 
 "$entryText"
 
@@ -1129,7 +1120,8 @@ Return ONLY a JSON object with this structure:
   "content": "Your brief insight here"
 }''';
 
-    final systemContent = "You are a helpful assistant that provides brief, engaging insights on personal log entries. Keep responses to 1-2 sentences for display on small UI cards.$dateString";
+    final systemContent =
+        "You are a helpful assistant that provides brief, engaging insights on personal log entries. Keep responses to 1-2 sentences for display on small UI cards.$dateString";
 
     final requestBody = {
       'model': _defaultModelId,
@@ -1179,7 +1171,6 @@ Return ONLY a JSON object with this structure:
         if (responseBody['output'] != null &&
             responseBody['output'] is List &&
             (responseBody['output'] as List).isNotEmpty) {
-
           Map<String, dynamic>? messageOutputElement;
           for (final item in responseBody['output'] as List) {
             if (item is Map<String, dynamic> && item['type'] == 'message') {
@@ -1193,9 +1184,7 @@ Return ONLY a JSON object with this structure:
             if (content != null && content is List && content.isNotEmpty) {
               String? jsonOutputString;
               for (final item in content) {
-                if (item is Map<String, dynamic> &&
-                    item['type'] == 'output_text' &&
-                    item['text'] != null) {
+                if (item is Map<String, dynamic> && item['type'] == 'output_text' && item['text'] != null) {
                   jsonOutputString = item['text'] as String;
                   break;
                 }

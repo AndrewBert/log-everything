@@ -9,6 +9,9 @@ class DashboardV2State extends Equatable {
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
   final bool isGeneratingInsight;
+  final bool isClassifyingIntent;
+  final IntentClassification? lastIntentClassification;
+  final String? intentClassificationError;
 
   const DashboardV2State({
     this.entries = const [],
@@ -17,6 +20,9 @@ class DashboardV2State extends Equatable {
     this.hasMoreEntries = true,
     this.selectedCarouselIndex = 0,
     this.isGeneratingInsight = false,
+    this.isClassifyingIntent = false,
+    this.lastIntentClassification,
+    this.intentClassificationError,
   });
 
   // CC: Derive current insight from selected entry (converts from SimpleInsight if needed)
@@ -58,6 +64,11 @@ class DashboardV2State extends Equatable {
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
     bool? isGeneratingInsight,
+    bool? isClassifyingIntent,
+    IntentClassification? lastIntentClassification,
+    String? intentClassificationError,
+    bool clearLastIntentClassification = false,
+    bool clearIntentClassificationError = false,
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
@@ -66,6 +77,13 @@ class DashboardV2State extends Equatable {
       hasMoreEntries: hasMoreEntries ?? this.hasMoreEntries,
       selectedCarouselIndex: selectedCarouselIndex ?? this.selectedCarouselIndex,
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
+      isClassifyingIntent: isClassifyingIntent ?? this.isClassifyingIntent,
+      lastIntentClassification: clearLastIntentClassification
+          ? null
+          : (lastIntentClassification ?? this.lastIntentClassification),
+      intentClassificationError: clearIntentClassificationError
+          ? null
+          : (intentClassificationError ?? this.intentClassificationError),
     );
   }
 
@@ -104,5 +122,8 @@ class DashboardV2State extends Equatable {
     hasMoreEntries,
     selectedCarouselIndex,
     isGeneratingInsight,
+    isClassifyingIntent,
+    lastIntentClassification,
+    intentClassificationError,
   ];
 }

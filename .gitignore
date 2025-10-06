@@ -22,3 +22,6 @@ android/app/.cxx/
 .fvm/
 
 coverage
+
+# Spec Kit - Local settings may contain user-specific permissions
+.claude/settings.local.json
