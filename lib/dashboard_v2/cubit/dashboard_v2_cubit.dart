@@ -200,6 +200,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     // CC: Check if the newest entry is actually new (no insight yet)
     final newestEntryIsNew = hasNewEntries && entries.isNotEmpty && entries.first.getCurrentInsight() == null;
 
+    // CC: Clear pending entry when real entries arrive (optimistic UI complete)
+    final shouldClearPending = state.pendingEntry != null && hasNewEntries;
+
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
@@ -207,6 +210,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         categories: categories,
         // CC: Reset selected index if it's out of bounds
         selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
+        clearPendingEntry: shouldClearPending,
       ),
     );
 
@@ -251,6 +255,16 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
       switch (classification.type) {
         case IntentType.note:
+        case IntentType.ambiguous:
+          // CC: Show temp entry immediately for optimistic UI
+          final tempEntry = Entry(
+            text: text,
+            timestamp: DateTime.now(),
+            category: 'Processing...',
+            isNew: true,
+          );
+          emit(state.copyWith(pendingEntry: tempEntry));
+          // CC: Fire-and-forget - stream will deliver the real entry
           _logAsNote(text);
           break;
         case IntentType.chat:
@@ -258,23 +272,36 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
             _navigateToChat(context, text);
           }
           break;
-        case IntentType.ambiguous:
-          _logAsNote(text);
-          break;
       }
     } on IntentDetectionException catch (e) {
+      // CC: On intent detection error, still show temp entry and log as note
+      final tempEntry = Entry(
+        text: text,
+        timestamp: DateTime.now(),
+        category: 'Processing...',
+        isNew: true,
+      );
       emit(
         state.copyWith(
           intentClassificationError: e.message,
           isClassifyingIntent: false,
+          pendingEntry: tempEntry,
         ),
       );
       _logAsNote(text);
     } catch (e) {
+      // CC: On unexpected error, still show temp entry and log as note
+      final tempEntry = Entry(
+        text: text,
+        timestamp: DateTime.now(),
+        category: 'Processing...',
+        isNew: true,
+      );
       emit(
         state.copyWith(
           intentClassificationError: 'Unexpected error during intent classification',
           isClassifyingIntent: false,
+          pendingEntry: tempEntry,
         ),
       );
       _logAsNote(text);

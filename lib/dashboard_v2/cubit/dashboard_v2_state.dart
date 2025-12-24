@@ -12,6 +12,7 @@ class DashboardV2State extends Equatable {
   final bool isClassifyingIntent;
   final IntentClassification? lastIntentClassification;
   final String? intentClassificationError;
+  final Entry? pendingEntry; // CC: Temp entry shown during AI categorization
 
   const DashboardV2State({
     this.entries = const [],
@@ -23,12 +24,18 @@ class DashboardV2State extends Equatable {
     this.isClassifyingIntent = false,
     this.lastIntentClassification,
     this.intentClassificationError,
+    this.pendingEntry,
   });
+
+  // CC: Combine pending entry with entries for display
+  List<Entry> get displayEntries =>
+      pendingEntry != null ? [pendingEntry!, ...entries] : entries;
 
   // CC: Derive current insight from selected entry (converts from SimpleInsight if needed)
   ComprehensiveInsight? get currentInsight {
-    if (selectedCarouselIndex < entries.length) {
-      final entry = entries[selectedCarouselIndex];
+    // CC: Use displayEntries to account for pending entry
+    if (selectedCarouselIndex < displayEntries.length) {
+      final entry = displayEntries[selectedCarouselIndex];
 
       // Prefer old format if it exists (for backwards compatibility)
       if (entry.insight != null) {
@@ -67,8 +74,10 @@ class DashboardV2State extends Equatable {
     bool? isClassifyingIntent,
     IntentClassification? lastIntentClassification,
     String? intentClassificationError,
+    Entry? pendingEntry,
     bool clearLastIntentClassification = false,
     bool clearIntentClassificationError = false,
+    bool clearPendingEntry = false,
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
@@ -84,6 +93,7 @@ class DashboardV2State extends Equatable {
       intentClassificationError: clearIntentClassificationError
           ? null
           : (intentClassificationError ?? this.intentClassificationError),
+      pendingEntry: clearPendingEntry ? null : (pendingEntry ?? this.pendingEntry),
     );
   }
 
@@ -125,5 +135,6 @@ class DashboardV2State extends Equatable {
     isClassifyingIntent,
     lastIntentClassification,
     intentClassificationError,
+    pendingEntry,
   ];
 }

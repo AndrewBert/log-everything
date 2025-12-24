@@ -177,25 +177,29 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 buildWhen: (prev, current) =>
                                     prev.currentInsight != current.currentInsight ||
                                     prev.isGeneratingInsight != current.isGeneratingInsight ||
-                                    prev.entries != current.entries,
+                                    prev.entries != current.entries ||
+                                    prev.pendingEntry != current.pendingEntry,
                                 builder: (context, state) {
                                   final primaryInsight = state.currentInsight?.getPrimaryInsight();
-                                  final selectedEntry = state.selectedCarouselIndex < state.entries.length
-                                      ? state.entries[state.selectedCarouselIndex]
+                                  // CC: Use displayEntries to account for pending entry
+                                  final selectedEntry = state.selectedCarouselIndex < state.displayEntries.length
+                                      ? state.displayEntries[state.selectedCarouselIndex]
                                       : null;
-                                  final categoryColor = selectedEntry != null
+                                  final isPending = selectedEntry?.category == 'Processing...';
+                                  final categoryColor = selectedEntry != null && !isPending
                                       ? state.getCategoryColor(selectedEntry.category)
                                       : Theme.of(context).colorScheme.primary;
 
-                                  // Check both cubit state AND entry's persistent flag
-                                  final isGenerating =
-                                      state.isGeneratingInsight || (selectedEntry?.isGeneratingInsight ?? false);
+                                  // CC: Show loading for pending entries or when generating insight
+                                  final isGenerating = isPending ||
+                                      state.isGeneratingInsight ||
+                                      (selectedEntry?.isGeneratingInsight ?? false);
 
                                   return InsightDisplay(
                                     insight: primaryInsight,
                                     isLoading: isGenerating,
                                     categoryColor: categoryColor,
-                                    onTap: primaryInsight != null && selectedEntry != null
+                                    onTap: primaryInsight != null && selectedEntry != null && !isPending
                                         ? () => _navigateToEntryDetails(context, selectedEntry, state)
                                         : null,
                                   );
@@ -217,17 +221,21 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                               BlocBuilder<DashboardV2Cubit, DashboardV2State>(
                                 buildWhen: (prev, current) =>
                                     prev.selectedCarouselIndex != current.selectedCarouselIndex ||
-                                    prev.entries != current.entries,
+                                    prev.entries != current.entries ||
+                                    prev.pendingEntry != current.pendingEntry,
                                 builder: (context, state) {
                                   return RecentEntriesCarousel(
-                                    entries: state.entries.take(10).toList(), // CP: Show only recent 10
+                                    entries: state.displayEntries.take(10).toList(),
                                     selectedIndex: state.selectedCarouselIndex,
                                     getCategoryColor: state.getCategoryColor,
                                     onPageChanged: (index) {
                                       context.read<DashboardV2Cubit>().selectCarouselEntry(index);
                                     },
                                     onEntryTap: (entry) {
-                                      _navigateToEntryDetails(context, entry, state);
+                                      // CC: Don't navigate for pending entries
+                                      if (entry.category != 'Processing...') {
+                                        _navigateToEntryDetails(context, entry, state);
+                                      }
                                     },
                                   );
                                 },
@@ -325,7 +333,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final items = _buildItemsWithDateHeaders(state.entries);
+                                final items = _buildItemsWithDateHeaders(state.displayEntries);
                                 if (index >= items.length) {
                                   if (state.hasMoreEntries) {
                                     return const Center(
@@ -417,7 +425,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 return const SizedBox.shrink();
                               },
                               childCount:
-                                  _buildItemsWithDateHeaders(state.entries).length + (state.hasMoreEntries ? 1 : 0),
+                                  _buildItemsWithDateHeaders(state.displayEntries).length + (state.hasMoreEntries ? 1 : 0),
                             ),
                           ),
                         ),

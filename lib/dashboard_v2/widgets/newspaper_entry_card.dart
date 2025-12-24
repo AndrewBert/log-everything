@@ -19,6 +19,9 @@ class NewspaperEntryCard extends StatelessWidget {
     this.categoryColor,
   });
 
+  // CC: Check if this is a pending/processing entry
+  bool get _isPending => entry.category == 'Processing...';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -26,8 +29,25 @@ class NewspaperEntryCard extends StatelessWidget {
     final dateFormat = DateFormat('MMM d');
     final timeFormat = DateFormat('h:mm a');
 
+    // CC: Wrap in pulsing animation for pending entries
+    Widget card = _buildCard(context, theme, categoryColor, dateFormat, timeFormat);
+
+    if (_isPending) {
+      return _PulsingCard(child: card);
+    }
+
+    return card;
+  }
+
+  Widget _buildCard(
+    BuildContext context,
+    ThemeData theme,
+    Color categoryColor,
+    DateFormat dateFormat,
+    DateFormat timeFormat,
+  ) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _isPending ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: EdgeInsets.symmetric(
@@ -167,6 +187,54 @@ class NewspaperEntryCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// CC: Animated wrapper that pulses opacity for pending entries
+class _PulsingCard extends StatefulWidget {
+  final Widget child;
+
+  const _PulsingCard({required this.child});
+
+  @override
+  State<_PulsingCard> createState() => _PulsingCardState();
+}
+
+class _PulsingCardState extends State<_PulsingCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _animation.value,
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }
