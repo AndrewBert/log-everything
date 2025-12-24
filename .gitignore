@@ -26,3 +26,6 @@ coverage
 # Spec Kit - Local settings may contain user-specific permissions
 .claude/settings.local.json
 .serena/
+
+# Git worktrees
+.worktrees/
