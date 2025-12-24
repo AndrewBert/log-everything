@@ -9,6 +9,17 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> _v130Changes = [
+      _buildChangeItem(
+        '🔍 Note Search',
+        '''Find any note instantly! Search through all your entries by keyword - finally a way to find that thing you wrote last month.''',
+      ),
+      _buildChangeItem(
+        '💬 AI Chat',
+        '''Ask questions about your notes! Type something like "what did I log about work last week?" and get answers from your personal AI assistant. The input bar auto-detects when you're asking a question.''',
+      ),
+    ];
+
     final List<Widget> _v123Changes = [
       _buildChangeItem(
         '💾 Auto-save for note editing',
@@ -86,6 +97,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.3.0 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.teal.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.3.0 - The Search Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.teal.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._v130Changes,
+              const SizedBox(height: 20),
               // Version 1.2.3 Header
               Container(
                 padding: const EdgeInsets.all(12),
