@@ -13,8 +13,6 @@ import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/pages/fullscreen_chat_page.dart';
-import 'package:myapp/chat/widgets/intent_clarification_dialog.dart';
-
 part 'dashboard_v2_state.dart';
 
 class DashboardV2Cubit extends Cubit<DashboardV2State> {
@@ -261,9 +259,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
           }
           break;
         case IntentType.ambiguous:
-          if (context.mounted) {
-            _showIntentClarificationDialog(context, text);
-          }
+          _logAsNote(text);
           break;
       }
     } on IntentDetectionException catch (e) {
@@ -302,24 +298,6 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
           },
           child: const FullscreenChatPage(),
         ),
-      ),
-    );
-  }
-
-  void _showIntentClarificationDialog(BuildContext context, String userInput) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => IntentClarificationDialog(
-        userInput: userInput,
-        onNoteSelected: () {
-          Navigator.pop(context);
-          _logAsNote(userInput);
-        },
-        onChatSelected: () {
-          Navigator.pop(context);
-          _navigateToChat(context, userInput);
-        },
       ),
     );
   }
