@@ -44,25 +44,11 @@ class _ChatMessagesListState extends State<_ChatMessagesList> {
     super.dispose();
   }
 
-  void _scrollToBottom({bool isStreaming = false}) {
+  void _scrollToBottom() {
     if (_scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
-          final targetPosition = _scrollController.position.maxScrollExtent;
-          final currentPosition = _scrollController.position.pixels;
-          final distance = (targetPosition - currentPosition).abs();
-
-          final duration = isStreaming
-              ? Duration(milliseconds: (150 + distance * 0.5).round().clamp(150, 400))
-              : const Duration(milliseconds: 300);
-
-          final curve = isStreaming ? Curves.linearToEaseOut : Curves.easeOutCubic;
-
-          _scrollController.animateTo(
-            targetPosition,
-            duration: duration,
-            curve: curve,
-          );
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         }
       });
     }
@@ -83,12 +69,9 @@ class _ChatMessagesListState extends State<_ChatMessagesList> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<ChatCubit, ChatState>(
-      listenWhen: (previous, current) =>
-          previous.messages.length < current.messages.length ||
-          (current.streamingMessageId != null && previous.messages != current.messages),
+      listenWhen: (previous, current) => previous.messages.length < current.messages.length,
       listener: (context, state) {
-        final isStreaming = state.streamingMessageId != null;
-        _scrollToBottom(isStreaming: isStreaming);
+        _scrollToBottom();
       },
       child: BlocBuilder<ChatCubit, ChatState>(
         builder: (context, state) {
