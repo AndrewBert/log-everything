@@ -1,4 +1,5 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // CP: Add this import
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
@@ -13,6 +14,7 @@ import 'package:myapp/services/vector_store_service.dart'; // CP: Corrected pack
 import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
 import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/services/debug_http_server.dart';
 
 final getIt = GetIt.instance;
 
@@ -68,4 +70,10 @@ Future<void> configureDependencies() async {
       timerFactory: getIt<TimerFactory>(), // CP: Injected TimerFactory
     ),
   );
+
+  if (kDebugMode) {
+    getIt.registerLazySingleton<DebugHttpServer>(
+      () => DebugHttpServer(repository: getIt<EntryRepository>()),
+    );
+  }
 }

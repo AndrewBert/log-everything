@@ -75,6 +75,18 @@ External APIs (OpenAI, Local Storage)
 - Only register services in DI container, not Cubits (use `BlocProvider` instead)
 - Services are lazy singletons, SharedPreferences is async singleton
 
+## Debug HTTP API
+
+A debug-only HTTP server runs on `localhost:8888` for programmatic entry management (debug mode only).
+
+**Setup:** `adb forward tcp:8888 tcp:8888` (for Android emulator)
+
+**Endpoints:**
+- `GET /health` - status, entry count, valid categories
+- `GET /entries` - list all entries
+- `POST /entries` - add single entry `{"text": "...", "category": "Misc"}`
+- `POST /entries/bulk` - add multiple `{"entries": [...]}`
+
 ## Code Conventions
 
 ### Widget Architecture

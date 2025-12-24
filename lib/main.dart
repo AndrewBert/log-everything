@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,6 +8,7 @@ import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/utils/logger.dart';
+import 'package:myapp/services/debug_http_server.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'chat/chat.dart';
 import 'entry/cubit/entry_cubit.dart';
@@ -23,6 +25,15 @@ void main() async {
     AppLogger.info('Environment variables loaded successfully.');
     await configureDependencies();
     AppLogger.info('Dependencies configured.');
+
+    if (kDebugMode) {
+      try {
+        final debugServer = getIt<DebugHttpServer>();
+        await debugServer.start();
+      } catch (e) {
+        AppLogger.error('Failed to start debug HTTP server', error: e);
+      }
+    }
   } catch (e) {
     AppLogger.error('Could not load .env file, using fallback keys.', error: e);
   }

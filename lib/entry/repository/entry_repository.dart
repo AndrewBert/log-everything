@@ -188,9 +188,16 @@ class EntryRepository {
   }
 
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
-    _entries.add(entryToAdd);
+    _entries.insert(0, entryToAdd);
     await _saveEntries();
     AppLogger.info("Repository: Added entry object - ${entryToAdd.text}");
+    return currentEntries;
+  }
+
+  Future<List<Entry>> addEntryObjects(List<Entry> entriesToAdd) async {
+    _entries.insertAll(0, entriesToAdd);
+    await _saveEntries();
+    AppLogger.info("Repository: Added ${entriesToAdd.length} entry objects in batch");
     return currentEntries;
   }
 
