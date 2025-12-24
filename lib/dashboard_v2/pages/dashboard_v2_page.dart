@@ -13,6 +13,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/utils/search_keys.dart';
+import 'package:myapp/search/widgets/search_overlay.dart';
 
 class DashboardV2Page extends StatefulWidget {
   const DashboardV2Page({super.key});
@@ -24,6 +26,7 @@ class DashboardV2Page extends StatefulWidget {
 class _DashboardV2PageState extends State<DashboardV2Page> {
   final ScrollController _scrollController = ScrollController();
   String _appVersion = '';
+  bool _isSearchOpen = false;
 
   @override
   void initState() {
@@ -46,6 +49,18 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     } catch (e) {
       // Handle error silently
     }
+  }
+
+  void _openSearch() {
+    setState(() {
+      _isSearchOpen = true;
+    });
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearchOpen = false;
+    });
   }
 
   @override
@@ -113,6 +128,12 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                   ),
                 ),
               ),
+            IconButton(
+              key: searchIconKey,
+              icon: const Icon(Icons.search),
+              tooltip: 'Search entries',
+              onPressed: _openSearch,
+            ),
             IconButton(
               icon: const Icon(Icons.help_outline),
               tooltip: 'Help / About',
@@ -425,6 +446,13 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                 child: FloatingInputBar(),
               ),
             ),
+            // CC: Search overlay
+            if (_isSearchOpen)
+              Positioned.fill(
+                child: SearchOverlay(
+                  onClose: _closeSearch,
+                ),
+              ),
           ],
         ),
       ),
