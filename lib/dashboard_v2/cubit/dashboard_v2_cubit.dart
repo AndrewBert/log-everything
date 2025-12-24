@@ -12,12 +12,14 @@ import 'package:get_it/get_it.dart';
 import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
-import 'package:myapp/chat/pages/fullscreen_chat_page.dart';
+import 'package:myapp/chat/pages/reimagined_chat_page.dart';
+import 'package:myapp/services/settings_service.dart';
 part 'dashboard_v2_state.dart';
 
 class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
   final IntentDetectionService _intentDetectionService;
+  final SettingsService _settingsService;
   final AiService _aiService = GetIt.instance<AiService>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
   // CC: Track entries currently generating insights to prevent duplicates
@@ -26,8 +28,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   DashboardV2Cubit({
     required EntryRepository entryRepository,
     required IntentDetectionService intentDetectionService,
+    required SettingsService settingsService,
   }) : _entryRepository = entryRepository,
        _intentDetectionService = intentDetectionService,
+       _settingsService = settingsService,
        super(const DashboardV2State()) {
     // CC: Subscribe to entries stream (handles entry AND color changes)
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
@@ -309,7 +313,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   Future<void> _logAsNote(String text) async {
-    await _entryRepository.addEntry(text);
+    await _entryRepository.addEntry(
+      text,
+      preserveOriginalText: _settingsService.preserveOriginalText,
+    );
   }
 
   void _navigateToChat(BuildContext context, String initialQuery) {
@@ -323,7 +330,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
             chatCubit.startChatWithQuery(initialQuery);
             return chatCubit;
           },
-          child: const FullscreenChatPage(),
+          child: const ReimaginedChatPage(),
         ),
       ),
     );
