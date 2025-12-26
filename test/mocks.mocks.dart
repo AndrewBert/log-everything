@@ -4,10 +4,11 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i8;
-import 'dart:convert' as _i22;
+import 'dart:convert' as _i24;
+import 'dart:io' as _i22;
 import 'dart:typed_data' as _i10;
 
-import 'package:flutter_bloc/flutter_bloc.dart' as _i23;
+import 'package:flutter_bloc/flutter_bloc.dart' as _i25;
 import 'package:http/http.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i18;
@@ -20,6 +21,7 @@ import 'package:myapp/entry/entry.dart' as _i14;
 import 'package:myapp/services/ai_service.dart' as _i16;
 import 'package:myapp/services/audio_recorder_service.dart' as _i19;
 import 'package:myapp/services/entry_persistence_service.dart' as _i13;
+import 'package:myapp/services/image_storage_service.dart' as _i21;
 import 'package:myapp/services/permission_service.dart' as _i11;
 import 'package:myapp/services/vector_store_service.dart' as _i20;
 import 'package:myapp/speech_service.dart' as _i7;
@@ -27,7 +29,7 @@ import 'package:permission_handler/permission_handler.dart' as _i12;
 import 'package:record/record.dart' as _i9;
 import 'package:record_platform_interface/record_platform_interface.dart'
     as _i2;
-import 'package:shared_preferences/shared_preferences.dart' as _i21;
+import 'package:shared_preferences/shared_preferences.dart' as _i23;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -447,6 +449,82 @@ class MockAiService extends _i1.Mock implements _i16.AiService {
             ),
           )
           as _i8.Future<_i4.SimpleInsight>);
+
+  @override
+  _i8.Future<
+    ({
+      String category,
+      String imageDescription,
+      String imageTitle,
+      String insight,
+      bool isTask,
+    })
+  >
+  analyzeImage({
+    required _i10.Uint8List? imageBytes,
+    required List<_i15.Category>? categories,
+    String? userNote,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#analyzeImage, [], {
+              #imageBytes: imageBytes,
+              #categories: categories,
+              #userNote: userNote,
+            }),
+            returnValue:
+                _i8.Future<
+                  ({
+                    String category,
+                    String imageDescription,
+                    String imageTitle,
+                    String insight,
+                    bool isTask,
+                  })
+                >.value((
+                  category: _i18.dummyValue<String>(
+                    this,
+                    Invocation.method(#analyzeImage, [], {
+                      #imageBytes: imageBytes,
+                      #categories: categories,
+                      #userNote: userNote,
+                    }),
+                  ),
+                  imageDescription: _i18.dummyValue<String>(
+                    this,
+                    Invocation.method(#analyzeImage, [], {
+                      #imageBytes: imageBytes,
+                      #categories: categories,
+                      #userNote: userNote,
+                    }),
+                  ),
+                  imageTitle: _i18.dummyValue<String>(
+                    this,
+                    Invocation.method(#analyzeImage, [], {
+                      #imageBytes: imageBytes,
+                      #categories: categories,
+                      #userNote: userNote,
+                    }),
+                  ),
+                  insight: _i18.dummyValue<String>(
+                    this,
+                    Invocation.method(#analyzeImage, [], {
+                      #imageBytes: imageBytes,
+                      #categories: categories,
+                      #userNote: userNote,
+                    }),
+                  ),
+                  isTask: false,
+                )),
+          )
+          as _i8.Future<
+            ({
+              String category,
+              String imageDescription,
+              String imageTitle,
+              String insight,
+              bool isTask,
+            })
+          >);
 }
 
 /// A class which mocks [AudioRecorderService].
@@ -573,10 +651,84 @@ class MockVectorStoreService extends _i1.Mock
           as _i8.Future<void>);
 }
 
+/// A class which mocks [ImageStorageService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockImageStorageService extends _i1.Mock
+    implements _i21.ImageStorageService {
+  MockImageStorageService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i8.Future<String> saveImage(_i22.File? imageFile) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveImage, [imageFile]),
+            returnValue: _i8.Future<String>.value(
+              _i18.dummyValue<String>(
+                this,
+                Invocation.method(#saveImage, [imageFile]),
+              ),
+            ),
+          )
+          as _i8.Future<String>);
+
+  @override
+  _i8.Future<String> saveImageBytes(_i10.Uint8List? bytes, String? extension) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveImageBytes, [bytes, extension]),
+            returnValue: _i8.Future<String>.value(
+              _i18.dummyValue<String>(
+                this,
+                Invocation.method(#saveImageBytes, [bytes, extension]),
+              ),
+            ),
+          )
+          as _i8.Future<String>);
+
+  @override
+  _i8.Future<void> deleteImage(String? relativePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteImage, [relativePath]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<_i22.File?> getImage(String? relativePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#getImage, [relativePath]),
+            returnValue: _i8.Future<_i22.File?>.value(),
+          )
+          as _i8.Future<_i22.File?>);
+
+  @override
+  _i8.Future<String> getFullPath(String? relativePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#getFullPath, [relativePath]),
+            returnValue: _i8.Future<String>.value(
+              _i18.dummyValue<String>(
+                this,
+                Invocation.method(#getFullPath, [relativePath]),
+              ),
+            ),
+          )
+          as _i8.Future<String>);
+
+  @override
+  _i8.Future<_i10.Uint8List?> getImageBytes(String? relativePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#getImageBytes, [relativePath]),
+            returnValue: _i8.Future<_i10.Uint8List?>.value(),
+          )
+          as _i8.Future<_i10.Uint8List?>);
+}
+
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i21.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i23.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }
@@ -735,7 +887,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i22.Encoding? encoding,
+    _i24.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -761,7 +913,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i22.Encoding? encoding,
+    _i24.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -787,7 +939,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i22.Encoding? encoding,
+    _i24.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -813,7 +965,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i22.Encoding? encoding,
+    _i24.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -926,6 +1078,12 @@ class MockChatCubit extends _i1.Mock implements _i6.ChatCubit {
           as _i8.Future<void>);
 
   @override
+  void startChatWithQuery(String? queryText) => super.noSuchMethod(
+    Invocation.method(#startChatWithQuery, [queryText]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
   void loadDummyMessages() => super.noSuchMethod(
     Invocation.method(#loadDummyMessages, []),
     returnValueForMissingStub: null,
@@ -938,7 +1096,7 @@ class MockChatCubit extends _i1.Mock implements _i6.ChatCubit {
   );
 
   @override
-  void onChange(_i23.Change<_i6.ChatState>? change) => super.noSuchMethod(
+  void onChange(_i25.Change<_i6.ChatState>? change) => super.noSuchMethod(
     Invocation.method(#onChange, [change]),
     returnValueForMissingStub: null,
   );

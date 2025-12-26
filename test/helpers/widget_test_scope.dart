@@ -24,6 +24,7 @@ class WidgetTestScope {
   late MockAudioRecorderService mockAudioRecorderService;
   late MockPermissionService mockPermissionService;
   late MockVectorStoreService mockVectorStoreService;
+  late MockImageStorageService mockImageStorageService;
   late MockSharedPreferences mockSharedPreferences;
   late MockClient mockHttpClient;
   late MockChatCubit mockChatCubit;
@@ -42,6 +43,11 @@ class WidgetTestScope {
     when(mockVectorStoreService.synchronizeMonthlyLogFile(any, any, any)).thenAnswer((_) async {});
     when(mockVectorStoreService.performInitialBackfillIfNeeded()).thenAnswer((_) async {});
     when(mockVectorStoreService.cleanupDuplicateFiles()).thenAnswer((_) async {});
+    mockImageStorageService = MockImageStorageService();
+    when(mockImageStorageService.saveImage(any)).thenAnswer((_) async => 'images/test.jpg');
+    when(mockImageStorageService.saveImageBytes(any, any)).thenAnswer((_) async => 'images/test.jpg');
+    when(mockImageStorageService.deleteImage(any)).thenAnswer((_) async {});
+    when(mockImageStorageService.getFullPath(any)).thenAnswer((_) async => '/test/path/images/test.jpg');
     mockSharedPreferences = MockSharedPreferences();
     mockHttpClient = MockClient();
     mockChatCubit = MockChatCubit();

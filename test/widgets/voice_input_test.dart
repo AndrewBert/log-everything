@@ -26,6 +26,7 @@ void main() {
       audioRecorder: scope.mockAudioRecorderService,
       permissionService: scope.mockPermissionService,
       vectorStoreService: scope.mockVectorStoreService,
+      imageStorageService: scope.mockImageStorageService,
       sharedPreferences: scope.mockSharedPreferences,
       httpClient: scope.mockHttpClient,
     );

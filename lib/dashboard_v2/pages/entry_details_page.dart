@@ -158,6 +158,21 @@ class EntryDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // AI Insight at the top
+            // Check both cubit state AND entry's persistent flag
+            if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: InsightDisplay(
+                  insight: state.primaryInsight,
+                  isLoading: state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false),
+                  categoryColor: categoryColor,
+                  margin: EdgeInsets.zero,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  useVariableHeight: true,
+                ),
+              ),
+
             // Image display for image entries
             if (entry.imagePath != null)
               Padding(
@@ -212,21 +227,6 @@ class EntryDetailsPage extends StatelessWidget {
                       ],
                     );
                   },
-                ),
-              ),
-
-            // AI Insight with refined visual design
-            // Check both cubit state AND entry's persistent flag
-            if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: InsightDisplay(
-                  insight: state.primaryInsight,
-                  isLoading: state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false),
-                  categoryColor: categoryColor,
-                  margin: EdgeInsets.zero,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  useVariableHeight: true,
                 ),
               ),
 

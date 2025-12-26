@@ -5,6 +5,7 @@ import 'package:myapp/services/audio_recorder_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart'; // Import Persistence service
 import 'package:myapp/services/permission_service.dart'; // Import Permission service
 import 'package:myapp/services/vector_store_service.dart'; // CP: Import VectorStoreService
+import 'package:myapp/services/image_storage_service.dart'; // Import ImageStorageService
 import 'package:myapp/services/timer_factory.dart'; // CP: Import TimerFactory
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Import SharedPreferences
@@ -27,6 +28,7 @@ Future<void> setupTestDependencies({
   required MockAudioRecorderService audioRecorder,
   required MockPermissionService permissionService,
   required MockVectorStoreService vectorStoreService, // CP: Add vectorStoreService mock
+  required MockImageStorageService imageStorageService, // Add imageStorageService mock
   required MockSharedPreferences sharedPreferences, // CP: Add SharedPreferences mock
   required http.Client httpClient, // CP: Add http.Client mock
   // Add other mocks as needed
@@ -42,6 +44,7 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<AudioRecorderService>(audioRecorder);
   getIt.registerSingleton<PermissionService>(permissionService);
   getIt.registerSingleton<VectorStoreService>(vectorStoreService); // CP: Register VectorStoreService mock
+  getIt.registerSingleton<ImageStorageService>(imageStorageService); // Register ImageStorageService mock
   getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
 
@@ -60,6 +63,7 @@ Future<void> setupTestDependencies({
       aiService: getIt<AiService>(),
       vectorStoreService: getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
       timerFactory: getIt<TimerFactory>(), // CP: Pass TimerFactory for tests
+      imageStorageService: getIt<ImageStorageService>(), // Pass ImageStorageService mock
     ),
   );
 
