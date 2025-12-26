@@ -31,18 +31,37 @@ flutter build ipa --release
 
 Verify IPA created at `build/ios/ipa/myapp.ipa`.
 
-### 4. Deploy
+### 4. Generate Changelog
 
-Extract changelog from the latest version section in `lib/dialogs/whats_new_dialog.dart` (the `_v*Changes` list for the current version).
+Generate changelog from commits since last tag:
 
 ```bash
-cd ios && fastlane beta_with_changelog changelog:"<extracted changelog>"
+# Get commits since last tag (or all commits if no tags)
+git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --oneline
 ```
 
-### 5. Confirm
+Present the commits to the user and ask them to confirm or edit the changelog text for TestFlight.
+
+### 5. Deploy
+
+```bash
+cd ios && fastlane beta_with_changelog changelog:"<user-confirmed changelog>"
+```
+
+### 6. Tag Release
+
+After successful upload, create a git tag for this release:
+
+```bash
+git tag -a v<version> -m "Release <version>"
+git push origin v<version>
+```
+
+### 7. Confirm
 
 Report success with:
 - Version deployed
+- Tag created
 - Changelog used
 - Note: Build available in TestFlight after Apple processing (~10-30 min)
 
