@@ -589,7 +589,17 @@ class EntryRepository {
           formattedContent = entriesForMonth
               .map((entry) {
                 final String timestampStr = _formatTimestampForLogEntry(entry.timestamp);
-                return "[$timestampStr] (${entry.category}): ${entry.text}";
+                final buffer = StringBuffer("[$timestampStr] (${entry.category})");
+                if (entry.imagePath != null) {
+                  buffer.write(" [IMAGE: ${entry.imageTitle ?? 'Untitled'}]");
+                  if (entry.imageDescription != null) {
+                    buffer.write(" ${entry.imageDescription}");
+                  }
+                }
+                if (entry.text.isNotEmpty) {
+                  buffer.write(": ${entry.text}");
+                }
+                return buffer.toString();
               })
               .join('\n---\n');
         }
