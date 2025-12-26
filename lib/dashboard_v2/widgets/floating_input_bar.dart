@@ -626,10 +626,12 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                     // CP: Add attachment button (left side) - always visible unless image selected
                                     if (!hasImage) ...[
                                       IconButton(
-                                        onPressed: _showImageSourceSheet,
+                                        onPressed: _isSubmitting ? null : _showImageSourceSheet,
                                         icon: Icon(
                                           Icons.add,
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                          color: _isSubmitting
+                                              ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.38)
+                                              : theme.colorScheme.onSurfaceVariant,
                                         ),
                                         tooltip: 'Add Attachment',
                                       ),
