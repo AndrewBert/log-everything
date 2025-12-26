@@ -60,8 +60,8 @@ class ImageEntryCard extends StatelessWidget {
                           Image.file(
                             File(snapshot.data!),
                             fit: BoxFit.cover,
-                            // CP: Limit decode size to match display (~500px)
-                            cacheWidth: 600,
+                            // CP: Match display size (~486px)
+                            cacheWidth: 500,
                             errorBuilder: (_, __, ___) => Container(
                               color: theme.colorScheme.surfaceContainerHighest,
                               child: const Icon(Icons.broken_image),

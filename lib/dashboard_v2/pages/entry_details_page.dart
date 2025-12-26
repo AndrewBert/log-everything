@@ -196,8 +196,8 @@ class EntryDetailsPage extends StatelessWidget {
                             File(snapshot.data!),
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            // CP: Full-width detail view - limit decode to screen width (x3 = ~1200)
-                            cacheWidth: 1200,
+                            // CP: Full-width detail view - match display size
+                            cacheWidth: 1026,
                             errorBuilder: (_, __, ___) => Container(
                               height: 200,
                               color: theme.colorScheme.surfaceContainerHighest,

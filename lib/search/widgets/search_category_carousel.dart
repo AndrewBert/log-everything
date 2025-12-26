@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/utils/category_colors.dart';
-import 'package:myapp/utils/search_keys.dart';
 
 class SearchCategoryCarousel extends StatelessWidget {
   final List<Category> categories;
@@ -22,55 +21,37 @@ class SearchCategoryCarousel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Column(
-      key: searchCategoryCarouselKey,
+      key: const ValueKey('search_category_carousel'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            'MATCHING CATEGORIES',
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontSize: 11,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 48,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              final isFirst = index == 0;
-              final isLast = index == categories.length - 1;
-              final categoryColor = category.color ?? CategoryColors.getColorForCategory(category.name);
-
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: isFirst ? 16 : 4,
-                  right: isLast ? 16 : 4,
-                ),
-                child: _SearchCategoryChip(
-                  category: category,
-                  color: categoryColor,
-                  onTap: () => onCategoryTap(category),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Divider(
-            height: 1,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+        Text(
+          'MATCHING CATEGORIES',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 11,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
           ),
         ),
         const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: categories.map((category) {
+            final categoryColor = category.color ?? CategoryColors.getColorForCategory(category.name);
+            return _SearchCategoryChip(
+              category: category,
+              color: categoryColor,
+              onTap: () => onCategoryTap(category),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+        Divider(
+          height: 1,
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -94,7 +75,7 @@ class _SearchCategoryChip extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        key: searchCategoryChipKey,
+        key: ValueKey('search_category_chip_${category.name}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
