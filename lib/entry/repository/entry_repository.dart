@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,7 +10,9 @@ import '../../services/ai_service.dart';
 import '../../services/entry_persistence_service.dart';
 import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
 import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
+import '../../services/image_storage_service.dart';
 import '../../utils/logger.dart';
+import '../../dashboard_v2/model/simple_insight.dart';
 
 /// Manages the storage and retrieval of entries, synchronizing with vector store and handling AI categorization.
 class EntryRepository {
@@ -17,6 +20,7 @@ class EntryRepository {
   final AiService _aiService;
   final VectorStoreService _vectorStoreService;
   final TimerFactory _timerFactory;
+  final ImageStorageService _imageStorageService;
   List<Entry> _entries = [];
   List<Category> _categories = [];
   // CP: Map to store debounce timers for each month's sync
@@ -35,10 +39,12 @@ class EntryRepository {
     required AiService aiService,
     required VectorStoreService vectorStoreService,
     required TimerFactory timerFactory,
+    required ImageStorageService imageStorageService,
   }) : _persistenceService = persistenceService,
        _aiService = aiService,
        _vectorStoreService = vectorStoreService,
-       _timerFactory = timerFactory;
+       _timerFactory = timerFactory,
+       _imageStorageService = imageStorageService;
 
   Future<void> initialize() async {
     await _loadCategories();
@@ -201,8 +207,81 @@ class EntryRepository {
     return currentEntries;
   }
 
+  Future<({List<Entry> entries, Entry? addedEntry})> addImageEntry({
+    required Uint8List imageBytes,
+    String? userNote,
+  }) async {
+    final DateTime processingTimestamp = DateTime.now();
+
+    try {
+      // Save image to local storage
+      final imagePath = await _imageStorageService.saveImageBytes(imageBytes, 'jpg');
+
+      // Analyze image with AI
+      final analysis = await _aiService.analyzeImage(
+        imageBytes: imageBytes,
+        categories: _categories,
+        userNote: userNote,
+      );
+
+      // Create entry with image fields
+      final newEntry = Entry(
+        text: userNote ?? '',
+        timestamp: processingTimestamp,
+        category: analysis.category,
+        isNew: true,
+        isTask: analysis.isTask,
+        imagePath: imagePath,
+        imageTitle: analysis.imageTitle,
+        imageDescription: analysis.imageDescription,
+        simpleInsight: SimpleInsight(
+          content: analysis.insight,
+          generatedAt: DateTime.now(),
+        ),
+      );
+
+      _entries.insert(0, newEntry);
+      await _saveEntries();
+
+      _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background vector store sync failed for addImageEntry",
+          error: e, stackTrace: stackTrace);
+      });
+
+      return (entries: currentEntries, addedEntry: newEntry);
+    } catch (e) {
+      AppLogger.error("Repository: Error adding image entry", error: e);
+
+      // Fallback: save with minimal data
+      final imagePath = await _imageStorageService.saveImageBytes(imageBytes, 'jpg');
+      final fallbackEntry = Entry(
+        text: userNote ?? '',
+        timestamp: processingTimestamp,
+        category: 'Misc',
+        isNew: true,
+        imagePath: imagePath,
+        imageTitle: 'Image',
+      );
+
+      _entries.insert(0, fallbackEntry);
+      await _saveEntries();
+
+      return (entries: currentEntries, addedEntry: fallbackEntry);
+    }
+  }
+
   Future<List<Entry>> deleteEntry(Entry entryToDelete) async {
     final originalLength = _entries.length;
+
+    // Delete associated image if exists
+    final entryToRemove = _entries.firstWhere(
+      (entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text,
+      orElse: () => entryToDelete,
+    );
+    if (entryToRemove.imagePath != null) {
+      await _imageStorageService.deleteImage(entryToRemove.imagePath!);
+    }
+
     _entries.removeWhere((entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text);
     if (_entries.length < originalLength) {
       await _saveEntries();
