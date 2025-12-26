@@ -678,7 +678,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                       ? "Add a note (optional)..."
                                                       : (_justTranscribed
                                                           ? "Review transcription..."
-                                                          : "What's on your mind?"),
+                                                          : "Log or ask anything..."),
                                                   hintStyle: TextStyle(
                                                     color: _hasText && !_isExpanded
                                                         ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
@@ -688,10 +688,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                   contentPadding: EdgeInsets.only(
                                                     left: _isExpanded
                                                         ? 16
-                                                        : (_hasText
-                                                              ? 4
-                                                              : 48), // CC: Add padding to center when empty (48px = icon button width)
-                                                    right: _hasText && !_isExpanded && _textOverflows ? 25 : 16,
+                                                        : (_hasText ? 4 : 0),
+                                                    right: _hasText && !_isExpanded && _textOverflows ? 25 : (_hasText ? 16 : 0),
                                                     top: 16,
                                                     bottom: 16,
                                                   ),
