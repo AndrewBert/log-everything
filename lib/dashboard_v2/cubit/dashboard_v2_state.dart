@@ -13,6 +13,7 @@ class DashboardV2State extends Equatable {
   final IntentClassification? lastIntentClassification;
   final String? intentClassificationError;
   final Entry? pendingEntry; // CC: Temp entry shown during AI categorization
+  final Uint8List? selectedImageBytes; // CP: Image selected for attachment
 
   const DashboardV2State({
     this.entries = const [],
@@ -25,6 +26,7 @@ class DashboardV2State extends Equatable {
     this.lastIntentClassification,
     this.intentClassificationError,
     this.pendingEntry,
+    this.selectedImageBytes,
   });
 
   // CC: Combine pending entry with entries for display
@@ -75,9 +77,11 @@ class DashboardV2State extends Equatable {
     IntentClassification? lastIntentClassification,
     String? intentClassificationError,
     Entry? pendingEntry,
+    Uint8List? selectedImageBytes,
     bool clearLastIntentClassification = false,
     bool clearIntentClassificationError = false,
     bool clearPendingEntry = false,
+    bool clearSelectedImage = false,
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
@@ -94,6 +98,7 @@ class DashboardV2State extends Equatable {
           ? null
           : (intentClassificationError ?? this.intentClassificationError),
       pendingEntry: clearPendingEntry ? null : (pendingEntry ?? this.pendingEntry),
+      selectedImageBytes: clearSelectedImage ? null : (selectedImageBytes ?? this.selectedImageBytes),
     );
   }
 
@@ -136,5 +141,6 @@ class DashboardV2State extends Equatable {
     lastIntentClassification,
     intentClassificationError,
     pendingEntry,
+    selectedImageBytes,
   ];
 }

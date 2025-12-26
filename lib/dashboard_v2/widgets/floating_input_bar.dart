@@ -24,8 +24,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   bool _justTranscribed = false;
   bool _textOverflows = false;
   Timer? _transcriptionReviewTimer;
-  File? _selectedImage;
-  bool _isProcessingImage = false;
   final ImagePicker _imagePicker = ImagePicker();
 
   late AnimationController _animationController;
@@ -298,26 +296,23 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
   Future<void> _handleSubmit() async {
     final text = _textController.text.trim();
-    final hasImage = _selectedImage != null;
+    final cubit = context.read<DashboardV2Cubit>();
+    final hasImage = cubit.state.selectedImageBytes != null;
 
     if (text.isEmpty && !hasImage) return;
-    if (_isSubmitting || _isProcessingImage) return;
+    if (_isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
-      if (hasImage) _isProcessingImage = true;
     });
 
     try {
       if (hasImage) {
-        final imageBytes = await _selectedImage!.readAsBytes();
-        await context.read<DashboardV2Cubit>().handleImageInput(
-          imageBytes,
+        await cubit.handleImageInput(
           userNote: text.isNotEmpty ? text : null,
         );
-        _clearImage();
       } else {
-        await context.read<DashboardV2Cubit>().handleUserInput(text, context);
+        await cubit.handleUserInput(text, context);
       }
 
       _textController.clear();
@@ -360,7 +355,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _isProcessingImage = false;
         });
       }
     }
@@ -407,12 +401,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         imageQuality: 85,
       );
 
-      if (pickedFile != null) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-          _isExpanded = true;
-        });
-        _animationController.forward();
+      if (pickedFile != null && mounted) {
+        final bytes = await File(pickedFile.path).readAsBytes();
+        if (mounted) {
+          context.read<DashboardV2Cubit>().setSelectedImage(bytes);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -421,13 +414,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
         );
       }
     }
-  }
-
-  void _clearImage() {
-    setState(() {
-      _selectedImage = null;
-    });
-    HapticFeedback.lightImpact();
   }
 
   Widget _buildRecordingIndicator(ThemeData theme) {
@@ -573,6 +559,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
           _waveformController.reset();
         }
 
+        // CP: Get image state from cubit
+        final hasImage = context.watch<DashboardV2Cubit>().state.selectedImageBytes != null;
+
         return Align(
           alignment: Alignment.bottomCenter,
           child: AnimatedBuilder(
@@ -620,40 +609,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                         color: Colors.transparent,
                         child: Stack(
                           children: [
-                            // Image preview when selected
-                            if (_selectedImage != null)
-                              Positioned(
-                                top: 8,
-                                left: 8,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    _clearImage();
-                                  },
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      image: DecorationImage(
-                                        image: FileImage(_selectedImage!),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.topRight,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black54,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.close, color: Colors.white, size: 12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
                             // CC: Show recording indicator when recording
                             if (isRecording)
                               Positioned.fill(
@@ -666,8 +621,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
-                                    // Image picker button (left side)
-                                    if (!_hasText && !_isExpanded && _selectedImage == null) ...[
+                                    // Image picker button (left side) - hide when image selected (overlay shows instead)
+                                    if (!_hasText && !_isExpanded && !hasImage) ...[
                                       IconButton(
                                         onPressed: _showImageSourceSheet,
                                         icon: Icon(
@@ -719,7 +674,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                 controller: _textController,
                                                 focusNode: _focusNode,
                                                 decoration: InputDecoration(
-                                                  hintText: _selectedImage != null
+                                                  hintText: hasImage
                                                       ? "Add a note (optional)..."
                                                       : (_justTranscribed
                                                           ? "Review transcription..."
@@ -806,11 +761,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                     ),
 
                                     // CC: Send button when has text or image, Mic button when empty
-                                    if (_hasText || _selectedImage != null) ...[
+                                    if (_hasText || hasImage) ...[
                                       // Send button
                                       IconButton(
-                                        onPressed: (_isSubmitting || _isProcessingImage || isTranscribing) ? null : _handleSubmit,
-                                        icon: (_isSubmitting || _isProcessingImage)
+                                        onPressed: (_isSubmitting || isTranscribing) ? null : _handleSubmit,
+                                        icon: _isSubmitting
                                             ? SizedBox(
                                                 width: 24,
                                                 height: 24,

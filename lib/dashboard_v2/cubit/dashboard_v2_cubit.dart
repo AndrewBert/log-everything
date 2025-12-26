@@ -310,10 +310,24 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     }
   }
 
-  Future<void> handleImageInput(
-    Uint8List imageBytes, {
+  // CP: Set selected image for attachment overlay
+  void setSelectedImage(Uint8List imageBytes) {
+    emit(state.copyWith(selectedImageBytes: imageBytes));
+  }
+
+  // CP: Clear selected image
+  void clearSelectedImage() {
+    emit(state.copyWith(clearSelectedImage: true));
+  }
+
+  Future<void> handleImageInput({
+    Uint8List? imageBytes,
     String? userNote,
   }) async {
+    // CP: Use provided bytes or fall back to state's selected image
+    final bytes = imageBytes ?? state.selectedImageBytes;
+    if (bytes == null) return;
+
     // Show pending entry while processing
     final tempEntry = Entry(
       text: userNote ?? '',
@@ -321,11 +335,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       category: 'Processing...',
       isNew: true,
     );
-    emit(state.copyWith(pendingEntry: tempEntry));
+    emit(state.copyWith(pendingEntry: tempEntry, clearSelectedImage: true));
 
     try {
       final result = await _entryRepository.addImageEntry(
-        imageBytes: imageBytes,
+        imageBytes: bytes,
         userNote: userNote,
       );
 

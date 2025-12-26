@@ -445,6 +445,73 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                 );
               },
             ),
+            // CP: Image attachment overlay
+            BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+              buildWhen: (prev, current) => prev.selectedImageBytes != current.selectedImageBytes,
+              builder: (context, state) {
+                if (state.selectedImageBytes == null) {
+                  return const SizedBox.shrink();
+                }
+
+                return Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Dismiss when tapping the scrim
+                      context.read<DashboardV2Cubit>().clearSelectedImage();
+                    },
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      child: SafeArea(
+                        child: Column(
+                          children: [
+                            // X button in top-left
+                            Align(
+                              alignment: Alignment.topLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: IconButton(
+                                  onPressed: () {
+                                    context.read<DashboardV2Cubit>().clearSelectedImage();
+                                  },
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.black38,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Image preview - centered and takes available space
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {}, // Prevent tap from dismissing
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Center(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.memory(
+                                        state.selectedImageBytes!,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Space for input bar
+                            const SizedBox(height: 80),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             // CC: Floating input bar at the bottom
             const Positioned(
               left: 0,
