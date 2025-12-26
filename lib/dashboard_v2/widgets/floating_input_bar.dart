@@ -302,6 +302,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
     if (text.isEmpty && !hasImage) return;
     if (_isSubmitting) return;
 
+    // CC: Unfocus before setting readOnly to avoid context menu assertion error
+    _focusNode.unfocus();
+
     setState(() {
       _isSubmitting = true;
     });
@@ -316,7 +319,6 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       }
 
       _textController.clear();
-      _focusNode.unfocus();
       HapticFeedback.mediumImpact();
 
       // CC: Reset transcription state and cancel timer when submitting
@@ -677,6 +679,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                               TextField(
                                                 controller: _textController,
                                                 focusNode: _focusNode,
+                                                readOnly: _isSubmitting,
                                                 decoration: InputDecoration(
                                                   hintText: hasImage
                                                       ? "Add a note (optional)..."
