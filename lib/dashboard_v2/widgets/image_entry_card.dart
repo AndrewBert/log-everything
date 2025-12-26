@@ -57,27 +57,23 @@ class ImageEntryCard extends StatelessWidget {
                     child: const Center(child: CircularProgressIndicator()),
                   ),
 
-                // Gradient overlay at bottom
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7),
-                        ],
-                      ),
+                // Gradient overlay - fades to black at bottom
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.5),
+                        Colors.black,
+                      ],
+                      stops: const [0.0, 0.4, 0.7],
                     ),
                   ),
                 ),
 
-                // Title overlay
+                // Title overlay - white text on dark gradient
                 Positioned(
                   bottom: 8,
                   left: 12,
@@ -87,13 +83,6 @@ class ImageEntryCard extends StatelessWidget {
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.5),
-                        ),
-                      ],
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
