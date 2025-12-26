@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -8,6 +9,7 @@ import 'package:myapp/entry/category.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/utils/category_colors.dart';
+import 'package:myapp/utils/logger.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
@@ -309,6 +311,37 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         ),
       );
       _logAsNote(text);
+    }
+  }
+
+  Future<void> handleImageInput(
+    Uint8List imageBytes, {
+    String? userNote,
+  }) async {
+    // Show pending entry while processing
+    final tempEntry = Entry(
+      text: userNote ?? '',
+      timestamp: DateTime.now(),
+      category: 'Processing...',
+      isNew: true,
+    );
+    emit(state.copyWith(pendingEntry: tempEntry));
+
+    try {
+      final result = await _entryRepository.addImageEntry(
+        imageBytes: imageBytes,
+        userNote: userNote,
+      );
+
+      // Clear pending entry - stream will deliver the real entry
+      emit(state.copyWith(clearPendingEntry: true));
+
+      AppLogger.info('Image entry added successfully: ${result.addedEntry?.imageTitle}');
+    } catch (e) {
+      AppLogger.error('Error adding image entry', error: e);
+      // Clear pending entry on error
+      emit(state.copyWith(clearPendingEntry: true));
+      rethrow;
     }
   }
 
