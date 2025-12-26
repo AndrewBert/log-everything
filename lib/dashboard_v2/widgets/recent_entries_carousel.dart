@@ -282,6 +282,7 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
                     ? ImageEntryCard(
                         entry: entry,
                         isSelected: isSelected,
+                        categoryColor: widget.getCategoryColor?.call(entry.category),
                         onTap: () {
                           if (widget.onEntryTap != null) {
                             widget.onEntryTap!(entry);
