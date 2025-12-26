@@ -15,6 +15,7 @@ import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
 import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/services/debug_http_server.dart';
+import 'package:myapp/services/image_storage_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -61,6 +62,9 @@ Future<void> configureDependencies() async {
 
   // Register IntentDetectionService
   getIt.registerLazySingleton<IntentDetectionService>(() => IntentDetectionService());
+
+  // Register ImageStorageService
+  getIt.registerLazySingleton<ImageStorageService>(() => LocalImageStorageService());
 
   getIt.registerLazySingleton(
     () => EntryRepository(
