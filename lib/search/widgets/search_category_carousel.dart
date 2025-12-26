@@ -20,39 +20,42 @@ class SearchCategoryCarousel extends StatelessWidget {
 
     final theme = Theme.of(context);
 
-    return Column(
+    return Padding(
       key: const ValueKey('search_category_carousel'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'MATCHING CATEGORIES',
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 11,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CATEGORIES',
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: categories.map((category) {
-            final categoryColor = category.color ?? CategoryColors.getColorForCategory(category.name);
-            return _SearchCategoryChip(
-              category: category,
-              color: categoryColor,
-              onTap: () => onCategoryTap(category),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
-        Divider(
-          height: 1,
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-        const SizedBox(height: 16),
-      ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: categories.map((category) {
+              final categoryColor = category.color ?? CategoryColors.getColorForCategory(category.name);
+              return _SearchCategoryChip(
+                category: category,
+                color: categoryColor,
+                onTap: () => onCategoryTap(category),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          Divider(
+            height: 1,
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
     );
   }
 }

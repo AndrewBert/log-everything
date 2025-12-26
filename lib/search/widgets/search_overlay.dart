@@ -106,7 +106,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
 
   Widget _buildSearchBar(BuildContext context, ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
@@ -238,7 +238,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
                         ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: entry2 != null
                     ? AspectRatio(
@@ -264,6 +264,8 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
       );
     }
 
+    final theme = Theme.of(context);
+
     return ListView(
       key: searchResultsListKey,
       padding: const EdgeInsets.all(16),
@@ -272,6 +274,19 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
           SearchCategoryCarousel(
             categories: state.matchingCategories,
             onCategoryTap: (category) => _navigateToCategory(context, category),
+          ),
+        if (state.hasResults)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'NOTES',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+            ),
           ),
         ...gridRows,
       ],
