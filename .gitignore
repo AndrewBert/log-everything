@@ -23,8 +23,10 @@ android/app/.cxx/
 
 coverage
 
-# Spec Kit - Local settings may contain user-specific permissions
+# Claude Code - Local settings (user-specific permissions and rules)
 .claude/settings.local.json
+.claude/*.local.md
+CLAUDE.local.md
 .serena/
 
 # Git worktrees
