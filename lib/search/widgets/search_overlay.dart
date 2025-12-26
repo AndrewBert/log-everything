@@ -5,6 +5,7 @@ import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/search/cubit/search_cubit.dart';
+import 'package:myapp/search/widgets/search_category_carousel.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
 import 'package:myapp/entry/category.dart';
@@ -93,7 +94,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
                     return _buildEmptyState(context, theme);
                   }
 
-                  return _buildResults(context, state.results);
+                  return _buildResults(context, state);
                 },
               ),
             ),
@@ -205,7 +206,9 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
     );
   }
 
-  Widget _buildResults(BuildContext context, List<Entry> results) {
+  Widget _buildResults(BuildContext context, SearchState state) {
+    final results = state.results;
+
     // Build grid rows (2 entries per row)
     final List<Widget> gridRows = [];
     for (int i = 0; i < results.length; i += 2) {
@@ -264,7 +267,24 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
     return ListView(
       key: searchResultsListKey,
       padding: const EdgeInsets.all(16),
-      children: gridRows,
+      children: [
+        if (state.hasMatchingCategories)
+          SearchCategoryCarousel(
+            categories: state.matchingCategories,
+            onCategoryTap: (category) => _navigateToCategory(context, category),
+          ),
+        ...gridRows,
+      ],
+    );
+  }
+
+  void _navigateToCategory(BuildContext context, Category category) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CategoryEntriesPage(
+          categoryName: category.name,
+        ),
+      ),
     );
   }
 

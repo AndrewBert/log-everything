@@ -512,6 +512,8 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       child: Image.memory(
                                         state.selectedImageBytes!,
                                         fit: BoxFit.contain,
+                                        // CP: Preview overlay - limit decode size
+                                        cacheWidth: 1200,
                                       ),
                                     ),
                                   ),

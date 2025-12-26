@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 
@@ -25,6 +26,7 @@ class SearchCubit extends Cubit<SearchState> {
       emit(state.copyWith(
         query: query,
         results: [],
+        matchingCategories: [],
         isSearching: false,
       ));
       return;
@@ -43,19 +45,24 @@ class SearchCubit extends Cubit<SearchState> {
   void _performSearch(String query) {
     final normalizedQuery = query.toLowerCase();
     final allEntries = _entryRepository.currentEntries;
+    final allCategories = _entryRepository.currentCategories;
 
     final results = allEntries.where((entry) {
-      // Search in text
       if (entry.text.toLowerCase().contains(normalizedQuery)) return true;
-      // Search in image title
       if (entry.imageTitle?.toLowerCase().contains(normalizedQuery) ?? false) return true;
-      // Search in image description
       if (entry.imageDescription?.toLowerCase().contains(normalizedQuery) ?? false) return true;
+      return false;
+    }).toList();
+
+    final matchingCategories = allCategories.where((category) {
+      if (category.name.toLowerCase().contains(normalizedQuery)) return true;
+      if (category.description.toLowerCase().contains(normalizedQuery)) return true;
       return false;
     }).toList();
 
     emit(state.copyWith(
       results: results,
+      matchingCategories: matchingCategories,
       isSearching: false,
     ));
   }

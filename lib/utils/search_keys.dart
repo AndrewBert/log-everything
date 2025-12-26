@@ -7,3 +7,5 @@ const Key searchResultsListKey = ValueKey('search_results_list');
 const Key searchNoResultsKey = ValueKey('search_no_results');
 const Key searchCloseButtonKey = ValueKey('search_close_button');
 const Key searchClearButtonKey = ValueKey('search_clear_button');
+const Key searchCategoryCarouselKey = ValueKey('search_category_carousel');
+const Key searchCategoryChipKey = ValueKey('search_category_chip');

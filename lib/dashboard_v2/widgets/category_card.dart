@@ -181,6 +181,8 @@ class CategoryCard extends StatelessWidget {
               ? Image.file(
                   File(snapshot.data!),
                   fit: BoxFit.cover,
+                  // CP: Tiny thumbnails - limit decode to ~100px (x3 device pixel ratio = 300)
+                  cacheWidth: 300,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.broken_image,
                     size: 16,
