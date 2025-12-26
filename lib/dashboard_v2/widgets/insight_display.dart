@@ -9,7 +9,8 @@ class InsightDisplay extends StatelessWidget {
   final Color categoryColor;
   final EdgeInsetsGeometry? margin;
   final EdgeInsetsGeometry? padding;
-  final bool useVariableHeight;
+  final bool _useVariableHeight;
+  final double? _fixedHeight;
 
   const InsightDisplay({
     super.key,
@@ -19,8 +20,32 @@ class InsightDisplay extends StatelessWidget {
     required this.categoryColor,
     this.margin,
     this.padding,
-    this.useVariableHeight = false,
-  });
+  })  : _useVariableHeight = false,
+        _fixedHeight = 160;
+
+  /// Details page variant - variable height, no minimum, zero margin
+  const InsightDisplay.details({
+    super.key,
+    this.insight,
+    this.isLoading = false,
+    this.onTap,
+    required this.categoryColor,
+    this.padding,
+  })  : _useVariableHeight = true,
+        _fixedHeight = null,
+        margin = EdgeInsets.zero;
+
+  /// Carousel variant - fixed 160px height, standard margin
+  const InsightDisplay.carousel({
+    super.key,
+    this.insight,
+    this.isLoading = false,
+    this.onTap,
+    required this.categoryColor,
+    this.margin,
+    this.padding,
+  })  : _useVariableHeight = false,
+        _fixedHeight = 160;
 
   @override
   Widget build(BuildContext context) {
@@ -31,23 +56,18 @@ class InsightDisplay extends StatelessWidget {
       child: AnimatedContainer(
         key: aiInsightContainerKey,
         duration: const Duration(milliseconds: 300),
-        constraints: useVariableHeight
-            ? const BoxConstraints(
-                minHeight: 160, // Maintain minimum height for visual consistency
-              )
-            : null,
-        height: useVariableHeight ? null : 160,
+        height: _fixedHeight,
         margin: margin ?? const EdgeInsets.symmetric(horizontal: 16),
         padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: isLoading
               ? SizedBox(
-                  height: useVariableHeight ? 128 : null, // 160 - 32 (vertical padding)
+                  height: _useVariableHeight ? null : 128, // 160 - 32 (vertical padding)
                   child: _TypewriterLoader(
                     key: const ValueKey('loading'),
                     categoryColor: categoryColor,
-                    useVariableHeight: useVariableHeight,
+                    useVariableHeight: _useVariableHeight,
                   ),
                 )
               : insight != null
@@ -65,7 +85,7 @@ class InsightDisplay extends StatelessWidget {
       children: [
         Container(
           width: 3,
-          height: useVariableHeight ? null : double.infinity,
+          height: _useVariableHeight ? null : double.infinity,
           decoration: BoxDecoration(
             color: categoryColor,
             borderRadius: BorderRadius.circular(1.5),
@@ -86,8 +106,8 @@ class InsightDisplay extends StatelessWidget {
                   fontSize: 18,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                 ),
-                maxLines: useVariableHeight ? null : 4,
-                overflow: useVariableHeight ? TextOverflow.visible : TextOverflow.ellipsis,
+                maxLines: _useVariableHeight ? null : 4,
+                overflow: _useVariableHeight ? TextOverflow.visible : TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
               Text(
@@ -107,7 +127,7 @@ class InsightDisplay extends StatelessWidget {
 
     // Only wrap with IntrinsicHeight when using variable height
     // This allows the border to stretch to match content height
-    return useVariableHeight ? IntrinsicHeight(child: content) : content;
+    return _useVariableHeight ? IntrinsicHeight(child: content) : content;
   }
 
   String _getInsightLabel(InsightType type) {

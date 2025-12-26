@@ -162,14 +162,11 @@ class EntryDetailsPage extends StatelessWidget {
             // Check both cubit state AND entry's persistent flag
             if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
               Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: InsightDisplay(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: InsightDisplay.details(
                   insight: state.primaryInsight,
                   isLoading: state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false),
                   categoryColor: categoryColor,
-                  margin: EdgeInsets.zero,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  useVariableHeight: true,
                 ),
               ),
 
