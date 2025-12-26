@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,7 @@ import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/utils/entry_details_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
 
@@ -156,6 +158,63 @@ class EntryDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Image display for image entries
+            if (entry.imagePath != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: FutureBuilder<String>(
+                  future: GetIt.instance<ImageStorageService>().getFullPath(entry.imagePath!),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(snapshot.data!),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 200,
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              child: const Center(child: Icon(Icons.broken_image, size: 48)),
+                            ),
+                          ),
+                        ),
+                        if (entry.imageTitle != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            entry.imageTitle!,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (entry.imageDescription != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            entry.imageDescription!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+
             // AI Insight with refined visual design
             // Check both cubit state AND entry's persistent flag
             if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
