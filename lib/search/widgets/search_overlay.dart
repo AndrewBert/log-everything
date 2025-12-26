@@ -115,16 +115,17 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
           ),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            key: searchCloseButtonKey,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: widget.onClose,
-          ),
-          Expanded(
-            child: TextField(
+      child: TextFieldTapRegion(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconButton(
+              key: searchCloseButtonKey,
+              icon: const Icon(Icons.arrow_back),
+              onPressed: widget.onClose,
+            ),
+            Expanded(
+              child: TextField(
               key: searchTextFieldKey,
               controller: _textController,
               focusNode: _focusNode,
@@ -152,9 +153,11 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
               onChanged: (value) {
                 context.read<SearchCubit>().updateQuery(value);
               },
+              onTapOutside: (_) => _focusNode.unfocus(),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

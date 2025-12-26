@@ -101,6 +101,7 @@ A debug-only HTTP server runs on `localhost:8888` for programmatic entry managem
 - **copyWith**: Use dedicated bool parameters (e.g., `clearController`) to explicitly set fields to null
 
 ### Code Style
+- **TextField Unfocus**: Use `onTapOutside` + wrap siblings with `TextFieldTapRegion`
 - **Comments**: Prefix with `"CP"` when adding comments
 - **Barrel Files**: Use for managing exports/imports
 - **withOpacity**: Deprecated - use `Color.withValues()` instead
