@@ -621,8 +621,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
-                                    // CP: Add attachment button (left side) - hide when image selected (overlay shows instead)
-                                    if (!_hasText && !_isExpanded && !hasImage) ...[
+                                    // CP: Add attachment button (left side) - always visible unless image selected
+                                    if (!hasImage) ...[
                                       IconButton(
                                         onPressed: _showImageSourceSheet,
                                         icon: Icon(
