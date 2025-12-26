@@ -45,7 +45,13 @@ class SearchCubit extends Cubit<SearchState> {
     final allEntries = _entryRepository.currentEntries;
 
     final results = allEntries.where((entry) {
-      return entry.text.toLowerCase().contains(normalizedQuery);
+      // Search in text
+      if (entry.text.toLowerCase().contains(normalizedQuery)) return true;
+      // Search in image title
+      if (entry.imageTitle?.toLowerCase().contains(normalizedQuery) ?? false) return true;
+      // Search in image description
+      if (entry.imageDescription?.toLowerCase().contains(normalizedQuery) ?? false) return true;
+      return false;
     }).toList();
 
     emit(state.copyWith(
