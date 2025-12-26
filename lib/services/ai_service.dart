@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/entry/category.dart';
@@ -12,6 +13,14 @@ import '../dashboard_v2/model/simple_insight.dart';
 
 // Rename field in typedef to follow Dart conventions
 typedef EntryPrototype = ({String textSegment, String category, bool isTask});
+
+typedef ImageAnalysisResult = ({
+  String category,
+  bool isTask,
+  String imageTitle,
+  String imageDescription,
+  String insight,
+});
 
 // CP: Sealed class for streaming chat events
 sealed class ChatStreamEvent {}
@@ -106,6 +115,13 @@ abstract class AiService {
   /// Note: This method does NOT use vector store search for pattern detection.
   /// Historical pattern analysis may be added in a future update.
   Future<SimpleInsight> generateSimpleInsight(String entryText, String entryId, {DateTime? currentDate});
+
+  /// Analyzes an image and returns categorization and description.
+  Future<ImageAnalysisResult> analyzeImage({
+    required Uint8List imageBytes,
+    required List<Category> categories,
+    String? userNote,
+  });
 }
 
 // Custom Exception for the service
@@ -1231,6 +1247,129 @@ Return ONLY a JSON object with this structure:
         'Failed to generate insight: ${e.toString()}',
         underlyingError: e,
       );
+    }
+  }
+
+  @override
+  Future<ImageAnalysisResult> analyzeImage({
+    required Uint8List imageBytes,
+    required List<Category> categories,
+    String? userNote,
+  }) async {
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      throw AiServiceException('OpenAI API Key not found.');
+    }
+    if (categories.isEmpty) {
+      throw AiServiceException('No categories provided for classification.');
+    }
+
+    AppLogger.info("Calling OpenAI Vision API (gpt-4.1) to analyze image");
+
+    final categoryNames = categories.map((cat) => cat.name).toList();
+    final categoriesListString = categories
+        .map((cat) => cat.description.trim().isNotEmpty
+            ? '- ${cat.name}: ${cat.description}'
+            : '- ${cat.name}')
+        .join('\n');
+
+    final base64Image = base64Encode(imageBytes);
+    final userNoteContext = userNote != null && userNote.isNotEmpty
+        ? "\n\nUser's note about this image: \"$userNote\""
+        : "";
+
+    final prompt = '''Analyze this image for a personal logging app.$userNoteContext
+
+Available categories:
+$categoriesListString
+
+Return a JSON object with:
+{
+  "category": "best matching category from the list above",
+  "isTask": true/false (is this something actionable like a receipt to file, a whiteboard todo, etc.),
+  "imageTitle": "2-4 word title for the image",
+  "imageDescription": "1-2 sentence factual description of what's in the image",
+  "insight": "brief interpretive reflection or helpful observation"
+}
+
+Be concise. Use ONLY category names from the provided list.''';
+
+    final requestBody = {
+      'model': fourPoint1,
+      'input': [
+        {
+          'role': 'user',
+          'content': [
+            {'type': 'input_text', 'text': prompt},
+            {
+              'type': 'input_image',
+              'image_url': 'data:image/jpeg;base64,$base64Image',
+            },
+          ],
+        },
+      ],
+      'text': {
+        'format': {'type': 'json_object'},
+      },
+      'metadata': {
+        'request_type': 'image_analysis',
+        'app_name': 'log-everything',
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': fourPoint1,
+      },
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_apiKey'},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
+          throw AiServiceException(
+            'OpenAI request failed. Status: ${responseBody['status']}. Error: ${responseBody['error']}',
+          );
+        }
+
+        Map<String, dynamic>? messageOutput;
+        for (var output in responseBody['output']) {
+          if (output['type'] == 'message' && output['content'] != null) {
+            messageOutput = output;
+            break;
+          }
+        }
+
+        if (messageOutput != null &&
+            messageOutput['content'] is List &&
+            messageOutput['content'].isNotEmpty) {
+          for (final item in messageOutput['content']) {
+            if (item['type'] == 'output_text' && item['text'] != null) {
+              final json = jsonDecode(item['text']);
+
+              final category = json['category'] as String? ?? 'Misc';
+              final validCategory = categoryNames.contains(category) ? category : 'Misc';
+
+              return (
+                category: validCategory,
+                isTask: json['isTask'] as bool? ?? false,
+                imageTitle: json['imageTitle'] as String? ?? 'Image',
+                imageDescription: json['imageDescription'] as String? ?? '',
+                insight: json['insight'] as String? ?? '',
+              );
+            }
+          }
+        }
+
+        throw AiServiceException('Unexpected response format from OpenAI Vision API');
+      } else {
+        throw AiServiceException('OpenAI Vision API HTTP error (Code: ${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is AiServiceException) rethrow;
+      throw AiServiceException('Image analysis failed: ${e.toString()}', underlyingError: e);
     }
   }
 }
