@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/utils/category_colors.dart';
 
 class CategoryCard extends StatelessWidget {
@@ -127,6 +130,12 @@ class CategoryCard extends StatelessWidget {
       itemCount: entriesToShow.length,
       itemBuilder: (context, index) {
         final entry = entriesToShow[index];
+
+        // CP: Show image thumbnail for image entries
+        if (entry.imagePath != null) {
+          return _buildImageThumbnail(theme, entry);
+        }
+
         return Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
@@ -148,6 +157,42 @@ class CategoryCard extends StatelessWidget {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
+        );
+      },
+    );
+  }
+
+  // CP: Build image thumbnail for mini grid
+  Widget _buildImageThumbnail(ThemeData theme, Entry entry) {
+    return FutureBuilder<String>(
+      future: GetIt.instance<ImageStorageService>().getFullPath(entry.imagePath!),
+      builder: (context, snapshot) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: snapshot.hasData
+              ? Image.file(
+                  File(snapshot.data!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image,
+                    size: 16,
+                  ),
+                )
+              : const Center(
+                  child: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  ),
+                ),
         );
       },
     );
