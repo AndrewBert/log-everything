@@ -9,6 +9,7 @@ export 'pages/todos_page.dart';
 export 'widgets/recent_entries_carousel.dart';
 export 'widgets/insight_display.dart';
 export 'widgets/newspaper_entry_card.dart';
+export 'widgets/image_entry_card.dart';
 export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';
 export 'widgets/rectangular_todo_card.dart';

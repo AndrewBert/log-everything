@@ -5,6 +5,7 @@ import 'package:myapp/dashboard_v2/cubit/category_entries_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
+import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 
@@ -230,29 +231,36 @@ class CategoryEntriesPage extends StatelessWidget {
                               }
 
                               final entry = state.entries[index];
-                              return NewspaperEntryCard(
-                                entry: entry,
-                                isInGrid: true,
-                                categoryColor: categoryColor,
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => EntryDetailsPage(
-                                        entry: entry,
-                                        cachedInsight: entry.getCurrentInsight() != null
-                                            ? Insight(
-                                                id: entry.timestamp.millisecondsSinceEpoch.toString(),
-                                                type: InsightType.summary,
-                                                title: 'Insight',
-                                                content: entry.getCurrentInsight()!.content,
-                                                generatedAt: entry.getCurrentInsight()!.generatedAt,
-                                              )
-                                            : null,
-                                      ),
+                              final onTap = () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => EntryDetailsPage(
+                                      entry: entry,
+                                      cachedInsight: entry.getCurrentInsight() != null
+                                          ? Insight(
+                                              id: entry.timestamp.millisecondsSinceEpoch.toString(),
+                                              type: InsightType.summary,
+                                              title: 'Insight',
+                                              content: entry.getCurrentInsight()!.content,
+                                              generatedAt: entry.getCurrentInsight()!.generatedAt,
+                                            )
+                                          : null,
                                     ),
-                                  );
-                                },
-                              );
+                                  ),
+                                );
+                              };
+                              return entry.imagePath != null
+                                  ? ImageEntryCard(
+                                      entry: entry,
+                                      categoryColor: categoryColor,
+                                      onTap: onTap,
+                                    )
+                                  : NewspaperEntryCard(
+                                      entry: entry,
+                                      isInGrid: true,
+                                      categoryColor: categoryColor,
+                                      onTap: onTap,
+                                    );
                             },
                             childCount: state.entries.length,
                           ),

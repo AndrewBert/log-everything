@@ -391,14 +391,22 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                         Expanded(
                                           child: AspectRatio(
                                             aspectRatio: 1,
-                                            child: NewspaperEntryCard(
-                                              entry: item,
-                                              isInGrid: true,
-                                              categoryColor: state.getCategoryColor(item.category),
-                                              onTap: () {
-                                                _navigateToEntryDetails(context, item, state);
-                                              },
-                                            ),
+                                            child: item.imagePath != null
+                                                ? ImageEntryCard(
+                                                    entry: item,
+                                                    categoryColor: state.getCategoryColor(item.category),
+                                                    onTap: () {
+                                                      _navigateToEntryDetails(context, item, state);
+                                                    },
+                                                  )
+                                                : NewspaperEntryCard(
+                                                    entry: item,
+                                                    isInGrid: true,
+                                                    categoryColor: state.getCategoryColor(item.category),
+                                                    onTap: () {
+                                                      _navigateToEntryDetails(context, item, state);
+                                                    },
+                                                  ),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -406,14 +414,22 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                           child: nextEntry != null
                                               ? AspectRatio(
                                                   aspectRatio: 1,
-                                                  child: NewspaperEntryCard(
-                                                    entry: nextEntry,
-                                                    isInGrid: true,
-                                                    categoryColor: state.getCategoryColor(nextEntry.category),
-                                                    onTap: () {
-                                                      _navigateToEntryDetails(context, nextEntry!, state);
-                                                    },
-                                                  ),
+                                                  child: nextEntry.imagePath != null
+                                                      ? ImageEntryCard(
+                                                          entry: nextEntry,
+                                                          categoryColor: state.getCategoryColor(nextEntry.category),
+                                                          onTap: () {
+                                                            _navigateToEntryDetails(context, nextEntry!, state);
+                                                          },
+                                                        )
+                                                      : NewspaperEntryCard(
+                                                          entry: nextEntry,
+                                                          isInGrid: true,
+                                                          categoryColor: state.getCategoryColor(nextEntry.category),
+                                                          onTap: () {
+                                                            _navigateToEntryDetails(context, nextEntry!, state);
+                                                          },
+                                                        ),
                                                 )
                                               : const SizedBox.shrink(),
                                         ),

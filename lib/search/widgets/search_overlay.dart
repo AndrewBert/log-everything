@@ -221,12 +221,18 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
               Expanded(
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: NewspaperEntryCard(
-                    entry: entry1,
-                    isInGrid: true,
-                    categoryColor: _getCategoryColor(entry1.category),
-                    onTap: () => _navigateToEntry(context, entry1),
-                  ),
+                  child: entry1.imagePath != null
+                      ? ImageEntryCard(
+                          entry: entry1,
+                          categoryColor: _getCategoryColor(entry1.category),
+                          onTap: () => _navigateToEntry(context, entry1),
+                        )
+                      : NewspaperEntryCard(
+                          entry: entry1,
+                          isInGrid: true,
+                          categoryColor: _getCategoryColor(entry1.category),
+                          onTap: () => _navigateToEntry(context, entry1),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -234,12 +240,18 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
                 child: entry2 != null
                     ? AspectRatio(
                         aspectRatio: 1,
-                        child: NewspaperEntryCard(
-                          entry: entry2,
-                          isInGrid: true,
-                          categoryColor: _getCategoryColor(entry2.category),
-                          onTap: () => _navigateToEntry(context, entry2),
-                        ),
+                        child: entry2.imagePath != null
+                            ? ImageEntryCard(
+                                entry: entry2,
+                                categoryColor: _getCategoryColor(entry2.category),
+                                onTap: () => _navigateToEntry(context, entry2),
+                              )
+                            : NewspaperEntryCard(
+                                entry: entry2,
+                                isInGrid: true,
+                                categoryColor: _getCategoryColor(entry2.category),
+                                onTap: () => _navigateToEntry(context, entry2),
+                              ),
                       )
                     : const SizedBox.shrink(),
               ),
