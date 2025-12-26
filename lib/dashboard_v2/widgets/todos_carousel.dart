@@ -33,7 +33,7 @@ class TodosCarousel extends StatelessWidget {
 
               // CC: Add active todos (unless they're marked as completed in transition)
               for (final todo in todoState.activeTodos) {
-                final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+                final todoId = todo.id;
                 final transitionState = carouselState.todoStates[todoId];
 
                 // CC: Show active todos unless they're fully completed
@@ -44,7 +44,7 @@ class TodosCarousel extends StatelessWidget {
 
               // CC: Add completed todos ONLY if they're transitioning back to active
               for (final todo in todoState.completedTodos) {
-                final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+                final todoId = todo.id;
                 final transitionState = carouselState.todoStates[todoId];
 
                 // CC: Only show completed todos if they're transitioning
@@ -137,7 +137,7 @@ class TodosCarousel extends StatelessWidget {
                                     entry: todo,
                                     cachedInsight: todo.getCurrentInsight() != null
                                         ? Insight(
-                                            id: todo.timestamp.millisecondsSinceEpoch.toString(),
+                                            id: todo.id,
                                             type: InsightType.summary,
                                             title: 'Insight',
                                             content: todo.getCurrentInsight()!.content,

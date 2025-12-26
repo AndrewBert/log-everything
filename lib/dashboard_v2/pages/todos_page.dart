@@ -108,7 +108,7 @@ class TodosPage extends StatelessWidget {
                                           entry: todo,
                                           cachedInsight: todo.getCurrentInsight() != null
                                               ? Insight(
-                                                  id: todo.timestamp.millisecondsSinceEpoch.toString(),
+                                                  id: todo.id,
                                                   type: InsightType.summary,
                                                   title: 'Insight',
                                                   content: todo.getCurrentInsight()!.content,

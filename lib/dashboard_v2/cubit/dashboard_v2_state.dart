@@ -48,11 +48,11 @@ class DashboardV2State extends Equatable {
       final simpleInsight = entry.simpleInsight;
       if (simpleInsight != null) {
         return ComprehensiveInsight(
-          entryId: entry.timestamp.millisecondsSinceEpoch.toString(),
+          entryId: entry.id,
           entryText: entry.text,
           insights: [
             Insight(
-              id: entry.timestamp.millisecondsSinceEpoch.toString(),
+              id: entry.id,
               type: InsightType.summary,
               title: 'Insight',
               content: simpleInsight.content,

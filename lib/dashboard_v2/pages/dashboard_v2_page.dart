@@ -468,11 +468,9 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                 if (state.selectedImageBytes == null) {
                   return const SizedBox.shrink();
                 }
-
                 return Positioned.fill(
                   child: GestureDetector(
                     onTap: () {
-                      // Dismiss when tapping the scrim
                       context.read<DashboardV2Cubit>().clearSelectedImage();
                     },
                     child: Container(
@@ -480,7 +478,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                       child: SafeArea(
                         child: Column(
                           children: [
-                            // X button in top-left
                             Align(
                               alignment: Alignment.topLeft,
                               child: Padding(
@@ -500,10 +497,9 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 ),
                               ),
                             ),
-                            // Image preview - centered and takes available space
                             Expanded(
                               child: GestureDetector(
-                                onTap: () {}, // Prevent tap from dismissing
+                                onTap: () {},
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 24),
                                   child: Center(
@@ -512,7 +508,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                       child: Image.memory(
                                         state.selectedImageBytes!,
                                         fit: BoxFit.contain,
-                                        // CP: Preview overlay - match display size
                                         cacheWidth: 1026,
                                       ),
                                     ),
@@ -520,7 +515,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                 ),
                               ),
                             ),
-                            // Space for input bar
                             const SizedBox(height: 80),
                           ],
                         ),
@@ -557,7 +551,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     final simpleInsight = entry.getCurrentInsight();
     final primaryInsight = simpleInsight != null
         ? Insight(
-            id: entry.timestamp.millisecondsSinceEpoch.toString(),
+            id: entry.id,
             type: InsightType.summary,
             title: 'Insight',
             content: simpleInsight.content,

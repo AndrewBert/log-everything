@@ -11,7 +11,7 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
   TodosCarouselCubit() : super(const TodosCarouselState());
 
   void handleTodoCompletion(Entry todo, bool isCompleting) {
-    final todoId = todo.timestamp.millisecondsSinceEpoch.toString();
+    final todoId = todo.id;
 
     // CC: Cancel any existing timer for this todo
     _transitionTimers[todoId]?.cancel();

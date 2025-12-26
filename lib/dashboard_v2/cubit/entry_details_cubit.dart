@@ -49,7 +49,7 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         // Convert SimpleInsight to Insight for display
         emit(state.copyWith(
           primaryInsight: Insight(
-            id: entry.timestamp.millisecondsSinceEpoch.toString(),
+            id: entry.id,
             type: InsightType.summary,
             title: 'Insight',
             content: currentInsight.content,
@@ -263,7 +263,7 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
   }
 
   Future<void> _generatePrimaryInsight(Entry entry) async {
-    final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
+    final entryId = entry.id;
 
     emit(state.copyWith(isRegeneratingInsight: true));
 

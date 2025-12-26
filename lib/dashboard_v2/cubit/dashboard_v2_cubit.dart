@@ -80,7 +80,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     if (index >= state.entries.length) return;
 
     final entry = state.entries[index];
-    final entryId = entry.timestamp.millisecondsSinceEpoch.toString();
+    final entryId = entry.id;
 
     // CC: Skip if entry already has insight (check BOTH formats!) or is currently generating
     if (entry.getCurrentInsight() != null || _generatingInsights.contains(entryId) || entry.isGeneratingInsight) {

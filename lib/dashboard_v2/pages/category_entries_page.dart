@@ -238,7 +238,7 @@ class CategoryEntriesPage extends StatelessWidget {
                                       entry: entry,
                                       cachedInsight: entry.getCurrentInsight() != null
                                           ? Insight(
-                                              id: entry.timestamp.millisecondsSinceEpoch.toString(),
+                                              id: entry.id,
                                               type: InsightType.summary,
                                               title: 'Insight',
                                               content: entry.getCurrentInsight()!.content,

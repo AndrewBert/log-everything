@@ -307,7 +307,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
     final simpleInsight = entry.getCurrentInsight();
     final primaryInsight = simpleInsight != null
         ? Insight(
-            id: entry.timestamp.millisecondsSinceEpoch.toString(),
+            id: entry.id,
             type: InsightType.summary,
             title: 'Insight',
             content: simpleInsight.content,
