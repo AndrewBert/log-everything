@@ -72,6 +72,7 @@ Future<void> configureDependencies() async {
       aiService: getIt<AiService>(),
       vectorStoreService: getIt<VectorStoreService>(), // CP: Injected VectorStoreService
       timerFactory: getIt<TimerFactory>(), // CP: Injected TimerFactory
+      imageStorageService: getIt<ImageStorageService>(),
     ),
   );
 
