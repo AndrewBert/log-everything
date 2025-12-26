@@ -619,8 +619,10 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                             if (!isRecording)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Row(
-                                  children: [
+                                // CC: TextFieldTapRegion prevents buttons from triggering onTapOutside
+                                child: TextFieldTapRegion(
+                                  child: Row(
+                                    children: [
                                     // CP: Add attachment button (left side) - always visible unless image selected
                                     if (!hasImage) ...[
                                       IconButton(
@@ -633,8 +635,8 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                       ),
                                     ],
 
-                                    // CC: Clear button - show when has text and not focused
-                                    if (_hasText && !_isExpanded) ...[
+                                    // CC: Clear button - show when has text and not focused (but not during submission)
+                                    if (_hasText && !_isExpanded && !_isSubmitting) ...[
                                       IconButton(
                                         onPressed: () {
                                           _textController.clear();
@@ -806,6 +808,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                   ],
                                 ),
                               ),
+                            ),
                           ],
                         ),
                       ),
