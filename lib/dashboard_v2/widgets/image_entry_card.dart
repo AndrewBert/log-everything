@@ -38,37 +38,38 @@ class ImageEntryCard extends StatelessWidget {
                 color: isSelected
                     ? color.withValues(alpha: 0.6)
                     : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
-                width: isSelected ? 1.5 : 1,
+                width: isSelected ? 2 : 1.5,
               ),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                // CP: Category color bar at top
-                Container(
-                  height: 3,
-                  color: color.withValues(alpha: 0.6),
-                ),
-                // CP: Image content area
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Background image
-                      if (snapshot.hasData)
-                        Image.file(
-                          File(snapshot.data!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Column(
+                children: [
+                  // CP: Category color bar at top
+                  Container(
+                    height: 3,
+                    color: color.withValues(alpha: 0.6),
+                  ),
+                  // CP: Image content area
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Background image
+                        if (snapshot.hasData)
+                          Image.file(
+                            File(snapshot.data!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.broken_image),
+                            ),
+                          )
+                        else
+                          Container(
                             color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.broken_image),
+                            child: const Center(child: CircularProgressIndicator()),
                           ),
-                        )
-                      else
-                        Container(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Center(child: CircularProgressIndicator()),
-                        ),
 
                       // Gradient overlay - fades to black at bottom
                       Container(
@@ -133,6 +134,7 @@ class ImageEntryCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           );
         },
       ),
