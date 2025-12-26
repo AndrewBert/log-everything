@@ -18,6 +18,9 @@ class Entry extends Equatable {
   final ComprehensiveInsight? insight; // CC: AI-generated insights for this entry (OLD - kept for backwards compatibility)
   final SimpleInsight? simpleInsight; // NEW - preferred format
   final bool isGeneratingInsight; // CC: Track if insight is being generated (initial or regeneration)
+  final String? imagePath; // Relative path to image in app storage
+  final String? imageTitle; // Brief 2-4 word AI title for cards
+  final String? imageDescription; // 1-2 sentence AI description
 
   Entry({
     String? id,
@@ -31,6 +34,9 @@ class Entry extends Equatable {
     this.insight, // CC: Optional insight
     this.simpleInsight,
     this.isGeneratingInsight = false, // CC: Default to false
+    this.imagePath,
+    this.imageTitle,
+    this.imageDescription,
   }) : id = id ?? const Uuid().v4(); // CC: Generate UUID if not provided
 
   // Factory constructor to create an Entry from a JSON map
@@ -61,6 +67,9 @@ class Entry extends Equatable {
       insight: oldInsight,
       simpleInsight: newInsight,
       isGeneratingInsight: json['isGeneratingInsight'] as bool? ?? false, // CC: Default to false if missing
+      imagePath: json['imagePath'] as String?,
+      imageTitle: json['imageTitle'] as String?,
+      imageDescription: json['imageDescription'] as String?,
     );
   }
 
@@ -78,6 +87,9 @@ class Entry extends Equatable {
       'insight': insight?.toJson(), // CC: Add insight to JSON (keep old format for now)
       'simpleInsight': simpleInsight?.toJson(), // Add new format
       'isGeneratingInsight': isGeneratingInsight, // CC: Add isGeneratingInsight to JSON
+      'imagePath': imagePath,
+      'imageTitle': imageTitle,
+      'imageDescription': imageDescription,
     };
   }
 
@@ -103,6 +115,12 @@ class Entry extends Equatable {
     SimpleInsight? simpleInsight,
     bool clearSimpleInsight = false,
     bool? isGeneratingInsight,
+    String? imagePath,
+    bool clearImagePath = false,
+    String? imageTitle,
+    bool clearImageTitle = false,
+    String? imageDescription,
+    bool clearImageDescription = false,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -116,6 +134,9 @@ class Entry extends Equatable {
       insight: clearInsight ? null : (insight ?? this.insight), // CC: Support clearing insight
       simpleInsight: clearSimpleInsight ? null : (simpleInsight ?? this.simpleInsight),
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
+      imagePath: clearImagePath ? null : (imagePath ?? this.imagePath),
+      imageTitle: clearImageTitle ? null : (imageTitle ?? this.imageTitle),
+      imageDescription: clearImageDescription ? null : (imageDescription ?? this.imageDescription),
     );
   }
 
@@ -146,5 +167,5 @@ class Entry extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight]; // Add props for Equatable
+  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, imageTitle, imageDescription]; // Add props for Equatable
 }
