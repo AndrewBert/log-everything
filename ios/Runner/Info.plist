@@ -30,6 +30,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs access to your microphone to record voice entries.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to capture images for log entries.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to select images for log entries.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
