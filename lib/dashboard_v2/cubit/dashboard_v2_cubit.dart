@@ -337,21 +337,24 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     );
     emit(state.copyWith(pendingEntry: tempEntry, clearSelectedImage: true));
 
+    // CP: Fire-and-forget like text input - stream will deliver the real entry
+    _processImageEntry(bytes, userNote);
+  }
+
+  // CP: Async image processing (fire-and-forget)
+  Future<void> _processImageEntry(Uint8List bytes, String? userNote) async {
     try {
       final result = await _entryRepository.addImageEntry(
         imageBytes: bytes,
         userNote: userNote,
       );
-
-      // Clear pending entry - stream will deliver the real entry
-      emit(state.copyWith(clearPendingEntry: true));
-
       AppLogger.info('Image entry added successfully: ${result.addedEntry?.imageTitle}');
     } catch (e) {
       AppLogger.error('Error adding image entry', error: e);
-      // Clear pending entry on error
-      emit(state.copyWith(clearPendingEntry: true));
-      rethrow;
+      // CP: Clear pending entry on error since stream won't deliver
+      if (!isClosed) {
+        emit(state.copyWith(clearPendingEntry: true));
+      }
     }
   }
 
