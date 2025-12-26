@@ -9,6 +9,17 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> _v131Changes = [
+      _buildChangeItem(
+        '📷 Image Attachments',
+        '''Attach photos to any entry! Tap the attachment button to add images from your camera or photo library. Images appear as thumbnails on cards and in search results.''',
+      ),
+      _buildChangeItem(
+        '💬 New Chat Look',
+        '''Experimenting with a redesigned chat page interface. Let me know what you think!''',
+      ),
+    ];
+
     final List<Widget> _v130Changes = [
       _buildChangeItem(
         '🔍 Note Search',
@@ -97,6 +108,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.3.1 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.camera_alt, color: Colors.pink.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.3.1 - The Image Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.pink.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._v131Changes,
+              const SizedBox(height: 20),
               // Version 1.3.0 Header
               Container(
                 padding: const EdgeInsets.all(12),

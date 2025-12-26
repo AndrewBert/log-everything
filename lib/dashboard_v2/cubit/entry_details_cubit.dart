@@ -7,7 +7,6 @@ import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
-import 'package:myapp/utils/logger.dart';
 
 part 'entry_details_state.dart';
 
@@ -47,15 +46,17 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       final currentInsight = entry.getCurrentInsight();
       if (currentInsight != null) {
         // Convert SimpleInsight to Insight for display
-        emit(state.copyWith(
-          primaryInsight: Insight(
-            id: entry.id,
-            type: InsightType.summary,
-            title: 'Insight',
-            content: currentInsight.content,
-            generatedAt: currentInsight.generatedAt,
+        emit(
+          state.copyWith(
+            primaryInsight: Insight(
+              id: entry.id,
+              type: InsightType.summary,
+              title: 'Insight',
+              content: currentInsight.content,
+              generatedAt: currentInsight.generatedAt,
+            ),
           ),
-        ));
+        );
       } else {
         // No insight exists, generate one
         _generatePrimaryInsight(entry);
@@ -303,7 +304,7 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
           isRegeneratingInsight: false,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Clear generating flag even on error
       try {
         final currentEntries = _entryRepository.currentEntries;
