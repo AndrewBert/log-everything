@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_state.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
@@ -22,6 +24,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   bool _justTranscribed = false;
   bool _textOverflows = false;
   Timer? _transcriptionReviewTimer;
+  File? _selectedImage;
+  bool _isProcessingImage = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   late AnimationController _animationController;
   late AnimationController _waveformController;
@@ -293,14 +298,28 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
 
   Future<void> _handleSubmit() async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isSubmitting) return;
+    final hasImage = _selectedImage != null;
+
+    if (text.isEmpty && !hasImage) return;
+    if (_isSubmitting || _isProcessingImage) return;
 
     setState(() {
       _isSubmitting = true;
+      if (hasImage) _isProcessingImage = true;
     });
 
     try {
-      await context.read<DashboardV2Cubit>().handleUserInput(text, context);
+      if (hasImage) {
+        final imageBytes = await _selectedImage!.readAsBytes();
+        await context.read<DashboardV2Cubit>().handleImageInput(
+          imageBytes,
+          userNote: text.isNotEmpty ? text : null,
+        );
+        _clearImage();
+      } else {
+        await context.read<DashboardV2Cubit>().handleUserInput(text, context);
+      }
+
       _textController.clear();
       _focusNode.unfocus();
       HapticFeedback.mediumImpact();
@@ -341,9 +360,74 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
       if (mounted) {
         setState(() {
           _isSubmitting = false;
+          _isProcessingImage = false;
         });
       }
     }
+  }
+
+  Future<void> _showImageSourceSheet() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+          _isExpanded = true;
+        });
+        _animationController.forward();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  void _clearImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+    HapticFeedback.lightImpact();
   }
 
   Widget _buildRecordingIndicator(ThemeData theme) {
@@ -536,6 +620,40 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                         color: Colors.transparent,
                         child: Stack(
                           children: [
+                            // Image preview when selected
+                            if (_selectedImage != null)
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    _clearImage();
+                                  },
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: FileImage(_selectedImage!),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.topRight,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close, color: Colors.white, size: 12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
                             // CC: Show recording indicator when recording
                             if (isRecording)
                               Positioned.fill(
@@ -548,6 +666,18 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
                                   children: [
+                                    // Image picker button (left side)
+                                    if (!_hasText && !_isExpanded && _selectedImage == null) ...[
+                                      IconButton(
+                                        onPressed: _showImageSourceSheet,
+                                        icon: Icon(
+                                          Icons.camera_alt_outlined,
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                        tooltip: 'Add Image',
+                                      ),
+                                    ],
+
                                     // CC: Clear button - show when has text and not focused
                                     if (_hasText && !_isExpanded) ...[
                                       IconButton(
@@ -589,9 +719,11 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                                 controller: _textController,
                                                 focusNode: _focusNode,
                                                 decoration: InputDecoration(
-                                                  hintText: _justTranscribed
-                                                      ? "Review transcription..."
-                                                      : "What's on your mind?",
+                                                  hintText: _selectedImage != null
+                                                      ? "Add a note (optional)..."
+                                                      : (_justTranscribed
+                                                          ? "Review transcription..."
+                                                          : "What's on your mind?"),
                                                   hintStyle: TextStyle(
                                                     color: _hasText && !_isExpanded
                                                         ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
@@ -673,12 +805,12 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                       ),
                                     ),
 
-                                    // CC: Send button when has text, Mic button when empty
-                                    if (_hasText) ...[
+                                    // CC: Send button when has text or image, Mic button when empty
+                                    if (_hasText || _selectedImage != null) ...[
                                       // Send button
                                       IconButton(
-                                        onPressed: (_isSubmitting || isTranscribing) ? null : _handleSubmit,
-                                        icon: _isSubmitting
+                                        onPressed: (_isSubmitting || _isProcessingImage || isTranscribing) ? null : _handleSubmit,
+                                        icon: (_isSubmitting || _isProcessingImage)
                                             ? SizedBox(
                                                 width: 24,
                                                 height: 24,
@@ -694,7 +826,7 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                                         tooltip: 'Send',
                                       ),
                                     ] else ...[
-                                      // Mic button when no text
+                                      // Mic button when no text or image
                                       IconButton(
                                         onPressed: isTranscribing
                                             ? null
