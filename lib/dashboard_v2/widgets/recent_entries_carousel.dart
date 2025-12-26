@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
+import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
@@ -277,20 +278,32 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
               duration: const Duration(milliseconds: 200),
               child: AspectRatio(
                 aspectRatio: 1.0,
-                child: NewspaperEntryCard(
-                  entry: entry,
-                  isSelected: isSelected,
-                  categoryColor: widget.getCategoryColor?.call(entry.category),
-                  onTap: () {
-                    // CC: If we have a navigation callback, use it
-                    if (widget.onEntryTap != null) {
-                      widget.onEntryTap!(entry);
-                    } else {
-                      // CC: Otherwise, animate to tapped card
-                      _scrollToIndex(index);
-                    }
-                  },
-                ),
+                child: entry.imagePath != null
+                    ? ImageEntryCard(
+                        entry: entry,
+                        isSelected: isSelected,
+                        onTap: () {
+                          if (widget.onEntryTap != null) {
+                            widget.onEntryTap!(entry);
+                          } else {
+                            _scrollToIndex(index);
+                          }
+                        },
+                      )
+                    : NewspaperEntryCard(
+                        entry: entry,
+                        isSelected: isSelected,
+                        categoryColor: widget.getCategoryColor?.call(entry.category),
+                        onTap: () {
+                          // CC: If we have a navigation callback, use it
+                          if (widget.onEntryTap != null) {
+                            widget.onEntryTap!(entry);
+                          } else {
+                            // CC: Otherwise, animate to tapped card
+                            _scrollToIndex(index);
+                          }
+                        },
+                      ),
               ),
             ),
           ),
