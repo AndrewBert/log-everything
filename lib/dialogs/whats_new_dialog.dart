@@ -9,6 +9,17 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> _v140Changes = [
+      _buildChangeItem(
+        '📦 Category Archiving',
+        '''Clean up your category list! Archive categories you're not using right now - they'll disappear from the main view but your entries stay safe. Unarchive anytime from the category settings.''',
+      ),
+      _buildChangeItem(
+        '🔧 UI Improvements',
+        '''Input bar now has a subtle border for better visibility. Search field behavior improved - tapping outside properly dismisses the keyboard.''',
+      ),
+    ];
+
     final List<Widget> _v131Changes = [
       _buildChangeItem(
         '📷 Image Attachments',
@@ -108,6 +119,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.4.0 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, color: Colors.indigo.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.4.0 - The Archive Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.indigo.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._v140Changes,
+              const SizedBox(height: 20),
               // Version 1.3.1 Header
               Container(
                 padding: const EdgeInsets.all(12),
