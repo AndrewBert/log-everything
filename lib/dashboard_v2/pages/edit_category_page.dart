@@ -23,78 +23,81 @@ class EditCategoryPage extends StatelessWidget {
         title: const Text('Edit Category'),
         elevation: 0,
         actions: [
-          // CP: Archive/Unarchive button
-          IconButton(
-            icon: Icon(
-              category.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
-            ),
-            onPressed: () async {
-              // CP: Show confirmation dialog
-              final shouldArchive = await showDialog<bool>(
-                context: context,
-                builder: (BuildContext dialogContext) {
-                  return AlertDialog(
-                    title: Text(
-                      category.isArchived ? 'Unarchive Category' : 'Archive Category',
-                    ),
-                    content: Text(
-                      category.isArchived
-                          ? 'Are you sure you want to unarchive "${category.name}"?'
-                          : 'Are you sure you want to archive "${category.name}"? It will be hidden from the main category list.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        child: const Text('Cancel'),
+          // CP: Archive/Unarchive button (hidden for Misc - it's the default category)
+          if (!category.isMisc)
+            IconButton(
+              icon: Icon(
+                category.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+              ),
+              onPressed: () async {
+                // CP: Show confirmation dialog
+                final shouldArchive = await showDialog<bool>(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: Text(
+                        category.isArchived ? 'Unarchive Category' : 'Archive Category',
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        child: Text(category.isArchived ? 'Unarchive' : 'Archive'),
-                      ),
-                    ],
-                  );
-                },
-              );
-
-              if (shouldArchive == true && context.mounted) {
-                final cubit = context.read<CategoryEntriesCubit>();
-                await cubit.toggleArchive();
-
-                if (context.mounted) {
-                  // CP: Pop twice to go back to category list
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
                       content: Text(
                         category.isArchived
-                            ? 'Category "${category.name}" unarchived'
-                            : 'Category "${category.name}" archived',
+                            ? 'Are you sure you want to unarchive "${category.displayName}"?'
+                            : 'Are you sure you want to archive "${category.displayName}"? It will be hidden from the main category list.',
                       ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          child: Text(category.isArchived ? 'Unarchive' : 'Archive'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (shouldArchive == true && context.mounted) {
+                  final cubit = context.read<CategoryEntriesCubit>();
+                  await cubit.toggleArchive();
+
+                  if (context.mounted) {
+                    // CP: Pop twice to go back to category list
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          category.isArchived
+                              ? 'Category "${category.displayName}" unarchived'
+                              : 'Category "${category.displayName}" archived',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 }
-              }
-            },
-            tooltip: category.isArchived ? 'Unarchive Category' : 'Archive Category',
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.delete_outline,
-              color: Theme.of(context).colorScheme.error,
+              },
+              tooltip: category.isArchived ? 'Unarchive Category' : 'Archive Category',
             ),
-            onPressed: () async {
-              // CC: Show confirmation dialog
-              final shouldDelete = await showDialog<bool>(
-                context: context,
-                builder: (BuildContext dialogContext) {
-                  return AlertDialog(
-                    title: const Text('Delete Category'),
-                    content: Text(
-                      'Are you sure you want to delete "${category.name}"? All entries in this category will be moved to "Misc".',
-                    ),
+          // CP: Delete button (hidden for Misc - it's the default category)
+          if (!category.isMisc)
+            IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () async {
+                // CC: Show confirmation dialog
+                final shouldDelete = await showDialog<bool>(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: const Text('Delete Category'),
+                      content: Text(
+                        'Are you sure you want to delete "${category.displayName}"? All entries in this category will be moved to "${Category.miscDisplayName}".',
+                      ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -123,7 +126,7 @@ class EditCategoryPage extends StatelessWidget {
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Category "${category.name}" deleted'),
+                      content: Text('Category "${category.displayName}" deleted'),
                       duration: const Duration(seconds: 2),
                     ),
                   );

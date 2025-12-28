@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:myapp/entry/category.dart';
 
 class ChangeCategoryDialog extends StatelessWidget {
   final String? currentCategory;
@@ -7,9 +8,9 @@ class ChangeCategoryDialog extends StatelessWidget {
 
   const ChangeCategoryDialog({super.key, required this.currentCategory, required this.availableCategories});
 
-  // Helper to map backend 'Misc' to frontend 'None' and vice versa
-  String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
-  String categoryBackendValue(String displayName) => displayName == 'None' ? 'Misc' : displayName;
+  // CP: Use Category model's static helpers for display name mapping
+  String _getDisplayName(String category) =>
+      category == Category.miscName ? Category.miscDisplayName : category;
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +19,11 @@ class ChangeCategoryDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       children:
           availableCategories.map((category) {
-            final display = categoryDisplayName(category); // Show 'None' for 'Misc'
+            final display = _getDisplayName(category); // CP: Show 'None' for 'Misc'
             return SimpleDialogOption(
               onPressed: () {
                 HapticFeedback.selectionClick();
-                Navigator.pop(
-                  context,
-                  categoryBackendValue(display), // Return backend value
-                ); // Return the selected category
+                Navigator.pop(context, category); // CP: Return the internal category name
               },
               child: Text(
                 display,

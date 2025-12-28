@@ -9,6 +9,10 @@ class Category extends Equatable {
   final Color? color; // CC: Integrate color directly into category model
   final bool isArchived; // CP: Archive status for hiding from main list
 
+  // CP: Misc is the special default category
+  static const String miscName = 'Misc';
+  static const String miscDisplayName = 'None';
+
   const Category({
     required this.name,
     this.description = '',
@@ -16,6 +20,16 @@ class Category extends Equatable {
     this.color,
     this.isArchived = false,
   });
+
+  // CP: Returns true if this is the special Misc/None category
+  bool get isMisc => name == miscName;
+
+  // CP: Display name for UI - shows "None" for the Misc category
+  String get displayName => isMisc ? miscDisplayName : name;
+
+  // CP: Convert display name back to internal name
+  static String toInternalName(String displayName) =>
+      displayName == miscDisplayName ? miscName : displayName;
 
   Category copyWith({
     String? name,

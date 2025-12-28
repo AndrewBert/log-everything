@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -119,7 +120,7 @@ class ImageEntryCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                entry.category.toUpperCase(),
+                                _getDisplayName(entry.category).toUpperCase(),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 9,
                                   letterSpacing: 0.8,
@@ -142,4 +143,8 @@ class ImageEntryCard extends StatelessWidget {
       ),
     );
   }
+
+  // CP: Convert internal category name to display name (Misc -> None)
+  String _getDisplayName(String categoryName) =>
+      categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
 }

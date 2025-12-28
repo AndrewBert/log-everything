@@ -7,6 +7,7 @@ import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 
 class CategoryEntriesPage extends StatelessWidget {
@@ -36,7 +37,8 @@ class CategoryEntriesPage extends StatelessWidget {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(state.category?.name ?? categoryName),
+                  // CP: Use displayName to show "None" for "Misc" category
+                  Text(state.category?.displayName ?? _getDisplayName(categoryName)),
                   Text(
                     '${state.entries.length} ${state.entries.length == 1 ? 'entry' : 'entries'}',
                     style: theme.textTheme.bodySmall,
@@ -276,4 +278,8 @@ class CategoryEntriesPage extends StatelessWidget {
       ),
     );
   }
+
+  // CP: Convert internal category name to display name (Misc -> None)
+  String _getDisplayName(String categoryName) =>
+      categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
 }

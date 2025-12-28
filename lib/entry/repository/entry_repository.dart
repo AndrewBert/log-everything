@@ -549,8 +549,13 @@ class EntryRepository {
     return (entries: currentEntries, categories: currentCategories);
   }
 
-  // CP: Toggle archive status for a category
+  // CP: Toggle archive status for a category (Misc cannot be archived)
   Future<List<Category>> toggleCategoryArchive(String categoryName) async {
+    // CP: Misc is the default category and cannot be archived
+    if (categoryName == 'Misc') {
+      return currentCategories;
+    }
+
     final categoryIndex = _categories.indexWhere((cat) => cat.name == categoryName);
     if (categoryIndex == -1) {
       return currentCategories;

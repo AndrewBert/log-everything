@@ -95,7 +95,7 @@ class EntryDetailsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(entry.category),
+                Text(_getDisplayName(entry.category)),
               ],
             ),
       actions: [
@@ -477,7 +477,7 @@ class EntryDetailsPage extends StatelessWidget {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                entry.category,
+                                _getDisplayName(entry.category),
                                 style: theme.textTheme.labelMedium?.copyWith(
                                   color: theme.colorScheme.onSurface,
                                   fontWeight: FontWeight.w500,
@@ -603,7 +603,7 @@ class EntryDetailsPage extends StatelessWidget {
                           : null,
                     ),
                     title: Text(
-                      category.name,
+                      category.displayName,
                       style: TextStyle(
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                       ),
@@ -682,4 +682,8 @@ class EntryDetailsPage extends StatelessWidget {
       ),
     );
   }
+
+  // CP: Convert internal category name to display name (Misc -> None)
+  String _getDisplayName(String categoryName) =>
+      categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
 }

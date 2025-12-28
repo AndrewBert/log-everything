@@ -16,9 +16,10 @@ typedef ShowEditCategoryDialogCallback =
     Future<EditCategoryResult?> Function(BuildContext context, String oldCategoryName, {bool focusDescription});
 typedef ShowDeleteCategoryConfirmationDialogCallback = Future<bool> Function(BuildContext context, String category);
 
-// Helper to map backend 'Misc' to frontend 'None' and vice versa
-String categoryDisplayName(String category) => category == 'Misc' ? 'None' : category;
-String categoryBackendValue(String displayName) => displayName == 'None' ? 'Misc' : displayName;
+// CP: Use Category model's static helpers for display name mapping
+String categoryDisplayName(String category) =>
+    category == Category.miscName ? Category.miscDisplayName : category;
+String categoryBackendValue(String displayName) => Category.toInternalName(displayName);
 
 class ManageCategoriesDialog extends StatefulWidget {
   final ShowEditCategoryDialogCallback onShowEditCategoryDialog;

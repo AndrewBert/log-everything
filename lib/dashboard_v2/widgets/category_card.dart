@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -60,13 +61,13 @@ class CategoryCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // CC: Category name and count
+                        // CC: Category name and count - use display name (Misc shows as None)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
-                                categoryName.toUpperCase(),
+                                _getDisplayName(categoryName).toUpperCase(),
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontSize: 14,
                                   letterSpacing: 0.8,
@@ -199,4 +200,8 @@ class CategoryCard extends StatelessWidget {
       },
     );
   }
+
+  // CP: Convert internal category name to display name (Misc -> None)
+  String _getDisplayName(String categoryName) =>
+      categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
 }
