@@ -33,6 +33,8 @@ class EntryRepository {
 
   List<Entry> get currentEntries => List.unmodifiable(_entries);
   List<Category> get currentCategories => List.unmodifiable(_categories);
+  // CP: Get only active (non-archived) categories for AI categorization
+  List<Category> get activeCategories => _categories.where((cat) => !cat.isArchived).toList();
 
   EntryRepository({
     required EntryPersistenceService persistenceService,
@@ -140,8 +142,8 @@ class EntryRepository {
     String? serviceError;
 
     try {
-      // CP: Pass List<Category> to AI service for type safety
-      extractedData = await _aiService.extractEntries(text, _categories);
+      // CP: Pass only active categories to AI service (excludes archived)
+      extractedData = await _aiService.extractEntries(text, activeCategories);
     } on AiServiceException catch (e) {
       AppLogger.error("Repository: AI Service failed: ${e.message}", error: e.underlyingError);
       serviceError = e.message;
@@ -333,8 +335,8 @@ class EntryRepository {
     List<EntryPrototype> extractedData = [];
     String? serviceError;
     try {
-      // CP: Pass List<Category> to AI service for type safety
-      extractedData = await _aiService.extractEntries(combinedText, _categories);
+      // CP: Pass only active categories to AI service (excludes archived)
+      extractedData = await _aiService.extractEntries(combinedText, activeCategories);
     } on AiServiceException catch (e) {
       AppLogger.error("Repository: AI Service failed for combined entry: ${e.message}", error: e.underlyingError);
       serviceError = e.message;
@@ -545,6 +547,22 @@ class EntryRepository {
     _entriesStreamController.add(currentEntries);
 
     return (entries: currentEntries, categories: currentCategories);
+  }
+
+  // CP: Toggle archive status for a category
+  Future<List<Category>> toggleCategoryArchive(String categoryName) async {
+    final categoryIndex = _categories.indexWhere((cat) => cat.name == categoryName);
+    if (categoryIndex == -1) {
+      return currentCategories;
+    }
+
+    final category = _categories[categoryIndex];
+    _categories[categoryIndex] = category.copyWith(isArchived: !category.isArchived);
+
+    await _saveCategories();
+    _entriesStreamController.add(currentEntries);
+
+    return currentCategories;
   }
 
   String getAllEntriesAsLogContext() {

@@ -23,6 +23,63 @@ class EditCategoryPage extends StatelessWidget {
         title: const Text('Edit Category'),
         elevation: 0,
         actions: [
+          // CP: Archive/Unarchive button
+          IconButton(
+            icon: Icon(
+              category.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+            ),
+            onPressed: () async {
+              // CP: Show confirmation dialog
+              final shouldArchive = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext dialogContext) {
+                  return AlertDialog(
+                    title: Text(
+                      category.isArchived ? 'Unarchive Category' : 'Archive Category',
+                    ),
+                    content: Text(
+                      category.isArchived
+                          ? 'Are you sure you want to unarchive "${category.name}"?'
+                          : 'Are you sure you want to archive "${category.name}"? It will be hidden from the main category list.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        child: Text(category.isArchived ? 'Unarchive' : 'Archive'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldArchive == true && context.mounted) {
+                final cubit = context.read<CategoryEntriesCubit>();
+                await cubit.toggleArchive();
+
+                if (context.mounted) {
+                  // CP: Pop twice to go back to category list
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        category.isArchived
+                            ? 'Category "${category.name}" unarchived'
+                            : 'Category "${category.name}" archived',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              }
+            },
+            tooltip: category.isArchived ? 'Unarchive Category' : 'Archive Category',
+          ),
           IconButton(
             icon: Icon(
               Icons.delete_outline,

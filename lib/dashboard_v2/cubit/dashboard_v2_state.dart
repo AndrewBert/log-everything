@@ -102,23 +102,29 @@ class DashboardV2State extends Equatable {
     );
   }
 
-  // CC: Get entries organized by category, including empty categories
-  Map<String, List<Entry>> get categorizedEntries {
+  // CP: Helper to build categorized entries map based on archive status
+  Map<String, List<Entry>> _buildCategorizedEntries({required bool archived}) {
     final Map<String, List<Entry>> result = {};
 
-    // CC: First, add all categories (including empty ones)
-    for (final category in categories) {
+    for (final category in categories.where((cat) => cat.isArchived == archived)) {
       result[category.name] = [];
     }
 
-    // CC: Then populate with entries
     for (final entry in entries) {
       final category = entry.category;
-      result.putIfAbsent(category, () => []).add(entry);
+      if (result.containsKey(category)) {
+        result[category]!.add(entry);
+      }
     }
 
     return result;
   }
+
+  // CC: Get entries organized by category, excluding archived categories
+  Map<String, List<Entry>> get categorizedEntries => _buildCategorizedEntries(archived: false);
+
+  // CP: Get entries organized by archived categories only
+  Map<String, List<Entry>> get archivedCategorizedEntries => _buildCategorizedEntries(archived: true);
 
   // CC: Get color for a category from state
   Color getCategoryColor(String categoryName) {

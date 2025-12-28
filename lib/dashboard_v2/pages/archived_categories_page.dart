@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
-import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
-import 'package:myapp/dashboard_v2/pages/archived_categories_page.dart';
 import 'package:myapp/dashboard_v2/widgets/category_card.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 
-class AllCategoriesPage extends StatelessWidget {
-  const AllCategoriesPage({
-    super.key,
-  });
+// CP: Page to display archived categories
+class ArchivedCategoriesPage extends StatelessWidget {
+  const ArchivedCategoriesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,49 +22,22 @@ class AllCategoriesPage extends StatelessWidget {
         builder: (context, state) {
           final theme = Theme.of(context);
 
-          // CC: Use categories from state instead of prop to include empty categories
-          final sortedCategories = state.categorizedEntries.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+          // CP: Use archived categories from state
+          final archivedCategories = state.archivedCategorizedEntries.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
 
-          // CC: Calculate total entries
-          final totalEntries = state.categorizedEntries.values.fold<int>(0, (sum, entries) => sum + entries.length);
+          // CP: Calculate total entries in archived categories
+          final totalEntries = archivedCategories.fold<int>(
+            0,
+            (sum, entry) => sum + entry.value.length,
+          );
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('All Categories'),
-              centerTitle: true,
+              title: const Text('Archived Categories'),
               elevation: 0,
-              actions: [
-                // CP: Archived categories button
-                IconButton(
-                  icon: const Icon(Icons.archive_outlined),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const ArchivedCategoriesPage(),
-                      ),
-                    );
-                  },
-                  tooltip: 'Archived Categories',
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.add),
-                    iconSize: 32,
-                    onPressed: () async {
-                      // CC: Navigate to add category page - stream will handle updates
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AddCategoryPage(),
-                        ),
-                      );
-                    },
-                    tooltip: 'Add Category',
-                  ),
-                ),
-              ],
             ),
-            body: sortedCategories.isEmpty
+            body: archivedCategories.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -75,13 +45,13 @@ class AllCategoriesPage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.category_outlined,
+                            Icons.archive_outlined,
                             size: 80,
                             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'No Categories Yet',
+                            'No Archived Categories',
                             style: theme.textTheme.headlineSmall?.copyWith(
                               color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.w600,
@@ -89,23 +59,11 @@ class AllCategoriesPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Create your first category to organize your entries',
+                            'Categories you archive will appear here',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 32),
-                          FilledButton.icon(
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const AddCategoryPage(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text('Create Category'),
                           ),
                         ],
                       ),
@@ -113,12 +71,12 @@ class AllCategoriesPage extends StatelessWidget {
                   )
                 : CustomScrollView(
                     slivers: [
-                      // CC: Summary statistics
+                      // CP: Summary statistics
                       SliverToBoxAdapter(
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           child: Text(
-                            '${sortedCategories.length} categories, $totalEntries entries',
+                            '${archivedCategories.length} archived, $totalEntries entries',
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -126,7 +84,7 @@ class AllCategoriesPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // CC: Categories grid
+                      // CP: Archived categories grid
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         sliver: SliverGrid(
@@ -138,7 +96,7 @@ class AllCategoriesPage extends StatelessWidget {
                           ),
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final category = sortedCategories[index];
+                              final category = archivedCategories[index];
                               return CategoryCard(
                                 categoryName: category.key,
                                 entryCount: category.value.length,
@@ -155,7 +113,7 @@ class AllCategoriesPage extends StatelessWidget {
                                 },
                               );
                             },
-                            childCount: sortedCategories.length,
+                            childCount: archivedCategories.length,
                           ),
                         ),
                       ),

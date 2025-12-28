@@ -7,12 +7,14 @@ class Category extends Equatable {
   final String description;
   final bool isChecklist;
   final Color? color; // CC: Integrate color directly into category model
+  final bool isArchived; // CP: Archive status for hiding from main list
 
   const Category({
     required this.name,
     this.description = '',
     this.isChecklist = false,
     this.color,
+    this.isArchived = false,
   });
 
   Category copyWith({
@@ -21,12 +23,14 @@ class Category extends Equatable {
     bool? isChecklist,
     Color? color,
     bool clearColor = false,
+    bool? isArchived,
   }) {
     return Category(
       name: name ?? this.name,
       description: description ?? this.description,
       isChecklist: isChecklist ?? this.isChecklist,
       color: clearColor ? null : (color ?? this.color),
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 
@@ -35,6 +39,7 @@ class Category extends Equatable {
     description: json['description'] as String? ?? '',
     isChecklist: json['isChecklist'] as bool? ?? false,
     color: json['colorHex'] != null ? _colorFromHex(json['colorHex'] as String) : null,
+    isArchived: json['isArchived'] as bool? ?? false,
   );
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +47,7 @@ class Category extends Equatable {
     'description': description,
     'isChecklist': isChecklist,
     if (color != null) 'colorHex': _colorToHex(color!),
+    'isArchived': isArchived,
   };
 
   // CC: Color conversion helpers
@@ -59,5 +65,5 @@ class Category extends Equatable {
   }
 
   @override
-  List<Object?> get props => [name, description, isChecklist, color];
+  List<Object?> get props => [name, description, isChecklist, color, isArchived];
 }

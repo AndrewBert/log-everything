@@ -89,6 +89,12 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
     await _entryRepository.deleteCategory(categoryName);
   }
 
+  // CP: Toggle archive status for the category
+  Future<void> toggleArchive() async {
+    await _entryRepository.toggleCategoryArchive(categoryName);
+    _loadCategoryEntries();
+  }
+
   // CC: Refresh the cubit state to pick up external changes (like color updates)
   void refreshState() {
     _loadCategoryEntries();
