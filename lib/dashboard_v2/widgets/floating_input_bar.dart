@@ -589,14 +589,14 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
                             ? theme.colorScheme.primaryContainer
                             : theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(28),
-                        border: _hasText && !_isExpanded
-                            ? Border.all(
-                                color: theme.colorScheme.primary.withValues(
+                        border: Border.all(
+                          color: _hasText && !_isExpanded
+                              ? theme.colorScheme.primary.withValues(
                                   alpha: 0.2 + (_pulseAnimation.value * 0.2),
-                                ),
-                                width: 1.5,
-                              )
-                            : null,
+                                )
+                              : theme.colorScheme.outlineVariant,
+                          width: _hasText && !_isExpanded ? 1.5 : 1.0,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: _hasText && !_isExpanded
