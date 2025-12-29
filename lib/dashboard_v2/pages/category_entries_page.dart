@@ -248,9 +248,17 @@ class CategoryEntriesPage extends StatelessWidget {
                                       );
                                     },
                                     onCheckboxTap: () async {
-                                      final repository = GetIt.instance<EntryRepository>();
-                                      final updatedTodo = todo.toggleCompletion();
-                                      await repository.updateEntry(todo, updatedTodo);
+                                      try {
+                                        final repository = GetIt.instance<EntryRepository>();
+                                        final updatedTodo = todo.toggleCompletion();
+                                        await repository.updateEntry(todo, updatedTodo);
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Failed to update todo')),
+                                          );
+                                        }
+                                      }
                                     },
                                   ),
                                 );

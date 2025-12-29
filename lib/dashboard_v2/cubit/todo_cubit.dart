@@ -55,9 +55,12 @@ class TodoCubit extends Cubit<TodoState> {
   }
 
   Future<void> toggleTodoCompletion(Entry todo) async {
-    // CC: Toggle completion status
-    final updatedTodo = todo.toggleCompletion();
-    await _entryRepository.updateEntry(todo, updatedTodo);
+    try {
+      final updatedTodo = todo.toggleCompletion();
+      await _entryRepository.updateEntry(todo, updatedTodo);
+    } catch (_) {
+      // Silently fail - checkbox won't update which provides visual feedback
+    }
   }
 
   void toggleShowCompleted() {

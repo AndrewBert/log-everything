@@ -628,8 +628,6 @@ class EntryDetailsPage extends StatelessWidget {
                                           fontSize: 17,
                                           height: 1.4,
                                           fontWeight: FontWeight.w400,
-                                          decoration: entry.isCompleted ? TextDecoration.lineThrough : null,
-                                          decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                                         ),
                                         decoration: const InputDecoration(
                                           border: InputBorder.none,
@@ -646,8 +644,6 @@ class EntryDetailsPage extends StatelessWidget {
                                           height: 1.4,
                                           fontWeight: FontWeight.w400,
                                           color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                                          decoration: entry.isCompleted ? TextDecoration.lineThrough : null,
-                                          decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                                         ),
                                       ),
                               ),

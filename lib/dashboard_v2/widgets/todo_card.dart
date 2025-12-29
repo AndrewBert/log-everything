@@ -98,8 +98,6 @@ class TodoCard extends StatelessWidget {
                               height: 1.4,
                               fontWeight: FontWeight.w400,
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                              decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
-                              decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
