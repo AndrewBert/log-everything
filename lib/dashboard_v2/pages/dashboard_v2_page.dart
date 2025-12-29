@@ -19,8 +19,9 @@ import 'package:myapp/search/widgets/search_overlay.dart';
 
 // CP: Layout constants for bottom bar positioning
 const double _inputBarHeight = 56.0;
-const double _inputBarBottomMargin = 16.0;
-const double _promptSuggestionsBottomOffset = _inputBarHeight + _inputBarBottomMargin;
+const double _inputBarBottomMargin = 8.0;
+const double _promptSuggestionsGap = 4.0;
+const double _promptSuggestionsBottomOffset = _inputBarHeight + _inputBarBottomMargin + _promptSuggestionsGap;
 
 class DashboardV2Page extends StatefulWidget {
   const DashboardV2Page({super.key});
@@ -451,9 +452,9 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                             ),
                           ),
                         ),
-                        // CC: Add padding at bottom for floating input bar
+                        // CC: Add padding at bottom for floating input bar and prompt suggestions
                         const SliverToBoxAdapter(
-                          child: SizedBox(height: 80),
+                          child: SizedBox(height: 130),
                         ),
                       ],
                       if (state.entries.isEmpty)
