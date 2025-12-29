@@ -9,7 +9,22 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
-    final List<Widget> _v140Changes = [
+    final List<Widget> v141Changes = [
+      _buildChangeItem(
+        '💡 Smart Prompt Suggestions',
+        '''AI-generated prompt suggestions now appear above the input bar when it's focused. Get quick ideas for what to log based on your context.''',
+      ),
+      _buildChangeItem(
+        '✅ Cleaner Entry Views',
+        '''Todos no longer clutter your entry feeds! They're now filtered out of the Recent Entries carousel and All Entries grid - find them in the dedicated Todos section instead.''',
+      ),
+      _buildChangeItem(
+        '🎨 Redesigned Todo Details',
+        '''The todo details page has a fresh new look with a circular checkbox design. Easier to read and interact with.''',
+      ),
+    ];
+
+    final List<Widget> v140Changes = [
       _buildChangeItem(
         '📦 Category Archiving',
         '''Clean up your category list! Archive categories you're not using right now - they'll disappear from the main view but your entries stay safe. Unarchive anytime from the category settings.''',
@@ -20,7 +35,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _v131Changes = [
+    final List<Widget> v131Changes = [
       _buildChangeItem(
         '📷 Image Attachments',
         '''Attach photos to any entry! Tap the attachment button to add images from your camera or photo library. Images appear as thumbnails on cards and in search results.''',
@@ -31,7 +46,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _v130Changes = [
+    final List<Widget> v130Changes = [
       _buildChangeItem(
         '🔍 Note Search',
         '''Find any note instantly! Search through all your entries by keyword - finally a way to find that thing you wrote last month.''',
@@ -42,7 +57,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _v123Changes = [
+    final List<Widget> v123Changes = [
       _buildChangeItem(
         '💾 Auto-save for note editing',
         '''Notes now save automatically when you navigate away - no more lost changes!''',
@@ -53,7 +68,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _v122Changes = [
+    final List<Widget> v122Changes = [
       _buildChangeItem(
         '🚀 Upgraded to GPT-5',
         '''Switched from GPT-4 to GPT-5 (just released last week). Early testing shows it's better at understanding context, but we'll see how it performs in real use.''',
@@ -72,7 +87,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _bugFixChanges = [
+    final List<Widget> bugFixChanges = [
       _buildChangeItem(
         '🐛 UI Polish & Fixes',
         '''Fixed text visibility in floating input bar, improved carousel scrolling behavior, enhanced layout consistency, and resolved overflow issues in insight containers.''',
@@ -83,7 +98,7 @@ class WhatsNewDialog extends StatelessWidget {
       ),
     ];
 
-    final List<Widget> _majorFeatureChanges = [
+    final List<Widget> majorFeatureChanges = [
       _buildChangeItem(
         '📰 All-New Dashboard Experience',
         '''Completely redesigned home screen with a newspaper-inspired layout, AI-powered insights, and intuitive navigation.''',
@@ -119,6 +134,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.4.1 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.cyan.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, color: Colors.cyan.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.4.1 - The Suggestions Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.cyan.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...v141Changes,
+              const SizedBox(height: 20),
               // Version 1.4.0 Header
               Container(
                 padding: const EdgeInsets.all(12),
@@ -144,7 +186,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._v140Changes,
+              ...v140Changes,
               const SizedBox(height: 20),
               // Version 1.3.1 Header
               Container(
@@ -171,7 +213,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._v131Changes,
+              ...v131Changes,
               const SizedBox(height: 20),
               // Version 1.3.0 Header
               Container(
@@ -198,7 +240,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._v130Changes,
+              ...v130Changes,
               const SizedBox(height: 20),
               // Version 1.2.3 Header
               Container(
@@ -225,7 +267,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._v123Changes,
+              ...v123Changes,
               const SizedBox(height: 20),
               // Version 1.2.2 Header
               Container(
@@ -252,7 +294,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._v122Changes,
+              ...v122Changes,
               const SizedBox(height: 20),
               // Version 1.2.1 Header
               Container(
@@ -279,7 +321,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._bugFixChanges,
+              ...bugFixChanges,
               const SizedBox(height: 20),
               // Version 1.1.9 Header
               Container(
@@ -306,7 +348,7 @@ class WhatsNewDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._majorFeatureChanges,
+              ...majorFeatureChanges,
               const SizedBox(height: 16),
               // CP: Personal message from developer
               Container(
