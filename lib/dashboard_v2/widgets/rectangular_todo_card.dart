@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:intl/intl.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -32,7 +31,6 @@ class RectangularTodoCard extends StatelessWidget {
       orElse: () => Category(name: todo.category),
     );
     final categoryColor = category.color ?? CategoryColors.getColorForCategory(todo.category);
-    final dateFormatter = DateFormat('MMM d');
 
     return AnimatedOpacity(
       opacity: todo.isCompleted ? 0.6 : 1.0,
@@ -116,31 +114,15 @@ class RectangularTodoCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
-                          // CC: Category and date
-                          Row(
-                            children: [
-                              // CC: Category chip
-                              Text(
-                                todo.category.toUpperCase(),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontSize: 10,
-                                  letterSpacing: 0.8,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // CC: Date
-                              Text(
-                                '• ${dateFormatter.format(todo.timestamp).toUpperCase()}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontSize: 10,
-                                  letterSpacing: 0.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
+                          // CC: Category label
+                          Text(
+                            todo.category.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
                           ),
                         ],
                       ),

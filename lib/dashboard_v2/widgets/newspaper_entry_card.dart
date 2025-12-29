@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -27,11 +26,9 @@ class NewspaperEntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final categoryColor = this.categoryColor ?? CategoryColors.getColorForCategory(entry.category);
-    final dateFormat = DateFormat('MMM d');
-    final timeFormat = DateFormat('h:mm a');
 
     // CC: Wrap in pulsing animation for pending entries
-    Widget card = _buildCard(context, theme, categoryColor, dateFormat, timeFormat);
+    Widget card = _buildCard(context, theme, categoryColor);
 
     if (_isPending) {
       return _PulsingCard(child: card);
@@ -44,8 +41,6 @@ class NewspaperEntryCard extends StatelessWidget {
     BuildContext context,
     ThemeData theme,
     Color categoryColor,
-    DateFormat dateFormat,
-    DateFormat timeFormat,
   ) {
     return GestureDetector(
       onTap: _isPending ? null : onTap,
@@ -138,19 +133,6 @@ class NewspaperEntryCard extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                             ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        // Date and time
-                        Text(
-                          '${dateFormat.format(entry.timestamp).toUpperCase()} • ${timeFormat.format(entry.timestamp)}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 11,
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
