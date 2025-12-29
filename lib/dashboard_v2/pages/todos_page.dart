@@ -4,8 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_page_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
-import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
-import 'package:myapp/dashboard_v2/model/insight.dart';
+import 'package:myapp/dashboard_v2/widgets/todo_card.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
@@ -96,26 +95,15 @@ class TodosPage extends StatelessWidget {
                               final todo = allVisibleTodos[index];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
-                                child: RectangularTodoCard(
+                                child: TodoCard(
                                   todo: todo,
                                   onCheckboxTap: () {
                                     _handleTodoCompletion(context, todo);
                                   },
-                                  onEntryTap: () {
+                                  onTap: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (context) => EntryDetailsPage(
-                                          entry: todo,
-                                          cachedInsight: todo.getCurrentInsight() != null
-                                              ? Insight(
-                                                  id: todo.id,
-                                                  type: InsightType.summary,
-                                                  title: 'Insight',
-                                                  content: todo.getCurrentInsight()!.content,
-                                                  generatedAt: todo.getCurrentInsight()!.generatedAt,
-                                                )
-                                              : null,
-                                        ),
+                                        builder: (context) => EntryDetailsPage(entry: todo),
                                       ),
                                     );
                                   },
@@ -204,10 +192,17 @@ class TodosPage extends StatelessWidget {
                                   final todo = visibleCompletedTodos[index];
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
-                                    child: RectangularTodoCard(
+                                    child: TodoCard(
                                       todo: todo,
                                       onCheckboxTap: () {
                                         _handleTodoCompletion(context, todo);
+                                      },
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => EntryDetailsPage(entry: todo),
+                                          ),
+                                        );
                                       },
                                     ),
                                   );

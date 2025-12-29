@@ -12,7 +12,7 @@ export 'widgets/newspaper_entry_card.dart';
 export 'widgets/image_entry_card.dart';
 export 'widgets/categories_carousel.dart';
 export 'widgets/category_card.dart';
-export 'widgets/rectangular_todo_card.dart';
+export 'widgets/todo_card.dart';
 export 'widgets/todos_carousel.dart';
 export 'widgets/floating_input_bar.dart';
 

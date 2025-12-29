@@ -6,7 +6,7 @@ import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
-import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
+import 'package:myapp/dashboard_v2/widgets/todo_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -238,23 +238,12 @@ class CategoryEntriesPage extends StatelessWidget {
                                 final todo = state.activeTodos[index];
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
-                                  child: RectangularTodoCard(
+                                  child: TodoCard(
                                     todo: todo,
-                                    onEntryTap: () {
+                                    onTap: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (context) => EntryDetailsPage(
-                                            entry: todo,
-                                            cachedInsight: todo.getCurrentInsight() != null
-                                                ? Insight(
-                                                    id: todo.id,
-                                                    type: InsightType.summary,
-                                                    title: 'Insight',
-                                                    content: todo.getCurrentInsight()!.content,
-                                                    generatedAt: todo.getCurrentInsight()!.generatedAt,
-                                                  )
-                                                : null,
-                                          ),
+                                          builder: (context) => EntryDetailsPage(entry: todo),
                                         ),
                                       );
                                     },
