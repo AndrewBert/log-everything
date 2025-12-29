@@ -582,15 +582,15 @@ class EntryDetailsPage extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // CP: Circular checkbox
+                            // CP: Circular checkbox (24x24 to match TodoCard)
                             GestureDetector(
                               onTap: state.isEditing
                                   ? null
                                   : () => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                width: 28,
-                                height: 28,
+                                width: 24,
+                                height: 24,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: entry.isCompleted ? theme.colorScheme.primary : Colors.transparent,
@@ -604,7 +604,7 @@ class EntryDetailsPage extends StatelessWidget {
                                 child: entry.isCompleted
                                     ? Icon(
                                         Icons.check,
-                                        size: 18,
+                                        size: 16,
                                         color: theme.colorScheme.onPrimary,
                                       )
                                     : null,
