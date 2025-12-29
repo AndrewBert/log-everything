@@ -14,9 +14,16 @@ class ChatCubit extends Cubit<ChatState> {
   // CP: Add AiService dependency
   final AiService _aiService;
   final Uuid _uuid = const Uuid();
+  Timer? _activeTypewriterTimer; // CP: Track active timer for cleanup
 
   // CP: Update constructor to accept AiService
   ChatCubit({required AiService aiService}) : _aiService = aiService, super(const ChatState());
+
+  @override
+  Future<void> close() {
+    _activeTypewriterTimer?.cancel();
+    return super.close();
+  }
 
   Future<void> addUserMessage(String text) async {
     // CP: Make method async
@@ -94,17 +101,16 @@ class ChatCubit extends Cubit<ChatState> {
     // CP: Variables for typewriter effect - declared outside try block
     final StringBuffer receivedText = StringBuffer(); // CP: Buffer for received text
     final StringBuffer displayedText = StringBuffer(); // CP: Buffer for displayed text
-    Timer? typewriterTimer;
     int currentIndex = 0;
 
     try {
       // CP: Start typewriter effect with variable speed
       void startTypewriter() {
-        typewriterTimer?.cancel();
+        _activeTypewriterTimer?.cancel();
 
         void typeNextCharacter() {
-          if (currentIndex >= receivedText.length) {
-            // CP: No more characters to display yet
+          // CP: Guard against emit after close
+          if (isClosed || currentIndex >= receivedText.length) {
             return;
           }
 
@@ -142,7 +148,7 @@ class ChatCubit extends Cubit<ChatState> {
 
           // CP: Schedule next character
           if (currentIndex < receivedText.length) {
-            typewriterTimer = Timer(nextDelay, typeNextCharacter);
+            _activeTypewriterTimer = Timer(nextDelay, typeNextCharacter);
           }
         }
 
@@ -160,14 +166,14 @@ class ChatCubit extends Cubit<ChatState> {
           case ChatStreamDelta(:final text):
             receivedText.write(text);
             // CP: Start typewriter if not already running
-            if (typewriterTimer == null || !typewriterTimer!.isActive) {
+            if (_activeTypewriterTimer == null || !_activeTypewriterTimer!.isActive) {
               startTypewriter();
             }
             break;
 
           case ChatStreamCompleted(:final fullText, :final responseId):
             // CP: Wait for typewriter to catch up, then show final text
-            typewriterTimer?.cancel();
+            _activeTypewriterTimer?.cancel();
 
             // CP: Calculate remaining time to display all text
             final remainingChars = receivedText.length - currentIndex;
@@ -176,7 +182,13 @@ class ChatCubit extends Cubit<ChatState> {
               const catchUpSpeed = Duration(milliseconds: 5);
 
               // CP: Fast-forward remaining text
-              Timer.periodic(catchUpSpeed, (timer) {
+              _activeTypewriterTimer = Timer.periodic(catchUpSpeed, (timer) {
+                // CP: Guard against emit after close
+                if (isClosed) {
+                  timer.cancel();
+                  return;
+                }
+
                 if (currentIndex >= receivedText.length) {
                   timer.cancel();
                   // CP: Show final complete text
@@ -207,7 +219,8 @@ class ChatCubit extends Cubit<ChatState> {
 
           case ChatStreamError(:final message):
             AppLogger.error('Stream error in ChatCubit: $message');
-            typewriterTimer?.cancel();
+            _activeTypewriterTimer?.cancel();
+            if (isClosed) break;
 
             final updatedMessages = List<ChatMessage>.from(state.messages);
             final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
@@ -234,7 +247,8 @@ class ChatCubit extends Cubit<ChatState> {
       }
     } catch (e, stackTrace) {
       AppLogger.error('Unexpected error in streaming chat: $e', stackTrace: stackTrace);
-      typewriterTimer?.cancel();
+      _activeTypewriterTimer?.cancel();
+      if (isClosed) return;
 
       final updatedMessages = List<ChatMessage>.from(state.messages);
       final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
@@ -257,6 +271,9 @@ class ChatCubit extends Cubit<ChatState> {
   }
 
   void _finishStreaming(String aiMessageId, String fullText, String? responseId) {
+    // CP: Guard against emit after close
+    if (isClosed) return;
+
     final updatedMessages = List<ChatMessage>.from(state.messages);
     final aiMessageIndex = updatedMessages.indexWhere((msg) => msg.id == aiMessageId);
     if (aiMessageIndex != -1) {
