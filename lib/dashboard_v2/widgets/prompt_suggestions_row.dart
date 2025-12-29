@@ -8,7 +8,6 @@ import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 // CP: Warm editorial color palette matching app aesthetic
 class _PromptColors {
   static const warmAmber = Color(0xFFF59E0B);
-  static const warmAmberSubtle = Color(0xFFD97706);
   static const warmCharcoal = Color(0xFF292524);
   static const warmStone = Color(0xFF78716C);
   static const warmSurface = Color(0xFFFFFBEB);
@@ -158,28 +157,8 @@ class _PromptChipState extends State<_PromptChip> {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // CP: Refined icon with subtle glow effect
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    colors: [
-                      _PromptColors.warmAmber.withValues(alpha: 0.15),
-                      Colors.transparent,
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 14,
-                  color: _PromptColors.warmAmberSubtle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // CP: Editorial typography
               Text(
                 widget.prompt,
                 style: GoogleFonts.inter(
@@ -187,11 +166,9 @@ class _PromptChipState extends State<_PromptChip> {
                   fontWeight: FontWeight.w500,
                   color: _PromptColors.warmCharcoal,
                   letterSpacing: -0.2,
-                  height: 1.2,
                 ),
               ),
-              const SizedBox(width: 4),
-              // CP: Subtle arrow indicator
+              const SizedBox(width: 6),
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 10,
