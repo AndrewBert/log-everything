@@ -102,6 +102,9 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   }
 
   void _onFocusChange() {
+    // CP: Notify cubit of focus change for prompt suggestions
+    context.read<DashboardV2Cubit>().setInputBarFocused(_focusNode.hasFocus);
+
     setState(() {
       _isExpanded = _focusNode.hasFocus;
       if (_isExpanded) {
@@ -158,8 +161,13 @@ class _FloatingInputBarState extends State<FloatingInputBar> with TickerProvider
   }
 
   void _onTextChanged() {
+    final hasText = _textController.text.isNotEmpty;
+
+    // CP: Notify cubit of text change for prompt suggestions
+    context.read<DashboardV2Cubit>().setInputBarHasText(hasText);
+
     setState(() {
-      _hasText = _textController.text.isNotEmpty;
+      _hasText = hasText;
       // CC: Start/stop pulse animation based on text presence
       if (_hasText && !_isExpanded) {
         _pulseController.repeat(reverse: true);

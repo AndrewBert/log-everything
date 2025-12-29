@@ -532,12 +532,15 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
               },
             ),
             // CP: Prompt suggestions row above input bar
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               bottom: _promptSuggestionsBottomOffset,
               child: SafeArea(
-                child: PromptSuggestionsRow(),
+                // CP: TextFieldTapRegion prevents keyboard dismiss when tapping prompts
+                child: TextFieldTapRegion(
+                  child: const PromptSuggestionsRow(),
+                ),
               ),
             ),
             // CC: Floating input bar at the bottom

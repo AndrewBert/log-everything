@@ -15,6 +15,8 @@ class DashboardV2State extends Equatable {
   final Entry? pendingEntry; // CC: Temp entry shown during AI categorization
   final Uint8List? selectedImageBytes; // CP: Image selected for attachment
   final List<String> promptSuggestions; // CP: AI-generated chat prompt suggestions
+  final bool isInputBarFocused; // CP: Track if input bar has focus
+  final bool inputBarHasText; // CP: Track if input bar has text
 
   const DashboardV2State({
     this.entries = const [],
@@ -29,6 +31,8 @@ class DashboardV2State extends Equatable {
     this.pendingEntry,
     this.selectedImageBytes,
     this.promptSuggestions = const [],
+    this.isInputBarFocused = false,
+    this.inputBarHasText = false,
   });
 
   // CC: Combine pending entry with entries for display
@@ -81,6 +85,8 @@ class DashboardV2State extends Equatable {
     Entry? pendingEntry,
     Uint8List? selectedImageBytes,
     List<String>? promptSuggestions,
+    bool? isInputBarFocused,
+    bool? inputBarHasText,
     bool clearLastIntentClassification = false,
     bool clearIntentClassificationError = false,
     bool clearPendingEntry = false,
@@ -103,6 +109,8 @@ class DashboardV2State extends Equatable {
       pendingEntry: clearPendingEntry ? null : (pendingEntry ?? this.pendingEntry),
       selectedImageBytes: clearSelectedImage ? null : (selectedImageBytes ?? this.selectedImageBytes),
       promptSuggestions: promptSuggestions ?? this.promptSuggestions,
+      isInputBarFocused: isInputBarFocused ?? this.isInputBarFocused,
+      inputBarHasText: inputBarHasText ?? this.inputBarHasText,
     );
   }
 
@@ -153,5 +161,7 @@ class DashboardV2State extends Equatable {
     pendingEntry,
     selectedImageBytes,
     promptSuggestions,
+    isInputBarFocused,
+    inputBarHasText,
   ];
 }

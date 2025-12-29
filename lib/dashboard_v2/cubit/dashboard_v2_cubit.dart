@@ -396,6 +396,16 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     _navigateToChat(context, prompt);
   }
 
+  // CP: Update input bar focus state
+  void setInputBarFocused(bool focused) {
+    emit(state.copyWith(isInputBarFocused: focused));
+  }
+
+  // CP: Update input bar text state
+  void setInputBarHasText(bool hasText) {
+    emit(state.copyWith(inputBarHasText: hasText));
+  }
+
   // CP: Load cached prompt suggestions from SharedPreferences
   void _loadCachedPromptSuggestions() {
     try {

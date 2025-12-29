@@ -20,15 +20,19 @@ class PromptSuggestionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-      buildWhen: (prev, current) => prev.promptSuggestions != current.promptSuggestions,
+      buildWhen: (prev, current) =>
+          prev.promptSuggestions != current.promptSuggestions ||
+          prev.isInputBarFocused != current.isInputBarFocused ||
+          prev.inputBarHasText != current.inputBarHasText,
       builder: (context, state) {
         final prompts = state.promptSuggestions;
+        final shouldShow = state.isInputBarFocused && !state.inputBarHasText && prompts.isNotEmpty;
 
-        if (prompts.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return _PromptChipsRow(prompts: prompts);
+        // CP: Animate in/out based on visibility
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: shouldShow ? _PromptChipsRow(prompts: prompts) : const SizedBox.shrink(),
+        );
       },
     );
   }
