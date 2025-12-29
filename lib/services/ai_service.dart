@@ -434,7 +434,7 @@ Respond with a JSON object containing an "entries" array.""";
   String _buildSystemInstructions(DateTime? currentDate) {
     // CP: Helper to build system instructions for chat
     final dateString = currentDate != null ? " Today's date is ${currentDate.toLocal().toString().split(' ')[0]}." : "";
-    return "You are a helpful AI assistant named Trilby. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString When answering, speak directly about what the user did rather than referencing 'your logs show' or 'according to your data' - just state the facts naturally.";
+    return "You are a helpful AI assistant named Trilby. Use the File Search tool to access and search the user's log entries to answer their questions. The logs are organized into daily files.$dateString When answering, speak directly about what the user did rather than referencing 'your logs show' or 'according to your data' - just state the facts naturally. When mentioning dates and times, use natural formats like 'Today at 9:36 PM', 'Yesterday at 10:15 AM', or 'Dec 28 at 3:00 PM' instead of technical formats.";
   }
 
   @override
