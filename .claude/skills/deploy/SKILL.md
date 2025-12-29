@@ -48,16 +48,26 @@ Present the commits to the user and ask them to confirm or edit the changelog te
 cd ios && fastlane beta_with_changelog changelog:"<user-confirmed changelog>"
 ```
 
-### 6. Tag Release
+### 6. Commit Changes
 
-After successful upload, create a git tag for this release:
+After successful upload, commit the version bump and What's New dialog changes:
+
+```bash
+git add pubspec.yaml lib/dialogs/whats_new_dialog.dart
+git commit -m "chore: bump version to <version> and update What's New dialog"
+git push origin main
+```
+
+### 7. Tag Release
+
+Create a git tag for this release:
 
 ```bash
 git tag -a v<version> -m "Release <version>"
 git push origin v<version>
 ```
 
-### 7. Confirm
+### 8. Confirm
 
 Report success with:
 - Version deployed
