@@ -188,9 +188,10 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                     prev.pendingEntry != current.pendingEntry,
                                 builder: (context, state) {
                                   final primaryInsight = state.currentInsight?.getPrimaryInsight();
-                                  // CC: Use displayEntries to account for pending entry
-                                  final selectedEntry = state.selectedCarouselIndex < state.displayEntries.length
-                                      ? state.displayEntries[state.selectedCarouselIndex]
+                                  // CP: Filter out todos - they have their own section
+                                  final recentEntries = state.displayEntries.where((e) => !e.isTask).toList();
+                                  final selectedEntry = state.selectedCarouselIndex < recentEntries.length
+                                      ? recentEntries[state.selectedCarouselIndex]
                                       : null;
                                   final isPending = selectedEntry?.category == 'Processing...';
                                   final categoryColor = selectedEntry != null && !isPending
@@ -231,8 +232,10 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                     prev.entries != current.entries ||
                                     prev.pendingEntry != current.pendingEntry,
                                 builder: (context, state) {
+                                  // CP: Filter out todos - they have their own section
+                                  final recentEntries = state.displayEntries.where((e) => !e.isTask).take(10).toList();
                                   return RecentEntriesCarousel(
-                                    entries: state.displayEntries.take(10).toList(),
+                                    entries: recentEntries,
                                     selectedIndex: state.selectedCarouselIndex,
                                     getCategoryColor: state.getCategoryColor,
                                     onPageChanged: (index) {
@@ -334,13 +337,14 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                         const SliverToBoxAdapter(
                           child: SizedBox(height: 8),
                         ),
-                        // CC: Grid with date headers
+                        // CC: Grid with date headers (exclude todos - they have their own section)
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final items = _buildItemsWithDateHeaders(state.displayEntries);
+                                final nonTaskEntries = state.displayEntries.where((e) => !e.isTask).toList();
+                                final items = _buildItemsWithDateHeaders(nonTaskEntries);
                                 if (index >= items.length) {
                                   if (state.hasMoreEntries) {
                                     return const Center(
@@ -447,8 +451,10 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
 
                                 return const SizedBox.shrink();
                               },
-                              childCount:
-                                  _buildItemsWithDateHeaders(state.displayEntries).length + (state.hasMoreEntries ? 1 : 0),
+                              childCount: _buildItemsWithDateHeaders(
+                                        state.displayEntries.where((e) => !e.isTask).toList(),
+                                      ).length +
+                                  (state.hasMoreEntries ? 1 : 0),
                             ),
                           ),
                         ),

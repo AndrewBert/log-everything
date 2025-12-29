@@ -6,6 +6,7 @@ import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
 import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
+import 'package:myapp/dashboard_v2/widgets/rectangular_todo_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -210,29 +211,109 @@ class CategoryEntriesPage extends StatelessWidget {
                       const SliverToBoxAdapter(
                         child: SizedBox(height: 16),
                       ),
-                      // TODO: Add AI insight container for the entire category
-                      // - Generate insights about patterns, trends, and summaries for all entries in this category
-                      // - Could include: most common themes, time patterns, emotional trends, suggestions
-                      // - Using NewspaperInsightContainer for insights
-                      // CC: Grid of entries
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: SliverGrid(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 1,
+                      // CP: Todo section (active todos only)
+                      if (state.activeTodos.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'TODOS',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              if (state.isLoading) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
+                        ),
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 8),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final todo = state.activeTodos[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: RectangularTodoCard(
+                                    todo: todo,
+                                    onEntryTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => EntryDetailsPage(
+                                            entry: todo,
+                                            cachedInsight: todo.getCurrentInsight() != null
+                                                ? Insight(
+                                                    id: todo.id,
+                                                    type: InsightType.summary,
+                                                    title: 'Insight',
+                                                    content: todo.getCurrentInsight()!.content,
+                                                    generatedAt: todo.getCurrentInsight()!.generatedAt,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onCheckboxTap: () async {
+                                      final repository = GetIt.instance<EntryRepository>();
+                                      final updatedTodo = todo.toggleCompletion();
+                                      await repository.updateEntry(todo, updatedTodo);
+                                    },
+                                  ),
                                 );
-                              }
+                              },
+                              childCount: state.activeTodos.length,
+                            ),
+                          ),
+                        ),
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 16),
+                        ),
+                      ],
+                      // CP: Entries header (only if there are regular entries)
+                      if (state.regularEntries.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'ENTRIES',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (state.regularEntries.isNotEmpty)
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 8),
+                        ),
+                      // CC: Grid of entries (regular entries only)
+                      if (state.regularEntries.isNotEmpty)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 1,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (state.isLoading) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
 
-                              final entry = state.entries[index];
+                                final entry = state.regularEntries[index];
                               final onTap = () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -251,23 +332,23 @@ class CategoryEntriesPage extends StatelessWidget {
                                   ),
                                 );
                               };
-                              return entry.imagePath != null
-                                  ? ImageEntryCard(
-                                      entry: entry,
-                                      categoryColor: categoryColor,
-                                      onTap: onTap,
-                                    )
-                                  : NewspaperEntryCard(
-                                      entry: entry,
-                                      isInGrid: true,
-                                      categoryColor: categoryColor,
-                                      onTap: onTap,
-                                    );
-                            },
-                            childCount: state.entries.length,
+                                return entry.imagePath != null
+                                    ? ImageEntryCard(
+                                        entry: entry,
+                                        categoryColor: categoryColor,
+                                        onTap: onTap,
+                                      )
+                                    : NewspaperEntryCard(
+                                        entry: entry,
+                                        isInGrid: true,
+                                        categoryColor: categoryColor,
+                                        onTap: onTap,
+                                      );
+                              },
+                              childCount: state.regularEntries.length,
+                            ),
                           ),
                         ),
-                      ),
                       const SliverToBoxAdapter(
                         child: SizedBox(height: 24),
                       ),

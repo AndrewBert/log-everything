@@ -32,6 +32,13 @@ class CategoryEntriesState extends Equatable {
     );
   }
 
+  // CP: Active todos for this category (uncompleted tasks only)
+  List<Entry> get activeTodos =>
+      entries.where((e) => e.isTask && !e.isCompleted).toList();
+
+  // CP: Regular entries (non-task items only)
+  List<Entry> get regularEntries => entries.where((e) => !e.isTask).toList();
+
   @override
   List<Object?> get props => [categoryName, category, entries, isLoading, categoryColor];
 }
