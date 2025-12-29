@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,15 +16,20 @@ import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/pages/reimagined_chat_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 part 'dashboard_v2_state.dart';
 
 class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final EntryRepository _entryRepository;
   final IntentDetectionService _intentDetectionService;
   final AiService _aiService = GetIt.instance<AiService>();
+  final SharedPreferences _prefs = GetIt.instance<SharedPreferences>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
   // CC: Track entries currently generating insights to prevent duplicates
   final Set<String> _generatingInsights = {};
+  // CP: Debounce timer for prompt suggestion regeneration
+  Timer? _promptSuggestionDebounce;
+  static const _promptSuggestionsKey = 'prompt_suggestions';
 
   DashboardV2Cubit({
     required EntryRepository entryRepository,
@@ -33,6 +39,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
        super(const DashboardV2State()) {
     // CC: Subscribe to entries stream (handles entry AND color changes)
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
+    // CP: Load cached prompt suggestions after initialization is complete
+    Future.microtask(_loadCachedPromptSuggestions);
   }
 
   void loadEntries() {
@@ -231,6 +239,9 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
       _generateInsightForEntry(0);
       // CC: Generate insights for other recent entries (skip index 0 to avoid duplicate)
       _generateInsightsForOtherRecentEntries();
+
+      // CP: Schedule prompt suggestion regeneration (debounced)
+      _schedulePromptSuggestionRegeneration();
     }
   }
 
@@ -363,6 +374,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   }
 
   void _navigateToChat(BuildContext context, String initialQuery) {
+    if (!context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -379,9 +391,69 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     );
   }
 
+  // CP: Navigate to chat with a prompt suggestion
+  void navigateToChatWithPrompt(BuildContext context, String prompt) {
+    _navigateToChat(context, prompt);
+  }
+
+  // CP: Load cached prompt suggestions from SharedPreferences
+  void _loadCachedPromptSuggestions() {
+    try {
+      final cachedJson = _prefs.getString(_promptSuggestionsKey);
+      if (cachedJson != null) {
+        final List<dynamic> decoded = jsonDecode(cachedJson);
+        final prompts = decoded.cast<String>();
+        emit(state.copyWith(promptSuggestions: prompts));
+        AppLogger.info('Loaded ${prompts.length} cached prompt suggestions');
+      }
+    } catch (e) {
+      AppLogger.error('Error loading cached prompt suggestions', error: e);
+    }
+  }
+
+  // CP: Regenerate prompt suggestions with debouncing
+  void _schedulePromptSuggestionRegeneration() {
+    _promptSuggestionDebounce?.cancel();
+    _promptSuggestionDebounce = Timer(const Duration(seconds: 2), () {
+      _regeneratePromptSuggestions();
+    });
+  }
+
+  // CP: Actually regenerate prompt suggestions via AI
+  Future<void> _regeneratePromptSuggestions() async {
+    final entries = state.entries;
+    AppLogger.info('Regenerating prompt suggestions for ${entries.length} entries');
+
+    try {
+      // CP: Convert entries to simple maps for the AI service
+      final entryMaps = entries.take(20).map((e) => {
+        'text': e.text,
+        'category': e.category,
+        'isTask': e.isTask,
+        'isCompleted': e.isCompleted,
+        'timestamp': e.timestamp.toIso8601String(),
+      }).toList();
+
+      final prompts = await _aiService.generatePromptSuggestions(
+        entries: entryMaps,
+        currentDate: DateTime.now(),
+      );
+
+      if (!isClosed && prompts.isNotEmpty) {
+        emit(state.copyWith(promptSuggestions: prompts));
+        // CP: Persist to SharedPreferences
+        await _prefs.setString(_promptSuggestionsKey, jsonEncode(prompts));
+        AppLogger.info('Generated and cached ${prompts.length} prompt suggestions');
+      }
+    } catch (e) {
+      AppLogger.error('Error regenerating prompt suggestions', error: e);
+    }
+  }
+
   @override
   Future<void> close() {
     _entriesSubscription?.cancel();
+    _promptSuggestionDebounce?.cancel();
     return super.close();
   }
 }

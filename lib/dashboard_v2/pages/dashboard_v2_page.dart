@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
+import 'package:myapp/dashboard_v2/widgets/prompt_suggestions_row.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
@@ -15,6 +16,11 @@ import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
+
+// CP: Layout constants for bottom bar positioning
+const double _inputBarHeight = 56.0;
+const double _inputBarBottomMargin = 16.0;
+const double _promptSuggestionsBottomOffset = _inputBarHeight + _inputBarBottomMargin;
 
 class DashboardV2Page extends StatefulWidget {
   const DashboardV2Page({super.key});
@@ -523,6 +529,15 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                   ),
                 );
               },
+            ),
+            // CP: Prompt suggestions row above input bar
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: _promptSuggestionsBottomOffset,
+              child: SafeArea(
+                child: PromptSuggestionsRow(),
+              ),
             ),
             // CC: Floating input bar at the bottom
             const Positioned(

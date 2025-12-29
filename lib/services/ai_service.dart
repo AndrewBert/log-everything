@@ -122,6 +122,18 @@ abstract class AiService {
     required List<Category> categories,
     String? userNote,
   });
+
+  /// Generates personalized chat prompt suggestions based on recent entries.
+  ///
+  /// Takes a list of recent [entries] and the [currentDate] for temporal context.
+  /// Returns 2-3 short prompt strings that the user might want to ask about
+  /// their logged data.
+  ///
+  /// Returns an empty list if there are fewer than 5 entries or if generation fails.
+  Future<List<String>> generatePromptSuggestions({
+    required List<Map<String, dynamic>> entries,
+    required DateTime currentDate,
+  });
 }
 
 // Custom Exception for the service
@@ -1370,6 +1382,143 @@ Be concise. Use ONLY category names from the provided list.''';
     } catch (e) {
       if (e is AiServiceException) rethrow;
       throw AiServiceException('Image analysis failed: ${e.toString()}', underlyingError: e);
+    }
+  }
+
+  @override
+  Future<List<String>> generatePromptSuggestions({
+    required List<Map<String, dynamic>> entries,
+    required DateTime currentDate,
+  }) async {
+    if (_apiKey == 'YOUR_API_KEY_NOT_FOUND') {
+      throw AiServiceException('OpenAI API Key not found.');
+    }
+
+    // CP: Minimum threshold - need at least 5 entries for meaningful suggestions
+    if (entries.length < 5) {
+      return [];
+    }
+
+    AppLogger.info("Generating prompt suggestions for ${entries.length} entries");
+
+    final dateString = currentDate.toLocal().toString().split(' ')[0];
+
+    // CP: Build a summary of recent entries for the AI
+    final entriesSummary = entries.take(20).map((e) {
+      final text = e['text'] as String? ?? '';
+      final category = e['category'] as String? ?? 'Unknown';
+      final isTask = e['isTask'] as bool? ?? false;
+      final isCompleted = e['isCompleted'] as bool? ?? false;
+      final timestamp = e['timestamp'] as String? ?? '';
+      return '- [$category] $text (task: $isTask, completed: $isCompleted, date: $timestamp)';
+    }).join('\n');
+
+    final prompt = '''Based on these recent log entries, generate 2-3 short chat prompts the user might want to ask about their data.
+
+Today's date: $dateString
+
+Recent entries:
+$entriesSummary
+
+Guidelines:
+- Keep prompts under 8 words
+- Reference specific patterns you see (categories, tasks, time periods)
+- Vary the prompt types: reflection, summary, actionable
+- Use "I" perspective ("What did I...", "How's my...")
+- Make them feel natural and conversational
+
+Return ONLY a JSON object with this structure:
+{
+  "prompts": ["prompt 1", "prompt 2", "prompt 3"]
+}''';
+
+    final requestBody = {
+      'model': gpt5Mini,
+      'input': [
+        {
+          'role': 'system',
+          'content': 'You generate short, personalized chat prompts for a personal logging app. Keep suggestions concise and relevant to the user\'s actual data.',
+        },
+        {
+          'role': 'user',
+          'content': prompt,
+        },
+      ],
+      'text': {
+        'format': {'type': 'json_object'},
+      },
+      'metadata': {
+        'request_type': 'prompt_suggestions',
+        'app_name': 'log-everything',
+        'entry_count': entries.length.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'model_used': gpt5Mini,
+      },
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+
+        if (responseBody['status'] != 'completed' || responseBody['error'] != null) {
+          AppLogger.error('Prompt suggestions request failed. Status: ${responseBody['status']}');
+          return [];
+        }
+
+        if (responseBody['output'] != null &&
+            responseBody['output'] is List &&
+            (responseBody['output'] as List).isNotEmpty) {
+          Map<String, dynamic>? messageOutputElement;
+          for (final item in responseBody['output'] as List) {
+            if (item is Map<String, dynamic> && item['type'] == 'message') {
+              messageOutputElement = item;
+              break;
+            }
+          }
+
+          if (messageOutputElement != null) {
+            final dynamic content = messageOutputElement['content'];
+            if (content != null && content is List && content.isNotEmpty) {
+              String? jsonOutputString;
+              for (final item in content) {
+                if (item is Map<String, dynamic> && item['type'] == 'output_text' && item['text'] != null) {
+                  jsonOutputString = item['text'] as String;
+                  break;
+                }
+              }
+
+              if (jsonOutputString != null) {
+                try {
+                  final json = jsonDecode(jsonOutputString);
+                  final prompts = (json['prompts'] as List?)?.cast<String>() ?? [];
+                  AppLogger.info('Generated ${prompts.length} prompt suggestions');
+                  return prompts.take(3).toList();
+                } catch (e) {
+                  AppLogger.error('Failed to parse prompt suggestions JSON', error: e);
+                  return [];
+                }
+              }
+            }
+          }
+        }
+
+        return [];
+      } else {
+        AppLogger.error('Prompt suggestions HTTP error: ${response.statusCode}');
+        return [];
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error('Error generating prompt suggestions', error: e, stackTrace: stackTrace);
+      return [];
     }
   }
 }
