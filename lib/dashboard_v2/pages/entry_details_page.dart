@@ -138,8 +138,14 @@ class EntryDetailsPage extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final theme = Theme.of(context);
     final entry = state.entry!;
+
+    // CP: Use different layout for todos
+    if (entry.isTask) {
+      return _buildTodoBody(context, state);
+    }
+
+    final theme = Theme.of(context);
     final dateFormat = DateFormat('MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
     // CC: Get category color with proper fallback to avoid sync issues
@@ -515,6 +521,271 @@ class EntryDetailsPage extends StatelessWidget {
                             ),
                           ],
                         ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // CP: Todo-specific layout with circular checkbox and in-place editing
+  Widget _buildTodoBody(BuildContext context, EntryDetailsState state) {
+    final theme = Theme.of(context);
+    final entry = state.entry!;
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    final timeFormat = DateFormat('h:mm a');
+    final categoryColor = _getCategoryColor(entry.category);
+
+    return GestureDetector(
+      onTap: () {
+        if (state.isEditing) {
+          context.read<EntryDetailsCubit>().saveAndExitEditMode();
+        }
+      },
+      behavior: HitTestBehavior.opaque,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // CP: Todo card with checkbox and text
+            AnimatedOpacity(
+              opacity: entry.isCompleted ? 0.6 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: state.isEditing
+                        ? categoryColor
+                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    width: state.isEditing ? 2 : 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // CP: Category color stripe at top
+                      Container(
+                        height: 4,
+                        color: categoryColor.withValues(alpha: 0.6),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // CP: Circular checkbox
+                            GestureDetector(
+                              onTap: state.isEditing
+                                  ? null
+                                  : () => context.read<EntryDetailsCubit>().toggleTaskCompletion(),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: entry.isCompleted ? theme.colorScheme.primary : Colors.transparent,
+                                  border: Border.all(
+                                    color: entry.isCompleted
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.outline.withValues(alpha: 0.5),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: entry.isCompleted
+                                    ? Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: theme.colorScheme.onPrimary,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // CP: Todo text (tap to edit)
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: state.isEditing
+                                    ? () {}
+                                    : () => context.read<EntryDetailsCubit>().startEditing(),
+                                child: state.isEditing
+                                    ? TextField(
+                                        key: entryTextFieldKey,
+                                        controller: context.read<EntryDetailsCubit>().textController,
+                                        focusNode: context.read<EntryDetailsCubit>().textFocusNode,
+                                        maxLines: null,
+                                        textInputAction: TextInputAction.newline,
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          fontSize: 17,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w400,
+                                          decoration: entry.isCompleted ? TextDecoration.lineThrough : null,
+                                          decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                        ),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                          isDense: true,
+                                        ),
+                                        onChanged: (text) =>
+                                            context.read<EntryDetailsCubit>().updateEditedText(text),
+                                      )
+                                    : Text(
+                                        entry.text,
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          fontSize: 17,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w400,
+                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                                          decoration: entry.isCompleted ? TextDecoration.lineThrough : null,
+                                          decorationColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // CP: Editable category section
+            Text(
+              'CATEGORY',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: allowCategoryEdit ? () => _showCategoryBottomSheet(context, state) : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: categoryColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _getDisplayName(entry.category),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (allowCategoryEdit)
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // CP: Date/time metadata footer
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dateFormat.format(entry.timestamp).toUpperCase(),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        timeFormat.format(entry.timestamp),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      // Save status indicator
+                      if (state.saveStatus != SaveStatus.idle) ...[
+                        const SizedBox(width: 16),
+                        if (state.saveStatus == SaveStatus.saving)
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        if (state.saveStatus == SaveStatus.saved)
+                          Icon(
+                            Icons.check_circle,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                        const SizedBox(width: 4),
+                        Text(
+                          state.saveStatus == SaveStatus.saving ? 'Saving...' : 'Saved',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: state.saveStatus == SaveStatus.saving
+                                ? theme.colorScheme.onSurfaceVariant
+                                : theme.colorScheme.primary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],

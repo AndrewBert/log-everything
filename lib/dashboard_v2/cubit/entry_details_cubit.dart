@@ -41,6 +41,9 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
       ),
     );
 
+    // CP: Skip insight generation for todos - they don't need AI insights
+    if (entry.isTask) return;
+
     // CP: If no cached insight, check if entry has one
     if (cachedInsight == null) {
       final currentInsight = entry.getCurrentInsight();
@@ -158,10 +161,14 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     }
 
     try {
-      // Mark entry as generating insight before updating
-      final updatedEntry = state.entry!.copyWith(text: newText, isGeneratingInsight: true);
-      // Full save with AI regeneration
-      await _entryRepository.updateEntry(state.entry!, updatedEntry);
+      // CP: Skip insight generation for todos
+      final isTask = state.entry!.isTask;
+      final updatedEntry = state.entry!.copyWith(
+        text: newText,
+        isGeneratingInsight: !isTask, // Only mark generating for non-tasks
+      );
+      // Full save with AI regeneration (skip for todos)
+      await _entryRepository.updateEntry(state.entry!, updatedEntry, skipAiRegeneration: isTask);
 
       emit(
         state.copyWith(
@@ -172,8 +179,10 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
         ),
       );
 
-      // Regenerate insight when text changes
-      _generatePrimaryInsight(updatedEntry);
+      // Regenerate insight when text changes (skip for todos)
+      if (!isTask) {
+        _generatePrimaryInsight(updatedEntry);
+      }
     } catch (e) {
       if (!isClosed) {
         emit(
