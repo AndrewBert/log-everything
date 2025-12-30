@@ -40,6 +40,57 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
     });
   }
 
+  Future<void> _showArchiveDialog(
+    BuildContext context,
+    Category category,
+    CategoryEntriesCubit cubit,
+  ) async {
+    final shouldArchive = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(
+            category.isArchived ? 'Unarchive Category' : 'Archive Category',
+          ),
+          content: Text(
+            category.isArchived
+                ? 'Are you sure you want to unarchive "${category.displayName}"?'
+                : 'Are you sure you want to archive "${category.displayName}"? It will be hidden from the main category list.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(category.isArchived ? 'Unarchive' : 'Archive'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldArchive == true && context.mounted) {
+      await cubit.toggleArchive();
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              category.isArchived
+                  ? 'Category "${category.displayName}" unarchived'
+                  : 'Category "${category.displayName}" archived',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -57,7 +108,6 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
           return Scaffold(
             appBar: AppBar(
               title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // CP: Use displayName to show "None" for "Misc" category
                   Text(state.category?.displayName ?? _getDisplayName(widget.categoryName)),
@@ -67,6 +117,7 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
                   ),
                 ],
               ),
+              centerTitle: true,
               elevation: 0,
               actions: [
                 IconButton(
@@ -75,21 +126,50 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
                   onPressed: _openSearch,
                   tooltip: 'Search Entries',
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () {
-                    if (state.category != null) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => BlocProvider.value(
-                            value: cubit,
-                            child: EditCategoryPage(category: state.category!),
+                // CP: Hide menu for Misc category (no editable options)
+                if (state.category != null && !state.category!.isMisc)
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => BlocProvider.value(
+                              value: cubit,
+                              child: EditCategoryPage(category: state.category!),
+                            ),
                           ),
+                        );
+                      } else if (value == 'archive') {
+                        await _showArchiveDialog(context, state.category!, cubit);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined),
+                            SizedBox(width: 12),
+                            Text('Edit Category'),
+                          ],
                         ),
-                      );
-                    }
-                  },
-                ),
+                      ),
+                      PopupMenuItem(
+                        value: 'archive',
+                        child: Row(
+                          children: [
+                            Icon(state.category!.isArchived
+                                ? Icons.unarchive_outlined
+                                : Icons.archive_outlined),
+                            const SizedBox(width: 12),
+                            Text(state.category!.isArchived
+                                ? 'Unarchive Category'
+                                : 'Archive Category'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
             body: Stack(
