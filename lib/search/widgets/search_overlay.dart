@@ -12,27 +12,66 @@ import 'package:myapp/entry/category.dart';
 
 class SearchOverlay extends StatelessWidget {
   final VoidCallback onClose;
+  final SearchMode mode;
+  final String? categoryName;
+  final bool archivedOnly;
 
   const SearchOverlay({
     super.key,
     required this.onClose,
-  });
+  })  : mode = SearchMode.all,
+        categoryName = null,
+        archivedOnly = false;
+
+  const SearchOverlay.categoriesOnly({
+    super.key,
+    required this.onClose,
+  })  : mode = SearchMode.categoriesOnly,
+        categoryName = null,
+        archivedOnly = false;
+
+  const SearchOverlay.archivedCategoriesOnly({
+    super.key,
+    required this.onClose,
+  })  : mode = SearchMode.categoriesOnly,
+        categoryName = null,
+        archivedOnly = true;
+
+  const SearchOverlay.forCategory({
+    super.key,
+    required this.onClose,
+    required String this.categoryName,
+  })  : mode = SearchMode.entriesOnly,
+        archivedOnly = false;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => SearchCubit(
         entryRepository: GetIt.instance<EntryRepository>(),
+        mode: mode,
+        categoryFilter: categoryName,
+        archivedOnly: archivedOnly,
       ),
-      child: _SearchOverlayContent(onClose: onClose),
+      child: _SearchOverlayContent(
+        onClose: onClose,
+        mode: mode,
+        categoryName: categoryName,
+      ),
     );
   }
 }
 
 class _SearchOverlayContent extends StatefulWidget {
   final VoidCallback onClose;
+  final SearchMode mode;
+  final String? categoryName;
 
-  const _SearchOverlayContent({required this.onClose});
+  const _SearchOverlayContent({
+    required this.onClose,
+    required this.mode,
+    this.categoryName,
+  });
 
   @override
   State<_SearchOverlayContent> createState() => _SearchOverlayContentState();
@@ -55,6 +94,16 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  String _getHintText() {
+    return switch (widget.mode) {
+      SearchMode.categoriesOnly => 'Search categories...',
+      SearchMode.entriesOnly => widget.categoryName != null
+          ? 'Search in ${widget.categoryName}...'
+          : 'Search entries...',
+      SearchMode.all => 'Search entries...',
+    };
   }
 
   Color _getCategoryColor(String categoryName) {
@@ -130,7 +179,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
               controller: _textController,
               focusNode: _focusNode,
               decoration: InputDecoration(
-                hintText: 'Search entries...',
+                hintText: _getHintText(),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -210,7 +259,13 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
   }
 
   Widget _buildResults(BuildContext context, SearchState state) {
+    if (widget.mode == SearchMode.categoriesOnly) {
+      return _buildCategoryGrid(context, state);
+    }
+
     final results = state.results;
+    final theme = Theme.of(context);
+    final showCategories = widget.mode == SearchMode.all && state.hasMatchingCategories;
 
     // Build grid rows (2 entries per row)
     final List<Widget> gridRows = [];
@@ -267,13 +322,11 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
       );
     }
 
-    final theme = Theme.of(context);
-
     return ListView(
       key: searchResultsListKey,
       padding: const EdgeInsets.all(16),
       children: [
-        if (state.hasMatchingCategories)
+        if (showCategories)
           SearchCategoryCarousel(
             categories: state.matchingCategories,
             onCategoryTap: (category) => _navigateToCategory(context, category),
@@ -293,6 +346,34 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
           ),
         ...gridRows,
       ],
+    );
+  }
+
+  Widget _buildCategoryGrid(BuildContext context, SearchState state) {
+    final categories = state.matchingCategories;
+    final allEntries = GetIt.instance<EntryRepository>().currentEntries;
+
+    return GridView.builder(
+      key: searchResultsListKey,
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        final categoryEntries = allEntries.where((e) => e.category == category.name).toList();
+        return CategoryCard(
+          categoryName: category.name,
+          entryCount: categoryEntries.length,
+          recentEntries: categoryEntries.take(4).toList(),
+          categoryColor: category.color ?? CategoryColors.getColorForCategory(category.name),
+          onTap: () => _navigateToCategory(context, category),
+        );
+      },
     );
   }
 

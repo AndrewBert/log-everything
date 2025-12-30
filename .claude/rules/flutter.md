@@ -5,7 +5,8 @@ paths: lib/**/*.dart
 # Flutter Code Conventions
 
 ## Widget Architecture
-- **StatelessWidget only** - no StatefulWidgets
+- **Prefer StatelessWidget + Cubit** for complex state management
+- **StatefulWidget is fine** for simple local UI state (e.g., toggle visibility, text controllers)
 - **Private methods** organized below `build()` method in widgets
 - **Key Usage**: Define widget keys in `lib/utils/*_keys.dart` files, import for reuse
 

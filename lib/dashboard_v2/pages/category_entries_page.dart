@@ -10,8 +10,10 @@ import 'package:myapp/dashboard_v2/widgets/todo_card.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/search/widgets/search_overlay.dart';
+import 'package:myapp/utils/search_keys.dart';
 
-class CategoryEntriesPage extends StatelessWidget {
+class CategoryEntriesPage extends StatefulWidget {
   final String categoryName;
 
   const CategoryEntriesPage({
@@ -20,11 +22,30 @@ class CategoryEntriesPage extends StatelessWidget {
   });
 
   @override
+  State<CategoryEntriesPage> createState() => _CategoryEntriesPageState();
+}
+
+class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
+  bool _isSearchOpen = false;
+
+  void _openSearch() {
+    setState(() {
+      _isSearchOpen = true;
+    });
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearchOpen = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => CategoryEntriesCubit(
         entryRepository: GetIt.instance<EntryRepository>(),
-        categoryName: categoryName,
+        categoryName: widget.categoryName,
       ),
       child: BlocBuilder<CategoryEntriesCubit, CategoryEntriesState>(
         builder: (context, state) {
@@ -39,7 +60,7 @@ class CategoryEntriesPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // CP: Use displayName to show "None" for "Misc" category
-                  Text(state.category?.displayName ?? _getDisplayName(categoryName)),
+                  Text(state.category?.displayName ?? _getDisplayName(widget.categoryName)),
                   Text(
                     '${state.entries.length} ${state.entries.length == 1 ? 'entry' : 'entries'}',
                     style: theme.textTheme.bodySmall,
@@ -48,6 +69,12 @@ class CategoryEntriesPage extends StatelessWidget {
               ),
               elevation: 0,
               actions: [
+                IconButton(
+                  key: categoryEntriesSearchButtonKey,
+                  icon: const Icon(Icons.search),
+                  onPressed: _openSearch,
+                  tooltip: 'Search Entries',
+                ),
                 IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () {
@@ -65,8 +92,10 @@ class CategoryEntriesPage extends StatelessWidget {
                 ),
               ],
             ),
-            body: state.entries.isEmpty && !state.isLoading
-                ? Column(
+            body: Stack(
+              children: [
+                state.entries.isEmpty && !state.isLoading
+                    ? Column(
                     children: [
                       // CC: Category header with color indicator
                       Container(
@@ -134,7 +163,7 @@ class CategoryEntriesPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Start adding entries to the "${state.category?.name ?? categoryName}" category',
+                                  'Start adding entries to the "${state.category?.name ?? widget.categoryName}" category',
                                   style: theme.textTheme.bodyLarge?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -351,6 +380,13 @@ class CategoryEntriesPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                if (_isSearchOpen)
+                  SearchOverlay.forCategory(
+                    onClose: _closeSearch,
+                    categoryName: widget.categoryName,
+                  ),
+              ],
+            ),
           );
         },
       ),
