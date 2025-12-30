@@ -25,6 +25,12 @@ class SearchState extends Equatable {
   bool get hasResults => results.isNotEmpty;
   bool get hasMatchingCategories => matchingCategories.isNotEmpty;
 
+  // CP: Separate todos from regular entries for distinct rendering
+  List<Entry> get todoResults => results.where((e) => e.isTask).toList();
+  List<Entry> get regularResults => results.where((e) => !e.isTask).toList();
+  bool get hasTodoResults => todoResults.isNotEmpty;
+  bool get hasRegularResults => regularResults.isNotEmpty;
+
   bool get showNoResults {
     if (!hasQuery || isSearching) return false;
     return switch (mode) {

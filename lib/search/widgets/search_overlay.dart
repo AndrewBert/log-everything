@@ -263,15 +263,15 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
       return _buildCategoryGrid(context, state);
     }
 
-    final results = state.results;
     final theme = Theme.of(context);
     final showCategories = widget.mode == SearchMode.all && state.hasMatchingCategories;
+    final regularResults = state.regularResults;
 
-    // Build grid rows (2 entries per row)
+    // CP: Build grid rows for regular entries (2 entries per row)
     final List<Widget> gridRows = [];
-    for (int i = 0; i < results.length; i += 2) {
-      final entry1 = results[i];
-      final entry2 = i + 1 < results.length ? results[i + 1] : null;
+    for (int i = 0; i < regularResults.length; i += 2) {
+      final entry1 = regularResults[i];
+      final entry2 = i + 1 < regularResults.length ? regularResults[i + 1] : null;
 
       gridRows.add(
         Padding(
@@ -331,7 +331,32 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
             categories: state.matchingCategories,
             onCategoryTap: (category) => _navigateToCategory(context, category),
           ),
-        if (state.hasResults)
+        // CP: Todos section
+        if (state.hasTodoResults) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'TODOS',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          ...state.todoResults.map((todo) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TodoCard(
+              todo: todo,
+              onTap: () => _navigateToEntry(context, todo),
+              onCheckboxTap: () => _toggleTodoCompletion(context, todo),
+            ),
+          )),
+          const SizedBox(height: 8),
+        ],
+        // CP: Notes section
+        if (state.hasRegularResults)
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 12),
             child: Text(
@@ -347,6 +372,20 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
         ...gridRows,
       ],
     );
+  }
+
+  Future<void> _toggleTodoCompletion(BuildContext context, Entry todo) async {
+    try {
+      final repository = GetIt.instance<EntryRepository>();
+      final updatedTodo = todo.toggleCompletion();
+      await repository.updateEntry(todo, updatedTodo);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update todo')),
+        );
+      }
+    }
   }
 
   Widget _buildCategoryGrid(BuildContext context, SearchState state) {
