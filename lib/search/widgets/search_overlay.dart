@@ -379,6 +379,10 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
       final repository = GetIt.instance<EntryRepository>();
       final updatedTodo = todo.toggleCompletion();
       await repository.updateEntry(todo, updatedTodo);
+      // CP: Refresh search results to reflect the change
+      if (context.mounted) {
+        context.read<SearchCubit>().refresh();
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

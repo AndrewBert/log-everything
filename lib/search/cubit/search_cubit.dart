@@ -90,6 +90,13 @@ class SearchCubit extends Cubit<SearchState> {
     emit(SearchState(mode: _mode));
   }
 
+  // CP: Re-run current search to refresh results after external changes
+  void refresh() {
+    if (state.hasQuery) {
+      _performSearch(state.query);
+    }
+  }
+
   @override
   Future<void> close() {
     _debounceTimer?.cancel();
