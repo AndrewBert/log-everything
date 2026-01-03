@@ -16,6 +16,7 @@ const Key cancelButtonKey = ValueKey('cancel_button');
 const Key categoryButtonKey = ValueKey('category_button');
 const Key deleteButtonKey = ValueKey('delete_button');
 const Key taskCheckboxKey = ValueKey('task_checkbox');
+const Key toggleTaskMenuItemKey = ValueKey('toggle_task_menu_item');
 
 // Dialog Keys
 const Key deleteConfirmationDialogKey = ValueKey('delete_confirmation_dialog');

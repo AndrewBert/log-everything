@@ -254,6 +254,41 @@ class EntryDetailsCubit extends Cubit<EntryDetailsState> {
     }
   }
 
+  Future<void> toggleEntryTaskStatus() async {
+    if (state.entry == null) return;
+
+    try {
+      final originalEntry = state.entry!;
+      final wasTask = originalEntry.isTask;
+
+      // Use Entry model's toggleTaskStatus for state transformation
+      final updatedEntry = originalEntry.toggleTaskStatus();
+
+      // Persist immediately
+      await _entryRepository.updateEntry(originalEntry, updatedEntry);
+
+      // Handle UI state based on conversion direction
+      if (wasTask && !updatedEntry.isTask) {
+        // Converting todo → note: trigger insight regeneration
+        emit(state.copyWith(entry: updatedEntry));
+        _generatePrimaryInsight(updatedEntry);
+      } else {
+        // Converting note → todo: clear insight from UI state (todos don't display insights)
+        emit(state.copyWith(
+          entry: updatedEntry,
+          clearPrimaryInsight: true,
+          isRegeneratingInsight: false,
+        ));
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          errorMessage: 'Failed to convert entry',
+        ),
+      );
+    }
+  }
+
   Future<void> deleteEntry() async {
     if (state.entry == null) return;
 
