@@ -10,6 +10,32 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
 
   TodosCarouselCubit() : super(const TodosCarouselState());
 
+  // CP: Set todos to highlighting state, auto-clears after 3 seconds
+  void setHighlightedTodos(List<String> todoIds) {
+    if (todoIds.isEmpty) return;
+
+    final newStates = Map<String, TodoTransitionState>.from(state.todoStates);
+
+    for (final todoId in todoIds) {
+      // CP: Cancel any existing timer for this todo
+      _transitionTimers[todoId]?.cancel();
+
+      // CP: Set to highlighting state
+      newStates[todoId] = TodoTransitionState.highlighting;
+
+      // CP: Auto-clear after 3 seconds
+      _transitionTimers[todoId] = Timer(const Duration(seconds: 3), () {
+        if (isClosed) return;
+        final updatedStates = Map<String, TodoTransitionState>.from(state.todoStates);
+        updatedStates.remove(todoId);
+        emit(state.copyWith(todoStates: updatedStates));
+        _transitionTimers.remove(todoId);
+      });
+    }
+
+    emit(state.copyWith(todoStates: newStates));
+  }
+
   void handleTodoCompletion(Entry todo, bool isCompleting) {
     final todoId = todo.id;
 
@@ -27,6 +53,7 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
 
       // CC: After 3 seconds, mark as fully completed (remove from display)
       _transitionTimers[todoId] = Timer(const Duration(seconds: 3), () {
+        if (isClosed) return;
         final updatedStates = Map<String, TodoTransitionState>.from(state.todoStates);
         updatedStates[todoId] = TodoTransitionState.completed;
         emit(state.copyWith(todoStates: updatedStates));
@@ -39,6 +66,7 @@ class TodosCarouselCubit extends Cubit<TodosCarouselState> {
 
       // CC: After 1 second, mark as fully active (normal display)
       _transitionTimers[todoId] = Timer(const Duration(seconds: 1), () {
+        if (isClosed) return;
         final updatedStates = Map<String, TodoTransitionState>.from(state.todoStates);
         updatedStates[todoId] = TodoTransitionState.active;
         emit(state.copyWith(todoStates: updatedStates));

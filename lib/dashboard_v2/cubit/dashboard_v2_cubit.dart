@@ -29,6 +29,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final Set<String> _generatingInsights = {};
   // CP: Debounce timer for prompt suggestion regeneration
   Timer? _promptSuggestionDebounce;
+  // CP: Track previous entry IDs to detect new entries
+  Set<String> _previousEntryIds = {};
   static const _promptSuggestionsKey = 'prompt_suggestions';
 
   DashboardV2Cubit({
@@ -48,6 +50,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     final entries = _entryRepository.currentEntries;
     final categories = _entryRepository.currentCategories;
+    // CP: Initialize previous entry IDs for new todo detection
+    _previousEntryIds = entries.map((e) => e.id).toSet();
     // CC: Include all entries (both regular entries and todos)
     emit(
       state.copyWith(
@@ -213,6 +217,14 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     // CC: Clear pending entry when real entries arrive (optimistic UI complete)
     final shouldClearPending = state.pendingEntry != null && hasNewEntries;
 
+    // CP: Detect newly added todos for highlight animation
+    final currentEntryIds = entries.map((e) => e.id).toSet();
+    final newTodoIds = entries
+        .where((e) => e.isTask && !_previousEntryIds.contains(e.id))
+        .map((e) => e.id)
+        .toList();
+    _previousEntryIds = currentEntryIds;
+
     // CC: Update state with new entries from stream
     emit(
       state.copyWith(
@@ -221,6 +233,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         // CC: Reset selected index if it's out of bounds
         selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
         clearPendingEntry: shouldClearPending,
+        newlyAddedTodoIds: newTodoIds.isNotEmpty ? newTodoIds : const [],
       ),
     );
 

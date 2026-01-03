@@ -2,6 +2,7 @@ part of 'todos_carousel_cubit.dart';
 
 enum TodoTransitionState {
   active, // Normal active todo
+  highlighting, // Newly added todo, showing highlight animation
   completing, // Just marked complete, animating
   completed, // Fully completed, removed from display
   uncompleting, // Just marked active, transitioning back

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todo_cubit.dart';
 import 'package:myapp/dashboard_v2/cubit/todos_carousel_cubit.dart';
 import 'package:myapp/dashboard_v2/pages/entry_details_page.dart';
@@ -23,10 +24,20 @@ class TodosCarousel extends StatelessWidget {
 
     return BlocProvider(
       create: (context) => TodosCarouselCubit(),
-      child: BlocBuilder<TodoCubit, TodoState>(
-        builder: (context, todoState) {
-          return BlocBuilder<TodosCarouselCubit, TodosCarouselState>(
-            builder: (context, carouselState) {
+      child: BlocListener<DashboardV2Cubit, DashboardV2State>(
+        listenWhen: (prev, current) =>
+            prev.newlyAddedTodoIds != current.newlyAddedTodoIds &&
+            current.newlyAddedTodoIds.isNotEmpty,
+        listener: (context, dashboardState) {
+          // CP: Trigger highlight animation for newly added todos
+          context.read<TodosCarouselCubit>().setHighlightedTodos(
+            dashboardState.newlyAddedTodoIds,
+          );
+        },
+        child: BlocBuilder<TodoCubit, TodoState>(
+          builder: (context, todoState) {
+            return BlocBuilder<TodosCarouselCubit, TodosCarouselState>(
+              builder: (context, carouselState) {
               // CC: Filter todos based on their actual state and transition state
               final displayableTodos = <Entry>[];
 
@@ -122,10 +133,15 @@ class TodosCarousel extends StatelessWidget {
                     child: Column(
                       key: todosCarouselKey,
                       children: displayTodos.map((todo) {
+                        // CP: Check if this todo should be highlighted
+                        final transitionState = carouselState.todoStates[todo.id];
+                        final isHighlighted = transitionState == TodoTransitionState.highlighting;
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: TodoCard(
                             todo: todo,
+                            isHighlighted: isHighlighted,
                             onCheckboxTap: () {
                               _handleTodoCompletion(context, todo);
                             },
@@ -143,9 +159,10 @@ class TodosCarousel extends StatelessWidget {
                   ),
                 ],
               );
-            },
-          );
-        },
+              },
+            );
+          },
+        ),
       ),
     );
   }

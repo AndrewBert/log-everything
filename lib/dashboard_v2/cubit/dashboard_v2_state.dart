@@ -17,6 +17,7 @@ class DashboardV2State extends Equatable {
   final List<String> promptSuggestions; // CP: AI-generated chat prompt suggestions
   final bool isInputBarFocused; // CP: Track if input bar has focus
   final bool inputBarHasText; // CP: Track if input bar has text
+  final List<String> newlyAddedTodoIds; // CP: Todo IDs just added for highlight
 
   const DashboardV2State({
     this.entries = const [],
@@ -33,6 +34,7 @@ class DashboardV2State extends Equatable {
     this.promptSuggestions = const [],
     this.isInputBarFocused = false,
     this.inputBarHasText = false,
+    this.newlyAddedTodoIds = const [],
   });
 
   // CC: Combine pending entry with entries for display
@@ -87,6 +89,7 @@ class DashboardV2State extends Equatable {
     List<String>? promptSuggestions,
     bool? isInputBarFocused,
     bool? inputBarHasText,
+    List<String>? newlyAddedTodoIds,
     bool clearLastIntentClassification = false,
     bool clearIntentClassificationError = false,
     bool clearPendingEntry = false,
@@ -111,6 +114,7 @@ class DashboardV2State extends Equatable {
       promptSuggestions: promptSuggestions ?? this.promptSuggestions,
       isInputBarFocused: isInputBarFocused ?? this.isInputBarFocused,
       inputBarHasText: inputBarHasText ?? this.inputBarHasText,
+      newlyAddedTodoIds: newlyAddedTodoIds ?? this.newlyAddedTodoIds,
     );
   }
 
@@ -163,5 +167,6 @@ class DashboardV2State extends Equatable {
     promptSuggestions,
     isInputBarFocused,
     inputBarHasText,
+    newlyAddedTodoIds,
   ];
 }
