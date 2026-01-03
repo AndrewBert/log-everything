@@ -22,10 +22,13 @@ class PromptSuggestionsRow extends StatelessWidget {
       buildWhen: (prev, current) =>
           prev.promptSuggestions != current.promptSuggestions ||
           prev.isInputBarFocused != current.isInputBarFocused ||
-          prev.inputBarHasText != current.inputBarHasText,
+          prev.inputBarHasText != current.inputBarHasText ||
+          prev.selectedImageBytes != current.selectedImageBytes,
       builder: (context, state) {
         final prompts = state.promptSuggestions;
-        final shouldShow = state.isInputBarFocused && !state.inputBarHasText && prompts.isNotEmpty;
+        final hasImageAttached = state.selectedImageBytes != null;
+        final shouldShow =
+            state.isInputBarFocused && !state.inputBarHasText && !hasImageAttached && prompts.isNotEmpty;
 
         // CP: Animate in/out based on visibility
         return AnimatedSwitcher(
