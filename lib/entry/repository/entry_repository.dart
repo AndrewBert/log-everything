@@ -13,6 +13,7 @@ import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
 import '../../services/image_storage_service.dart';
 import '../../utils/logger.dart';
 import '../../dashboard_v2/model/simple_insight.dart';
+import '../processing_state.dart';
 
 /// Manages the storage and retrieval of entries, synchronizing with vector store and handling AI categorization.
 class EntryRepository {
@@ -26,6 +27,9 @@ class EntryRepository {
   // CP: Map to store debounce timers for each month's sync
   final Map<String, Timer> _syncDebounceTimers = {};
   static const _syncDebounceMs = 2000; // CP: 2 second debounce
+
+  // CC: Track entry IDs currently being processed to prevent concurrent processing
+  final Set<String> _processingEntryIds = {};
 
   // CC: Stream controller for reactive updates
   final _entriesStreamController = StreamController<List<Entry>>.broadcast();
@@ -54,6 +58,9 @@ class EntryRepository {
 
     // CC: Migrate category colors from CategoryColors utility to Category model
     await _migrateCategoryColorsIfNeeded();
+
+    // CC: Retry any pending/failed entries from previous sessions
+    retryPendingEntries();
 
     // CC: Emit initial entries to stream
     _entriesStreamController.add(currentEntries);
@@ -138,36 +145,115 @@ class EntryRepository {
     if (text.isEmpty) return (entries: _entries, splitCount: 0);
 
     final DateTime processingTimestamp = DateTime.now();
-    List<EntryPrototype> extractedData = [];
-    String? serviceError;
+
+    // CC: Create pending entry and save BEFORE AI call to prevent data loss
+    final pendingEntry = Entry(
+      text: text,
+      timestamp: processingTimestamp,
+      category: 'Processing...',
+      isNew: true,
+      processingState: ProcessingState.pending,
+    );
+
+    _entries.insert(0, pendingEntry);
+    await _saveEntries();
+    AppLogger.info("Repository: Pre-persisted pending entry for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
+
+    // CC: Process in background - fire-and-forget
+    _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
+      AppLogger.error("Repository: Background AI processing failed", error: e, stackTrace: stackTrace);
+    });
+
+    return (entries: currentEntries, splitCount: 1);
+  }
+
+  /// Processes a pending entry with AI categorization and replaces it with final entries.
+  ///
+  /// Flow:
+  /// 1. Checks if entry is already being processed (prevents concurrent processing)
+  /// 2. Marks entry as [ProcessingState.processing]
+  /// 3. Calls AI service for categorization
+  /// 4. On success: replaces pending entry with categorized entries
+  /// 5. On failure: marks entry as [ProcessingState.failed] for retry
+  Future<void> _processEntryWithAI(Entry pendingEntry) async {
+    // CC: Prevent concurrent processing of the same entry
+    if (_processingEntryIds.contains(pendingEntry.id)) {
+      AppLogger.info("Repository: Entry ${pendingEntry.id} is already being processed, skipping");
+      return;
+    }
+    _processingEntryIds.add(pendingEntry.id);
 
     try {
-      // CP: Pass only active categories to AI service (excludes archived)
-      extractedData = await _aiService.extractEntries(text, activeCategories);
-    } on AiServiceException catch (e) {
-      AppLogger.error("Repository: AI Service failed: ${e.message}", error: e.underlyingError);
-      serviceError = e.message;
-    } catch (e, stacktrace) {
-      AppLogger.error("Repository: Unexpected error calling AI Service", error: e, stackTrace: stacktrace);
-      serviceError = "An unexpected error occurred during categorization.";
-    }
+      // CC: Mark as processing
+      final processingEntry = pendingEntry.copyWith(processingState: ProcessingState.processing);
+      final processingIndex = _entries.indexWhere((e) => e.id == pendingEntry.id);
+      if (processingIndex != -1) {
+        _entries[processingIndex] = processingEntry;
+        await _saveEntries();
+      }
 
-    final List<Entry> addedEntries = [];
-    if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(
-        text: text,
-        timestamp: processingTimestamp,
-        category: 'Misc',
-        isNew: true,
-        isTask: false,
-      );
-      addedEntries.add(fallbackEntry);
-    } else {
+      List<EntryPrototype> extractedData = [];
+      String? serviceError;
+
+      try {
+        // CP: Pass only active categories to AI service (excludes archived)
+        extractedData = await _aiService.extractEntries(pendingEntry.text, activeCategories);
+      } on AiServiceException catch (e) {
+        AppLogger.error("Repository: AI Service failed: ${e.message}", error: e.underlyingError);
+        serviceError = e.message;
+      } catch (e, stacktrace) {
+        AppLogger.error("Repository: Unexpected error calling AI Service", error: e, stackTrace: stacktrace);
+        serviceError = "An unexpected error occurred during categorization.";
+      }
+
+      // CC: Find the pending entry
+      final entryIndex = _entries.indexWhere((e) => e.id == pendingEntry.id);
+      if (entryIndex == -1) {
+        AppLogger.warn("Repository: Pending entry ${pendingEntry.id} not found, may have been deleted");
+        return;
+      }
+
+      // CC: If AI failed, mark as failed for retry (unless max retries exceeded)
+      if (serviceError != null && extractedData.isEmpty) {
+        final newRetryCount = pendingEntry.processingRetryCount + 1;
+        if (newRetryCount >= Entry.maxProcessingRetries) {
+          // CC: Max retries exceeded - convert to fallback entry
+          AppLogger.warn("Repository: Entry ${pendingEntry.id} exceeded max retries, converting to fallback");
+          _entries.removeAt(entryIndex);
+          final fallbackEntry = Entry(
+            text: pendingEntry.text,
+            timestamp: pendingEntry.timestamp,
+            category: 'Misc',
+            isNew: true,
+            isTask: false,
+          );
+          _entries.insert(entryIndex, fallbackEntry);
+          await _saveEntries();
+          _triggerVectorStoreSyncForMonth(pendingEntry.timestamp).catchError((e, stackTrace) {
+            AppLogger.error("Repository: Background vector store sync failed", error: e, stackTrace: stackTrace);
+          });
+        } else {
+          // CC: Mark as failed for retry on next app launch
+          final failedEntry = pendingEntry.copyWith(
+            processingState: ProcessingState.failed,
+            processingRetryCount: newRetryCount,
+          );
+          _entries[entryIndex] = failedEntry;
+          await _saveEntries();
+          AppLogger.info("Repository: Entry ${pendingEntry.id} marked as failed (retry ${newRetryCount}/${Entry.maxProcessingRetries})");
+        }
+        return;
+      }
+
+      // CC: Remove the pending entry and add final entries
+      _entries.removeAt(entryIndex);
+
+      final List<Entry> addedEntries = [];
       // CC: Add microsecond offsets to ensure unique timestamps for each entry
       for (var i = 0; i < extractedData.length; i++) {
         final data = extractedData[i];
         // CC: Add i microseconds to ensure each entry has a unique timestamp
-        final uniqueTimestamp = processingTimestamp.add(Duration(microseconds: i));
+        final uniqueTimestamp = pendingEntry.timestamp.add(Duration(microseconds: i));
         final newEntry = Entry(
           text: data.textSegment,
           timestamp: uniqueTimestamp,
@@ -177,22 +263,44 @@ class EntryRepository {
         );
         addedEntries.add(newEntry);
       }
+
+      // CC: Insert at original position to maintain order
+      _entries.insertAll(entryIndex, addedEntries);
+      await _saveEntries();
+
+      // CP: Log split information for debugging
+      final splitCount = addedEntries.length;
+      if (splitCount > 1) {
+        AppLogger.info("Repository: Entry was split into $splitCount parts");
+      }
+
+      _triggerVectorStoreSyncForMonth(pendingEntry.timestamp).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
+      });
+    } finally {
+      // CC: Always remove from processing set
+      _processingEntryIds.remove(pendingEntry.id);
+    }
+  }
+
+  /// Retries processing for any pending or failed entries from previous sessions.
+  /// Called on app initialization and when app resumes from background.
+  void retryPendingEntries() {
+    final pendingEntries = _entries.where((e) => e.needsProcessing).toList();
+
+    if (pendingEntries.isEmpty) {
+      AppLogger.info("Repository: No pending entries to retry");
+      return;
     }
 
-    _entries.insertAll(0, addedEntries);
-    await _saveEntries();
+    AppLogger.info("Repository: Retrying ${pendingEntries.length} pending entries");
 
-    // CP: Log split information for debugging
-    final splitCount = addedEntries.length;
-    if (splitCount > 1) {
-      AppLogger.info("Repository: Entry was split into $splitCount parts");
+    for (final entry in pendingEntries) {
+      // CC: Process each pending entry in background (non-blocking)
+      _processEntryWithAI(entry).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Failed to retry entry ${entry.id}", error: e, stackTrace: stackTrace);
+      });
     }
-
-    _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
-      AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
-    });
-
-    return (entries: currentEntries, splitCount: splitCount);
   }
 
   Future<List<Entry>> addEntryObject(Entry entryToAdd) async {
@@ -332,73 +440,44 @@ class EntryRepository {
       return (entries: currentEntries, splitCount: 0);
     }
 
-    List<EntryPrototype> extractedData = [];
-    String? serviceError;
-    try {
-      // CP: Pass only active categories to AI service (excludes archived)
-      extractedData = await _aiService.extractEntries(combinedText, activeCategories);
-    } on AiServiceException catch (e) {
-      AppLogger.error("Repository: AI Service failed for combined entry: ${e.message}", error: e.underlyingError);
-      serviceError = e.message;
-    } catch (e, stacktrace) {
-      AppLogger.error(
-        "Repository: Unexpected error calling AI Service for combined entry",
-        error: e,
-        stackTrace: stacktrace,
-      );
-      serviceError = "An unexpected error occurred during categorization.";
-    }
-
+    // CC: Find existing temp entry and update it with processingState
     int tempIndex = _entries.indexWhere((e) => e.timestamp == tempEntryTimestamp && e.category == 'Processing...');
     if (tempIndex != -1) {
-      _entries.removeAt(tempIndex);
-    } else {
-      AppLogger.warn('[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found!');
-      tempIndex = 0;
+      // CC: Update the existing entry with processing state and combined text
+      final pendingEntry = _entries[tempIndex].copyWith(
+        text: combinedText,
+        processingState: ProcessingState.pending,
+      );
+      _entries[tempIndex] = pendingEntry;
+      await _saveEntries();
+      AppLogger.info("Repository: Updated combined entry with pending state");
+
+      // CC: Process in background - fire-and-forget
+      _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background AI processing failed for combined entry", error: e, stackTrace: stackTrace);
+      });
+
+      return (entries: currentEntries, splitCount: 1);
     }
 
-    final List<Entry> addedEntries = [];
-    if (serviceError != null || extractedData.isEmpty) {
-      final fallbackEntry = Entry(text: combinedText, timestamp: tempEntryTimestamp, category: 'Misc', isNew: true);
-      addedEntries.add(fallbackEntry);
-    } else {
-      // CC: Add microsecond offsets to ensure unique timestamps for each entry
-      for (var i = 0; i < extractedData.length; i++) {
-        final data = extractedData[i];
-        // CC: Add i microseconds to ensure each entry has a unique timestamp
-        final uniqueTimestamp = tempEntryTimestamp.add(Duration(microseconds: i));
-        final newEntry = Entry(
-          text: data.textSegment,
-          timestamp: uniqueTimestamp,
-          category: _categories.any((cat) => cat.name == data.category) ? data.category : 'Misc',
-          isNew: true,
-        );
-        addedEntries.add(newEntry);
-      }
-    }
-
-    if (tempIndex >= 0 && tempIndex <= _entries.length) {
-      _entries.insertAll(tempIndex, addedEntries);
-    } else {
-      _entries.insertAll(0, addedEntries);
-    }
-
+    // CC: If no temp entry found, create a new pending entry
+    AppLogger.warn('[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found, creating new pending entry');
+    final pendingEntry = Entry(
+      text: combinedText,
+      timestamp: tempEntryTimestamp,
+      category: 'Processing...',
+      isNew: true,
+      processingState: ProcessingState.pending,
+    );
+    _entries.insert(0, pendingEntry);
     await _saveEntries();
 
-    // CP: Log split information for debugging
-    final splitCount = addedEntries.length;
-    if (splitCount > 1) {
-      AppLogger.info("Repository: Combined entry was split into $splitCount parts");
-    }
-
-    _triggerVectorStoreSyncForMonth(tempEntryTimestamp).catchError((e, stackTrace) {
-      AppLogger.error(
-        "Repository: Background vector store sync failed for processCombinedEntry",
-        error: e,
-        stackTrace: stackTrace,
-      );
+    // CC: Process in background - fire-and-forget
+    _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
+      AppLogger.error("Repository: Background AI processing failed for combined entry", error: e, stackTrace: stackTrace);
     });
-    return (entries: currentEntries, splitCount: splitCount);
+
+    return (entries: currentEntries, splitCount: 1);
   }
 
   Future<List<Category>> addCustomCategory(String newCategory) async {

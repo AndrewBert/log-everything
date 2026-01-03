@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart'; // Add equatable import
 import 'package:uuid/uuid.dart';
 import '../dashboard_v2/model/insight.dart'; // CC: Import for ComprehensiveInsight
 import '../dashboard_v2/model/simple_insight.dart';
+import 'processing_state.dart';
 
 // Represents a single entry with text, a timestamp, and a category.
 class Entry extends Equatable {
@@ -21,6 +22,8 @@ class Entry extends Equatable {
   final String? imagePath; // Relative path to image in app storage
   final String? imageTitle; // Brief 2-4 word AI title for cards
   final String? imageDescription; // 1-2 sentence AI description
+  final ProcessingState? processingState; // Tracks entry processing lifecycle (null = fully processed)
+  final int processingRetryCount; // Number of times processing has been attempted
 
   Entry({
     String? id,
@@ -37,6 +40,8 @@ class Entry extends Equatable {
     this.imagePath,
     this.imageTitle,
     this.imageDescription,
+    this.processingState,
+    this.processingRetryCount = 0,
   }) : id = id ?? const Uuid().v4(); // CC: Generate UUID if not provided
 
   // Factory constructor to create an Entry from a JSON map
@@ -70,6 +75,13 @@ class Entry extends Equatable {
       imagePath: json['imagePath'] as String?,
       imageTitle: json['imageTitle'] as String?,
       imageDescription: json['imageDescription'] as String?,
+      processingState: json['processingState'] != null
+          ? ProcessingState.values.firstWhere(
+              (e) => e.name == json['processingState'],
+              orElse: () => ProcessingState.pending,
+            )
+          : null,
+      processingRetryCount: json['processingRetryCount'] as int? ?? 0,
     );
   }
 
@@ -90,6 +102,8 @@ class Entry extends Equatable {
       'imagePath': imagePath,
       'imageTitle': imageTitle,
       'imageDescription': imageDescription,
+      'processingState': processingState?.name,
+      'processingRetryCount': processingRetryCount,
     };
   }
 
@@ -121,6 +135,9 @@ class Entry extends Equatable {
     bool clearImageTitle = false,
     String? imageDescription,
     bool clearImageDescription = false,
+    ProcessingState? processingState,
+    bool clearProcessingState = false,
+    int? processingRetryCount,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -137,6 +154,8 @@ class Entry extends Equatable {
       imagePath: clearImagePath ? null : (imagePath ?? this.imagePath),
       imageTitle: clearImageTitle ? null : (imageTitle ?? this.imageTitle),
       imageDescription: clearImageDescription ? null : (imageDescription ?? this.imageDescription),
+      processingState: clearProcessingState ? null : (processingState ?? this.processingState),
+      processingRetryCount: processingRetryCount ?? this.processingRetryCount,
     );
   }
 
@@ -166,6 +185,21 @@ class Entry extends Equatable {
     return null;
   }
 
+  /// Maximum number of processing retry attempts before giving up.
+  static const int maxProcessingRetries = 3;
+
+  /// Returns true if this entry needs AI processing (pending state or failed state within retry limit).
+  bool get needsProcessing =>
+      processingState == ProcessingState.pending ||
+      (processingState == ProcessingState.failed && processingRetryCount < maxProcessingRetries);
+
+  /// Returns true if this entry is currently being processed.
+  bool get isProcessing => processingState == ProcessingState.processing;
+
+  /// Returns true if this entry has permanently failed processing (exceeded retry limit).
+  bool get hasFailedPermanently =>
+      processingState == ProcessingState.failed && processingRetryCount >= maxProcessingRetries;
+
   @override
-  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, imageTitle, imageDescription]; // Add props for Equatable
+  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, imageTitle, imageDescription, processingState, processingRetryCount]; // Add props for Equatable
 }
