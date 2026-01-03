@@ -16,6 +16,7 @@ import 'entry/repository/entry_repository.dart';
 import 'onboarding/onboarding.dart';
 import 'locator.dart';
 import 'snackbar/cubit/snackbar_cubit.dart';
+import 'utils/app_lifecycle_observer.dart';
 
 // Make main async
 void main() async {
@@ -39,6 +40,9 @@ void main() async {
   }
 
   await CategoryColors.initialize();
+
+  // CC: Register lifecycle observer for background processing
+  getIt<AppLifecycleObserver>().register();
 
   Intl.defaultLocale = 'en_US';
 

@@ -16,6 +16,7 @@ import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/services/debug_http_server.dart';
 import 'package:myapp/services/image_storage_service.dart';
+import 'package:myapp/utils/app_lifecycle_observer.dart';
 
 final getIt = GetIt.instance;
 
@@ -74,6 +75,11 @@ Future<void> configureDependencies() async {
       timerFactory: getIt<TimerFactory>(), // CP: Injected TimerFactory
       imageStorageService: getIt<ImageStorageService>(),
     ),
+  );
+
+  // CC: Register AppLifecycleObserver for background processing handling
+  getIt.registerLazySingleton<AppLifecycleObserver>(
+    () => AppLifecycleObserver(entryRepository: getIt<EntryRepository>()),
   );
 
   if (kDebugMode) {
