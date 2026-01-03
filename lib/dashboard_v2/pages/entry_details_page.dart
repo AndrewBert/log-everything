@@ -105,9 +105,25 @@ class EntryDetailsPage extends StatelessWidget {
             onSelected: (value) {
               if (value == 'delete') {
                 _showDeleteDialog(context, state);
+              } else if (value == 'toggle_task') {
+                context.read<EntryDetailsCubit>().toggleEntryTaskStatus();
               }
             },
             itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                key: toggleTaskMenuItemKey,
+                value: 'toggle_task',
+                child: Row(
+                  children: [
+                    Icon(
+                      entry.isTask ? Icons.note_outlined : Icons.check_circle_outline,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(entry.isTask ? 'Convert to Note' : 'Convert to Todo'),
+                  ],
+                ),
+              ),
               PopupMenuItem<String>(
                 value: 'delete',
                 child: Row(
