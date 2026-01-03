@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "951334134238",
+    "project_id": "log-splitter-mobile",
+    "storage_bucket": "log-splitter-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:951334134238:android:802d5916a517bd7b74fd4f",
+        "android_client_info": {
+          "package_name": "com.andrewbertino.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "951334134238-uq20gj04nqifalojocpk9dtjucb5gi6t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andrewbertino.myapp",
+            "certificate_hash": "b71323225662acf4734a7f98a25a50c762776017"
+          }
+        },
+        {
+          "client_id": "951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTjMZ8ooyZ4npJJKQ8dwDVLPtq47lssJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "951334134238-q0medhn1p2ch2ek0pgd3p0li8qar88ju.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.andrewbertino.myapp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:951334134238:android:9e8f8a85cb37d52d74fd4f",
+        "android_client_info": {
+          "package_name": "com.logsplitter.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "951334134238-lv0vdvh8pgm7vl97g637smhgjkbch4l5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.logsplitter.app",
+            "certificate_hash": "b71323225662acf4734a7f98a25a50c762776017"
+          }
+        },
+        {
+          "client_id": "951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTjMZ8ooyZ4npJJKQ8dwDVLPtq47lssJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "951334134238-q0medhn1p2ch2ek0pgd3p0li8qar88ju.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.andrewbertino.myapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

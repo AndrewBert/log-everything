@@ -1,8 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import 'package:myapp/firebase_options.dart';
 import 'package:myapp/services/ai_service.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
@@ -21,6 +23,10 @@ import 'utils/app_lifecycle_observer.dart';
 // Make main async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // CP: Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   try {
     await dotenv.load(fileName: ".env");
     AppLogger.info('Environment variables loaded successfully.');

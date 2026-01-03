@@ -16,6 +16,7 @@ import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/services/debug_http_server.dart';
 import 'package:myapp/services/image_storage_service.dart';
+import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/utils/app_lifecycle_observer.dart';
 
 final getIt = GetIt.instance;
@@ -66,6 +67,9 @@ Future<void> configureDependencies() async {
 
   // Register ImageStorageService
   getIt.registerLazySingleton<ImageStorageService>(() => LocalImageStorageService());
+
+  // CP: Register AuthService for Firebase authentication
+  getIt.registerLazySingleton<AuthService>(() => FirebaseAuthService());
 
   getIt.registerLazySingleton(
     () => EntryRepository(
