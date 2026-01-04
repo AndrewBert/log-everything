@@ -44,14 +44,6 @@ void main() {
   });
 
   group('AppBar Dialog Interactions', () {
-    testWidgets('should show HelpDialog when help button is tapped', (WidgetTester tester) async {
-      await givenHomePageIsDisplayed(tester, scope);
-
-      await whenHelpButtonIsTapped(tester);
-
-      thenHelpDialogIsDisplayed(tester);
-    });
-
     testWidgets('should show ManageCategoriesDialog when manage categories button is tapped', (
       WidgetTester tester,
     ) async {

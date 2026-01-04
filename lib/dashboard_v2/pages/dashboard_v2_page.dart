@@ -11,8 +11,6 @@ import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:myapp/dialogs/help_dialog.dart';
-import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
@@ -140,11 +138,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
               icon: const Icon(Icons.search),
               tooltip: 'Search entries',
               onPressed: _openSearch,
-            ),
-            IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: 'Help / About',
-              onPressed: () => _showHelpDialog(context),
             ),
             const SizedBox(width: 8),
           ],
@@ -591,22 +584,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
           cachedInsight: primaryInsight,
         ),
       ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return HelpDialog(onShowWhatsNewPressed: () => _showWhatsNewDialog(context));
-      },
-    );
-  }
-
-  Future<void> _showWhatsNewDialog(BuildContext context, [String? version]) async {
-    await showDialog(
-      context: context,
-      builder: (context) => WhatsNewDialog(currentVersion: version ?? _appVersion),
     );
   }
 

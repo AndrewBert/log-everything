@@ -7,7 +7,6 @@ import 'package:myapp/entry/entry.dart';
 // import 'package:myapp/widgets/entries_list.dart'; // CC: EntriesList removed
 // import 'package:myapp/widgets/entry_card.dart'; // CC: EntryCard removed
 import 'package:myapp/utils/app_bar_keys.dart';
-import 'package:myapp/dialogs/help_dialog.dart';
 import 'package:myapp/dialogs/manage_categories_dialog.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
 // import 'package:myapp/widgets/filter_section.dart'; // CC: FilterSection removed
@@ -127,13 +126,6 @@ Future<void> whenSnackbarActionIsTapped(WidgetTester tester, String actionLabel)
   await tester.pumpAndSettle();
 }
 
-Future<void> whenHelpButtonIsTapped(WidgetTester tester) async {
-  final helpButtonFinder = find.byIcon(Icons.help_outline);
-  expect(helpButtonFinder, findsOneWidget);
-  await tester.tap(helpButtonFinder);
-  await tester.pumpAndSettle();
-}
-
 Future<void> whenManageCategoriesButtonIsTapped(WidgetTester tester) async {
   final manageCategoriesButtonFinder = find.byIcon(Icons.tune);
   expect(manageCategoriesButtonFinder, findsOneWidget);
@@ -207,10 +199,6 @@ void thenSnackbarHasAction(WidgetTester tester, String actionLabel) {
   expect(snackbarItemFinder, findsAtLeastNWidgets(1));
   final actionFinder = find.descendant(of: snackbarItemFinder, matching: find.text(actionLabel));
   expect(actionFinder, findsOneWidget, reason: 'Snackbar should have an action button labeled "$actionLabel"');
-}
-
-void thenHelpDialogIsDisplayed(WidgetTester tester) {
-  expect(find.byType(HelpDialog), findsOneWidget, reason: 'HelpDialog should be displayed');
 }
 
 void thenManageCategoriesDialogIsDisplayed(WidgetTester tester) {
