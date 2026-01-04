@@ -10,6 +10,33 @@ import '../utils/logger.dart';
 /// users/{uid}/entries/{entryId} -> Entry JSON
 /// users/{uid}/categories/{categoryName} -> Category JSON
 class FirestoreSyncService {
+  // CP: Sanitize cloud entry by clearing transient state flags.
+  // isGeneratingInsight and processingState should never persist - they're runtime state only.
+  // If processingState is non-null, the entry was synced mid-processing and needs cleanup.
+  Entry _sanitizeCloudEntry(Entry entry) {
+    bool needsSanitization = false;
+    final hasIncompleteProcessing = entry.processingState != null;
+
+    if (entry.isGeneratingInsight) {
+      AppLogger.info('[FirestoreSyncService] Sanitizing entry ${entry.id}: clearing isGeneratingInsight=true');
+      needsSanitization = true;
+    }
+
+    if (hasIncompleteProcessing) {
+      AppLogger.info('[FirestoreSyncService] Sanitizing entry ${entry.id}: incomplete processingState=${entry.processingState}, assigning to Misc');
+      needsSanitization = true;
+    }
+
+    if (needsSanitization) {
+      return entry.copyWith(
+        isGeneratingInsight: false,
+        category: hasIncompleteProcessing ? 'Misc' : null,
+        clearProcessingState: true,
+      );
+    }
+    return entry;
+  }
+
   final FirebaseFirestore _firestore;
   StreamSubscription<QuerySnapshot>? _entriesSubscription;
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
@@ -38,7 +65,8 @@ class FirestoreSyncService {
       (snapshot) {
         final entries = snapshot.docs.map((doc) {
           try {
-            return Entry.fromJson(doc.data());
+            final entry = Entry.fromJson(doc.data());
+            return _sanitizeCloudEntry(entry);
           } catch (e) {
             AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
             return null;
@@ -89,7 +117,8 @@ class FirestoreSyncService {
       final snapshot = await _entriesRef(uid).get();
       final entries = snapshot.docs.map((doc) {
         try {
-          return Entry.fromJson(doc.data());
+          final entry = Entry.fromJson(doc.data());
+          return _sanitizeCloudEntry(entry);
         } catch (e) {
           AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
           return null;
@@ -130,6 +159,12 @@ class FirestoreSyncService {
     // CP: Skip image entries for Phase 2
     if (entry.imagePath != null) {
       AppLogger.info('[FirestoreSyncService] Skipping image entry ${entry.id} (Phase 2)');
+      return;
+    }
+
+    // CP: Skip entries still being processed - they shouldn't be synced until complete
+    if (entry.processingState != null) {
+      AppLogger.info('[FirestoreSyncService] Skipping incomplete entry ${entry.id}: processingState=${entry.processingState}');
       return;
     }
 
@@ -175,11 +210,13 @@ class FirestoreSyncService {
 
   /// Bulk sync all entries to Firestore (for initial upload after sign-in).
   Future<void> syncAllEntries(String uid, List<Entry> entries) async {
-    // CP: Filter out image entries for Phase 2
-    final textEntries = entries.where((e) => e.imagePath == null).toList();
+    // CP: Filter out image entries (Phase 2) and incomplete entries (still processing)
+    final syncableEntries = entries.where((e) =>
+      e.imagePath == null && e.processingState == null
+    ).toList();
 
-    if (textEntries.isEmpty) {
-      AppLogger.info('[FirestoreSyncService] No text entries to sync');
+    if (syncableEntries.isEmpty) {
+      AppLogger.info('[FirestoreSyncService] No entries to sync');
       return;
     }
 
@@ -189,7 +226,7 @@ class FirestoreSyncService {
       var currentBatch = _firestore.batch();
       var operationCount = 0;
 
-      for (final entry in textEntries) {
+      for (final entry in syncableEntries) {
         currentBatch.set(_entriesRef(uid).doc(entry.id), entry.toJson());
         operationCount++;
 
@@ -208,7 +245,7 @@ class FirestoreSyncService {
         await batch.commit();
       }
 
-      AppLogger.info('[FirestoreSyncService] Bulk synced ${textEntries.length} entries');
+      AppLogger.info('[FirestoreSyncService] Bulk synced ${syncableEntries.length} entries');
     } catch (e) {
       AppLogger.error('[FirestoreSyncService] Error bulk syncing entries', error: e);
     }
