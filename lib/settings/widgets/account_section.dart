@@ -65,9 +65,35 @@ class AccountSection extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : null,
-          onTap: () => context.read<SettingsCubit>().signOut(),
+          onTap: () => _showSignOutConfirmation(context),
         ),
       ],
+    );
+  }
+
+  void _showSignOutConfirmation(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+          'All local data will be cleared from this device. '
+          'Your data is safely stored in the cloud and will be restored when you sign in again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+              context.read<SettingsCubit>().signOut();
+            },
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
     );
   }
 

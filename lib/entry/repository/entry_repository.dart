@@ -878,12 +878,24 @@ class EntryRepository {
     AppLogger.info('[EntryRepository] Cloud sync complete - ${_entries.length} entries, ${_categories.length} categories');
   }
 
-  /// Called when user signs out. Stops listening, clears user ID.
-  void onUserSignedOut() {
-    AppLogger.info('[EntryRepository] User signed out - stopping cloud sync');
+  /// Called when user signs out. Stops listening, clears user ID and all local data.
+  Future<void> onUserSignedOut() async {
+    AppLogger.info('[EntryRepository] User signed out - stopping cloud sync and clearing data');
     _firestoreSyncService.stopListening();
     _currentUserId = null;
-    // CP: Keep local data intact for guest mode
+
+    // Clear all local data to prevent mixing with another account
+    await _persistenceService.clearAllData();
+    await _vectorStoreService.clearLocalCache();
+
+    // Clear in-memory state
+    _entries = [];
+    _categories = [];
+
+    // Notify listeners of the cleared state
+    _entriesStreamController.add(currentEntries);
+
+    AppLogger.info('[EntryRepository] All local data cleared');
   }
 
   /// Handle remote entries update from Firestore listener.

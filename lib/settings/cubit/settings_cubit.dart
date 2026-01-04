@@ -32,7 +32,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         if (user != null) {
           await _entryRepository.onUserSignedIn(user.uid);
         } else {
-          _entryRepository.onUserSignedOut();
+          await _entryRepository.onUserSignedOut();
         }
         emit(state.copyWith(
           currentUser: user,

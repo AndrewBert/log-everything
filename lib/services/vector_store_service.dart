@@ -811,6 +811,36 @@ class VectorStoreService {
     }
   }
 
+  /// Clears all local vector store cache data from SharedPreferences.
+  /// Does NOT delete files from OpenAI - the vector store remains intact
+  /// for when the user signs back in.
+  Future<void> clearLocalCache() async {
+    AppLogger.info('[VectorStoreService] Clearing local cache...');
+
+    // Clear vector store ID
+    await _prefs.remove(_vectorStoreIdKey);
+
+    // Clear monthly file ID mappings
+    await _prefs.remove(_monthlyLogFileIdsKey);
+
+    // Clear backfill state
+    await _prefs.remove(_backfillLastSuccessfulDateKey);
+    await _prefs.remove(_fullBackfillRunAttemptedKey);
+
+    // Clear any sync locks
+    final allKeys = _prefs.getKeys();
+    for (final key in allKeys) {
+      if (key.startsWith('vector_store_sync_lock_')) {
+        await _prefs.remove(key);
+      }
+    }
+
+    // Clear in-memory locks
+    _monthSyncLocks.clear();
+
+    AppLogger.info('[VectorStoreService] Local cache cleared');
+  }
+
   // CP: Debug method to list all files in vector store
   Future<void> debugListVectorStoreFiles() async {
     try {
