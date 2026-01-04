@@ -7,6 +7,7 @@ import 'package:myapp/services/permission_service.dart'; // Import Permission se
 import 'package:myapp/services/vector_store_service.dart'; // CP: Import VectorStoreService
 import 'package:myapp/services/image_storage_service.dart'; // Import ImageStorageService
 import 'package:myapp/services/timer_factory.dart'; // CP: Import TimerFactory
+import 'package:myapp/services/firestore_sync_service.dart'; // CP: Import FirestoreSyncService
 import 'package:myapp/speech_service.dart'; // Import Speech service base/interface
 import 'package:shared_preferences/shared_preferences.dart'; // CP: Import SharedPreferences
 import 'package:http/http.dart' as http; // CP: Import http
@@ -31,6 +32,7 @@ Future<void> setupTestDependencies({
   required MockImageStorageService imageStorageService, // Add imageStorageService mock
   required MockSharedPreferences sharedPreferences, // CP: Add SharedPreferences mock
   required http.Client httpClient, // CP: Add http.Client mock
+  required MockFirestoreSyncService firestoreSyncService, // CP: Add FirestoreSyncService mock
   // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
@@ -47,6 +49,7 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<ImageStorageService>(imageStorageService); // Register ImageStorageService mock
   getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
+  getIt.registerSingleton<FirestoreSyncService>(firestoreSyncService); // CP: Register FirestoreSyncService mock
 
   // --- Register TimerFactory for testing ---
   getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
@@ -64,6 +67,7 @@ Future<void> setupTestDependencies({
       vectorStoreService: getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
       timerFactory: getIt<TimerFactory>(), // CP: Pass TimerFactory for tests
       imageStorageService: getIt<ImageStorageService>(), // Pass ImageStorageService mock
+      firestoreSyncService: getIt<FirestoreSyncService>(), // CP: Pass FirestoreSyncService mock
     ),
   );
 

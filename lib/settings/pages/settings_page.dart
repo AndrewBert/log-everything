@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/settings/cubit/settings_cubit.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/settings/widgets/account_section.dart';
@@ -12,7 +13,10 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SettingsCubit(authService: GetIt.instance<AuthService>()),
+      create: (_) => SettingsCubit(
+        authService: GetIt.instance<AuthService>(),
+        entryRepository: GetIt.instance<EntryRepository>(),
+      ),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Settings'),

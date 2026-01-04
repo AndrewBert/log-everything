@@ -11,6 +11,7 @@ import '../../services/entry_persistence_service.dart';
 import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
 import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
 import '../../services/image_storage_service.dart';
+import '../../services/firestore_sync_service.dart'; // CP: Added for cloud sync
 import '../../utils/logger.dart';
 import '../../dashboard_v2/model/simple_insight.dart';
 import '../processing_state.dart';
@@ -22,6 +23,7 @@ class EntryRepository {
   final VectorStoreService _vectorStoreService;
   final TimerFactory _timerFactory;
   final ImageStorageService _imageStorageService;
+  final FirestoreSyncService _firestoreSyncService; // CP: Cloud sync service
   List<Entry> _entries = [];
   List<Category> _categories = [];
   // CP: Map to store debounce timers for each month's sync
@@ -30,6 +32,9 @@ class EntryRepository {
 
   // CC: Track entry IDs currently being processed to prevent concurrent processing
   final Set<String> _processingEntryIds = {};
+
+  // CP: Current user ID for cloud sync (null = not signed in)
+  String? _currentUserId;
 
   // CC: Stream controller for reactive updates
   final _entriesStreamController = StreamController<List<Entry>>.broadcast();
@@ -46,11 +51,17 @@ class EntryRepository {
     required VectorStoreService vectorStoreService,
     required TimerFactory timerFactory,
     required ImageStorageService imageStorageService,
+    required FirestoreSyncService firestoreSyncService,
   }) : _persistenceService = persistenceService,
        _aiService = aiService,
        _vectorStoreService = vectorStoreService,
        _timerFactory = timerFactory,
-       _imageStorageService = imageStorageService;
+       _imageStorageService = imageStorageService,
+       _firestoreSyncService = firestoreSyncService {
+    // CP: Set up callbacks for remote changes
+    _firestoreSyncService.onRemoteEntriesChanged = _handleRemoteEntriesChanged;
+    _firestoreSyncService.onRemoteCategoriesChanged = _handleRemoteCategoriesChanged;
+  }
 
   Future<void> initialize() async {
     await _loadCategories();
@@ -121,21 +132,35 @@ class EntryRepository {
     }
   }
 
-  Future<void> _saveCategories() async {
+  Future<void> _saveCategories({List<Category>? categoriesToSync}) async {
     try {
       await _persistenceService.saveCategories(_categories);
       // AppLogger.info("Repository: Saved Categories: $_categories");
+
+      // CP: Sync to cloud if signed in
+      if (_currentUserId != null && categoriesToSync != null) {
+        for (final category in categoriesToSync) {
+          _syncCategoryToCloud(category);
+        }
+      }
     } catch (e) {
       AppLogger.error("Repository: Error saving categories", error: e);
     }
   }
 
-  Future<void> _saveEntries() async {
+  Future<void> _saveEntries({List<Entry>? entriesToSync}) async {
     try {
       await _persistenceService.saveEntries(_entries);
       AppLogger.info('Repository: Saved ${_entries.length} entries.');
       // CC: Emit updated entries to stream
       _entriesStreamController.add(currentEntries);
+
+      // CP: Sync to cloud if signed in
+      if (_currentUserId != null && entriesToSync != null) {
+        for (final entry in entriesToSync) {
+          _syncEntryToCloud(entry);
+        }
+      }
     } catch (e) {
       AppLogger.error('Repository: Error saving entries', error: e);
     }
@@ -395,6 +420,8 @@ class EntryRepository {
     _entries.removeWhere((entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text);
     if (_entries.length < originalLength) {
       await _saveEntries();
+      // CP: Delete from cloud
+      _deleteEntryFromCloud(entryToRemove.id);
       _triggerVectorStoreSyncForMonth(entryToDelete.timestamp).catchError((e, stackTrace) {
         AppLogger.error(
           "Repository: Background vector store sync failed for deleteEntry",
@@ -413,7 +440,7 @@ class EntryRepository {
     if (index != -1) {
       final entryToSave = updatedEntry.copyWith(isNew: _entries[index].isNew);
       _entries[index] = entryToSave;
-      await _saveEntries();
+      await _saveEntries(entriesToSync: [entryToSave]); // CP: Sync to cloud
       if (!skipAiRegeneration) {
         _triggerVectorStoreSyncForMonth(originalEntry.timestamp).catchError((e, stackTrace) {
           AppLogger.error(
@@ -502,15 +529,14 @@ class EntryRepository {
     final trimmedName = name.trim();
     final trimmedDescription = description.trim();
     if (trimmedName.isNotEmpty && trimmedName != 'Misc' && !_categories.any((cat) => cat.name == trimmedName)) {
-      _categories.add(
-        Category(
-          name: trimmedName,
-          description: trimmedDescription,
-          isChecklist: isChecklist,
-          color: color,
-        ),
+      final newCategory = Category(
+        name: trimmedName,
+        description: trimmedDescription,
+        isChecklist: isChecklist,
+        color: color,
       );
-      await _saveCategories();
+      _categories.add(newCategory);
+      await _saveCategories(categoriesToSync: [newCategory]); // CP: Sync to cloud
       // CC: Emit updated entries to stream to notify listeners of category changes
       _entriesStreamController.add(currentEntries);
     }
@@ -527,18 +553,24 @@ class EntryRepository {
       _categories.removeAt(categoryIndex);
       bool entriesChanged = false;
       final Set<DateTime> affectedDates = {};
+      final List<Entry> updatedEntries = [];
       _entries = _entries.map((entry) {
         if (entry.category == categoryToDelete) {
           entriesChanged = true;
           affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
-          return entry.copyWith(category: 'Misc');
+          final updated = entry.copyWith(category: 'Misc');
+          updatedEntries.add(updated);
+          return updated;
         }
         return entry;
       }).toList();
 
       await _saveCategories();
+      // CP: Delete category from cloud
+      _deleteCategoryFromCloud(categoryToDelete);
+
       if (entriesChanged) {
-        await _saveEntries();
+        await _saveEntries(entriesToSync: updatedEntries); // CP: Sync updated entries to cloud
         for (final date in affectedDates) {
           _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
             AppLogger.error(
@@ -590,27 +622,36 @@ class EntryRepository {
       return (entries: currentEntries, categories: currentCategories);
     }
     final oldCategory = _categories[oldCategoryIndex];
-    _categories[oldCategoryIndex] = oldCategory.copyWith(
+    final updatedCategory = oldCategory.copyWith(
       name: trimmedNewName,
       description: description ?? oldCategory.description,
       isChecklist: isChecklist ?? oldCategory.isChecklist,
       color: color ?? oldCategory.color,
     );
+    _categories[oldCategoryIndex] = updatedCategory;
     bool entriesChanged = false;
     final Set<DateTime> affectedDates = {};
+    final List<Entry> updatedEntries = [];
     if (isNameChanged) {
       _entries = _entries.map((entry) {
         if (entry.category == oldName) {
           entriesChanged = true;
           affectedDates.add(DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day));
-          return entry.copyWith(category: trimmedNewName);
+          final updated = entry.copyWith(category: trimmedNewName);
+          updatedEntries.add(updated);
+          return updated;
         }
         return entry;
       }).toList();
     }
-    await _saveCategories();
+    // CP: Sync category changes to cloud
+    if (isNameChanged) {
+      _deleteCategoryFromCloud(oldName); // Delete old name
+    }
+    await _saveCategories(categoriesToSync: [updatedCategory]); // Sync new/updated category
+
     if (entriesChanged) {
-      await _saveEntries();
+      await _saveEntries(entriesToSync: updatedEntries); // Sync updated entries
       for (final date in affectedDates) {
         _triggerVectorStoreSyncForMonth(date).catchError((e, stackTrace) {
           AppLogger.error(
@@ -641,9 +682,10 @@ class EntryRepository {
     }
 
     final category = _categories[categoryIndex];
-    _categories[categoryIndex] = category.copyWith(isArchived: !category.isArchived);
+    final updatedCategory = category.copyWith(isArchived: !category.isArchived);
+    _categories[categoryIndex] = updatedCategory;
 
-    await _saveCategories();
+    await _saveCategories(categoriesToSync: [updatedCategory]); // CP: Sync to cloud
     _entriesStreamController.add(currentEntries);
 
     return currentCategories;
@@ -801,12 +843,134 @@ class EntryRepository {
     return Color(int.parse(buffer.toString(), radix: 16));
   }
 
+  // ============================================================================
+  // CP: Cloud Sync Methods (Phase 2: Firestore)
+  // ============================================================================
+
+  /// Called when user signs in. Merges local and cloud data, starts listening.
+  Future<void> onUserSignedIn(String uid) async {
+    AppLogger.info('[EntryRepository] User signed in: $uid - starting cloud sync');
+    _currentUserId = uid;
+
+    // CP: Fetch cloud data and merge with local
+    final cloudEntries = await _firestoreSyncService.fetchEntries(uid);
+    final cloudCategories = await _firestoreSyncService.fetchCategories(uid);
+
+    // CP: Merge entries (cloud wins for same ID)
+    final mergedEntries = _firestoreSyncService.mergeEntries(_entries, cloudEntries);
+    final mergedCategories = _firestoreSyncService.mergeCategories(_categories, cloudCategories);
+
+    // CP: Update local state
+    _entries = mergedEntries;
+    _categories = List<Category>.from(mergedCategories);
+
+    // CP: Save merged data locally
+    await _saveEntries();
+    await _saveCategories();
+
+    // CP: Push any local-only entries to cloud
+    await _firestoreSyncService.syncAllEntries(uid, _entries);
+    await _firestoreSyncService.syncAllCategories(uid, _categories);
+
+    // CP: Start listening for real-time changes from other devices
+    _firestoreSyncService.startListening(uid);
+
+    AppLogger.info('[EntryRepository] Cloud sync complete - ${_entries.length} entries, ${_categories.length} categories');
+  }
+
+  /// Called when user signs out. Stops listening, clears user ID.
+  void onUserSignedOut() {
+    AppLogger.info('[EntryRepository] User signed out - stopping cloud sync');
+    _firestoreSyncService.stopListening();
+    _currentUserId = null;
+    // CP: Keep local data intact for guest mode
+  }
+
+  /// Handle remote entries update from Firestore listener.
+  void _handleRemoteEntriesChanged(List<Entry> remoteEntries) {
+    if (_currentUserId == null) return;
+
+    // CP: Merge remote changes with local (remote wins for conflicts)
+    final merged = _firestoreSyncService.mergeEntries(_entries, remoteEntries);
+
+    // CP: Only update if there are actual changes
+    if (merged.length != _entries.length || !_entriesEqual(merged, _entries)) {
+      _entries = merged;
+      _persistenceService.saveEntries(_entries).catchError((e) {
+        AppLogger.error('[EntryRepository] Error saving entries after remote update', error: e);
+      });
+      _entriesStreamController.add(currentEntries);
+      AppLogger.info('[EntryRepository] Updated local entries from remote: ${_entries.length} entries');
+    }
+  }
+
+  /// Handle remote categories update from Firestore listener.
+  void _handleRemoteCategoriesChanged(List<Category> remoteCategories) {
+    if (_currentUserId == null) return;
+
+    final merged = _firestoreSyncService.mergeCategories(_categories, remoteCategories);
+
+    if (merged.length != _categories.length) {
+      _categories = List<Category>.from(merged);
+      _persistenceService.saveCategories(_categories).catchError((e) {
+        AppLogger.error('[EntryRepository] Error saving categories after remote update', error: e);
+      });
+      _entriesStreamController.add(currentEntries);
+      AppLogger.info('[EntryRepository] Updated local categories from remote: ${_categories.length} categories');
+    }
+  }
+
+  /// Check if two entry lists are equal (shallow comparison by ID and timestamp).
+  bool _entriesEqual(List<Entry> a, List<Entry> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id || a[i].timestamp != b[i].timestamp) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Sync a single entry to cloud (called after local save).
+  void _syncEntryToCloud(Entry entry) {
+    if (_currentUserId == null) return;
+    _firestoreSyncService.syncEntry(_currentUserId!, entry).catchError((e) {
+      AppLogger.error('[EntryRepository] Error syncing entry to cloud', error: e);
+    });
+  }
+
+  /// Sync a single category to cloud.
+  void _syncCategoryToCloud(Category category) {
+    if (_currentUserId == null) return;
+    _firestoreSyncService.syncCategory(_currentUserId!, category).catchError((e) {
+      AppLogger.error('[EntryRepository] Error syncing category to cloud', error: e);
+    });
+  }
+
+  /// Delete an entry from cloud.
+  void _deleteEntryFromCloud(String entryId) {
+    if (_currentUserId == null) return;
+    _firestoreSyncService.deleteEntry(_currentUserId!, entryId).catchError((e) {
+      AppLogger.error('[EntryRepository] Error deleting entry from cloud', error: e);
+    });
+  }
+
+  /// Delete a category from cloud.
+  void _deleteCategoryFromCloud(String categoryName) {
+    if (_currentUserId == null) return;
+    _firestoreSyncService.deleteCategory(_currentUserId!, categoryName).catchError((e) {
+      AppLogger.error('[EntryRepository] Error deleting category from cloud', error: e);
+    });
+  }
+
   /// CP: Disposes the repository and cancels all pending timers
   void dispose() {
     for (final timer in _syncDebounceTimers.values) {
       timer.cancel();
     }
     _syncDebounceTimers.clear();
+    // CP: Stop cloud sync
+    _firestoreSyncService.stopListening();
     // CC: Close the stream controller
     _entriesStreamController.close();
     AppLogger.info("[EntryRepository] Disposed and cancelled all pending timers");

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/utils/logger.dart';
 
@@ -9,11 +10,15 @@ part 'settings_state.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   final AuthService _authService;
+  final EntryRepository _entryRepository; // CP: For cloud sync
   StreamSubscription<AuthUser?>? _authSubscription;
 
-  SettingsCubit({required AuthService authService})
-      : _authService = authService,
-        super(const SettingsState()) {
+  SettingsCubit({
+    required AuthService authService,
+    required EntryRepository entryRepository,
+  }) : _authService = authService,
+       _entryRepository = entryRepository,
+       super(const SettingsState()) {
     _init();
   }
 
@@ -22,7 +27,13 @@ class SettingsCubit extends Cubit<SettingsState> {
 
     // CP: Subscribe to auth state changes
     _authSubscription = _authService.authStateChanges.listen(
-      (user) {
+      (user) async {
+        // CP: Handle cloud sync on auth state change
+        if (user != null) {
+          await _entryRepository.onUserSignedIn(user.uid);
+        } else {
+          _entryRepository.onUserSignedOut();
+        }
         emit(state.copyWith(
           currentUser: user,
           clearUser: user == null,
@@ -35,8 +46,11 @@ class SettingsCubit extends Cubit<SettingsState> {
       },
     );
 
-    // CP: Set initial user state
+    // CP: Set initial user state and trigger sync if already signed in
     final user = _authService.currentUser;
+    if (user != null) {
+      _entryRepository.onUserSignedIn(user.uid);
+    }
     emit(state.copyWith(
       currentUser: user,
       clearUser: user == null,
