@@ -23,6 +23,9 @@ dart run build_runner build
 # Clean and rebuild
 flutter clean && flutter pub get
 
+# Add packages (use this instead of manually editing pubspec.yaml)
+flutter pub add <package_name>
+
 # Build IPA for iOS release
 flutter build ipa --release
 ```

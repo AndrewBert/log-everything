@@ -10,6 +10,7 @@ abstract class EntryPersistenceService {
   Future<void> saveEntries(List<Entry> entries);
   Future<List<Category>> loadCategories(); // CP: Use Category
   Future<void> saveCategories(List<Category> categories); // CP: Use Category
+  Future<void> clearAllData();
 }
 
 // Implementation using SharedPreferences
@@ -124,6 +125,19 @@ class SharedPreferencesEntryPersistenceService implements EntryPersistenceServic
     } catch (e) {
       AppLogger.error('Persistence: Error saving categories', error: e);
       throw Exception('Failed to save categories.');
+    }
+  }
+
+  @override
+  Future<void> clearAllData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_entriesKey);
+      await prefs.remove(_categoriesKey);
+      AppLogger.info('Persistence: Cleared all entries and categories data');
+    } catch (e) {
+      AppLogger.error('Persistence: Error clearing data', error: e);
+      throw Exception('Failed to clear data.');
     }
   }
 }

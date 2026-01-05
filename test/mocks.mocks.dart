@@ -4,11 +4,11 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i8;
-import 'dart:convert' as _i24;
+import 'dart:convert' as _i25;
 import 'dart:io' as _i22;
 import 'dart:typed_data' as _i10;
 
-import 'package:flutter_bloc/flutter_bloc.dart' as _i25;
+import 'package:flutter_bloc/flutter_bloc.dart' as _i26;
 import 'package:http/http.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i18;
@@ -21,6 +21,7 @@ import 'package:myapp/entry/entry.dart' as _i14;
 import 'package:myapp/services/ai_service.dart' as _i16;
 import 'package:myapp/services/audio_recorder_service.dart' as _i19;
 import 'package:myapp/services/entry_persistence_service.dart' as _i13;
+import 'package:myapp/services/firestore_sync_service.dart' as _i23;
 import 'package:myapp/services/image_storage_service.dart' as _i21;
 import 'package:myapp/services/permission_service.dart' as _i11;
 import 'package:myapp/services/vector_store_service.dart' as _i20;
@@ -29,7 +30,7 @@ import 'package:permission_handler/permission_handler.dart' as _i12;
 import 'package:record/record.dart' as _i9;
 import 'package:record_platform_interface/record_platform_interface.dart'
     as _i2;
-import 'package:shared_preferences/shared_preferences.dart' as _i23;
+import 'package:shared_preferences/shared_preferences.dart' as _i24;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -525,6 +526,20 @@ class MockAiService extends _i1.Mock implements _i16.AiService {
               bool isTask,
             })
           >);
+
+  @override
+  _i8.Future<List<String>> generatePromptSuggestions({
+    required List<Map<String, dynamic>>? entries,
+    required DateTime? currentDate,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#generatePromptSuggestions, [], {
+              #entries: entries,
+              #currentDate: currentDate,
+            }),
+            returnValue: _i8.Future<List<String>>.value(<String>[]),
+          )
+          as _i8.Future<List<String>>);
 }
 
 /// A class which mocks [AudioRecorderService].
@@ -725,10 +740,148 @@ class MockImageStorageService extends _i1.Mock
           as _i8.Future<_i10.Uint8List?>);
 }
 
+/// A class which mocks [FirestoreSyncService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockFirestoreSyncService extends _i1.Mock
+    implements _i23.FirestoreSyncService {
+  MockFirestoreSyncService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  set onRemoteEntriesChanged(
+    void Function(List<_i14.Entry>)? _onRemoteEntriesChanged,
+  ) => super.noSuchMethod(
+    Invocation.setter(#onRemoteEntriesChanged, _onRemoteEntriesChanged),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  set onRemoteCategoriesChanged(
+    void Function(List<_i15.Category>)? _onRemoteCategoriesChanged,
+  ) => super.noSuchMethod(
+    Invocation.setter(#onRemoteCategoriesChanged, _onRemoteCategoriesChanged),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void startListening(String? uid) => super.noSuchMethod(
+    Invocation.method(#startListening, [uid]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void stopListening() => super.noSuchMethod(
+    Invocation.method(#stopListening, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i8.Future<List<_i14.Entry>> fetchEntries(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchEntries, [uid]),
+            returnValue: _i8.Future<List<_i14.Entry>>.value(<_i14.Entry>[]),
+          )
+          as _i8.Future<List<_i14.Entry>>);
+
+  @override
+  _i8.Future<List<_i15.Category>> fetchCategories(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchCategories, [uid]),
+            returnValue: _i8.Future<List<_i15.Category>>.value(
+              <_i15.Category>[],
+            ),
+          )
+          as _i8.Future<List<_i15.Category>>);
+
+  @override
+  _i8.Future<void> syncEntry(String? uid, _i14.Entry? entry) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncEntry, [uid, entry]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<void> deleteEntry(String? uid, String? entryId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteEntry, [uid, entryId]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<void> syncCategory(String? uid, _i15.Category? category) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncCategory, [uid, category]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<void> deleteCategory(String? uid, String? categoryName) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteCategory, [uid, categoryName]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<void> syncAllEntries(String? uid, List<_i14.Entry>? entries) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncAllEntries, [uid, entries]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  _i8.Future<void> syncAllCategories(
+    String? uid,
+    List<_i15.Category>? categories,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncAllCategories, [uid, categories]),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
+  List<_i14.Entry> mergeEntries(
+    List<_i14.Entry>? localEntries,
+    List<_i14.Entry>? cloudEntries,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#mergeEntries, [localEntries, cloudEntries]),
+            returnValue: <_i14.Entry>[],
+          )
+          as List<_i14.Entry>);
+
+  @override
+  List<_i15.Category> mergeCategories(
+    List<_i15.Category>? localCategories,
+    List<_i15.Category>? cloudCategories,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#mergeCategories, [
+              localCategories,
+              cloudCategories,
+            ]),
+            returnValue: <_i15.Category>[],
+          )
+          as List<_i15.Category>);
+}
+
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i23.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i24.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }
@@ -887,7 +1040,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i24.Encoding? encoding,
+    _i25.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -913,7 +1066,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i24.Encoding? encoding,
+    _i25.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -939,7 +1092,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i24.Encoding? encoding,
+    _i25.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -965,7 +1118,7 @@ class MockClient extends _i1.Mock implements _i5.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i24.Encoding? encoding,
+    _i25.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -1060,6 +1213,15 @@ class MockChatCubit extends _i1.Mock implements _i6.ChatCubit {
           as bool);
 
   @override
+  _i8.Future<void> close() =>
+      (super.noSuchMethod(
+            Invocation.method(#close, []),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
   _i8.Future<void> addUserMessage(String? text) =>
       (super.noSuchMethod(
             Invocation.method(#addUserMessage, [text]),
@@ -1096,7 +1258,7 @@ class MockChatCubit extends _i1.Mock implements _i6.ChatCubit {
   );
 
   @override
-  void onChange(_i25.Change<_i6.ChatState>? change) => super.noSuchMethod(
+  void onChange(_i26.Change<_i6.ChatState>? change) => super.noSuchMethod(
     Invocation.method(#onChange, [change]),
     returnValueForMissingStub: null,
   );
@@ -1112,13 +1274,4 @@ class MockChatCubit extends _i1.Mock implements _i6.ChatCubit {
     Invocation.method(#onError, [error, stackTrace]),
     returnValueForMissingStub: null,
   );
-
-  @override
-  _i8.Future<void> close() =>
-      (super.noSuchMethod(
-            Invocation.method(#close, []),
-            returnValue: _i8.Future<void>.value(),
-            returnValueForMissingStub: _i8.Future<void>.value(),
-          )
-          as _i8.Future<void>);
 }
