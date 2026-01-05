@@ -5,11 +5,13 @@ import 'package:myapp/entry/entry.dart';
 class CategoryCalendarView extends StatefulWidget {
   final List<Entry> entries;
   final Color categoryColor;
+  final void Function(DateTime focusedMonth)? onMonthChanged;
 
   const CategoryCalendarView({
     super.key,
     required this.entries,
     required this.categoryColor,
+    this.onMonthChanged,
   });
 
   @override
@@ -96,28 +98,49 @@ class _CategoryCalendarViewState extends State<CategoryCalendarView> {
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, day, events) {
           if (events.isEmpty) return null;
-          return _buildDotIndicators(events.length);
+          return _buildMarker(events.length);
         },
       ),
       onPageChanged: (focusedDay) {
         setState(() {
           _focusedDay = focusedDay;
         });
+        widget.onMonthChanged?.call(focusedDay);
       },
       // No day selection - display only
       selectedDayPredicate: (_) => false,
     );
   }
 
-  Widget _buildDotIndicators(int count) {
-    final dotCount = count.clamp(1, 3);
+  Widget _buildMarker(int count) {
+    if (count >= 4) {
+      return Positioned(
+        bottom: 2,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: widget.categoryColor.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Positioned(
       bottom: 4,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(
-          dotCount,
+          count,
           (_) => Container(
             width: 6,
             height: 6,
