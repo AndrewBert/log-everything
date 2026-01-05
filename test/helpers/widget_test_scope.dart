@@ -4,9 +4,9 @@ import 'package:mockito/mockito.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/entry.dart';
-// import 'package:myapp/pages/home_page.dart'; // CC: HomePage removed
+import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
+import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
-// import 'package:myapp/pages/cubit/home_page_cubit.dart'; // CC: HomePageCubit removed
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/chat/model/chat_message.dart';
 import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
@@ -28,6 +28,8 @@ class WidgetTestScope {
   late MockSharedPreferences mockSharedPreferences;
   late MockClient mockHttpClient;
   late MockChatCubit mockChatCubit;
+  late MockFirestoreSyncService mockFirestoreSyncService;
+  late MockIntentDetectionService mockIntentDetectionService;
 
   late Widget widgetUnderTest;
 
@@ -54,6 +56,10 @@ class WidgetTestScope {
     when(mockChatCubit.loadDummyMessages()).thenAnswer((_) async {});
     when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(const ChatState()));
     when(mockChatCubit.state).thenReturn(const ChatState());
+    mockFirestoreSyncService = MockFirestoreSyncService();
+    when(mockFirestoreSyncService.syncEntry(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.deleteEntry(any, any)).thenAnswer((_) async {});
+    mockIntentDetectionService = MockIntentDetectionService();
   }
 
   void initializeWidget() {
@@ -62,10 +68,35 @@ class WidgetTestScope {
         BlocProvider<ChatCubit>.value(value: mockChatCubit),
         BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
         BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
-        // BlocProvider<HomePageCubit>(create: (context) => HomePageCubit(chatCubit: context.read<ChatCubit>())), // CC: HomePageCubit removed
         BlocProvider.value(value: getIt<SnackbarCubit>()),
       ],
-      child: MaterialApp(home: Container()), // CC: HomePage replaced with Container stub
+      child: MaterialApp(home: Container()),
+    );
+  }
+
+  // CP: Initialize widget with DashboardV2Page for testing
+  void initializeWidgetWithDashboardV2() {
+    widgetUnderTest = MultiBlocProvider(
+      providers: [
+        BlocProvider<ChatCubit>.value(value: mockChatCubit),
+        BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
+        BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
+        BlocProvider.value(value: getIt<SnackbarCubit>()),
+      ],
+      child: const MaterialApp(home: DashboardV2Page()),
+    );
+  }
+
+  // CP: Initialize widget with CategoryEntriesPage for testing
+  void initializeWidgetWithCategoryEntriesPage(String categoryName) {
+    widgetUnderTest = MultiBlocProvider(
+      providers: [
+        BlocProvider<ChatCubit>.value(value: mockChatCubit),
+        BlocProvider<EntryCubit>(create: (context) => EntryCubit(entryRepository: getIt<EntryRepository>())),
+        BlocProvider<VoiceInputCubit>(create: (context) => VoiceInputCubit(entryCubit: context.read<EntryCubit>())),
+        BlocProvider.value(value: getIt<SnackbarCubit>()),
+      ],
+      child: MaterialApp(home: CategoryEntriesPage(categoryName: categoryName)),
     );
   }
 
@@ -107,6 +138,11 @@ class WidgetTestScope {
         (textSegment: TestData.testEntryText, category: 'Misc', isTask: false),
       ],
     );
+  }
+
+  // CP: Stub AI service for Dashboard V2 tests (minimal stubbing for non-AI functionality)
+  void stubAiServiceForDashboardV2() {
+    when(mockAiService.extractEntries(any, any)).thenAnswer((_) async => []);
   }
 
   // CP: Checklist-specific persistence stubs
