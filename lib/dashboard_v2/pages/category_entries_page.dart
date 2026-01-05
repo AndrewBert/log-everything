@@ -7,6 +7,7 @@ import 'package:myapp/dashboard_v2/pages/edit_category_page.dart';
 import 'package:myapp/dashboard_v2/widgets/newspaper_entry_card.dart';
 import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
 import 'package:myapp/dashboard_v2/widgets/todo_card.dart';
+import 'package:myapp/dashboard_v2/pages/category_calendar_page.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -120,6 +121,21 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
               centerTitle: true,
               elevation: 0,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.calendar_month),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => CategoryCalendarPage(
+                          categoryName: state.category?.displayName ?? widget.categoryName,
+                          entries: state.entries,
+                          categoryColor: categoryColor,
+                        ),
+                      ),
+                    );
+                  },
+                  tooltip: 'View Calendar',
+                ),
                 IconButton(
                   key: categoryEntriesSearchButtonKey,
                   icon: const Icon(Icons.search),
