@@ -74,6 +74,22 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  Future<void> signInWithApple() async {
+    try {
+      emit(state.copyWith(isSigningIn: true, clearError: true));
+      await _authService.signInWithApple();
+      emit(state.copyWith(isSigningIn: false));
+    } on AuthCancelledException {
+      emit(state.copyWith(isSigningIn: false));
+      AppLogger.info('User cancelled Apple sign in');
+    } on AuthException catch (e) {
+      emit(state.copyWith(isSigningIn: false, errorMessage: e.message));
+    } catch (e) {
+      AppLogger.error('Unexpected Apple sign in error', error: e);
+      emit(state.copyWith(isSigningIn: false, errorMessage: 'An unexpected error occurred'));
+    }
+  }
+
   Future<void> signOut() async {
     try {
       emit(state.copyWith(isSigningOut: true, clearError: true));
