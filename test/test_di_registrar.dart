@@ -33,13 +33,17 @@ Future<void> setupTestDependencies({
   required MockImageStorageService imageStorageService, // Add imageStorageService mock
   required MockSharedPreferences sharedPreferences, // CP: Add SharedPreferences mock
   required http.Client httpClient, // CP: Add http.Client mock
-  required MockFirestoreSyncService firestoreSyncService, // CP: Add FirestoreSyncService mock
-  required MockIntentDetectionService intentDetectionService, // CP: Add IntentDetectionService mock
+  MockFirestoreSyncService? firestoreSyncService, // CP: Add FirestoreSyncService mock (optional)
+  MockIntentDetectionService? intentDetectionService, // CP: Add IntentDetectionService mock (optional)
   // Add other mocks as needed
 }) async {
   // Reset GetIt before registering mocks for a clean slate
   await getIt.reset();
   getIt.allowReassignment = allowReassignment;
+
+  // CP: Create default mocks if not provided
+  final effectiveFirestoreSyncService = firestoreSyncService ?? MockFirestoreSyncService();
+  final effectiveIntentDetectionService = intentDetectionService ?? MockIntentDetectionService();
 
   // --- Register Mocks for Services ---
   getIt.registerSingleton<EntryPersistenceService>(persistenceService);
@@ -51,8 +55,8 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<ImageStorageService>(imageStorageService); // Register ImageStorageService mock
   getIt.registerSingleton<SharedPreferences>(sharedPreferences); // CP: Register SharedPreferences mock
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
-  getIt.registerSingleton<FirestoreSyncService>(firestoreSyncService); // CP: Register FirestoreSyncService mock
-  getIt.registerSingleton<IntentDetectionService>(intentDetectionService); // CP: Register IntentDetectionService mock
+  getIt.registerSingleton<FirestoreSyncService>(effectiveFirestoreSyncService); // CP: Register FirestoreSyncService mock
+  getIt.registerSingleton<IntentDetectionService>(effectiveIntentDetectionService); // CP: Register IntentDetectionService mock
 
   // --- Register TimerFactory for testing ---
   getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
@@ -70,7 +74,7 @@ Future<void> setupTestDependencies({
       vectorStoreService: getIt<VectorStoreService>(), // CP: Pass VectorStoreService mock
       timerFactory: getIt<TimerFactory>(), // CP: Pass TimerFactory for tests
       imageStorageService: getIt<ImageStorageService>(), // Pass ImageStorageService mock
-      firestoreSyncService: getIt<FirestoreSyncService>(), // CP: Pass FirestoreSyncService mock
+      firestoreSyncService: effectiveFirestoreSyncService, // CP: Pass FirestoreSyncService mock
     ),
   );
 
