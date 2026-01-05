@@ -15,10 +15,10 @@ class CategoryCalendarView extends StatefulWidget {
   });
 
   @override
-  State<CategoryCalendarView> createState() => _CategoryCalendarViewState();
+  CategoryCalendarViewState createState() => CategoryCalendarViewState();
 }
 
-class _CategoryCalendarViewState extends State<CategoryCalendarView> {
+class CategoryCalendarViewState extends State<CategoryCalendarView> {
   DateTime _focusedDay = DateTime.now();
 
   /// Normalize a DateTime to midnight (day only, no time component)
@@ -40,6 +40,19 @@ class _CategoryCalendarViewState extends State<CategoryCalendarView> {
   List<Entry> _getEntriesForDay(DateTime day) {
     final normalized = _normalizeDate(day);
     return _entriesByDay[normalized] ?? [];
+  }
+
+  void goToToday() {
+    final today = DateTime.now();
+    setState(() {
+      _focusedDay = today;
+    });
+    widget.onMonthChanged?.call(today);
+  }
+
+  bool get isViewingCurrentMonth {
+    final now = DateTime.now();
+    return _focusedDay.year == now.year && _focusedDay.month == now.month;
   }
 
   @override

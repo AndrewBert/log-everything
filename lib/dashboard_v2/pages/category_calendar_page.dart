@@ -19,12 +19,18 @@ class CategoryCalendarPage extends StatefulWidget {
 }
 
 class _CategoryCalendarPageState extends State<CategoryCalendarPage> {
+  final _calendarKey = GlobalKey<CategoryCalendarViewState>();
   late DateTime _focusedMonth;
 
   @override
   void initState() {
     super.initState();
     _focusedMonth = DateTime.now();
+  }
+
+  bool get _isViewingCurrentMonth {
+    final now = DateTime.now();
+    return _focusedMonth.year == now.year && _focusedMonth.month == now.month;
   }
 
   List<Entry> get _entriesThisMonth {
@@ -42,37 +48,24 @@ class _CategoryCalendarPageState extends State<CategoryCalendarPage> {
     return days.length;
   }
 
-  MapEntry<int, int>? get _mostActiveDay {
-    if (_entriesThisMonth.isEmpty) return null;
-
-    final countByDay = <int, int>{};
-    for (final entry in _entriesThisMonth) {
-      final day = entry.timestamp.day;
-      countByDay[day] = (countByDay[day] ?? 0) + 1;
-    }
-
-    int maxDay = countByDay.keys.first;
-    int maxCount = countByDay[maxDay]!;
-    for (final entry in countByDay.entries) {
-      if (entry.value > maxCount) {
-        maxDay = entry.key;
-        maxCount = entry.value;
-      }
-    }
-    return MapEntry(maxDay, maxCount);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final entriesCount = _entriesThisMonth.length;
     final daysCount = _daysWithEntries;
-    final mostActive = _mostActiveDay;
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.categoryName} Calendar'),
         centerTitle: true,
+        actions: [
+          if (!_isViewingCurrentMonth)
+            IconButton(
+              icon: const Icon(Icons.today),
+              onPressed: () => _calendarKey.currentState?.goToToday(),
+              tooltip: 'Go to today',
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -86,6 +79,7 @@ class _CategoryCalendarPageState extends State<CategoryCalendarPage> {
               child: Column(
                 children: [
                   CategoryCalendarView(
+                    key: _calendarKey,
                     entries: widget.entries,
                     categoryColor: widget.categoryColor,
                     onMonthChanged: (month) {
@@ -137,15 +131,6 @@ class _CategoryCalendarPageState extends State<CategoryCalendarPage> {
                             ),
                           ],
                         ),
-                        if (mostActive != null && mostActive.value > 1) ...[
-                          const SizedBox(height: 12),
-                          _StatCard(
-                            value: '${mostActive.key}',
-                            label: 'Most active day (${mostActive.value} entries)',
-                            color: widget.categoryColor,
-                            isWide: true,
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -163,13 +148,11 @@ class _StatCard extends StatelessWidget {
   final String value;
   final String label;
   final Color color;
-  final bool isWide;
 
   const _StatCard({
     required this.value,
     required this.label,
     required this.color,
-    this.isWide = false,
   });
 
   @override
@@ -182,44 +165,25 @@ class _StatCard extends StatelessWidget {
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: isWide
-          ? Row(
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
