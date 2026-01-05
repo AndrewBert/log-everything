@@ -14,6 +14,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
+import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
 
 // CP: Layout constants for bottom bar positioning
 const double _inputBarHeight = 56.0;
@@ -97,7 +98,14 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
           ),
         ),
       ],
-      child: Scaffold(
+      child: BlocListener<DashboardV2Cubit, DashboardV2State>(
+        listenWhen: (prev, current) =>
+            prev.entryPendingCategorization != current.entryPendingCategorization &&
+            current.entryPendingCategorization != null,
+        listener: (context, state) {
+          _showCategorizationSnackbar(context, state.entryPendingCategorization!);
+        },
+        child: Scaffold(
         key: dashboardV2PageKey,
         appBar: AppBar(
           key: dashboardV2AppBarKey,
@@ -559,6 +567,54 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                 ),
               ),
           ],
+        ),
+      ),
+      ),
+    );
+  }
+
+  // CP: Show snackbar prompting user to categorize an entry that was assigned to Misc
+  void _showCategorizationSnackbar(BuildContext context, Entry entry) {
+    final dashboardCubit = context.read<DashboardV2Cubit>();
+    final entryCubit = context.read<EntryCubit>();
+    final entryRepository = GetIt.instance<EntryRepository>();
+
+    // CP: Clear the pending state immediately so snackbar doesn't re-show
+    dashboardCubit.clearEntryPendingCategorization();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('What kind of note is this?'),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+        action: SnackBarAction(
+          label: 'Categorize',
+          onPressed: () async {
+            // CP: Check context is still valid before showing bottom sheet
+            if (!context.mounted) return;
+
+            final selectedCategory = await showCategoryPickerBottomSheet(
+              context: context,
+              currentCategory: entry.category,
+              title: 'What kind of note is this?',
+            );
+
+            // CP: Check context again after async gap
+            if (!context.mounted) return;
+
+            if (selectedCategory != null && selectedCategory != entry.category) {
+              // CP: Fetch latest entry from repository to avoid stale reference
+              final latestEntry = entryRepository.currentEntries.firstWhere(
+                (e) => e.id == entry.id,
+                orElse: () => entry,
+              );
+
+              // CP: Update the entry through cubit (follows architecture pattern)
+              final updatedEntry = latestEntry.copyWith(category: selectedCategory);
+              await entryCubit.updateEntry(latestEntry, updatedEntry);
+            }
+          },
         ),
       ),
     );

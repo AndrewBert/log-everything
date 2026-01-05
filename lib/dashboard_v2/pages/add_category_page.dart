@@ -24,7 +24,8 @@ class AddCategoryPage extends StatelessWidget {
           );
 
           if (context.mounted) {
-            Navigator.of(context).pop();
+            // CP: Return the created category name for callers that need it
+            Navigator.of(context).pop(name);
 
             // CC: Show success message
             ScaffoldMessenger.of(context).showSnackBar(

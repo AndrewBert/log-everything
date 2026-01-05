@@ -122,21 +122,6 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
               elevation: 0,
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.calendar_month),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => CategoryCalendarPage(
-                          categoryName: state.category?.displayName ?? widget.categoryName,
-                          entries: state.entries,
-                          categoryColor: categoryColor,
-                        ),
-                      ),
-                    );
-                  },
-                  tooltip: 'View Calendar',
-                ),
-                IconButton(
                   key: categoryEntriesSearchButtonKey,
                   icon: const Icon(Icons.search),
                   onPressed: _openSearch,

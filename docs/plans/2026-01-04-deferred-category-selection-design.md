@@ -22,13 +22,15 @@ User logs entry → AI processes → No category match found
     ↓
 Entry saved under Misc (as usual)
     ↓
-Snackbar appears: "What kind of note is this?" [Categorize]
+Cubit sets entryPendingCategorization in state
     ↓
-User taps → Enhanced picker dialog opens
+BlocListener detects change → Snackbar appears: "What kind of note is this?" [Categorize]
+    ↓
+User taps → Bottom sheet opens
     ↓
 [+ Create new] at top, existing categories below
     ↓
-User picks or creates → Entry is refiled
+User picks or creates → Entry is refiled via EntryCubit.updateEntry()
 ```
 
 If user ignores the snackbar, entry stays in Misc. No pressure.
@@ -49,33 +51,25 @@ If user ignores the snackbar, entry stays in Misc. No pressure.
 - After entry processing, if category == Misc, emit state that tells UI to show snackbar
 - Snackbar passes the entry reference so it can be refiled
 
-## Component: Enhanced Category Picker
+## Component: Category Picker Bottom Sheet
 
-**Based on:** Existing `ChangeCategoryDialog` with modifications
+**Based on:** `EntryDetailsPage._showCategoryBottomSheet` pattern
+
+**Implementation:** New `showCategoryPickerBottomSheet()` function in `lib/dashboard_v2/widgets/category_picker_bottom_sheet.dart`
 
 **Structure:**
-```
-┌─────────────────────────────────┐
-│  What kind of note is this?    │
-├─────────────────────────────────┤
-│  [+ Create new category]       │  ← Top, prominent
-├─────────────────────────────────┤
-│  Work 💼                        │
-│  Personal 👤                    │
-│  Health 🏥                      │
-│  ...existing categories...      │
-└─────────────────────────────────┘
-```
+- Modal bottom sheet with draggable scroll
+- "Create new category" option at top with primary color styling
+- Existing categories below with color indicators and descriptions
+- Close button in header
 
 **Behavior:**
-- Tapping existing category → refiled immediately, dialog closes
-- Tapping "Create new category" → navigates to `AddCategoryPage`
-- After creating new category, entry is refiled to that category
+- Tapping existing category → returns category name, sheet closes
+- Tapping "Create new category" → navigates to `AddCategoryPage`, returns created category name
+- Dismissing sheet → returns null
 
-**Changes to existing `ChangeCategoryDialog`:**
-- Add optional `title` parameter (default: "Change Category")
-- Add "Create new category" option at the top
-- Handle navigation to `AddCategoryPage` and return new category name
+**Cleanup:**
+- Deleted unused `lib/dialogs/change_category_dialog.dart`
 
 ## Edge Cases
 

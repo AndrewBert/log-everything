@@ -13,6 +13,10 @@ import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
 import 'package:myapp/locator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:myapp/intent_detection/models/models.dart';
+import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
+import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
+import 'package:myapp/dashboard_v2/model/simple_insight.dart';
 
 import '../mocks.mocks.dart';
 import 'test_data.dart';
@@ -28,6 +32,8 @@ class WidgetTestScope {
   late MockSharedPreferences mockSharedPreferences;
   late MockClient mockHttpClient;
   late MockChatCubit mockChatCubit;
+  late MockFirestoreSyncService mockFirestoreSyncService;
+  late MockIntentDetectionService mockIntentDetectionService;
 
   late Widget widgetUnderTest;
 
@@ -54,6 +60,21 @@ class WidgetTestScope {
     when(mockChatCubit.loadDummyMessages()).thenAnswer((_) async {});
     when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(const ChatState()));
     when(mockChatCubit.state).thenReturn(const ChatState());
+    mockFirestoreSyncService = MockFirestoreSyncService();
+    when(mockFirestoreSyncService.syncEntry(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.syncCategory(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.syncAllEntries(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.syncAllCategories(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.deleteEntry(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.deleteCategory(any, any)).thenAnswer((_) async {});
+    mockIntentDetectionService = MockIntentDetectionService();
+    when(mockIntentDetectionService.classifyIntent(any)).thenAnswer(
+      (_) async => IntentClassification(
+        type: IntentType.note,
+        confidence: 0.95,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   void initializeWidget() {
@@ -66,6 +87,18 @@ class WidgetTestScope {
         BlocProvider.value(value: getIt<SnackbarCubit>()),
       ],
       child: MaterialApp(home: Container()), // CC: HomePage replaced with Container stub
+    );
+  }
+
+  void initializeWidgetWithDashboardV2() {
+    widgetUnderTest = const MaterialApp(
+      home: DashboardV2Page(),
+    );
+  }
+
+  void initializeWidgetWithCategoryEntriesPage(String categoryName) {
+    widgetUnderTest = MaterialApp(
+      home: CategoryEntriesPage(categoryName: categoryName),
     );
   }
 
@@ -107,6 +140,16 @@ class WidgetTestScope {
         (textSegment: TestData.testEntryText, category: 'Misc', isTask: false),
       ],
     );
+  }
+
+  void stubAiServiceForDashboardV2() {
+    when(mockAiService.generateSimpleInsight(any, any, currentDate: anyNamed('currentDate')))
+        .thenAnswer((_) async => SimpleInsight(
+              content: 'Test insight content',
+              generatedAt: DateTime.now(),
+            ));
+    when(mockAiService.generatePromptSuggestions(entries: anyNamed('entries'), currentDate: anyNamed('currentDate')))
+        .thenAnswer((_) async => <String>[]);
   }
 
   // CP: Checklist-specific persistence stubs

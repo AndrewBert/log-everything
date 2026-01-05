@@ -223,6 +223,13 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         .where((e) => e.isTask && !_previousEntryIds.contains(e.id))
         .map((e) => e.id)
         .toList();
+
+    // CP: Detect new entries categorized as Misc that need user categorization
+    final newMiscEntries = entries
+        .where((e) => !e.isTask && e.category == Category.miscName && !_previousEntryIds.contains(e.id))
+        .toList();
+    final entryNeedingCategorization = newMiscEntries.isNotEmpty ? newMiscEntries.first : null;
+
     _previousEntryIds = currentEntryIds;
 
     // CC: Update state with new entries from stream
@@ -234,6 +241,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
         clearPendingEntry: shouldClearPending,
         newlyAddedTodoIds: newTodoIds.isNotEmpty ? newTodoIds : const [],
+        entryPendingCategorization: entryNeedingCategorization,
       ),
     );
 
@@ -471,6 +479,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     } catch (e) {
       AppLogger.error('Error regenerating prompt suggestions', error: e);
     }
+  }
+
+  // CP: Clear the pending categorization state (called after snackbar is shown)
+  void clearEntryPendingCategorization() {
+    emit(state.copyWith(clearEntryPendingCategorization: true));
   }
 
   @override

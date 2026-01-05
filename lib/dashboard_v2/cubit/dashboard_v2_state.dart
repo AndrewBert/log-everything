@@ -18,6 +18,7 @@ class DashboardV2State extends Equatable {
   final bool isInputBarFocused; // CP: Track if input bar has focus
   final bool inputBarHasText; // CP: Track if input bar has text
   final List<String> newlyAddedTodoIds; // CP: Todo IDs just added for highlight
+  final Entry? entryPendingCategorization; // CP: Entry that was categorized as Misc and needs user categorization
 
   const DashboardV2State({
     this.entries = const [],
@@ -35,6 +36,7 @@ class DashboardV2State extends Equatable {
     this.isInputBarFocused = false,
     this.inputBarHasText = false,
     this.newlyAddedTodoIds = const [],
+    this.entryPendingCategorization,
   });
 
   // CC: Combine pending entry with entries for display
@@ -90,10 +92,12 @@ class DashboardV2State extends Equatable {
     bool? isInputBarFocused,
     bool? inputBarHasText,
     List<String>? newlyAddedTodoIds,
+    Entry? entryPendingCategorization,
     bool clearLastIntentClassification = false,
     bool clearIntentClassificationError = false,
     bool clearPendingEntry = false,
     bool clearSelectedImage = false,
+    bool clearEntryPendingCategorization = false,
   }) {
     return DashboardV2State(
       entries: entries ?? this.entries,
@@ -115,6 +119,9 @@ class DashboardV2State extends Equatable {
       isInputBarFocused: isInputBarFocused ?? this.isInputBarFocused,
       inputBarHasText: inputBarHasText ?? this.inputBarHasText,
       newlyAddedTodoIds: newlyAddedTodoIds ?? this.newlyAddedTodoIds,
+      entryPendingCategorization: clearEntryPendingCategorization
+          ? null
+          : (entryPendingCategorization ?? this.entryPendingCategorization),
     );
   }
 
@@ -168,5 +175,6 @@ class DashboardV2State extends Equatable {
     isInputBarFocused,
     inputBarHasText,
     newlyAddedTodoIds,
+    entryPendingCategorization,
   ];
 }
