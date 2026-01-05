@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
-import 'package:myapp/dashboard_v2/model/simple_insight.dart';
 
 void main() {
   group('ComprehensiveInsight', () {
