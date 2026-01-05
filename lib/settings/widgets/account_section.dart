@@ -100,7 +100,7 @@ class AccountSection extends StatelessWidget {
   Widget _buildSignedOutView(BuildContext context, SettingsState state) {
     return ListTile(
       leading: const Icon(Icons.login),
-      title: const Text('Sign in with Google'),
+      title: const Text('Sign in'),
       subtitle: const Text('Sync your data across devices'),
       enabled: !state.isSigningIn,
       trailing: state.isSigningIn
@@ -110,7 +110,50 @@ class AccountSection extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.chevron_right),
-      onTap: () => context.read<SettingsCubit>().signInWithGoogle(),
+      onTap: () => _showSignInOptions(context),
+    );
+  }
+
+  void _showSignInOptions(BuildContext context) {
+    final cubit = context.read<SettingsCubit>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Sign in with',
+                    style: Theme.of(bottomSheetContext).textTheme.titleMedium,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.apple),
+                  title: const Text('Apple'),
+                  onTap: () {
+                    Navigator.of(bottomSheetContext).pop();
+                    cubit.signInWithApple();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.g_mobiledata),
+                  title: const Text('Google'),
+                  onTap: () {
+                    Navigator.of(bottomSheetContext).pop();
+                    cubit.signInWithGoogle();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

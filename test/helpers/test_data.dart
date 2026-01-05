@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/category.dart';
 
@@ -35,22 +36,24 @@ class TestData {
   static final rawEntriesList = [entryToday1, entryToday2, entryYesterday, entryOlder];
 
   static final categoriesList = [
-    const Category(name: 'Misc', description: 'Miscellaneous entries'),
-    const Category(name: 'Work', description: 'Work-related entries'),
-    const Category(name: 'Personal', description: 'Personal entries'),
+    Category(name: 'Misc', description: 'Miscellaneous entries', color: const Color(0xFF9E9E9E)),
+    Category(name: 'Work', description: 'Work-related entries', color: const Color(0xFF2196F3)),
+    Category(name: 'Personal', description: 'Personal entries', color: const Color(0xFF4CAF50)),
   ];
 
   // CP: Checklist test data
-  static const checklistCategory = Category(
-    name: 'TodoList', 
+  static final checklistCategory = Category(
+    name: 'TodoList',
     description: 'Tasks and checklist items',
     isChecklist: true,
+    color: const Color(0xFFFF9800),
   );
 
-  static const regularCategory = Category(
-    name: 'Notes', 
+  static final regularCategory = Category(
+    name: 'Notes',
     description: 'Regular notes and thoughts',
     isChecklist: false,
+    color: const Color(0xFF9C27B0),
   );
 
   static final checklistEntryIncomplete = Entry(

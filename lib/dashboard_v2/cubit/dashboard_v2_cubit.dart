@@ -224,11 +224,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         .map((e) => e.id)
         .toList();
 
-    // CP: Detect new entries categorized as Misc that need user categorization
-    final newMiscEntries = entries
-        .where((e) => !e.isTask && e.category == Category.miscName && !_previousEntryIds.contains(e.id))
+    // CP: Detect new entries that may need user categorization (all new notes, not just Misc)
+    final newNoteEntries = entries
+        .where((e) => !e.isTask && !_previousEntryIds.contains(e.id))
         .toList();
-    final entryNeedingCategorization = newMiscEntries.isNotEmpty ? newMiscEntries.first : null;
+    final entryNeedingCategorization = newNoteEntries.isNotEmpty ? newNoteEntries.first : null;
 
     _previousEntryIds = currentEntryIds;
 
