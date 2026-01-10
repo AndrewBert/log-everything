@@ -29,6 +29,7 @@ class WidgetTestScope {
   late MockPermissionService mockPermissionService;
   late MockVectorStoreService mockVectorStoreService;
   late MockImageStorageService mockImageStorageService;
+  late MockImageStorageSyncService mockImageStorageSyncService;
   late MockSharedPreferences mockSharedPreferences;
   late MockClient mockHttpClient;
   late MockChatCubit mockChatCubit;
@@ -56,6 +57,12 @@ class WidgetTestScope {
     when(mockImageStorageService.saveImageBytes(any, any)).thenAnswer((_) async => 'images/test.jpg');
     when(mockImageStorageService.deleteImage(any)).thenAnswer((_) async {});
     when(mockImageStorageService.getFullPath(any)).thenAnswer((_) async => '/test/path/images/test.jpg');
+    // CP: Mock for cloud image sync
+    mockImageStorageSyncService = MockImageStorageSyncService();
+    when(mockImageStorageSyncService.uploadImage(any, any)).thenAnswer((_) async => null);
+    when(mockImageStorageSyncService.downloadImage(any, any)).thenAnswer((_) async => false);
+    when(mockImageStorageSyncService.deleteImage(any)).thenAnswer((_) async => false);
+    when(mockImageStorageSyncService.getDownloadUrl(any)).thenAnswer((_) async => null);
     mockSharedPreferences = MockSharedPreferences();
     mockHttpClient = MockClient();
     mockChatCubit = MockChatCubit();

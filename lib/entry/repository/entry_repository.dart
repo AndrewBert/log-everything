@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,7 @@ import '../../services/entry_persistence_service.dart';
 import '../../services/vector_store_service.dart'; // CP: Added VectorStoreService import
 import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
 import '../../services/image_storage_service.dart';
+import '../../services/image_storage_sync_service.dart'; // CP: Added for cloud image sync
 import '../../services/firestore_sync_service.dart'; // CP: Added for cloud sync
 import '../../utils/logger.dart';
 import '../../dashboard_v2/model/simple_insight.dart';
@@ -23,6 +25,7 @@ class EntryRepository {
   final VectorStoreService _vectorStoreService;
   final TimerFactory _timerFactory;
   final ImageStorageService _imageStorageService;
+  final ImageStorageSyncService _imageStorageSyncService; // CP: Cloud image sync
   final FirestoreSyncService _firestoreSyncService; // CP: Cloud sync service
   List<Entry> _entries = [];
   List<Category> _categories = [];
@@ -32,6 +35,9 @@ class EntryRepository {
 
   // CC: Track entry IDs currently being processed to prevent concurrent processing
   final Set<String> _processingEntryIds = {};
+
+  // CP: Track cloud image paths that failed to delete for later retry
+  final Set<String> _pendingCloudImageDeletions = {};
 
   // CP: Current user ID for cloud sync (null = not signed in)
   String? _currentUserId;
@@ -55,12 +61,14 @@ class EntryRepository {
     required VectorStoreService vectorStoreService,
     required TimerFactory timerFactory,
     required ImageStorageService imageStorageService,
+    required ImageStorageSyncService imageStorageSyncService,
     required FirestoreSyncService firestoreSyncService,
   }) : _persistenceService = persistenceService,
        _aiService = aiService,
        _vectorStoreService = vectorStoreService,
        _timerFactory = timerFactory,
        _imageStorageService = imageStorageService,
+       _imageStorageSyncService = imageStorageSyncService,
        _firestoreSyncService = firestoreSyncService {
     // CP: Set up callbacks for remote changes
     _firestoreSyncService.onRemoteEntriesChanged = _handleRemoteEntriesChanged;
@@ -423,7 +431,7 @@ class EntryRepository {
         userNote: userNote,
       );
 
-      // Create entry with image fields
+      // Create entry with image fields (cloudImagePath set later if upload succeeds)
       final newEntry = Entry(
         text: userNote ?? '',
         timestamp: processingTimestamp,
@@ -441,6 +449,14 @@ class EntryRepository {
 
       _entries.insert(0, newEntry);
       await _saveEntries();
+
+      // CP: Upload image to Firebase Storage in background (if signed in)
+      // Note: If upload fails, it will be retried on next app restart via _uploadPendingImages()
+      // which is called in onUserSignedIn() when the auth stream fires
+      _uploadImageForEntry(newEntry).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background image upload failed for ${newEntry.id}",
+          error: e, stackTrace: stackTrace);
+      });
 
       _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
         AppLogger.error("Repository: Background vector store sync failed for addImageEntry",
@@ -465,6 +481,12 @@ class EntryRepository {
       _entries.insert(0, fallbackEntry);
       await _saveEntries();
 
+      // CP: Attempt upload for fallback entry too
+      _uploadImageForEntry(fallbackEntry).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background image upload failed for fallback entry",
+          error: e, stackTrace: stackTrace);
+      });
+
       return (entries: currentEntries, addedEntry: fallbackEntry);
     }
   }
@@ -479,6 +501,19 @@ class EntryRepository {
     );
     if (entryToRemove.imagePath != null) {
       await _imageStorageService.deleteImage(entryToRemove.imagePath!);
+    }
+    // CP: Delete cloud image if exists, track failures for retry
+    if (entryToRemove.cloudImagePath != null) {
+      final cloudPath = entryToRemove.cloudImagePath!;
+      _imageStorageSyncService.deleteImage(cloudPath).then((success) {
+        if (!success) {
+          AppLogger.warn('[EntryRepository] Cloud image deletion failed, queuing for retry: $cloudPath');
+          _pendingCloudImageDeletions.add(cloudPath);
+        }
+      }).catchError((Object e) {
+        AppLogger.error('[EntryRepository] Error deleting cloud image, queuing for retry', error: e);
+        _pendingCloudImageDeletions.add(cloudPath);
+      });
     }
 
     _entries.removeWhere((entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text);
@@ -951,6 +986,16 @@ class EntryRepository {
     // CP: Start listening for real-time changes from other devices
     _firestoreSyncService.startListening(uid);
 
+    // CP: Upload any local images that haven't been synced to cloud yet
+    _uploadPendingImages().catchError((e, stackTrace) {
+      AppLogger.error('[EntryRepository] Background pending image upload failed', error: e, stackTrace: stackTrace);
+    });
+
+    // CP: Retry any cloud image deletions that previously failed
+    _retryPendingCloudImageDeletions().catchError((e, stackTrace) {
+      AppLogger.error('[EntryRepository] Background cloud image deletion retry failed', error: e, stackTrace: stackTrace);
+    });
+
     AppLogger.info('[EntryRepository] Cloud sync complete - ${_entries.length} entries, ${_categories.length} categories');
   }
 
@@ -1050,6 +1095,186 @@ class EntryRepository {
     _firestoreSyncService.deleteCategory(_currentUserId!, categoryName).catchError((e) {
       AppLogger.error('[EntryRepository] Error deleting category from cloud', error: e);
     });
+  }
+
+  // ============================================================================
+  // CP: Image Cloud Sync Methods (Phase 3: Firebase Storage)
+  // ============================================================================
+
+  /// Upload image for an entry to Firebase Storage.
+  /// Updates the entry's cloudImagePath on success.
+  Future<void> _uploadImageForEntry(Entry entry) async {
+    if (_currentUserId == null) {
+      AppLogger.info('[EntryRepository] Skipping image upload - not signed in');
+      return;
+    }
+
+    if (entry.imagePath == null) {
+      AppLogger.info('[EntryRepository] Skipping image upload - no local image');
+      return;
+    }
+
+    if (entry.cloudImagePath != null) {
+      AppLogger.info('[EntryRepository] Skipping image upload - already uploaded');
+      return;
+    }
+
+    // Get the full local path for the image
+    final fullPath = await _imageStorageService.getFullPath(entry.imagePath!);
+    if (fullPath == null) {
+      AppLogger.warn('[EntryRepository] Cannot upload - image file not found: ${entry.imagePath}');
+      return;
+    }
+
+    final imageFile = File(fullPath);
+    if (!await imageFile.exists()) {
+      AppLogger.warn('[EntryRepository] Cannot upload - image file does not exist: $fullPath');
+      return;
+    }
+
+    // CP: Use the entry ID as the UUID for the cloud path
+    final cloudPath = await _imageStorageSyncService.uploadImage(imageFile, entry.id);
+
+    if (cloudPath != null) {
+      // CP: Transaction safety - validate entry state before updating
+      final entryIndex = _entries.indexWhere((e) => e.id == entry.id);
+      if (entryIndex == -1) {
+        AppLogger.warn('[EntryRepository] Entry deleted during upload, skipping update: ${entry.id}');
+        // CP: Delete the orphaned cloud image since entry no longer exists
+        _imageStorageSyncService.deleteImage(cloudPath).catchError((e) {
+          AppLogger.error('[EntryRepository] Failed to delete orphaned cloud image', error: e);
+          _pendingCloudImageDeletions.add(cloudPath);
+          return false;
+        });
+        return;
+      }
+
+      final currentEntry = _entries[entryIndex];
+
+      // CP: Check if entry already has a cloudImagePath (another upload succeeded first)
+      if (currentEntry.cloudImagePath != null) {
+        AppLogger.info('[EntryRepository] Entry already has cloud path, skipping update: ${entry.id}');
+        return;
+      }
+
+      // CP: Check if the imagePath changed (entry was modified during upload)
+      if (currentEntry.imagePath != entry.imagePath) {
+        AppLogger.warn('[EntryRepository] Entry imagePath changed during upload, skipping update: ${entry.id}');
+        return;
+      }
+
+      // Update the entry with the cloud path
+      final updatedEntry = currentEntry.copyWith(cloudImagePath: cloudPath);
+      _entries[entryIndex] = updatedEntry;
+      await _saveEntries(entriesToSync: [updatedEntry]);
+      AppLogger.info('[EntryRepository] Image uploaded and entry updated: ${entry.id}');
+    } else {
+      AppLogger.warn('[EntryRepository] Image upload failed for entry: ${entry.id}');
+    }
+  }
+
+  /// Upload all local images that don't have cloudImagePath yet.
+  /// Called on sign-in and app initialization for already signed-in users.
+  Future<void> _uploadPendingImages() async {
+    if (_currentUserId == null) {
+      return;
+    }
+
+    final pendingEntries = _entries.where((e) =>
+      e.imagePath != null && e.cloudImagePath == null
+    ).toList();
+
+    if (pendingEntries.isEmpty) {
+      AppLogger.info('[EntryRepository] No pending images to upload');
+      return;
+    }
+
+    AppLogger.info('[EntryRepository] Uploading ${pendingEntries.length} pending images');
+
+    for (final entry in pendingEntries) {
+      await _uploadImageForEntry(entry);
+    }
+
+    AppLogger.info('[EntryRepository] Finished uploading pending images');
+  }
+
+  /// CP: Retry deleting cloud images that previously failed.
+  /// Called on sign-in to clean up orphaned cloud files.
+  Future<void> _retryPendingCloudImageDeletions() async {
+    if (_currentUserId == null || _pendingCloudImageDeletions.isEmpty) {
+      return;
+    }
+
+    final pendingPaths = List<String>.from(_pendingCloudImageDeletions);
+    AppLogger.info('[EntryRepository] Retrying ${pendingPaths.length} pending cloud image deletions');
+
+    for (final cloudPath in pendingPaths) {
+      final success = await _imageStorageSyncService.deleteImage(cloudPath);
+      if (success) {
+        _pendingCloudImageDeletions.remove(cloudPath);
+        AppLogger.info('[EntryRepository] Successfully deleted orphaned cloud image: $cloudPath');
+      } else {
+        AppLogger.warn('[EntryRepository] Still unable to delete cloud image: $cloudPath');
+      }
+    }
+
+    if (_pendingCloudImageDeletions.isEmpty) {
+      AppLogger.info('[EntryRepository] All pending cloud image deletions completed');
+    } else {
+      AppLogger.warn('[EntryRepository] ${_pendingCloudImageDeletions.length} cloud image deletions still pending');
+    }
+  }
+
+  /// Download a cloud image to local storage if not already cached.
+  /// Returns the local image path on success, null on failure.
+  Future<String?> downloadCloudImage(Entry entry) async {
+    if (entry.cloudImagePath == null) {
+      return entry.imagePath;
+    }
+
+    // CP: If we already have a valid local file, return it
+    // Check both existence AND size > 0 to detect corrupted files
+    if (entry.imagePath != null) {
+      final fullPath = await _imageStorageService.getFullPath(entry.imagePath!);
+      if (fullPath != null) {
+        final file = File(fullPath);
+        if (await file.exists() && await file.length() > 0) {
+          return entry.imagePath;
+        }
+        // CP: File exists but is empty/corrupted - will re-download from cloud
+        if (await file.exists()) {
+          AppLogger.warn('[EntryRepository] Local image file corrupted (0 bytes), will re-download: ${entry.imagePath}');
+        }
+      }
+    }
+
+    // Download from cloud
+    final localFileName = '${entry.id}.jpg';
+    final basePath = await _imageStorageService.getFullPath(localFileName);
+    if (basePath == null) {
+      AppLogger.warn('[EntryRepository] Cannot determine local path for cloud image');
+      return null;
+    }
+
+    final success = await _imageStorageSyncService.downloadImage(
+      entry.cloudImagePath!,
+      basePath,
+    );
+
+    if (success) {
+      // Update entry with local path
+      final entryIndex = _entries.indexWhere((e) => e.id == entry.id);
+      if (entryIndex != -1) {
+        final updatedEntry = _entries[entryIndex].copyWith(imagePath: localFileName);
+        _entries[entryIndex] = updatedEntry;
+        await _saveEntries();
+        AppLogger.info('[EntryRepository] Cloud image downloaded and cached: ${entry.id}');
+        return localFileName;
+      }
+    }
+
+    AppLogger.warn('[EntryRepository] Failed to download cloud image for entry: ${entry.id}');
+    return null;
   }
 
   /// CP: Exports all entries and categories to a JSON string for backup
