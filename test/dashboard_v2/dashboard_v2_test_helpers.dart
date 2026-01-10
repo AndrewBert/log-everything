@@ -16,15 +16,24 @@ import '../helpers/widget_test_scope.dart';
 
 Future<void> givenDashboardV2IsDisplayed(
   WidgetTester tester,
-  WidgetTestScope scope, {
-  bool expectEntries = true,
-}) async {
+  WidgetTestScope scope,
+) async {
   // Initialize repository FIRST so currentEntries is populated
   // when DashboardV2Cubit's loadEntries() is called
   final repository = getIt<EntryRepository>();
   await tester.runAsync(() async {
     await repository.initialize();
   });
+
+  // Debug: verify repository has data
+  assert(repository.currentEntries.isNotEmpty,
+      'Repository should have entries after initialization');
+  assert(repository.currentCategories.isNotEmpty,
+      'Repository should have categories after initialization');
+
+  print('DEBUG: Repository entries count: ${repository.currentEntries.length}');
+  print('DEBUG: Repository categories count: ${repository.currentCategories.length}');
+  print('DEBUG: Repository categories: ${repository.currentCategories.map((c) => c.name).toList()}');
 
   // Now pump widget - cubit will get entries from already-initialized repository
   await tester.pumpWidget(scope.widgetUnderTest);
@@ -72,7 +81,7 @@ Future<void> givenDashboardHasNoEntries(
   WidgetTestScope scope,
 ) async {
   scope.stubPersistenceWithEmptyEntries();
-  await givenDashboardV2IsDisplayed(tester, scope, expectEntries: false);
+  await givenDashboardV2IsDisplayed(tester, scope);
 }
 
 // =============================================================================
@@ -167,6 +176,20 @@ void thenAllCategoriesAreDisplayed(
 }
 
 void thenCategoriesCarouselIsDisplayed(WidgetTester tester) {
+  // Debug: Check if empty state is displayed instead
+  final emptyState = find.text('No entries yet');
+  if (emptyState.evaluate().isNotEmpty) {
+    print('DEBUG: "No entries yet" is displayed - entries.isEmpty is true in state');
+  }
+
+  // Debug: Check for various widgets to understand the tree
+  final dashboardPage = find.byType(DashboardV2Page);
+  print('DEBUG: DashboardV2Page found: ${dashboardPage.evaluate().length}');
+  final recentCarousel = find.byType(RecentEntriesCarousel);
+  print('DEBUG: RecentEntriesCarousel found: ${recentCarousel.evaluate().length}');
+  final categoriesCarousel = find.byType(CategoriesCarousel);
+  print('DEBUG: CategoriesCarousel found: ${categoriesCarousel.evaluate().length}');
+
   final carousel = find.byType(CategoriesCarousel);
   expect(carousel, findsOneWidget,
       reason: 'Categories carousel should be displayed');

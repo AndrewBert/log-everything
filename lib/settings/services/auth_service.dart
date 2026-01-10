@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:myapp/utils/logger.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 // CP: Domain model for authenticated user
 class AuthUser {
@@ -42,6 +47,7 @@ abstract class AuthService {
   AuthUser? get currentUser;
   Stream<AuthUser?> get authStateChanges;
   Future<AuthUser> signInWithGoogle();
+  Future<AuthUser> signInWithApple();
   Future<void> signOut();
 }
 
@@ -111,6 +117,75 @@ class FirebaseAuthService implements AuthService {
       AppLogger.error('Unexpected sign in error', error: e);
       throw AuthException('Sign in failed. Please try again.');
     }
+  }
+
+  @override
+  Future<AuthUser> signInWithApple() async {
+    try {
+      // CP: Generate a secure random nonce for Apple Sign-In
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await _firebaseAuth.signInWithCredential(oauthCredential);
+
+      if (userCredential.user == null) {
+        throw AuthException('Sign in failed - no user returned');
+      }
+
+      // CP: Apple only provides name on first sign-in, so update profile if available
+      if (appleCredential.givenName != null || appleCredential.familyName != null) {
+        final displayName = [
+          appleCredential.givenName,
+          appleCredential.familyName,
+        ].where((s) => s != null).join(' ');
+
+        if (displayName.isNotEmpty) {
+          await userCredential.user!.updateDisplayName(displayName);
+        }
+      }
+
+      AppLogger.info('User signed in with Apple: ${userCredential.user!.email}');
+      return AuthUser.fromFirebase(userCredential.user!);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw AuthCancelledException();
+      }
+      AppLogger.error('Apple sign in error', error: e);
+      throw AuthException(e.message);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Firebase auth error', error: e);
+      throw AuthException(e.message ?? 'Sign in failed');
+    } catch (e) {
+      AppLogger.error('Unexpected Apple sign in error', error: e);
+      throw AuthException('Sign in failed. Please try again.');
+    }
+  }
+
+  // CP: Generate a cryptographically secure random nonce
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  // CP: SHA256 hash the nonce for Apple Sign-In
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   @override

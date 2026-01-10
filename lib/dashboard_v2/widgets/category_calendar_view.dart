@@ -5,20 +5,18 @@ import 'package:myapp/entry/entry.dart';
 class CategoryCalendarView extends StatefulWidget {
   final List<Entry> entries;
   final Color categoryColor;
-  final void Function(DateTime focusedMonth)? onMonthChanged;
 
   const CategoryCalendarView({
     super.key,
     required this.entries,
     required this.categoryColor,
-    this.onMonthChanged,
   });
 
   @override
-  CategoryCalendarViewState createState() => CategoryCalendarViewState();
+  State<CategoryCalendarView> createState() => _CategoryCalendarViewState();
 }
 
-class CategoryCalendarViewState extends State<CategoryCalendarView> {
+class _CategoryCalendarViewState extends State<CategoryCalendarView> {
   DateTime _focusedDay = DateTime.now();
 
   /// Normalize a DateTime to midnight (day only, no time component)
@@ -40,19 +38,6 @@ class CategoryCalendarViewState extends State<CategoryCalendarView> {
   List<Entry> _getEntriesForDay(DateTime day) {
     final normalized = _normalizeDate(day);
     return _entriesByDay[normalized] ?? [];
-  }
-
-  void goToToday() {
-    final today = DateTime.now();
-    setState(() {
-      _focusedDay = today;
-    });
-    widget.onMonthChanged?.call(today);
-  }
-
-  bool get isViewingCurrentMonth {
-    final now = DateTime.now();
-    return _focusedDay.year == now.year && _focusedDay.month == now.month;
   }
 
   @override
@@ -111,49 +96,28 @@ class CategoryCalendarViewState extends State<CategoryCalendarView> {
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, day, events) {
           if (events.isEmpty) return null;
-          return _buildMarker(events.length);
+          return _buildDotIndicators(events.length);
         },
       ),
       onPageChanged: (focusedDay) {
         setState(() {
           _focusedDay = focusedDay;
         });
-        widget.onMonthChanged?.call(focusedDay);
       },
       // No day selection - display only
       selectedDayPredicate: (_) => false,
     );
   }
 
-  Widget _buildMarker(int count) {
-    if (count >= 4) {
-      return Positioned(
-        bottom: 2,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          decoration: BoxDecoration(
-            color: widget.categoryColor.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '$count',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-
+  Widget _buildDotIndicators(int count) {
+    final dotCount = count.clamp(1, 3);
     return Positioned(
       bottom: 4,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(
-          count,
+          dotCount,
           (_) => Container(
             width: 6,
             height: 6,

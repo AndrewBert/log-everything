@@ -51,55 +51,72 @@ void main() {
     await scope.dispose();
   });
 
-  group('Dashboard Display', () {
+  group('Category Navigation', () {
     testWidgets(
-      'Given user opens app, When dashboard loads, Then entries and categories are displayed',
+      'Given user opens app, When dashboard loads, Then all categories are displayed',
       (WidgetTester tester) async {
         // Given - User opens the app
         await givenDashboardHasEntries(tester, scope);
 
-        // Then - Dashboard should be visible with entries
+        // Then - All categories should be visible
         thenDashboardV2PageIsDisplayed(tester);
-        thenRecentEntriesCarouselIsDisplayed(tester);
-        // Categories display in uppercase on entry cards (Misc -> NONE)
-        thenAllCategoriesAreDisplayed(tester, ['NONE', 'WORK']);
+        thenCategoriesCarouselIsDisplayed(tester);
+        // TestData has Misc, Work, Personal categories
+        thenAllCategoriesAreDisplayed(tester, ['Misc', 'Work', 'Personal']);
       },
     );
 
     testWidgets(
-      'Given dashboard with entries, When viewing recent entries, Then carousel displays entry text',
+      'Given user is on dashboard, When user taps a category, Then category entries page opens',
       (WidgetTester tester) async {
         // Given - Dashboard is displayed with entries
         await givenDashboardHasEntries(tester, scope);
+        thenDashboardV2PageIsDisplayed(tester);
 
-        // Then - Recent entries carousel should be visible with entries
-        thenRecentEntriesCarouselIsDisplayed(tester);
-        // Verify that entry text is visible in the carousel
-        thenEntryIsDisplayed(tester, TestData.entryToday1.text);
+        // When - User taps on a category card
+        await whenCategoryCardIsTapped(tester, 'Work');
+
+        // Then - Category entries page should open
+        thenCategoryEntriesPageIsDisplayed(tester);
+        thenCategoryEntriesPageShowsCategory(tester, 'Work');
       },
     );
 
+    testWidgets(
+      'Given user is on category entries page, When user taps back, Then returns to dashboard',
+      (WidgetTester tester) async {
+        // Given - User navigated to category entries page
+        await givenDashboardHasEntries(tester, scope);
+        await whenCategoryCardIsTapped(tester, 'Work');
+        thenCategoryEntriesPageIsDisplayed(tester);
+
+        // When - User taps back button
+        await whenBackButtonIsTapped(tester);
+
+        // Then - User returns to dashboard
+        thenDashboardV2PageIsDisplayed(tester);
+      },
+    );
   });
 
-  group('Category Entries Page', () {
+  group('Viewing Entries by Category', () {
     testWidgets(
-      'Given user opens category entries page, When entries exist, Then entries are displayed',
+      'Given user is on category entries page, When entries exist, Then entries are displayed in list',
       (WidgetTester tester) async {
         // Given - Category entries page is displayed for a category with entries
         await givenCategoryEntriesPageIsDisplayed(tester, scope, 'Work');
 
         // Then - Entries should be displayed
-        thenCategoryEntriesPageIsDisplayed(tester);
-        thenCategoryEntriesPageShowsCategory(tester, 'Work');
         // TestData.entryToday2 has category 'Work'
         thenEntryIsDisplayed(tester, TestData.entryToday2.text);
       },
     );
 
     testWidgets(
-      'Given user opens category entries page, When no entries exist, Then empty state is shown',
+      'Given user is on category entries page, When no entries exist, Then empty state is shown',
       (WidgetTester tester) async {
         // Given - Category entries page for a category with no entries
+        // We'll create a category that has no entries in TestData
         scope.stubPersistenceWithEmptyEntries();
         await givenCategoryEntriesPageIsDisplayed(tester, scope, 'Misc');
 
@@ -109,14 +126,44 @@ void main() {
     );
 
     testWidgets(
-      'Given user is on category entries page, When page loads, Then category count is shown',
+      'Given user views entries, When entry has timestamp, Then date header is displayed correctly',
       (WidgetTester tester) async {
-        // Given - Category entries page for Misc
-        await givenCategoryEntriesPageIsDisplayed(tester, scope, 'Misc');
+        // Given - Dashboard is displayed with entries
+        await givenDashboardHasEntries(tester, scope);
 
-        // Then - Entry count should be displayed
+        // Then - Date headers should be displayed (TODAY, YESTERDAY, etc)
+        // TestData has entries for today and yesterday
+        thenDateHeaderIsDisplayed(tester, 'TODAY');
+      },
+    );
+  });
+
+  group('Dashboard State', () {
+    testWidgets(
+      'Given user has entries in multiple categories, When viewing dashboard, Then category counts are accurate',
+      (WidgetTester tester) async {
+        // Given - Dashboard is displayed with entries in multiple categories
+        await givenDashboardHasEntries(tester, scope);
+
+        // Then - Category with entries should show accurate count
+        // Navigate to a category to see its entry count
+        await whenCategoryCardIsTapped(tester, 'Misc');
+        thenCategoryEntriesPageIsDisplayed(tester);
         // TestData has 2 entries in Misc category (entryToday1 and entryOlder)
         thenCategoryCountIsDisplayed(tester, 'Misc', 2);
+      },
+    );
+
+    testWidgets(
+      'Given dashboard with entries, When viewing recent entries, Then carousel displays entries',
+      (WidgetTester tester) async {
+        // Given - Dashboard is displayed with entries
+        await givenDashboardHasEntries(tester, scope);
+
+        // Then - Recent entries carousel should be visible with entries
+        thenRecentEntriesCarouselIsDisplayed(tester);
+        // Verify that entry text is visible in the carousel
+        thenEntryIsDisplayed(tester, TestData.entryToday1.text);
       },
     );
   });

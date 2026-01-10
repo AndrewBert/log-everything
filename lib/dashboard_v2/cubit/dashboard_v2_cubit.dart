@@ -31,6 +31,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   Timer? _promptSuggestionDebounce;
   // CP: Track previous entry IDs to detect new entries
   Set<String> _previousEntryIds = {};
+  // CP: Track if we're waiting for a processing entry to complete
+  bool _hasProcessingEntry = false;
+  // CP: Track entry IDs we've already shown the snackbar for
+  final Set<String> _snackbarShownForIds = {};
   static const _promptSuggestionsKey = 'prompt_suggestions';
 
   DashboardV2Cubit({
@@ -146,7 +150,8 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         );
       }
     } catch (e) {
-      // Clear generating flag even on error
+      AppLogger.error('Failed to generate insight for entry', error: e);
+      // CP: Clear generating flag even on error
       try {
         final currentEntries = _entryRepository.currentEntries;
         final currentEntry = currentEntries.firstWhere(
@@ -156,7 +161,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         final updatedEntry = currentEntry.copyWith(isGeneratingInsight: false);
         await _entryRepository.updateEntry(currentEntry, updatedEntry, skipAiRegeneration: true);
       } catch (updateError) {
-        // Ignore cleanup errors
+        AppLogger.error('Failed to clear isGeneratingInsight flag', error: updateError);
       }
 
       // CC: Only update isGeneratingInsight if this was for the selected entry
@@ -223,7 +228,28 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         .where((e) => e.isTask && !_previousEntryIds.contains(e.id))
         .map((e) => e.id)
         .toList();
+
+    // CP: Check if there's currently a processing entry
+    final hasProcessingNow = entries.any((e) => e.category == 'Processing...');
+
+    // CP: Detect when processing completes - find the newest non-task entry we haven't shown snackbar for
+    Entry? entryNeedingCategorization;
+    if (_hasProcessingEntry && !hasProcessingNow) {
+      // Processing just finished - find the newest entry that needs categorization prompt
+      for (final entry in entries) {
+        if (!entry.isTask && entry.category != 'Processing...' && !_snackbarShownForIds.contains(entry.id)) {
+          entryNeedingCategorization = entry;
+          _snackbarShownForIds.add(entry.id);
+          break;
+        }
+      }
+    }
+
+    _hasProcessingEntry = hasProcessingNow;
     _previousEntryIds = currentEntryIds;
+
+    // CP: Prune snackbar shown IDs to prevent unbounded memory growth
+    _snackbarShownForIds.removeWhere((id) => !currentEntryIds.contains(id));
 
     // CC: Update state with new entries from stream
     emit(
@@ -234,6 +260,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         selectedCarouselIndex: state.selectedCarouselIndex >= entries.length ? 0 : state.selectedCarouselIndex,
         clearPendingEntry: shouldClearPending,
         newlyAddedTodoIds: newTodoIds.isNotEmpty ? newTodoIds : const [],
+        entryPendingCategorization: entryNeedingCategorization,
       ),
     );
 
@@ -471,6 +498,11 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
     } catch (e) {
       AppLogger.error('Error regenerating prompt suggestions', error: e);
     }
+  }
+
+  // CP: Clear the pending categorization state (called after snackbar is shown)
+  void clearEntryPendingCategorization() {
+    emit(state.copyWith(clearEntryPendingCategorization: true));
   }
 
   @override
