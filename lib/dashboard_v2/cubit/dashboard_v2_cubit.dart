@@ -31,6 +31,10 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   Timer? _promptSuggestionDebounce;
   // CP: Track previous entry IDs to detect new entries
   Set<String> _previousEntryIds = {};
+  // CP: Track if we're waiting for a processing entry to complete
+  bool _hasProcessingEntry = false;
+  // CP: Track entry IDs we've already shown the snackbar for
+  final Set<String> _snackbarShownForIds = {};
   static const _promptSuggestionsKey = 'prompt_suggestions';
 
   DashboardV2Cubit({
@@ -224,12 +228,23 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         .map((e) => e.id)
         .toList();
 
-    // CP: Detect new entries that may need user categorization (all new notes, not just Misc)
-    final newNoteEntries = entries
-        .where((e) => !e.isTask && !_previousEntryIds.contains(e.id))
-        .toList();
-    final entryNeedingCategorization = newNoteEntries.isNotEmpty ? newNoteEntries.first : null;
+    // CP: Check if there's currently a processing entry
+    final hasProcessingNow = entries.any((e) => e.category == 'Processing...');
 
+    // CP: Detect when processing completes - find the newest non-task entry we haven't shown snackbar for
+    Entry? entryNeedingCategorization;
+    if (_hasProcessingEntry && !hasProcessingNow) {
+      // Processing just finished - find the newest entry that needs categorization prompt
+      for (final entry in entries) {
+        if (!entry.isTask && entry.category != 'Processing...' && !_snackbarShownForIds.contains(entry.id)) {
+          entryNeedingCategorization = entry;
+          _snackbarShownForIds.add(entry.id);
+          break;
+        }
+      }
+    }
+
+    _hasProcessingEntry = hasProcessingNow;
     _previousEntryIds = currentEntryIds;
 
     // CC: Update state with new entries from stream
