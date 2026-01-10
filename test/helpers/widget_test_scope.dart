@@ -34,6 +34,8 @@ class WidgetTestScope {
   late MockChatCubit mockChatCubit;
   late MockFirestoreSyncService mockFirestoreSyncService;
   late MockIntentDetectionService mockIntentDetectionService;
+  late MockDeviceIdService mockDeviceIdService;
+  late MockSnapshotService mockSnapshotService;
 
   late Widget widgetUnderTest;
 
@@ -75,6 +77,26 @@ class WidgetTestScope {
         timestamp: DateTime.now(),
       ),
     );
+    // CP: Device ID and Snapshot services for recovery flow
+    mockDeviceIdService = MockDeviceIdService();
+    when(mockDeviceIdService.getDeviceId()).thenAnswer((_) async => 'test-device-id');
+    when(mockDeviceIdService.hasDeviceId()).thenAnswer((_) async => true);
+    mockSnapshotService = MockSnapshotService();
+    when(mockSnapshotService.createSnapshot(
+      deviceId: anyNamed('deviceId'),
+      entries: anyNamed('entries'),
+      categories: anyNamed('categories'),
+      vectorStoreId: anyNamed('vectorStoreId'),
+      monthlyLogFileIds: anyNamed('monthlyLogFileIds'),
+    )).thenAnswer((_) async {});
+    when(mockSnapshotService.fetchSnapshot(any)).thenAnswer((_) async => null);
+    when(mockSnapshotService.hasValidSnapshot(any)).thenAnswer((_) async => false);
+    when(mockSnapshotService.deleteSnapshot(any)).thenAnswer((_) async {});
+    when(mockSnapshotService.scheduleSnapshotDeletion(any, any)).thenAnswer((_) async {});
+    // CP: Add VectorStoreService stubs for recovery-related methods
+    when(mockVectorStoreService.getVectorStoreId()).thenReturn(null);
+    when(mockVectorStoreService.getMonthlyLogFileIds()).thenReturn({});
+    when(mockVectorStoreService.restoreFromSnapshot(any, any)).thenAnswer((_) async {});
   }
 
   void initializeWidget() {

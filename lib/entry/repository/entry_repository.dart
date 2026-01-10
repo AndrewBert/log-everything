@@ -335,11 +335,48 @@ class EntryRepository {
     return currentEntries;
   }
 
+  /// CP: Adds multiple entry objects in batch (used for recovery).
+  /// Triggers cloud sync and vector store sync for affected months.
   Future<List<Entry>> addEntryObjects(List<Entry> entriesToAdd) async {
+    if (entriesToAdd.isEmpty) return currentEntries;
+
     _entries.insertAll(0, entriesToAdd);
-    await _saveEntries();
+    await _saveEntries(entriesToSync: entriesToAdd);
     AppLogger.info("Repository: Added ${entriesToAdd.length} entry objects in batch");
+
+    // CP: Trigger vector store sync for all affected months
+    final affectedMonths = <DateTime>{};
+    for (final entry in entriesToAdd) {
+      affectedMonths.add(DateTime(entry.timestamp.year, entry.timestamp.month, 1));
+    }
+    for (final month in affectedMonths) {
+      _triggerVectorStoreSyncForMonth(month).catchError((e, stackTrace) {
+        AppLogger.error("Repository: Background vector store sync failed", error: e, stackTrace: stackTrace);
+      });
+    }
+
     return currentEntries;
+  }
+
+  /// CP: Adds multiple category objects in batch (used for recovery).
+  /// Merges with existing categories - new categories are added, existing ones are skipped.
+  Future<List<Category>> addCategoryObjects(List<Category> categoriesToAdd) async {
+    if (categoriesToAdd.isEmpty) return currentCategories;
+
+    final existingNames = _categories.map((c) => c.name).toSet();
+    final newCategories = categoriesToAdd.where((c) => !existingNames.contains(c.name)).toList();
+
+    if (newCategories.isEmpty) {
+      AppLogger.info("Repository: All ${categoriesToAdd.length} categories already exist, skipping");
+      return currentCategories;
+    }
+
+    _categories.addAll(newCategories);
+    await _saveCategories(categoriesToSync: newCategories);
+    _entriesStreamController.add(currentEntries);
+    AppLogger.info("Repository: Added ${newCategories.length} category objects in batch");
+
+    return currentCategories;
   }
 
   Future<({List<Entry> entries, Entry? addedEntry})> addImageEntry({
@@ -880,7 +917,8 @@ class EntryRepository {
 
   /// Called when user signs out. Stops listening, clears user ID and all local data.
   Future<void> onUserSignedOut() async {
-    AppLogger.info('[EntryRepository] User signed out - stopping cloud sync and clearing data');
+    // CP: Log entry count before clearing to help debug data loss issues
+    AppLogger.info('[EntryRepository] User signed out - clearing ${_entries.length} entries and ${_categories.length} categories');
     _firestoreSyncService.stopListening();
     _currentUserId = null;
 
@@ -973,6 +1011,18 @@ class EntryRepository {
     _firestoreSyncService.deleteCategory(_currentUserId!, categoryName).catchError((e) {
       AppLogger.error('[EntryRepository] Error deleting category from cloud', error: e);
     });
+  }
+
+  /// CP: Exports all entries and categories to a JSON string for backup
+  String exportToJson() {
+    final exportData = {
+      'exportDate': DateTime.now().toIso8601String(),
+      'entryCount': _entries.length,
+      'categoryCount': _categories.length,
+      'entries': _entries.map((e) => e.toJson()).toList(),
+      'categories': _categories.map((c) => c.toJson()).toList(),
+    };
+    return jsonEncode(exportData);
   }
 
   /// CP: Disposes the repository and cancels all pending timers

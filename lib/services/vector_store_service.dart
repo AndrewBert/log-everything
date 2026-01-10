@@ -62,6 +62,34 @@ class VectorStoreService {
 
   static const String _vectorStoreIdKey = 'openai_vector_store_id';
 
+  // CP: Read-only getter for current vector store ID (does not create if missing)
+  String? getVectorStoreId() => _prefs.getString(_vectorStoreIdKey);
+
+  // CP: Read-only getter for current monthly file ID mappings
+  Map<String, String> getMonthlyLogFileIds() {
+    final jsonString = _prefs.getString(_monthlyLogFileIdsKey);
+    if (jsonString == null || jsonString.isEmpty) {
+      return {};
+    }
+    try {
+      return Map<String, String>.from(jsonDecode(jsonString) as Map);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // CP: Restore vector store info from snapshot (used during recovery)
+  Future<void> restoreFromSnapshot(String? vectorStoreId, Map<String, String> monthlyLogFileIds) async {
+    if (vectorStoreId != null && vectorStoreId.isNotEmpty) {
+      await _prefs.setString(_vectorStoreIdKey, vectorStoreId);
+      AppLogger.info('[VectorStoreService] Restored vector store ID: $vectorStoreId');
+    }
+    if (monthlyLogFileIds.isNotEmpty) {
+      await _prefs.setString(_monthlyLogFileIdsKey, jsonEncode(monthlyLogFileIds));
+      AppLogger.info('[VectorStoreService] Restored ${monthlyLogFileIds.length} monthly file IDs');
+    }
+  }
+
   VectorStoreService({
     required SharedPreferences sharedPreferences,
     required http.Client httpClient,
