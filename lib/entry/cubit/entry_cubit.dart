@@ -147,19 +147,12 @@ class EntryCubit extends Cubit<EntryState> {
     // CP: Update recent categories when finalizing entries
     _updateRecentCategories(_entryRepository.currentEntries);
 
-    // CP: Check if any new entries were categorized as Misc (need user categorization)
-    final newMiscEntries =
-        finalEntries.where((e) => e.isNew && e.category == Category.miscName).toList();
-    final entryNeedingCategorization = newMiscEntries.isNotEmpty ? newMiscEntries.first : null;
-
     emit(
       state.copyWith(
         isLoading: false,
         displayListItems: finalDisplayList,
         categories: finalCategories,
         clearLastError: true,
-        entryPendingCategorization: entryNeedingCategorization,
-        clearEntryPendingCategorization: entryNeedingCategorization == null,
       ),
     );
     finalEntries.where((e) => e.isNew).forEach(_markEntryAsNotNewAfterDelay);
@@ -417,11 +410,6 @@ class EntryCubit extends Cubit<EntryState> {
   // CP: Clear split notification after toast is shown
   void clearSplitNotification() {
     emit(state.copyWith(clearSplitNotification: true));
-  }
-
-  // CP: Clear the entry pending categorization after snackbar is shown or dismissed
-  void clearEntryPendingCategorization() {
-    emit(state.copyWith(clearEntryPendingCategorization: true));
   }
 
   // CP: Toggle completion status for checklist items

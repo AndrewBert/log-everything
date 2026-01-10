@@ -16,6 +16,7 @@ import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
+import 'package:myapp/utils/logger.dart';
 
 // CP: Layout constants for bottom bar positioning
 const double _inputBarHeight = 56.0;
@@ -54,7 +55,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
         _appVersion = packageInfo.version;
       });
     } catch (e) {
-      // Handle error silently
+      AppLogger.error('Failed to load app version', error: e);
     }
   }
 
@@ -611,15 +612,27 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
             if (!context.mounted) return;
 
             if (selectedCategory != null && selectedCategory != entry.category) {
-              // CP: Fetch latest entry from repository to avoid stale reference
-              final latestEntry = entryRepository.currentEntries.firstWhere(
-                (e) => e.id == entry.id,
-                orElse: () => entry,
-              );
+              try {
+                // CP: Fetch latest entry from repository to avoid stale reference
+                final latestEntry = entryRepository.currentEntries.firstWhere(
+                  (e) => e.id == entry.id,
+                  orElse: () => entry,
+                );
 
-              // CP: Update the entry through cubit (follows architecture pattern)
-              final updatedEntry = latestEntry.copyWith(category: selectedCategory);
-              await entryCubit.updateEntry(latestEntry, updatedEntry);
+                // CP: Update the entry through cubit (follows architecture pattern)
+                final updatedEntry = latestEntry.copyWith(category: selectedCategory);
+                await entryCubit.updateEntry(latestEntry, updatedEntry);
+              } catch (e) {
+                AppLogger.error('Failed to update entry category', error: e);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Failed to update category'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             }
           },
         ),

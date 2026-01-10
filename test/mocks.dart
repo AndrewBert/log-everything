@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPre
 import 'package:http/http.dart' as http; // CP: Import http for mock generation
 import 'package:myapp/chat/cubit/chat_cubit.dart'; // CP: Import ChatCubit for mock generation
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/settings/services/auth_service.dart';
 
 // Generate mocks for the services needed
 @GenerateMocks([
@@ -28,5 +29,6 @@ import 'package:myapp/intent_detection/services/intent_detection_service.dart';
   http.Client, // CP: Add http.Client for mock generation
   ChatCubit, // CP: Add ChatCubit for mock generation
   IntentDetectionService,
+  AuthService, // CP: Add AuthService for mock generation
 ])
 void main() {}
