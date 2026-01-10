@@ -15,6 +15,7 @@ import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
+import 'package:myapp/settings/settings.dart';
 
 // CP: Layout constants for bottom bar positioning
 const double _inputBarHeight = 56.0;
@@ -146,6 +147,13 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
               icon: const Icon(Icons.search),
               tooltip: 'Search entries',
               onPressed: _openSearch,
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Settings',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              ),
             ),
             const SizedBox(width: 8),
           ],
