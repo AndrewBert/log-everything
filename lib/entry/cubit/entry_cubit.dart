@@ -16,6 +16,7 @@ class EntryCubit extends Cubit<EntryState> {
   final EntryRepository _entryRepository;
 
   EntryCubit({required EntryRepository entryRepository}) : _entryRepository = entryRepository, super(EntryState()) {
+    AppLogger.info('[DEBUG-SIGNIN] EntryCubit created, calling _initialize()');
     _initialize();
   }
 
@@ -30,9 +31,11 @@ class EntryCubit extends Cubit<EntryState> {
   }
 
   Future<void> _initialize() async {
+    AppLogger.info('[DEBUG-SIGNIN] EntryCubit._initialize() STARTED');
     emit(state.copyWith(isLoading: true, clearLastError: true));
     try {
       await _entryRepository.initialize();
+      AppLogger.info('[DEBUG-SIGNIN] EntryCubit._initialize() repository.initialize() returned');
       final initialEntries = _entryRepository.currentEntries;
       final initialCategories = _entryRepository.currentCategories;
       final initialDisplayList = _buildDisplayList(initialEntries, null);

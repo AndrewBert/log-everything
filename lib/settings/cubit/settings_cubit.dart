@@ -45,13 +45,16 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void _init() {
+    AppLogger.info('[DEBUG-SIGNIN] SettingsCubit._init() STARTED');
     emit(state.copyWith(isLoading: true));
 
     // CP: Subscribe to auth state changes
+    AppLogger.info('[DEBUG-SIGNIN] SettingsCubit._init() subscribing to auth stream');
     _authSubscription = _authService.authStateChanges.listen(
       (user) async {
         // CP: Handle cloud sync on auth state change
         if (user != null) {
+          AppLogger.info('[DEBUG-SIGNIN] Auth state changed - user=${user.uid}, calling onUserSignedIn()');
           await _entryRepository.onUserSignedIn(user.uid);
           _previousUserId = user.uid;
 
@@ -80,10 +83,12 @@ class SettingsCubit extends Cubit<SettingsState> {
       },
     );
 
-    // CP: Set initial user state and trigger sync if already signed in
+    // CP: Set initial user state (sync is handled by auth stream listener above)
+    // NOTE: Removed duplicate onUserSignedIn() call here - the auth stream listener
+    // will fire immediately with current user, so calling it here caused a race condition
     final user = _authService.currentUser;
     if (user != null) {
-      _entryRepository.onUserSignedIn(user.uid);
+      AppLogger.info('[DEBUG-SIGNIN] SettingsCubit._init() user already signed in: ${user.uid} - will sync via stream listener');
       _previousUserId = user.uid;
     }
     emit(state.copyWith(
@@ -109,10 +114,12 @@ class SettingsCubit extends Cubit<SettingsState> {
     required String providerName,
   }) async {
     try {
+      AppLogger.info('[DEBUG-SIGNIN] _performSignIn() STARTED for $providerName');
       emit(state.copyWith(isSigningIn: true, clearError: true));
 
       // CP: Create pre-sign-in snapshot as failsafe
       await _createPreSignInSnapshot();
+      AppLogger.info('[DEBUG-SIGNIN] _performSignIn() snapshot created, calling signInMethod()');
 
       // CP: Set flag so auth listener checks for data loss after merge completes
       _pendingDataLossCheck = true;
