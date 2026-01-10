@@ -18,8 +18,6 @@ class EntryState extends Equatable {
   final Entry? contextMenuEntry;
   // CP: Add split notification for toast messages
   final String? splitNotification;
-  // CP: Entry that was categorized as Misc and needs user categorization
-  final Entry? entryPendingCategorization;
 
   const EntryState({
     this.categories = const [],
@@ -33,7 +31,6 @@ class EntryState extends Equatable {
     this.editingIsTask,
     this.contextMenuEntry,
     this.splitNotification,
-    this.entryPendingCategorization,
   });
 
   // Implement props getter
@@ -50,7 +47,6 @@ class EntryState extends Equatable {
     editingIsTask,
     contextMenuEntry,
     splitNotification,
-    entryPendingCategorization,
   ];
 
   // copyWith remains the same, but without entries
@@ -66,14 +62,12 @@ class EntryState extends Equatable {
     bool? editingIsTask,
     Entry? contextMenuEntry,
     String? splitNotification,
-    Entry? entryPendingCategorization,
     bool clearLastError = false,
     bool clearFilter = false,
     bool clearEditingEntry = false,
     bool clearEditingIsTask = false,
     bool clearContextMenuEntry = false,
     bool clearSplitNotification = false,
-    bool clearEntryPendingCategorization = false,
   }) {
     return EntryState(
       categories: categories ?? this.categories,
@@ -87,9 +81,6 @@ class EntryState extends Equatable {
       editingIsTask: clearEditingIsTask ? null : (editingIsTask ?? this.editingIsTask),
       contextMenuEntry: clearContextMenuEntry ? null : (contextMenuEntry ?? this.contextMenuEntry),
       splitNotification: clearSplitNotification ? null : (splitNotification ?? this.splitNotification),
-      entryPendingCategorization: clearEntryPendingCategorization
-          ? null
-          : (entryPendingCategorization ?? this.entryPendingCategorization),
     );
   }
 }

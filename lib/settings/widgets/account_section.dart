@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/settings/cubit/settings_cubit.dart';
+import 'package:myapp/utils/logger.dart';
 
 class AccountSection extends StatelessWidget {
   const AccountSection({super.key});
@@ -42,7 +43,9 @@ class AccountSection extends StatelessWidget {
           leading: user.photoUrl != null
               ? CircleAvatar(
                   backgroundImage: NetworkImage(user.photoUrl!),
-                  onBackgroundImageError: (exception, stackTrace) {},
+                  onBackgroundImageError: (exception, stackTrace) {
+                    AppLogger.error('Failed to load user photo', error: exception);
+                  },
                 )
               : CircleAvatar(
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,

@@ -8,10 +8,12 @@ import 'package:myapp/services/ai_service.dart'; // Import AI service
 import 'package:myapp/services/vector_store_service.dart'; // Import VectorStore service
 import 'package:myapp/services/image_storage_service.dart'; // Import ImageStorage service
 import 'package:myapp/services/firestore_sync_service.dart'; // CP: Import FirestoreSyncService
+import 'package:myapp/intent_detection/services/intent_detection_service.dart'; // CP: Import IntentDetectionService
 import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 import 'package:http/http.dart' as http; // CP: Import http for mock generation
 import 'package:myapp/chat/cubit/chat_cubit.dart'; // CP: Import ChatCubit for mock generation
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/settings/services/auth_service.dart';
 
 // Generate mocks for the services needed
 @GenerateMocks([
@@ -24,9 +26,11 @@ import 'package:myapp/intent_detection/services/intent_detection_service.dart';
   VectorStoreService, // CP: Add VectorStoreService for mock generation
   ImageStorageService, // Add ImageStorageService for mock generation
   FirestoreSyncService, // CP: Add FirestoreSyncService for mock generation
+  IntentDetectionService, // CP: Add IntentDetectionService for mock generation
   SharedPreferences, // CP: Add SharedPreferences for mock generation
   http.Client, // CP: Add http.Client for mock generation
   ChatCubit, // CP: Add ChatCubit for mock generation
   IntentDetectionService,
+  AuthService, // CP: Add AuthService for mock generation
 ])
 void main() {}

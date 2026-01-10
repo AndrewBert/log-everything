@@ -6,6 +6,7 @@ import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/dashboard_v2/widgets/connecting_line.dart';
 import 'package:myapp/dashboard_v2/widgets/prompt_suggestions_row.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/entry/cubit/entry_cubit.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
@@ -16,6 +17,7 @@ import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
 import 'package:myapp/settings/settings.dart';
+import 'package:myapp/utils/logger.dart';
 
 // CP: Layout constants for bottom bar positioning
 const double _inputBarHeight = 56.0;
@@ -54,7 +56,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
         _appVersion = packageInfo.version;
       });
     } catch (e) {
-      // Handle error silently
+      AppLogger.error('Failed to load app version', error: e);
     }
   }
 
@@ -581,7 +583,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     );
   }
 
-  // CP: Show snackbar prompting user to categorize an entry that was assigned to Misc
+  // CP: Show snackbar prompting user to categorize or change category
   void _showCategorizationSnackbar(BuildContext context, Entry entry) {
     final dashboardCubit = context.read<DashboardV2Cubit>();
     final entryCubit = context.read<EntryCubit>();
@@ -590,14 +592,20 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     // CP: Clear the pending state immediately so snackbar doesn't re-show
     dashboardCubit.clearEntryPendingCategorization();
 
+    // CP: Different messaging for Misc vs existing category
+    final isMisc = entry.category == Category.miscName;
+    final message = isMisc ? 'Add a category?' : 'Added to ${entry.category}';
+    final buttonLabel = isMisc ? 'Add' : 'Change';
+    final sheetTitle = isMisc ? 'Add a category' : 'Change category';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('What kind of note is this?'),
+        content: Text(message),
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
         action: SnackBarAction(
-          label: 'Categorize',
+          label: buttonLabel,
           onPressed: () async {
             // CP: Check context is still valid before showing bottom sheet
             if (!context.mounted) return;
@@ -605,22 +613,34 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
             final selectedCategory = await showCategoryPickerBottomSheet(
               context: context,
               currentCategory: entry.category,
-              title: 'What kind of note is this?',
+              title: sheetTitle,
             );
 
             // CP: Check context again after async gap
             if (!context.mounted) return;
 
             if (selectedCategory != null && selectedCategory != entry.category) {
-              // CP: Fetch latest entry from repository to avoid stale reference
-              final latestEntry = entryRepository.currentEntries.firstWhere(
-                (e) => e.id == entry.id,
-                orElse: () => entry,
-              );
+              try {
+                // CP: Fetch latest entry from repository to avoid stale reference
+                final latestEntry = entryRepository.currentEntries.firstWhere(
+                  (e) => e.id == entry.id,
+                  orElse: () => entry,
+                );
 
-              // CP: Update the entry through cubit (follows architecture pattern)
-              final updatedEntry = latestEntry.copyWith(category: selectedCategory);
-              await entryCubit.updateEntry(latestEntry, updatedEntry);
+                // CP: Update the entry through cubit (follows architecture pattern)
+                final updatedEntry = latestEntry.copyWith(category: selectedCategory);
+                await entryCubit.updateEntry(latestEntry, updatedEntry);
+              } catch (e) {
+                AppLogger.error('Failed to update entry category', error: e);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Failed to update category'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             }
           },
         ),

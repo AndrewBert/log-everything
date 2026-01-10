@@ -10,6 +10,7 @@ import 'package:myapp/dashboard_v2/widgets/todo_card.dart';
 import 'package:myapp/dashboard_v2/pages/category_calendar_page.dart';
 import 'package:myapp/dashboard_v2/model/insight.dart';
 import 'package:myapp/entry/category.dart';
+import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/utils/search_keys.dart';
@@ -318,8 +319,19 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
                             ),
                           ),
                         ),
+                      // Calendar preview card
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: _CalendarPreviewCard(
+                            entries: state.entries,
+                            categoryName: state.category?.displayName ?? widget.categoryName,
+                            categoryColor: categoryColor,
+                          ),
+                        ),
+                      ),
                       const SliverToBoxAdapter(
-                        child: SizedBox(height: 16),
+                        child: SizedBox(height: 8),
                       ),
                       // CP: Todo section (active todos only)
                       if (state.activeTodos.isNotEmpty) ...[
@@ -477,4 +489,80 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
   // CP: Convert internal category name to display name (Misc -> None)
   String _getDisplayName(String categoryName) =>
       categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
+}
+
+class _CalendarPreviewCard extends StatelessWidget {
+  final List<Entry> entries;
+  final String categoryName;
+  final Color categoryColor;
+
+  const _CalendarPreviewCard({
+    required this.entries,
+    required this.categoryName,
+    required this.categoryColor,
+  });
+
+  int get _entriesThisMonth {
+    final now = DateTime.now();
+    return entries.where((entry) {
+      return entry.timestamp.year == now.year && entry.timestamp.month == now.month;
+    }).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final count = _entriesThisMonth;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => CategoryCalendarPage(
+                categoryName: categoryName,
+                entries: entries,
+                categoryColor: categoryColor,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: categoryColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: categoryColor.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_month,
+                color: categoryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '$count ${count == 1 ? 'entry' : 'entries'} this month',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
