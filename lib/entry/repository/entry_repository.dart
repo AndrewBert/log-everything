@@ -1277,6 +1277,16 @@ class EntryRepository {
     return null;
   }
 
+  /// Ensures an entry's cloud image is available locally.
+  /// If the entry has a cloudImagePath but no local imagePath, triggers a download.
+  /// Returns the local path on success, null if no download needed or on failure.
+  Future<String?> ensureImageAvailable(Entry entry) async {
+    if (entry.cloudImagePath != null && entry.imagePath == null) {
+      return downloadCloudImage(entry);
+    }
+    return entry.imagePath;
+  }
+
   /// CP: Exports all entries and categories to a JSON string for backup
   String exportToJson() {
     final exportData = {

@@ -200,5 +200,51 @@ void main() {
         expect(updated.simpleInsight, isNull);
       });
     });
+
+    group('hasImage', () {
+      test('Given entry with local imagePath only, When hasImage called, Then returns true', () {
+        final entry = Entry(
+          text: 'Test entry',
+          timestamp: testDate,
+          category: 'Work',
+          imagePath: 'local/test.jpg',
+        );
+
+        expect(entry.hasImage, isTrue);
+      });
+
+      test('Given entry with cloudImagePath only, When hasImage called, Then returns true', () {
+        final entry = Entry(
+          text: 'Test entry',
+          timestamp: testDate,
+          category: 'Work',
+          cloudImagePath: 'users/uid123/images/test.jpg',
+        );
+
+        expect(entry.hasImage, isTrue);
+      });
+
+      test('Given entry with both imagePath and cloudImagePath, When hasImage called, Then returns true', () {
+        final entry = Entry(
+          text: 'Test entry',
+          timestamp: testDate,
+          category: 'Work',
+          imagePath: 'local/test.jpg',
+          cloudImagePath: 'users/uid123/images/test.jpg',
+        );
+
+        expect(entry.hasImage, isTrue);
+      });
+
+      test('Given entry with neither imagePath nor cloudImagePath, When hasImage called, Then returns false', () {
+        final entry = Entry(
+          text: 'Test entry',
+          timestamp: testDate,
+          category: 'Work',
+        );
+
+        expect(entry.hasImage, isFalse);
+      });
+    });
   });
 }

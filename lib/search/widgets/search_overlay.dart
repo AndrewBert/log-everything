@@ -282,7 +282,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
               Expanded(
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: entry1.imagePath != null
+                  child: entry1.hasImage
                       ? ImageEntryCard(
                           entry: entry1,
                           categoryColor: _getCategoryColor(entry1.category),
@@ -301,7 +301,7 @@ class _SearchOverlayContentState extends State<_SearchOverlayContent> {
                 child: entry2 != null
                     ? AspectRatio(
                         aspectRatio: 1,
-                        child: entry2.imagePath != null
+                        child: entry2.hasImage
                             ? ImageEntryCard(
                                 entry: entry2,
                                 categoryColor: _getCategoryColor(entry2.category),

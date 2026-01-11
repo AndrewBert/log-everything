@@ -224,6 +224,106 @@ void main() {
       },
     );
   });
+
+  group('ensureImageAvailable', () {
+    test(
+      'Given entry with cloudImagePath but no local imagePath, When ensureImageAvailable called, Then triggers download',
+      () async {
+        // Given
+        final downloadPath = '${tempDir.path}/test-id.jpg';
+        final entry = Entry(
+          id: 'test-id',
+          text: 'Test entry',
+          timestamp: DateTime.now(),
+          category: 'Work',
+          cloudImagePath: 'users/uid123/images/test-id.jpg',
+        );
+
+        when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [entry]);
+        await repository.initialize();
+
+        when(mockImageStorageService.getFullPath('test-id.jpg'))
+            .thenAnswer((_) async => downloadPath);
+        when(mockImageStorageSyncService.downloadImage(
+          'users/uid123/images/test-id.jpg',
+          downloadPath,
+        )).thenAnswer((_) async => true);
+
+        // When
+        final result = await repository.ensureImageAvailable(entry);
+
+        // Then
+        expect(result, equals('test-id.jpg'));
+        verify(mockImageStorageSyncService.downloadImage(any, any)).called(1);
+      },
+    );
+
+    test(
+      'Given entry with existing local imagePath, When ensureImageAvailable called, Then returns existing path without download',
+      () async {
+        // Given
+        await repository.initialize();
+        final entry = Entry(
+          id: 'test-id',
+          text: 'Test entry',
+          timestamp: DateTime.now(),
+          category: 'Work',
+          imagePath: 'local/existing.jpg',
+          cloudImagePath: 'users/uid123/images/test-id.jpg',
+        );
+
+        // When
+        final result = await repository.ensureImageAvailable(entry);
+
+        // Then
+        expect(result, equals('local/existing.jpg'));
+        verifyNever(mockImageStorageSyncService.downloadImage(any, any));
+      },
+    );
+
+    test(
+      'Given entry with no cloudImagePath, When ensureImageAvailable called, Then returns existing imagePath',
+      () async {
+        // Given
+        await repository.initialize();
+        final entry = Entry(
+          id: 'test-id',
+          text: 'Test entry',
+          timestamp: DateTime.now(),
+          category: 'Work',
+          imagePath: 'local/test.jpg',
+        );
+
+        // When
+        final result = await repository.ensureImageAvailable(entry);
+
+        // Then
+        expect(result, equals('local/test.jpg'));
+        verifyNever(mockImageStorageSyncService.downloadImage(any, any));
+      },
+    );
+
+    test(
+      'Given entry with neither path, When ensureImageAvailable called, Then returns null',
+      () async {
+        // Given
+        await repository.initialize();
+        final entry = Entry(
+          id: 'test-id',
+          text: 'Test entry',
+          timestamp: DateTime.now(),
+          category: 'Work',
+        );
+
+        // When
+        final result = await repository.ensureImageAvailable(entry);
+
+        // Then
+        expect(result, isNull);
+        verifyNever(mockImageStorageSyncService.downloadImage(any, any));
+      },
+    );
+  });
 }
 
 /// CP: Fake timer factory for testing - timers don't fire

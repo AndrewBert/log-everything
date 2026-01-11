@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/services/image_storage_sync_service.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -30,6 +31,7 @@ class ImageEntryCard extends StatefulWidget {
 class _ImageEntryCardState extends State<ImageEntryCard> {
   // CP: Cache the future to prevent recreating on every build
   late Future<({String? localPath, String? downloadUrl})> _imageSourceFuture;
+  bool _downloadTriggered = false;
 
   @override
   void initState() {
@@ -43,12 +45,14 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
     // CP: Only refresh if the entry's image paths changed
     if (oldWidget.entry.imagePath != widget.entry.imagePath ||
         oldWidget.entry.cloudImagePath != widget.entry.cloudImagePath) {
+      _downloadTriggered = false;
       _imageSourceFuture = _getImageSource();
     }
   }
 
   /// CP: Get the image source - either local path or cloud download URL.
   /// Returns a record with either localPath or downloadUrl set.
+  /// Also triggers background download for cloud-only images (Issue #46).
   Future<({String? localPath, String? downloadUrl})> _getImageSource() async {
     final imageService = GetIt.instance<ImageStorageService>();
     final syncService = GetIt.instance<ImageStorageSyncService>();
@@ -66,6 +70,11 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
 
     // CP: Fall back to cloud download URL
     if (widget.entry.cloudImagePath != null) {
+      // CP: Trigger background download to cache locally (Issue #46)
+      if (!_downloadTriggered) {
+        _triggerBackgroundDownload();
+      }
+
       final downloadUrl = await syncService.getDownloadUrl(widget.entry.cloudImagePath!);
       if (downloadUrl != null) {
         return (localPath: null, downloadUrl: downloadUrl);
@@ -73,6 +82,20 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
     }
 
     return (localPath: null, downloadUrl: null);
+  }
+
+  /// CP: Triggers a background download of the cloud image.
+  /// When complete, refreshes the image source to show the local file.
+  void _triggerBackgroundDownload() {
+    _downloadTriggered = true;
+    final repository = GetIt.instance<EntryRepository>();
+    repository.ensureImageAvailable(widget.entry).then((localPath) {
+      if (localPath != null && mounted) {
+        setState(() {
+          _imageSourceFuture = _getImageSource();
+        });
+      }
+    });
   }
 
   @override

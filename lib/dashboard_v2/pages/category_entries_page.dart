@@ -451,7 +451,7 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
                                   ),
                                 );
                               };
-                                return entry.imagePath != null
+                                return entry.hasImage
                                     ? ImageEntryCard(
                                         entry: entry,
                                         categoryColor: categoryColor,
