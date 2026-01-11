@@ -1000,14 +1000,14 @@ class EntryRepository {
     await _persistenceService.clearAllData();
     await _vectorStoreService.clearLocalCache();
 
-    // Clear in-memory state
+    // Clear entries but restore default categories so app can still categorize
     _entries = [];
-    _categories = [];
+    _categories = await _persistenceService.loadCategories();
 
     // Notify listeners of the cleared state
     _entriesStreamController.add(currentEntries);
 
-    AppLogger.info('[EntryRepository] All local data cleared');
+    AppLogger.info('[EntryRepository] Local data cleared, categories restored to defaults');
   }
 
   /// Handle remote entries update from Firestore listener.

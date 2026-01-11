@@ -196,14 +196,15 @@ class AccountSection extends StatelessWidget {
                     style: Theme.of(bottomSheetContext).textTheme.titleMedium,
                   ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.apple),
-                  title: const Text('Apple'),
-                  onTap: () {
-                    Navigator.of(bottomSheetContext).pop();
-                    cubit.signInWithApple();
-                  },
-                ),
+                if (Platform.isIOS)
+                  ListTile(
+                    leading: const Icon(Icons.apple),
+                    title: const Text('Apple'),
+                    onTap: () {
+                      Navigator.of(bottomSheetContext).pop();
+                      cubit.signInWithApple();
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(Icons.g_mobiledata),
                   title: const Text('Google'),
