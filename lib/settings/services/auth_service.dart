@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:myapp/utils/logger.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 // CP: Domain model for authenticated user
-class AuthUser {
+class AuthUser extends Equatable {
   final String uid;
   final String? displayName;
   final String? email;
@@ -29,6 +30,9 @@ class AuthUser {
       photoUrl: firebaseUser.photoURL,
     );
   }
+
+  @override
+  List<Object?> get props => [uid, displayName, email, photoUrl];
 }
 
 // CP: Custom exceptions for auth operations
