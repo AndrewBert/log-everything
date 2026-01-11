@@ -17,9 +17,11 @@ import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/model/simple_insight.dart';
+import 'package:myapp/settings/services/auth_service.dart'; // CP: Import AuthService and AuthUser
 
 import '../mocks.mocks.dart';
 import 'test_data.dart';
+import 'auth_test_data.dart'; // CP: Import auth test data
 
 class WidgetTestScope {
   late MockEntryPersistenceService mockPersistenceService;
@@ -37,6 +39,7 @@ class WidgetTestScope {
   late MockIntentDetectionService mockIntentDetectionService;
   late MockDeviceIdService mockDeviceIdService;
   late MockSnapshotService mockSnapshotService;
+  late MockAuthService mockAuthService; // CP: Auth service mock for settings tests
 
   late Widget widgetUnderTest;
 
@@ -104,6 +107,11 @@ class WidgetTestScope {
     when(mockVectorStoreService.getVectorStoreId()).thenReturn(null);
     when(mockVectorStoreService.getMonthlyLogFileIds()).thenReturn({});
     when(mockVectorStoreService.restoreFromSnapshot(any, any)).thenAnswer((_) async {});
+
+    // CP: Auth service mock with default unauthenticated state
+    mockAuthService = MockAuthService();
+    when(mockAuthService.currentUser).thenReturn(null);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(null));
   }
 
   void initializeWidget() {
@@ -247,6 +255,52 @@ class WidgetTestScope {
 
   void stubChatCubitEmpty() {
     stubChatCubitWithMessages([]);
+  }
+
+  // CP: Auth-related stub helpers
+  void stubAuthenticatedUser({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.currentUser).thenReturn(authUser);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(authUser));
+  }
+
+  void stubUnauthenticatedUser() {
+    when(mockAuthService.currentUser).thenReturn(null);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(null));
+  }
+
+  void stubSignInWithGoogleSuccess({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.signInWithGoogle()).thenAnswer((_) async => authUser);
+  }
+
+  void stubSignInWithGoogleCancelled() {
+    when(mockAuthService.signInWithGoogle()).thenThrow(AuthCancelledException());
+  }
+
+  void stubSignInWithGoogleError({String message = 'Sign in failed'}) {
+    when(mockAuthService.signInWithGoogle()).thenThrow(AuthException(message));
+  }
+
+  void stubSignInWithAppleSuccess({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.signInWithApple()).thenAnswer((_) async => authUser);
+  }
+
+  void stubSignInWithAppleCancelled() {
+    when(mockAuthService.signInWithApple()).thenThrow(AuthCancelledException());
+  }
+
+  void stubSignInWithAppleError({String message = 'Sign in failed'}) {
+    when(mockAuthService.signInWithApple()).thenThrow(AuthException(message));
+  }
+
+  void stubSignOutSuccess() {
+    when(mockAuthService.signOut()).thenAnswer((_) async {});
+  }
+
+  void stubSignOutError({String message = 'Sign out failed'}) {
+    when(mockAuthService.signOut()).thenThrow(AuthException(message));
   }
 
   Future<void> dispose() async {}

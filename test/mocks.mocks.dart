@@ -7,6 +7,7 @@ import 'dart:async' as _i14;
 import 'dart:convert' as _i36;
 import 'dart:io' as _i28;
 import 'dart:typed_data' as _i16;
+import 'dart:ui' as _i39;
 
 import 'package:firebase_core/firebase_core.dart' as _i11;
 import 'package:firebase_storage/firebase_storage.dart' as _i12;
@@ -22,6 +23,7 @@ import 'package:myapp/dashboard_v2/model/insight.dart' as _i3;
 import 'package:myapp/dashboard_v2/model/simple_insight.dart' as _i4;
 import 'package:myapp/entry/category.dart' as _i21;
 import 'package:myapp/entry/entry.dart' as _i20;
+import 'package:myapp/entry/repository/entry_repository.dart' as _i38;
 import 'package:myapp/intent_detection/models/models.dart' as _i6;
 import 'package:myapp/intent_detection/services/intent_detection_service.dart'
     as _i34;
@@ -2016,6 +2018,310 @@ class MockSettingsCubit extends _i1.Mock implements _i10.SettingsCubit {
   @override
   void onError(Object? error, StackTrace? stackTrace) => super.noSuchMethod(
     Invocation.method(#onError, [error, stackTrace]),
+    returnValueForMissingStub: null,
+  );
+}
+
+/// A class which mocks [EntryRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockEntryRepository extends _i1.Mock implements _i38.EntryRepository {
+  MockEntryRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i14.Stream<List<_i20.Entry>> get entriesStream =>
+      (super.noSuchMethod(
+            Invocation.getter(#entriesStream),
+            returnValue: _i14.Stream<List<_i20.Entry>>.empty(),
+          )
+          as _i14.Stream<List<_i20.Entry>>);
+
+  @override
+  List<_i20.Entry> get currentEntries =>
+      (super.noSuchMethod(
+            Invocation.getter(#currentEntries),
+            returnValue: <_i20.Entry>[],
+          )
+          as List<_i20.Entry>);
+
+  @override
+  List<_i21.Category> get currentCategories =>
+      (super.noSuchMethod(
+            Invocation.getter(#currentCategories),
+            returnValue: <_i21.Category>[],
+          )
+          as List<_i21.Category>);
+
+  @override
+  List<_i21.Category> get activeCategories =>
+      (super.noSuchMethod(
+            Invocation.getter(#activeCategories),
+            returnValue: <_i21.Category>[],
+          )
+          as List<_i21.Category>);
+
+  @override
+  _i14.Future<void> initialize() =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, []),
+            returnValue: _i14.Future<void>.value(),
+            returnValueForMissingStub: _i14.Future<void>.value(),
+          )
+          as _i14.Future<void>);
+
+  @override
+  _i14.Future<({List<_i20.Entry> entries, int splitCount})> addEntry(
+    String? text,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addEntry, [text]),
+            returnValue:
+                _i14.Future<({List<_i20.Entry> entries, int splitCount})>.value(
+                  (entries: <_i20.Entry>[], splitCount: 0),
+                ),
+          )
+          as _i14.Future<({List<_i20.Entry> entries, int splitCount})>);
+
+  @override
+  void retryPendingEntries() => super.noSuchMethod(
+    Invocation.method(#retryPendingEntries, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i14.Future<List<_i20.Entry>> addEntryObject(_i20.Entry? entryToAdd) =>
+      (super.noSuchMethod(
+            Invocation.method(#addEntryObject, [entryToAdd]),
+            returnValue: _i14.Future<List<_i20.Entry>>.value(<_i20.Entry>[]),
+          )
+          as _i14.Future<List<_i20.Entry>>);
+
+  @override
+  _i14.Future<List<_i20.Entry>> addEntryObjects(
+    List<_i20.Entry>? entriesToAdd,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addEntryObjects, [entriesToAdd]),
+            returnValue: _i14.Future<List<_i20.Entry>>.value(<_i20.Entry>[]),
+          )
+          as _i14.Future<List<_i20.Entry>>);
+
+  @override
+  _i14.Future<List<_i21.Category>> addCategoryObjects(
+    List<_i21.Category>? categoriesToAdd,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addCategoryObjects, [categoriesToAdd]),
+            returnValue: _i14.Future<List<_i21.Category>>.value(
+              <_i21.Category>[],
+            ),
+          )
+          as _i14.Future<List<_i21.Category>>);
+
+  @override
+  _i14.Future<({_i20.Entry? addedEntry, List<_i20.Entry> entries})>
+  addImageEntry({required _i16.Uint8List? imageBytes, String? userNote}) =>
+      (super.noSuchMethod(
+            Invocation.method(#addImageEntry, [], {
+              #imageBytes: imageBytes,
+              #userNote: userNote,
+            }),
+            returnValue:
+                _i14.Future<
+                  ({_i20.Entry? addedEntry, List<_i20.Entry> entries})
+                >.value((addedEntry: null, entries: <_i20.Entry>[])),
+          )
+          as _i14.Future<({_i20.Entry? addedEntry, List<_i20.Entry> entries})>);
+
+  @override
+  _i14.Future<List<_i20.Entry>> deleteEntry(_i20.Entry? entryToDelete) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteEntry, [entryToDelete]),
+            returnValue: _i14.Future<List<_i20.Entry>>.value(<_i20.Entry>[]),
+          )
+          as _i14.Future<List<_i20.Entry>>);
+
+  @override
+  _i14.Future<List<_i20.Entry>> updateEntry(
+    _i20.Entry? originalEntry,
+    _i20.Entry? updatedEntry, {
+    bool? skipAiRegeneration = false,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #updateEntry,
+              [originalEntry, updatedEntry],
+              {#skipAiRegeneration: skipAiRegeneration},
+            ),
+            returnValue: _i14.Future<List<_i20.Entry>>.value(<_i20.Entry>[]),
+          )
+          as _i14.Future<List<_i20.Entry>>);
+
+  @override
+  _i14.Future<({List<_i20.Entry> entries, int splitCount})>
+  processCombinedEntry(String? combinedText, DateTime? tempEntryTimestamp) =>
+      (super.noSuchMethod(
+            Invocation.method(#processCombinedEntry, [
+              combinedText,
+              tempEntryTimestamp,
+            ]),
+            returnValue:
+                _i14.Future<({List<_i20.Entry> entries, int splitCount})>.value(
+                  (entries: <_i20.Entry>[], splitCount: 0),
+                ),
+          )
+          as _i14.Future<({List<_i20.Entry> entries, int splitCount})>);
+
+  @override
+  _i14.Future<List<_i21.Category>> addCustomCategory(String? newCategory) =>
+      (super.noSuchMethod(
+            Invocation.method(#addCustomCategory, [newCategory]),
+            returnValue: _i14.Future<List<_i21.Category>>.value(
+              <_i21.Category>[],
+            ),
+          )
+          as _i14.Future<List<_i21.Category>>);
+
+  @override
+  _i14.Future<List<_i21.Category>> addCustomCategoryWithDescription(
+    String? name,
+    String? description, {
+    bool? isChecklist = false,
+    _i39.Color? color,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #addCustomCategoryWithDescription,
+              [name, description],
+              {#isChecklist: isChecklist, #color: color},
+            ),
+            returnValue: _i14.Future<List<_i21.Category>>.value(
+              <_i21.Category>[],
+            ),
+          )
+          as _i14.Future<List<_i21.Category>>);
+
+  @override
+  _i14.Future<({List<_i21.Category> categories, List<_i20.Entry> entries})>
+  deleteCategory(String? categoryToDelete) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteCategory, [categoryToDelete]),
+            returnValue:
+                _i14.Future<
+                  ({List<_i21.Category> categories, List<_i20.Entry> entries})
+                >.value((
+                  categories: <_i21.Category>[],
+                  entries: <_i20.Entry>[],
+                )),
+          )
+          as _i14.Future<
+            ({List<_i21.Category> categories, List<_i20.Entry> entries})
+          >);
+
+  @override
+  _i14.Future<bool> markEntryAsNotNew(DateTime? timestamp, String? text) =>
+      (super.noSuchMethod(
+            Invocation.method(#markEntryAsNotNew, [timestamp, text]),
+            returnValue: _i14.Future<bool>.value(false),
+          )
+          as _i14.Future<bool>);
+
+  @override
+  _i14.Future<({List<_i21.Category> categories, List<_i20.Entry> entries})>
+  renameCategory(
+    String? oldName,
+    String? newName, {
+    String? description,
+    bool? isChecklist,
+    _i39.Color? color,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #renameCategory,
+              [oldName, newName],
+              {
+                #description: description,
+                #isChecklist: isChecklist,
+                #color: color,
+              },
+            ),
+            returnValue:
+                _i14.Future<
+                  ({List<_i21.Category> categories, List<_i20.Entry> entries})
+                >.value((
+                  categories: <_i21.Category>[],
+                  entries: <_i20.Entry>[],
+                )),
+          )
+          as _i14.Future<
+            ({List<_i21.Category> categories, List<_i20.Entry> entries})
+          >);
+
+  @override
+  _i14.Future<List<_i21.Category>> toggleCategoryArchive(
+    String? categoryName,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#toggleCategoryArchive, [categoryName]),
+            returnValue: _i14.Future<List<_i21.Category>>.value(
+              <_i21.Category>[],
+            ),
+          )
+          as _i14.Future<List<_i21.Category>>);
+
+  @override
+  String getAllEntriesAsLogContext() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllEntriesAsLogContext, []),
+            returnValue: _i24.dummyValue<String>(
+              this,
+              Invocation.method(#getAllEntriesAsLogContext, []),
+            ),
+          )
+          as String);
+
+  @override
+  _i14.Future<void> onUserSignedIn(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#onUserSignedIn, [uid]),
+            returnValue: _i14.Future<void>.value(),
+            returnValueForMissingStub: _i14.Future<void>.value(),
+          )
+          as _i14.Future<void>);
+
+  @override
+  _i14.Future<void> onUserSignedOut() =>
+      (super.noSuchMethod(
+            Invocation.method(#onUserSignedOut, []),
+            returnValue: _i14.Future<void>.value(),
+            returnValueForMissingStub: _i14.Future<void>.value(),
+          )
+          as _i14.Future<void>);
+
+  @override
+  _i14.Future<String?> downloadCloudImage(_i20.Entry? entry) =>
+      (super.noSuchMethod(
+            Invocation.method(#downloadCloudImage, [entry]),
+            returnValue: _i14.Future<String?>.value(),
+          )
+          as _i14.Future<String?>);
+
+  @override
+  String exportToJson() =>
+      (super.noSuchMethod(
+            Invocation.method(#exportToJson, []),
+            returnValue: _i24.dummyValue<String>(
+              this,
+              Invocation.method(#exportToJson, []),
+            ),
+          )
+          as String);
+
+  @override
+  void dispose() => super.noSuchMethod(
+    Invocation.method(#dispose, []),
     returnValueForMissingStub: null,
   );
 }

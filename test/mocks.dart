@@ -18,6 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:myapp/chat/cubit/chat_cubit.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/settings/cubit/settings_cubit.dart';
+import 'package:myapp/entry/repository/entry_repository.dart'; // CP: For settings page integration tests
 import 'package:firebase_storage/firebase_storage.dart'; // CP: For image sync tests
 
 // Generate mocks for the services needed
@@ -41,6 +42,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // CP: For image sync t
   ChatCubit, // CP: Add ChatCubit for mock generation
   AuthService,
   SettingsCubit,
+  EntryRepository, // CP: For settings page integration tests
   FirebaseStorage, // CP: For image sync tests
   Reference, // CP: For mocking storage.ref().child() chain
 ])
