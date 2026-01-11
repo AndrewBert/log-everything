@@ -78,13 +78,11 @@ class EntryRepository {
   Future<void> initialize() async {
     // CP: Prevent double initialization (can happen if multiple cubits call this)
     if (_isInitialized) {
-      AppLogger.info('[DEBUG-SIGNIN] EntryRepository.initialize() already complete, skipping');
       return;
     }
 
     // CP: If already initializing, wait for the existing initialization to complete
     if (_initCompleter != null) {
-      AppLogger.info('[DEBUG-SIGNIN] EntryRepository.initialize() already in progress, waiting...');
       await _initCompleter!.future;
       return;
     }
@@ -92,10 +90,8 @@ class EntryRepository {
     // CP: Mark as initializing
     _initCompleter = Completer<void>();
 
-    AppLogger.info('[DEBUG-SIGNIN] EntryRepository.initialize() STARTED');
     await _loadCategories();
     await _loadEntries();
-    AppLogger.info('[DEBUG-SIGNIN] EntryRepository.initialize() entries loaded: ${_entries.length}, categories: ${_categories.length}');
 
     // CC: Migrate category colors from CategoryColors utility to Category model
     await _migrateCategoryColorsIfNeeded();
@@ -142,7 +138,6 @@ class EntryRepository {
     // CP: Mark initialization complete and signal any waiting sign-in calls
     _isInitialized = true;
     _initCompleter?.complete();
-    AppLogger.info('[DEBUG-SIGNIN] EntryRepository.initialize() COMPLETE - _isInitialized=true');
   }
 
   Future<void> _loadCategories() async {
@@ -953,23 +948,18 @@ class EntryRepository {
     // CP: Wait for initialization to complete before proceeding with sign-in
     // This prevents the race condition where sign-in fires before entries are loaded
     if (!_isInitialized && _initCompleter != null) {
-      AppLogger.warn('[DEBUG-SIGNIN] onUserSignedIn() called BEFORE initialize complete! Waiting for init...');
       await _initCompleter!.future;
-      AppLogger.info('[DEBUG-SIGNIN] onUserSignedIn() init complete, proceeding with sign-in');
     }
 
-    AppLogger.info('[DEBUG-SIGNIN] onUserSignedIn() STARTED - LOCAL _entries.length=${_entries.length}, _categories.length=${_categories.length}');
     _currentUserId = uid;
 
     // CP: Fetch cloud data and merge with local
     final cloudEntries = await _firestoreSyncService.fetchEntries(uid);
     final cloudCategories = await _firestoreSyncService.fetchCategories(uid);
-    AppLogger.info('[DEBUG-SIGNIN] onUserSignedIn() CLOUD data fetched - cloudEntries=${cloudEntries.length}, cloudCategories=${cloudCategories.length}');
 
     // CP: Merge entries (cloud wins for same ID)
     final mergedEntries = _firestoreSyncService.mergeEntries(_entries, cloudEntries);
     final mergedCategories = _firestoreSyncService.mergeCategories(_categories, cloudCategories);
-    AppLogger.info('[DEBUG-SIGNIN] onUserSignedIn() MERGE complete - mergedEntries=${mergedEntries.length}, mergedCategories=${mergedCategories.length}');
 
     // CP: Update local state
     _entries = mergedEntries;
