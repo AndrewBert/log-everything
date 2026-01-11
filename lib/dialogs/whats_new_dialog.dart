@@ -9,6 +9,25 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> v150Changes = [
+      _buildChangeItem(
+        '☁️ Cloud Sync',
+        '''Your entries and categories now sync across devices! Sign in with Apple or Google to enable automatic cloud backup and sync.''',
+      ),
+      _buildChangeItem(
+        '🍎 Sign in with Apple',
+        '''New authentication option - sign in securely with your Apple ID. Your data syncs to the cloud and stays safe.''',
+      ),
+      _buildChangeItem(
+        '📅 Category Calendar',
+        '''View your entries on a calendar! See which days have entries, browse by date, and track your logging patterns over time.''',
+      ),
+      _buildChangeItem(
+        '🔄 Note ↔ Todo Toggle',
+        '''Changed your mind? Convert any note to a todo (or vice versa) with a single tap from the entry details page.''',
+      ),
+    ];
+
     final List<Widget> v141Changes = [
       _buildChangeItem(
         '💡 Smart Prompt Suggestions',
@@ -134,6 +153,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.5.0 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_outlined, color: Colors.deepPurple.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.5.0 - The Cloud Sync Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.deepPurple.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...v150Changes,
+              const SizedBox(height: 20),
               // Version 1.4.1 Header
               Container(
                 padding: const EdgeInsets.all(12),

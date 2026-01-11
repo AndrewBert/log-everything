@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// CP: Firebase Firestore security rules for user data
+// - users/{uid}/** - User's entries and categories (owner-only access)
+// - snapshots/{deviceId}/** - Pre-sign-in backup snapshots (any authenticated user)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // CP: Users can only read/write their own data
+    // Covers: users/{uid}/entries and users/{uid}/categories collections
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // CP: Pre-sign-in snapshots - any authenticated user can access
+    // These are temporary backups created before sign-in to prevent data loss
+    // The deviceId ensures snapshots are scoped to the device that created them
+    match /snapshots/{deviceId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

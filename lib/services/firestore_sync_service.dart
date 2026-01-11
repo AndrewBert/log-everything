@@ -156,9 +156,9 @@ class FirestoreSyncService {
 
   /// Sync a single entry to Firestore (upsert).
   Future<void> syncEntry(String uid, Entry entry) async {
-    // CP: Skip image entries for Phase 2
-    if (entry.imagePath != null) {
-      AppLogger.info('[FirestoreSyncService] Skipping image entry ${entry.id} (Phase 2)');
+    // CP: Skip image entries that haven't been uploaded to cloud storage yet
+    if (entry.imagePath != null && entry.cloudImagePath == null) {
+      AppLogger.info('[FirestoreSyncService] Skipping entry ${entry.id}: image not yet uploaded to cloud');
       return;
     }
 
@@ -210,9 +210,10 @@ class FirestoreSyncService {
 
   /// Bulk sync all entries to Firestore (for initial upload after sign-in).
   Future<void> syncAllEntries(String uid, List<Entry> entries) async {
-    // CP: Filter out image entries (Phase 2) and incomplete entries (still processing)
+    // CP: Filter out incomplete entries (still processing) and image entries not yet uploaded
     final syncableEntries = entries.where((e) =>
-      e.imagePath == null && e.processingState == null
+      e.processingState == null &&
+      (e.imagePath == null || e.cloudImagePath != null)
     ).toList();
 
     if (syncableEntries.isEmpty) {

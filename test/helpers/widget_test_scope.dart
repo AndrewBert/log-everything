@@ -17,9 +17,11 @@ import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/model/simple_insight.dart';
+import 'package:myapp/settings/services/auth_service.dart'; // CP: Import AuthService and AuthUser
 
 import '../mocks.mocks.dart';
 import 'test_data.dart';
+import 'auth_test_data.dart'; // CP: Import auth test data
 
 class WidgetTestScope {
   late MockEntryPersistenceService mockPersistenceService;
@@ -29,11 +31,15 @@ class WidgetTestScope {
   late MockPermissionService mockPermissionService;
   late MockVectorStoreService mockVectorStoreService;
   late MockImageStorageService mockImageStorageService;
+  late MockImageStorageSyncService mockImageStorageSyncService;
   late MockSharedPreferences mockSharedPreferences;
   late MockClient mockHttpClient;
   late MockChatCubit mockChatCubit;
   late MockFirestoreSyncService mockFirestoreSyncService;
   late MockIntentDetectionService mockIntentDetectionService;
+  late MockDeviceIdService mockDeviceIdService;
+  late MockSnapshotService mockSnapshotService;
+  late MockAuthService mockAuthService; // CP: Auth service mock for settings tests
 
   late Widget widgetUnderTest;
 
@@ -54,6 +60,12 @@ class WidgetTestScope {
     when(mockImageStorageService.saveImageBytes(any, any)).thenAnswer((_) async => 'images/test.jpg');
     when(mockImageStorageService.deleteImage(any)).thenAnswer((_) async {});
     when(mockImageStorageService.getFullPath(any)).thenAnswer((_) async => '/test/path/images/test.jpg');
+    // CP: Mock for cloud image sync
+    mockImageStorageSyncService = MockImageStorageSyncService();
+    when(mockImageStorageSyncService.uploadImage(any, any)).thenAnswer((_) async => null);
+    when(mockImageStorageSyncService.downloadImage(any, any)).thenAnswer((_) async => false);
+    when(mockImageStorageSyncService.deleteImage(any)).thenAnswer((_) async => false);
+    when(mockImageStorageSyncService.getDownloadUrl(any)).thenAnswer((_) async => null);
     mockSharedPreferences = MockSharedPreferences();
     mockHttpClient = MockClient();
     mockChatCubit = MockChatCubit();
@@ -75,6 +87,31 @@ class WidgetTestScope {
         timestamp: DateTime.now(),
       ),
     );
+    // CP: Device ID and Snapshot services for recovery flow
+    mockDeviceIdService = MockDeviceIdService();
+    when(mockDeviceIdService.getDeviceId()).thenAnswer((_) async => 'test-device-id');
+    when(mockDeviceIdService.hasDeviceId()).thenAnswer((_) async => true);
+    mockSnapshotService = MockSnapshotService();
+    when(mockSnapshotService.createSnapshot(
+      deviceId: anyNamed('deviceId'),
+      entries: anyNamed('entries'),
+      categories: anyNamed('categories'),
+      vectorStoreId: anyNamed('vectorStoreId'),
+      monthlyLogFileIds: anyNamed('monthlyLogFileIds'),
+    )).thenAnswer((_) async {});
+    when(mockSnapshotService.fetchSnapshot(any)).thenAnswer((_) async => null);
+    when(mockSnapshotService.hasValidSnapshot(any)).thenAnswer((_) async => false);
+    when(mockSnapshotService.deleteSnapshot(any)).thenAnswer((_) async {});
+    when(mockSnapshotService.scheduleSnapshotDeletion(any, any)).thenAnswer((_) async {});
+    // CP: Add VectorStoreService stubs for recovery-related methods
+    when(mockVectorStoreService.getVectorStoreId()).thenReturn(null);
+    when(mockVectorStoreService.getMonthlyLogFileIds()).thenReturn({});
+    when(mockVectorStoreService.restoreFromSnapshot(any, any)).thenAnswer((_) async {});
+
+    // CP: Auth service mock with default unauthenticated state
+    mockAuthService = MockAuthService();
+    when(mockAuthService.currentUser).thenReturn(null);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(null));
   }
 
   void initializeWidget() {
@@ -218,6 +255,52 @@ class WidgetTestScope {
 
   void stubChatCubitEmpty() {
     stubChatCubitWithMessages([]);
+  }
+
+  // CP: Auth-related stub helpers
+  void stubAuthenticatedUser({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.currentUser).thenReturn(authUser);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(authUser));
+  }
+
+  void stubUnauthenticatedUser() {
+    when(mockAuthService.currentUser).thenReturn(null);
+    when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(null));
+  }
+
+  void stubSignInWithGoogleSuccess({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.signInWithGoogle()).thenAnswer((_) async => authUser);
+  }
+
+  void stubSignInWithGoogleCancelled() {
+    when(mockAuthService.signInWithGoogle()).thenThrow(AuthCancelledException());
+  }
+
+  void stubSignInWithGoogleError({String message = 'Sign in failed'}) {
+    when(mockAuthService.signInWithGoogle()).thenThrow(AuthException(message));
+  }
+
+  void stubSignInWithAppleSuccess({AuthUser? user}) {
+    final authUser = user ?? AuthTestData.testUser;
+    when(mockAuthService.signInWithApple()).thenAnswer((_) async => authUser);
+  }
+
+  void stubSignInWithAppleCancelled() {
+    when(mockAuthService.signInWithApple()).thenThrow(AuthCancelledException());
+  }
+
+  void stubSignInWithAppleError({String message = 'Sign in failed'}) {
+    when(mockAuthService.signInWithApple()).thenThrow(AuthException(message));
+  }
+
+  void stubSignOutSuccess() {
+    when(mockAuthService.signOut()).thenAnswer((_) async {});
+  }
+
+  void stubSignOutError({String message = 'Sign out failed'}) {
+    when(mockAuthService.signOut()).thenThrow(AuthException(message));
   }
 
   Future<void> dispose() async {}

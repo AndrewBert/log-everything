@@ -16,6 +16,7 @@ import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
+import 'package:myapp/settings/settings.dart';
 import 'package:myapp/utils/logger.dart';
 
 // CP: Layout constants for bottom bar positioning
@@ -148,6 +149,13 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
               icon: const Icon(Icons.search),
               tooltip: 'Search entries',
               onPressed: _openSearch,
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Settings',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -405,7 +413,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                         Expanded(
                                           child: AspectRatio(
                                             aspectRatio: 1,
-                                            child: item.imagePath != null
+                                            child: item.hasImage
                                                 ? ImageEntryCard(
                                                     entry: item,
                                                     categoryColor: state.getCategoryColor(item.category),
@@ -428,7 +436,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                           child: nextEntry != null
                                               ? AspectRatio(
                                                   aspectRatio: 1,
-                                                  child: nextEntry.imagePath != null
+                                                  child: nextEntry.hasImage
                                                       ? ImageEntryCard(
                                                           entry: nextEntry,
                                                           categoryColor: state.getCategoryColor(nextEntry.category),

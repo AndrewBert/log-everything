@@ -9,6 +9,7 @@ import 'package:myapp/entry/entry.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/image_storage_service.dart';
+import 'package:myapp/services/image_storage_sync_service.dart';
 import 'package:myapp/utils/entry_details_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
 
@@ -192,14 +193,14 @@ class EntryDetailsPage extends StatelessWidget {
                 ),
               ),
 
-            // Image display for image entries
-            if (entry.imagePath != null)
+            // Image display for image entries (local or cloud)
+            if (entry.imagePath != null || entry.cloudImagePath != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: FutureBuilder<String>(
-                  future: GetIt.instance<ImageStorageService>().getFullPath(entry.imagePath!),
+                child: FutureBuilder<({String? localPath, String? downloadUrl})>(
+                  future: _getImageSource(entry),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return Container(
                         height: 200,
                         decoration: BoxDecoration(
@@ -209,23 +210,72 @@ class EntryDetailsPage extends StatelessWidget {
                         child: const Center(child: CircularProgressIndicator()),
                       );
                     }
+
+                    final data = snapshot.data;
+                    Widget imageWidget;
+
+                    if (data?.localPath != null) {
+                      imageWidget = Image.file(
+                        File(data!.localPath!),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        cacheWidth: 1026,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 200,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Center(child: Icon(Icons.broken_image, size: 48)),
+                        ),
+                      );
+                    } else if (data?.downloadUrl != null) {
+                      imageWidget = Image.network(
+                        data!.downloadUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        cacheWidth: 1026,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 200,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cloud_off, size: 48, color: theme.colorScheme.outline),
+                                const SizedBox(height: 8),
+                                Text('Image unavailable offline', style: theme.textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    } else {
+                      imageWidget = Container(
+                        height: 200,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: const Center(child: Icon(Icons.image_not_supported, size: 48)),
+                      );
+                    }
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            File(snapshot.data!),
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            // CP: Full-width detail view - match display size
-                            cacheWidth: 1026,
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 200,
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              child: const Center(child: Icon(Icons.broken_image, size: 48)),
-                            ),
-                          ),
+                          child: imageWidget,
                         ),
                         if (entry.imageTitle != null) ...[
                           const SizedBox(height: 12),
@@ -969,4 +1019,31 @@ class EntryDetailsPage extends StatelessWidget {
   // CP: Convert internal category name to display name (Misc -> None)
   String _getDisplayName(String categoryName) =>
       categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
+
+  /// CP: Get the image source for an entry - either local path or cloud download URL.
+  Future<({String? localPath, String? downloadUrl})> _getImageSource(Entry entry) async {
+    final imageService = GetIt.instance<ImageStorageService>();
+    final syncService = GetIt.instance<ImageStorageSyncService>();
+
+    // Try local path first
+    if (entry.imagePath != null) {
+      final fullPath = await imageService.getFullPath(entry.imagePath!);
+      if (fullPath != null) {
+        final file = File(fullPath);
+        if (await file.exists()) {
+          return (localPath: fullPath, downloadUrl: null);
+        }
+      }
+    }
+
+    // Fall back to cloud download URL
+    if (entry.cloudImagePath != null) {
+      final downloadUrl = await syncService.getDownloadUrl(entry.cloudImagePath!);
+      if (downloadUrl != null) {
+        return (localPath: null, downloadUrl: downloadUrl);
+      }
+    }
+
+    return (localPath: null, downloadUrl: null);
+  }
 }

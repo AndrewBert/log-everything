@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/entry.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/services/image_storage_service.dart';
+import 'package:myapp/services/image_storage_sync_service.dart';
 import 'package:myapp/utils/category_colors.dart';
 
-class ImageEntryCard extends StatelessWidget {
+// CP: Converted to StatefulWidget to cache the FutureBuilder future and prevent
+// redundant async operations on every rebuild.
+class ImageEntryCard extends StatefulWidget {
   final Entry entry;
   final VoidCallback? onTap;
   final bool isSelected;
@@ -21,14 +25,88 @@ class ImageEntryCard extends StatelessWidget {
   });
 
   @override
+  State<ImageEntryCard> createState() => _ImageEntryCardState();
+}
+
+class _ImageEntryCardState extends State<ImageEntryCard> {
+  // CP: Cache the future to prevent recreating on every build
+  late Future<({String? localPath, String? downloadUrl})> _imageSourceFuture;
+  bool _downloadTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageSourceFuture = _getImageSource();
+  }
+
+  @override
+  void didUpdateWidget(ImageEntryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // CP: Only refresh if the entry's image paths changed
+    if (oldWidget.entry.imagePath != widget.entry.imagePath ||
+        oldWidget.entry.cloudImagePath != widget.entry.cloudImagePath) {
+      _downloadTriggered = false;
+      _imageSourceFuture = _getImageSource();
+    }
+  }
+
+  /// CP: Get the image source - either local path or cloud download URL.
+  /// Returns a record with either localPath or downloadUrl set.
+  /// Also triggers background download for cloud-only images (Issue #46).
+  Future<({String? localPath, String? downloadUrl})> _getImageSource() async {
+    final imageService = GetIt.instance<ImageStorageService>();
+    final syncService = GetIt.instance<ImageStorageSyncService>();
+
+    // CP: Try local path first
+    if (widget.entry.imagePath != null) {
+      final fullPath = await imageService.getFullPath(widget.entry.imagePath!);
+      if (fullPath != null) {
+        final file = File(fullPath);
+        if (await file.exists()) {
+          return (localPath: fullPath, downloadUrl: null);
+        }
+      }
+    }
+
+    // CP: Fall back to cloud download URL
+    if (widget.entry.cloudImagePath != null) {
+      // CP: Trigger background download to cache locally (Issue #46)
+      if (!_downloadTriggered) {
+        _triggerBackgroundDownload();
+      }
+
+      final downloadUrl = await syncService.getDownloadUrl(widget.entry.cloudImagePath!);
+      if (downloadUrl != null) {
+        return (localPath: null, downloadUrl: downloadUrl);
+      }
+    }
+
+    return (localPath: null, downloadUrl: null);
+  }
+
+  /// CP: Triggers a background download of the cloud image.
+  /// When complete, refreshes the image source to show the local file.
+  void _triggerBackgroundDownload() {
+    _downloadTriggered = true;
+    final repository = GetIt.instance<EntryRepository>();
+    repository.ensureImageAvailable(widget.entry).then((localPath) {
+      if (localPath != null && mounted) {
+        setState(() {
+          _imageSourceFuture = _getImageSource();
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = categoryColor ?? CategoryColors.getColorForCategory(entry.category);
+    final color = widget.categoryColor ?? CategoryColors.getColorForCategory(widget.entry.category);
 
     return GestureDetector(
-      onTap: onTap,
-      child: FutureBuilder<String>(
-        future: GetIt.instance<ImageStorageService>().getFullPath(entry.imagePath!),
+      onTap: widget.onTap,
+      child: FutureBuilder<({String? localPath, String? downloadUrl})>(
+        future: _imageSourceFuture, // CP: Use cached future
         builder: (context, snapshot) {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -36,10 +114,10 @@ class ImageEntryCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected
+                color: widget.isSelected
                     ? color.withValues(alpha: 0.6)
                     : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
-                width: isSelected ? 2 : 1.5,
+                width: widget.isSelected ? 2 : 1.5,
               ),
             ),
             child: ClipRRect(
@@ -57,22 +135,7 @@ class ImageEntryCard extends StatelessWidget {
                       fit: StackFit.expand,
                       children: [
                         // Background image
-                        if (snapshot.hasData)
-                          Image.file(
-                            File(snapshot.data!),
-                            fit: BoxFit.cover,
-                            // CP: Match display size (~486px)
-                            cacheWidth: 500,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.broken_image),
-                            ),
-                          )
-                        else
-                          Container(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Center(child: CircularProgressIndicator()),
-                          ),
+                        _buildImage(context, snapshot, theme),
 
                       // Gradient overlay - fades to black at bottom
                       Container(
@@ -100,7 +163,7 @@ class ImageEntryCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              entry.imageTitle ?? 'Image',
+                              widget.entry.imageTitle ?? 'Image',
                               style: theme.textTheme.titleSmall?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -120,7 +183,7 @@ class ImageEntryCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                _getDisplayName(entry.category).toUpperCase(),
+                                _getDisplayName(widget.entry.category).toUpperCase(),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 9,
                                   letterSpacing: 0.8,
@@ -147,4 +210,79 @@ class ImageEntryCard extends StatelessWidget {
   // CP: Convert internal category name to display name (Misc -> None)
   String _getDisplayName(String categoryName) =>
       categoryName == Category.miscName ? Category.miscDisplayName : categoryName;
+
+  /// CP: Build the image widget based on available source (local or cloud).
+  Widget _buildImage(
+    BuildContext context,
+    AsyncSnapshot<({String? localPath, String? downloadUrl})> snapshot,
+    ThemeData theme,
+  ) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Container(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final data = snapshot.data;
+    if (data == null) {
+      return Container(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Icon(Icons.broken_image),
+      );
+    }
+
+    // CP: Local file takes priority
+    if (data.localPath != null) {
+      return Image.file(
+        File(data.localPath!),
+        fit: BoxFit.cover,
+        cacheWidth: 500,
+        errorBuilder: (_, __, ___) => Container(
+          color: theme.colorScheme.surfaceContainerHighest,
+          child: const Icon(Icons.broken_image),
+        ),
+      );
+    }
+
+    // CP: Fall back to network image from cloud
+    if (data.downloadUrl != null) {
+      return Image.network(
+        data.downloadUrl!,
+        fit: BoxFit.cover,
+        cacheWidth: 500,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => Container(
+          color: theme.colorScheme.surfaceContainerHighest,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.cloud_off, color: theme.colorScheme.outline),
+              const SizedBox(height: 4),
+              Text('Offline', style: theme.textTheme.labelSmall),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // CP: No image available
+    return Container(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: const Icon(Icons.image_not_supported),
+    );
+  }
 }

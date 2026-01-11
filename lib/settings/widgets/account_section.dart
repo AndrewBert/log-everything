@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myapp/entry/repository/entry_repository.dart';
+import 'package:myapp/locator.dart';
 import 'package:myapp/settings/cubit/settings_cubit.dart';
 import 'package:myapp/utils/logger.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AccountSection extends StatelessWidget {
   const AccountSection({super.key});
@@ -70,6 +75,22 @@ class AccountSection extends StatelessWidget {
               : null,
           onTap: () => _showSignOutConfirmation(context),
         ),
+        // CP: Manual recovery option
+        ListTile(
+          leading: const Icon(Icons.restore),
+          title: const Text('Recover lost data'),
+          subtitle: const Text('Check for backup from previous sign-in'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.read<SettingsCubit>().checkForManualRecovery(),
+        ),
+        // CP: Export data option
+        ListTile(
+          leading: const Icon(Icons.download),
+          title: const Text('Export data'),
+          subtitle: const Text('Save a backup of all entries'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _exportData(context),
+        ),
       ],
     );
   }
@@ -101,20 +122,59 @@ class AccountSection extends StatelessWidget {
   }
 
   Widget _buildSignedOutView(BuildContext context, SettingsState state) {
-    return ListTile(
-      leading: const Icon(Icons.login),
-      title: const Text('Sign in'),
-      subtitle: const Text('Sync your data across devices'),
-      enabled: !state.isSigningIn,
-      trailing: state.isSigningIn
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.chevron_right),
-      onTap: () => _showSignInOptions(context),
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.login),
+          title: const Text('Sign in'),
+          subtitle: const Text('Sync your data across devices'),
+          enabled: !state.isSigningIn,
+          trailing: state.isSigningIn
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.chevron_right),
+          onTap: () => _showSignInOptions(context),
+        ),
+        ListTile(
+          leading: const Icon(Icons.download),
+          title: const Text('Export data'),
+          subtitle: const Text('Save a backup of all entries'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _exportData(context),
+        ),
+      ],
     );
+  }
+
+  Future<void> _exportData(BuildContext context) async {
+    try {
+      final repository = getIt<EntryRepository>();
+      final jsonData = repository.exportToJson();
+
+      // CP: Write to temp file
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final file = File('${tempDir.path}/log_splitter_backup_$timestamp.json');
+      await file.writeAsString(jsonData);
+
+      // CP: Share the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Log Splitter Backup',
+      );
+
+      AppLogger.info('[AccountSection] Exported data to ${file.path}');
+    } catch (e) {
+      AppLogger.error('[AccountSection] Export failed', error: e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   void _showSignInOptions(BuildContext context) {

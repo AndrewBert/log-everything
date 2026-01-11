@@ -20,6 +20,7 @@ class Entry extends Equatable {
   final SimpleInsight? simpleInsight; // NEW - preferred format
   final bool isGeneratingInsight; // CC: Track if insight is being generated (initial or regeneration)
   final String? imagePath; // Relative path to image in app storage
+  final String? cloudImagePath; // Firebase Storage path (users/{uid}/images/{uuid}.jpg)
   final String? imageTitle; // Brief 2-4 word AI title for cards
   final String? imageDescription; // 1-2 sentence AI description
   final ProcessingState? processingState; // Tracks entry processing lifecycle (null = fully processed)
@@ -38,6 +39,7 @@ class Entry extends Equatable {
     this.simpleInsight,
     this.isGeneratingInsight = false, // CC: Default to false
     this.imagePath,
+    this.cloudImagePath,
     this.imageTitle,
     this.imageDescription,
     this.processingState,
@@ -73,6 +75,7 @@ class Entry extends Equatable {
       simpleInsight: newInsight,
       isGeneratingInsight: json['isGeneratingInsight'] as bool? ?? false, // CC: Default to false if missing
       imagePath: json['imagePath'] as String?,
+      cloudImagePath: json['cloudImagePath'] as String?,
       imageTitle: json['imageTitle'] as String?,
       imageDescription: json['imageDescription'] as String?,
       processingState: json['processingState'] != null
@@ -100,6 +103,7 @@ class Entry extends Equatable {
       'simpleInsight': simpleInsight?.toJson(), // Add new format
       'isGeneratingInsight': isGeneratingInsight, // CC: Add isGeneratingInsight to JSON
       'imagePath': imagePath,
+      'cloudImagePath': cloudImagePath,
       'imageTitle': imageTitle,
       'imageDescription': imageDescription,
       'processingState': processingState?.name,
@@ -131,6 +135,8 @@ class Entry extends Equatable {
     bool? isGeneratingInsight,
     String? imagePath,
     bool clearImagePath = false,
+    String? cloudImagePath,
+    bool clearCloudImagePath = false,
     String? imageTitle,
     bool clearImageTitle = false,
     String? imageDescription,
@@ -152,6 +158,7 @@ class Entry extends Equatable {
       simpleInsight: clearSimpleInsight ? null : (simpleInsight ?? this.simpleInsight),
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
       imagePath: clearImagePath ? null : (imagePath ?? this.imagePath),
+      cloudImagePath: clearCloudImagePath ? null : (cloudImagePath ?? this.cloudImagePath),
       imageTitle: clearImageTitle ? null : (imageTitle ?? this.imageTitle),
       imageDescription: clearImageDescription ? null : (imageDescription ?? this.imageDescription),
       processingState: clearProcessingState ? null : (processingState ?? this.processingState),
@@ -221,6 +228,9 @@ class Entry extends Equatable {
   bool get hasFailedPermanently =>
       processingState == ProcessingState.failed && processingRetryCount >= maxProcessingRetries;
 
+  /// Returns true if this entry has an associated image (local or cloud).
+  bool get hasImage => imagePath != null || cloudImagePath != null;
+
   @override
-  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, imageTitle, imageDescription, processingState, processingRetryCount]; // Add props for Equatable
+  List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, cloudImagePath, imageTitle, imageDescription, processingState, processingRetryCount]; // Add props for Equatable
 }

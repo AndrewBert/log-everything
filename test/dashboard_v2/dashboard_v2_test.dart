@@ -28,6 +28,7 @@ void main() {
       permissionService: scope.mockPermissionService,
       vectorStoreService: scope.mockVectorStoreService,
       imageStorageService: scope.mockImageStorageService,
+      imageStorageSyncService: scope.mockImageStorageSyncService,
       sharedPreferences: scope.mockSharedPreferences,
       httpClient: scope.mockHttpClient,
       firestoreSyncService: scope.mockFirestoreSyncService,

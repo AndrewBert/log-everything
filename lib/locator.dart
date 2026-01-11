@@ -19,6 +19,9 @@ import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/utils/app_lifecycle_observer.dart';
 import 'package:myapp/services/firestore_sync_service.dart';
+import 'package:myapp/services/device_id_service.dart';
+import 'package:myapp/services/snapshot_service.dart';
+import 'package:myapp/services/image_storage_sync_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -75,6 +78,17 @@ Future<void> configureDependencies() async {
   // CP: Register FirestoreSyncService for cloud sync
   getIt.registerLazySingleton<FirestoreSyncService>(() => FirestoreSyncService());
 
+  // CP: Register DeviceIdService for stable device identification (stored in Keychain)
+  getIt.registerLazySingleton<DeviceIdService>(() => SecureStorageDeviceIdService());
+
+  // CP: Register SnapshotService for pre-sign-in data backup
+  getIt.registerLazySingleton<SnapshotService>(() => FirestoreSnapshotService());
+
+  // CP: Register ImageStorageSyncService for cloud image sync
+  getIt.registerLazySingleton<ImageStorageSyncService>(
+    () => FirebaseImageStorageSyncService(authService: getIt<AuthService>()),
+  );
+
   getIt.registerLazySingleton(
     () => EntryRepository(
       persistenceService: getIt<EntryPersistenceService>(),
@@ -82,6 +96,7 @@ Future<void> configureDependencies() async {
       vectorStoreService: getIt<VectorStoreService>(), // CP: Injected VectorStoreService
       timerFactory: getIt<TimerFactory>(), // CP: Injected TimerFactory
       imageStorageService: getIt<ImageStorageService>(),
+      imageStorageSyncService: getIt<ImageStorageSyncService>(), // CP: Injected for cloud image sync
       firestoreSyncService: getIt<FirestoreSyncService>(), // CP: Injected for cloud sync
     ),
   );
