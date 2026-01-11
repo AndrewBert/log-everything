@@ -10,12 +10,19 @@ class OnboardingState extends Equatable {
   final List<String> suggestedCategories;
   final String? errorMessage;
   final bool canProceed;
+  // CP: Auth-related fields for sign-in during onboarding
+  final bool isSigningIn;
+  final AuthUser? signedInUser;
+  final String? authErrorMessage;
 
   const OnboardingState({
     this.currentStep = OnboardingStep.welcome,
     this.currentStepIndex = 0,
     this.isLoading = false,
     this.selectedCategories = const [],
+    this.isSigningIn = false,
+    this.signedInUser,
+    this.authErrorMessage,
     this.suggestedCategories = const [
       // CP: Work & Productivity
       'Work',
@@ -80,6 +87,11 @@ class OnboardingState extends Equatable {
     String? errorMessage,
     bool? canProceed,
     bool clearErrorMessage = false,
+    bool? isSigningIn,
+    AuthUser? signedInUser,
+    String? authErrorMessage,
+    bool clearAuthError = false,
+    bool clearSignedInUser = false,
   }) {
     return OnboardingState(
       currentStep: currentStep ?? this.currentStep,
@@ -89,6 +101,9 @@ class OnboardingState extends Equatable {
       suggestedCategories: suggestedCategories ?? this.suggestedCategories,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       canProceed: canProceed ?? this.canProceed,
+      isSigningIn: isSigningIn ?? this.isSigningIn,
+      signedInUser: clearSignedInUser ? null : (signedInUser ?? this.signedInUser),
+      authErrorMessage: clearAuthError ? null : (authErrorMessage ?? this.authErrorMessage),
     );
   }
 
@@ -109,5 +124,8 @@ class OnboardingState extends Equatable {
     suggestedCategories,
     errorMessage,
     canProceed,
+    isSigningIn,
+    signedInUser,
+    authErrorMessage,
   ];
 }

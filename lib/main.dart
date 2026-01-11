@@ -17,6 +17,8 @@ import 'entry/cubit/entry_cubit.dart';
 import 'entry/repository/entry_repository.dart';
 import 'onboarding/onboarding.dart';
 import 'locator.dart';
+import 'services/firestore_sync_service.dart';
+import 'settings/services/auth_service.dart';
 import 'snackbar/cubit/snackbar_cubit.dart';
 import 'utils/app_lifecycle_observer.dart';
 
@@ -69,6 +71,9 @@ class MyApp extends StatelessWidget {
           create: (context) => OnboardingCubit(
             sharedPreferences: getIt<SharedPreferences>(),
             entryCubit: context.read<EntryCubit>(),
+            authService: getIt<AuthService>(),
+            firestoreSyncService: getIt<FirestoreSyncService>(),
+            entryRepository: getIt<EntryRepository>(),
           ),
         ),
         BlocProvider<SnackbarCubit>(create: (context) => getIt<SnackbarCubit>()),
