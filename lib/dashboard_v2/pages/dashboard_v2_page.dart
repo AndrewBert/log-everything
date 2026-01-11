@@ -413,7 +413,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                         Expanded(
                                           child: AspectRatio(
                                             aspectRatio: 1,
-                                            child: item.imagePath != null
+                                            child: item.hasImage
                                                 ? ImageEntryCard(
                                                     entry: item,
                                                     categoryColor: state.getCategoryColor(item.category),
@@ -436,7 +436,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                           child: nextEntry != null
                                               ? AspectRatio(
                                                   aspectRatio: 1,
-                                                  child: nextEntry.imagePath != null
+                                                  child: nextEntry.hasImage
                                                       ? ImageEntryCard(
                                                           entry: nextEntry,
                                                           categoryColor: state.getCategoryColor(nextEntry.category),

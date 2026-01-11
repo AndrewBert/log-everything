@@ -278,7 +278,7 @@ class _ListViewCarouselState extends State<_ListViewCarousel> {
               duration: const Duration(milliseconds: 200),
               child: AspectRatio(
                 aspectRatio: 1.0,
-                child: entry.imagePath != null
+                child: entry.hasImage
                     ? ImageEntryCard(
                         entry: entry,
                         isSelected: isSelected,

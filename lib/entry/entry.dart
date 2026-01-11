@@ -228,6 +228,9 @@ class Entry extends Equatable {
   bool get hasFailedPermanently =>
       processingState == ProcessingState.failed && processingRetryCount >= maxProcessingRetries;
 
+  /// Returns true if this entry has an associated image (local or cloud).
+  bool get hasImage => imagePath != null || cloudImagePath != null;
+
   @override
   List<Object?> get props => [id, text, timestamp, category, isNew, isCompleted, isTask, completedAt, insight, simpleInsight, isGeneratingInsight, imagePath, cloudImagePath, imageTitle, imageDescription, processingState, processingRetryCount]; // Add props for Equatable
 }
