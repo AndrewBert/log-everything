@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http; // CP: Import http
 import 'package:myapp/snackbar/cubit/snackbar_cubit.dart';
 import 'package:myapp/snackbar/services/snackbar_service.dart';
 import 'package:myapp/intent_detection/services/intent_detection_service.dart';
+import 'package:myapp/settings/services/auth_service.dart'; // CP: Import AuthService
 
 import 'mocks.mocks.dart'; // Import generated mocks
 
@@ -37,6 +38,7 @@ Future<void> setupTestDependencies({
   required http.Client httpClient, // CP: Add http.Client mock
   required MockFirestoreSyncService firestoreSyncService, // CP: Add FirestoreSyncService mock
   required MockIntentDetectionService intentDetectionService,
+  MockAuthService? authService, // CP: Optional AuthService mock for auth tests
 }) async {
   // Reset GetIt before registering mocks for a clean slate
   await getIt.reset();
@@ -55,6 +57,11 @@ Future<void> setupTestDependencies({
   getIt.registerSingleton<http.Client>(httpClient); // CP: Register http.Client mock
   getIt.registerSingleton<FirestoreSyncService>(firestoreSyncService); // CP: Register FirestoreSyncService mock
   getIt.registerSingleton<IntentDetectionService>(intentDetectionService);
+
+  // CP: Register AuthService mock if provided
+  if (authService != null) {
+    getIt.registerSingleton<AuthService>(authService);
+  }
 
   // --- Register TimerFactory for testing ---
   getIt.registerSingleton<TimerFactory>(TestTimerFactory()); // CP: Register test TimerFactory
