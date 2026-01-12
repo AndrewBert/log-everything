@@ -99,49 +99,55 @@ class _TodoCardState extends State<TodoCard> with SingleTickerProviderStateMixin
                   color: categoryColor.withValues(alpha: 0.6),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(0, 0, 12, 0),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // CP: Circular checkbox
+                      // CP: Circular checkbox with expanded tap target (48x48 per Material guidelines)
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: widget.onCheckboxTap,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: widget.todo.isCompleted ? theme.colorScheme.primary : Colors.transparent,
-                            border: Border.all(
-                              color: widget.todo.isCompleted
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.outline.withValues(alpha: 0.5),
-                              width: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: widget.todo.isCompleted ? theme.colorScheme.primary : Colors.transparent,
+                              border: Border.all(
+                                color: widget.todo.isCompleted
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.outline.withValues(alpha: 0.5),
+                                width: 2,
+                              ),
                             ),
+                            child: widget.todo.isCompleted
+                                ? Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: theme.colorScheme.onPrimary,
+                                  )
+                                : null,
                           ),
-                          child: widget.todo.isCompleted
-                              ? Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: theme.colorScheme.onPrimary,
-                                )
-                              : null,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // CP: Todo text
+                      // CP: Todo text with top padding to align with checkbox
                       Expanded(
-                        child: Text(
-                          widget.todo.text,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 15,
-                            height: 1.4,
-                            fontWeight: FontWeight.w400,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 12),
+                          child: Text(
+                            widget.todo.text,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontSize: 15,
+                              height: 1.4,
+                              fontWeight: FontWeight.w400,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
