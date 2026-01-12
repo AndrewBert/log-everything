@@ -516,6 +516,182 @@ void main() {
       },
     );
   });
+
+  group('URL caching', () {
+    test(
+      'Given first call succeeds, When getDownloadUrl called twice with same path, Then Firebase only called once',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        when(mockRef.getDownloadURL()).thenAnswer(
+          (_) async => 'https://firebasestorage.googleapis.com/cached-url',
+        );
+
+        // When
+        final result1 = await service.getDownloadUrl('users/uid123/images/test.jpg');
+        final result2 = await service.getDownloadUrl('users/uid123/images/test.jpg');
+
+        // Then
+        expect(result1, equals('https://firebasestorage.googleapis.com/cached-url'));
+        expect(result2, equals('https://firebasestorage.googleapis.com/cached-url'));
+        verify(mockRef.getDownloadURL()).called(1); // Only called once due to cache
+      },
+    );
+
+    test(
+      'Given different paths, When getDownloadUrl called, Then Firebase called for each path',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        when(mockRef.getDownloadURL()).thenAnswer(
+          (_) async => 'https://firebasestorage.googleapis.com/url',
+        );
+
+        // When
+        await service.getDownloadUrl('users/uid123/images/image1.jpg');
+        await service.getDownloadUrl('users/uid123/images/image2.jpg');
+
+        // Then
+        verify(mockRef.getDownloadURL()).called(2); // Each path fetched separately
+      },
+    );
+
+    test(
+      'Given cached URL, When clearUrlCache called and getDownloadUrl called again, Then Firebase called again',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        var callCount = 0;
+        when(mockRef.getDownloadURL()).thenAnswer((_) async {
+          callCount++;
+          return 'https://firebasestorage.googleapis.com/url';
+        });
+
+        // First call caches the URL
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+        expect(callCount, 1);
+
+        // When
+        service.clearUrlCache();
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+
+        // Then - Firebase called again after cache cleared (total of 2 calls)
+        expect(callCount, 2);
+      },
+    );
+
+    test(
+      'Given Firebase error, When getDownloadUrl called, Then error not cached and retry fetches from Firebase',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        var callCount = 0;
+        when(mockRef.getDownloadURL()).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) {
+            throw FirebaseException(
+              plugin: 'firebase_storage',
+              code: 'object-not-found',
+              message: 'Not found',
+            );
+          }
+          return 'https://firebasestorage.googleapis.com/url';
+        });
+
+        // When - First call fails
+        final result1 = await service.getDownloadUrl('users/uid123/images/test.jpg');
+        // Second call succeeds
+        final result2 = await service.getDownloadUrl('users/uid123/images/test.jpg');
+
+        // Then - Error not cached, second call fetches from Firebase
+        expect(result1, isNull);
+        expect(result2, equals('https://firebasestorage.googleapis.com/url'));
+        verify(mockRef.getDownloadURL()).called(2);
+      },
+    );
+
+    test(
+      'Given multiple cached URLs, When clearUrlCache called, Then all URLs cleared',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        var callCount = 0;
+        when(mockRef.getDownloadURL()).thenAnswer((_) async {
+          callCount++;
+          return 'https://firebasestorage.googleapis.com/url';
+        });
+
+        await service.getDownloadUrl('users/uid123/images/image1.jpg');
+        await service.getDownloadUrl('users/uid123/images/image2.jpg');
+        expect(callCount, 2);
+
+        // When
+        service.clearUrlCache();
+
+        // Then - Both URLs need to be refetched
+        await service.getDownloadUrl('users/uid123/images/image1.jpg');
+        await service.getDownloadUrl('users/uid123/images/image2.jpg');
+        expect(callCount, 4); // 2 original + 2 after clear
+      },
+    );
+
+    test(
+      'Given cached URL, When deleteImage succeeds, Then cache entry removed and next fetch calls Firebase',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        var getUrlCallCount = 0;
+        when(mockRef.getDownloadURL()).thenAnswer((_) async {
+          getUrlCallCount++;
+          return 'https://firebasestorage.googleapis.com/url';
+        });
+        when(mockRef.delete()).thenAnswer((_) async {});
+
+        // Cache the URL first
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+        expect(getUrlCallCount, 1);
+
+        // When
+        await service.deleteImage('users/uid123/images/test.jpg');
+
+        // Then - URL should be refetched after deletion invalidated the cache
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+        expect(getUrlCallCount, 2);
+      },
+    );
+
+    test(
+      'Given cached URL, When deleteImage returns object-not-found, Then cache entry still removed',
+      () async {
+        // Given
+        stubSignedInUser('uid123');
+        var getUrlCallCount = 0;
+        when(mockRef.getDownloadURL()).thenAnswer((_) async {
+          getUrlCallCount++;
+          return 'https://firebasestorage.googleapis.com/url';
+        });
+        when(mockRef.delete()).thenThrow(
+          FirebaseException(
+            plugin: 'firebase_storage',
+            code: 'object-not-found',
+            message: 'Object not found',
+          ),
+        );
+
+        // Cache the URL first
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+        expect(getUrlCallCount, 1);
+
+        // When - Delete returns "already deleted" (object-not-found)
+        final deleteResult = await service.deleteImage('users/uid123/images/test.jpg');
+        expect(deleteResult, isTrue); // Still returns true for idempotency
+
+        // Then - Cache should be invalidated, next fetch calls Firebase
+        await service.getDownloadUrl('users/uid123/images/test.jpg');
+        expect(getUrlCallCount, 2);
+      },
+    );
+  });
 }
 
 // CP: Mock classes for Firebase Storage tasks
