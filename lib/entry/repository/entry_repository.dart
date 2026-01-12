@@ -999,6 +999,7 @@ class EntryRepository {
     // Clear all local data to prevent mixing with another account
     await _persistenceService.clearAllData();
     await _vectorStoreService.clearLocalCache();
+    _imageStorageSyncService.clearUrlCache();
 
     // Clear entries but restore default categories so app can still categorize
     _entries = [];

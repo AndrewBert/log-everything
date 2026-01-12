@@ -21,6 +21,9 @@ abstract class ImageStorageSyncService {
   /// Gets the download URL for a cloud image.
   /// Returns null if not available.
   Future<String?> getDownloadUrl(String cloudPath);
+
+  /// Clears the in-memory URL cache. Call on sign-out to prevent URL leaks.
+  void clearUrlCache();
 }
 
 /// CP: Firebase Storage implementation of ImageStorageSyncService.
@@ -31,6 +34,9 @@ class FirebaseImageStorageSyncService implements ImageStorageSyncService {
   // CP: Retry configuration
   static const _maxRetries = 3;
   static const _initialBackoffMs = 500;
+
+  // CP: In-memory cache for download URLs (Firebase URLs are permanent, no expiry needed)
+  final Map<String, String> _urlCache = {};
 
   FirebaseImageStorageSyncService({
     required AuthService authService,
@@ -191,11 +197,13 @@ class FirebaseImageStorageSyncService implements ImageStorageSyncService {
     try {
       AppLogger.info('[ImageStorageSyncService] Deleting image at $cloudPath');
       await ref.delete();
+      _urlCache.remove(cloudPath); // CP: Invalidate cached URL for deleted image
       AppLogger.info('[ImageStorageSyncService] Successfully deleted image at $cloudPath');
       return true;
     } on FirebaseException catch (e) {
       // CP: Object not found is not an error - it's already deleted
       if (e.code == 'object-not-found') {
+        _urlCache.remove(cloudPath); // CP: Invalidate cache even if already deleted
         AppLogger.info('[ImageStorageSyncService] Image already deleted at $cloudPath');
         return true;
       }
@@ -219,9 +227,18 @@ class FirebaseImageStorageSyncService implements ImageStorageSyncService {
       return null;
     }
 
+    // CP: Return cached URL if available (Firebase URLs are permanent)
+    final cachedUrl = _urlCache[cloudPath];
+    if (cachedUrl != null) {
+      return cachedUrl;
+    }
+
     try {
       final ref = _storage.ref().child(cloudPath);
-      return await ref.getDownloadURL();
+      final url = await ref.getDownloadURL();
+      // CP: Cache the URL for future requests
+      _urlCache[cloudPath] = url;
+      return url;
     } on FirebaseException catch (e) {
       AppLogger.error('[ImageStorageSyncService] Firebase error getting download URL: ${e.code} - ${e.message}');
       return null;
@@ -229,5 +246,11 @@ class FirebaseImageStorageSyncService implements ImageStorageSyncService {
       AppLogger.error('[ImageStorageSyncService] Error getting download URL: $e');
       return null;
     }
+  }
+
+  @override
+  void clearUrlCache() {
+    _urlCache.clear();
+    AppLogger.info('[ImageStorageSyncService] URL cache cleared');
   }
 }
