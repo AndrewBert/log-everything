@@ -140,8 +140,7 @@ class VectorStoreService {
         if (e is VectorStoreApiException) rethrow;
         throw VectorStoreApiException('Error creating vector store: $e', underlyingError: e);
       }
-    } else {
-    }
+    } else {}
     return vectorStoreId;
   }
 
@@ -161,7 +160,7 @@ class VectorStoreService {
           );
           if (attempt == 2) {
             // CP: On final attempt, clear corrupted data and return empty map
-              await _prefs.remove(_monthlyLogFileIdsKey);
+            await _prefs.remove(_monthlyLogFileIdsKey);
             return {};
           }
           // CP: Wait a bit before retrying
@@ -188,7 +187,6 @@ class VectorStoreService {
       if (savedJson != jsonString) {
         throw VectorStoreSyncException('SharedPreferences save verification failed - data corruption detected');
       }
-
     } catch (e) {
       AppLogger.error(
         '[VectorStoreService] Error saving monthly_log_file_ids to SharedPreferences: $e', // CP: Updated log
@@ -460,7 +458,6 @@ class VectorStoreService {
     final fileName = "logs_$monthKey.txt";
 
     return _withMonthSyncLock(monthKey, () async {
-
       Map<String, String> monthlyLogFileIds = await _getMonthlyLogFileIds();
       final String? existingFileId = monthlyLogFileIds[monthKey];
 
@@ -504,10 +501,9 @@ class VectorStoreService {
       try {
         // Get entries for metadata
         final List<Entry> allEntries = await _entryPersistenceService.loadEntries();
-        final List<Entry> monthEntries =
-            allEntries.where((e) {
-              return e.timestamp.year == date.year && e.timestamp.month == date.month;
-            }).toList();
+        final List<Entry> monthEntries = allEntries.where((e) {
+          return e.timestamp.year == date.year && e.timestamp.month == date.month;
+        }).toList();
         await _addFileToVectorStore(vectorStoreId, newFileId, entries: monthEntries, monthDate: date);
       } catch (e, stackTrace) {
         AppLogger.error(
@@ -539,7 +535,6 @@ class VectorStoreService {
 
   // CP: New method to perform initial backfill of historical logs.
   Future<void> performInitialBackfillIfNeeded() async {
-
     final bool fullRunPreviouslyAttempted = _prefs.getBool(_fullBackfillRunAttemptedKey) ?? false;
 
     if (fullRunPreviouslyAttempted) {
@@ -599,30 +594,27 @@ class VectorStoreService {
         }
       }
 
-      final List<DateTime> monthsToProcess =
-          sortedMonths.where((monthDate) {
-            if (lastSuccessfulBackfillMonth == null) {
-              return true; // CP: Process all if no last successful date
-            }
-            // CP: Process if current month is after the last successfully backfilled month
-            return monthDate.isAfter(lastSuccessfulBackfillMonth);
-          }).toList();
+      final List<DateTime> monthsToProcess = sortedMonths.where((monthDate) {
+        if (lastSuccessfulBackfillMonth == null) {
+          return true; // CP: Process all if no last successful date
+        }
+        // CP: Process if current month is after the last successfully backfilled month
+        return monthDate.isAfter(lastSuccessfulBackfillMonth);
+      }).toList();
 
       if (monthsToProcess.isEmpty) {
         await _prefs.setBool(_fullBackfillRunAttemptedKey, true);
         return;
       }
 
-
-      int successCount = 0;
       int failureCount = 0;
       DateTime? latestSuccessfullyProcessedMonthInThisRun;
 
       for (final monthDate in monthsToProcess) {
         // CP: Iterate through months
         // CP: Sort entries within the month by timestamp
-        final List<Entry> entriesForMonth =
-            entriesByMonth[monthDate]!..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        final List<Entry> entriesForMonth = entriesByMonth[monthDate]!
+          ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
         // CP: Format content for the entire month
         final String monthlyLogContent = entriesForMonth
@@ -636,7 +628,6 @@ class VectorStoreService {
               monthDate, // CP: Pass the DateTime representing the month
               monthlyLogContent,
             );
-            successCount++;
             latestSuccessfullyProcessedMonthInThisRun = monthDate;
             // CP: Update last successful date to the first day of the processed month
             await _prefs.setString(
@@ -661,7 +652,6 @@ class VectorStoreService {
         }
         await Future.delayed(const Duration(milliseconds: 500));
       }
-
 
       if (failureCount == 0 &&
           (monthsToProcess.isEmpty ||
@@ -735,7 +725,6 @@ class VectorStoreService {
 
   // CP: Helper method to clean up duplicate files in vector store
   Future<void> cleanupDuplicateFiles() async {
-
     try {
       final vectorStoreId = await getOrCreateVectorStoreId();
       if (vectorStoreId == null) {
@@ -756,7 +745,6 @@ class VectorStoreService {
 
       final responseBody = jsonDecode(response.body);
       final files = responseBody['data'] as List<dynamic>;
-
 
       // CP: Group files by month based on filename pattern
       final Map<String, List<Map<String, dynamic>>> filesByMonth = {};
@@ -798,7 +786,6 @@ class VectorStoreService {
         }
       }
 
-
       // CP: Find and remove duplicates (keep the most recent)
       for (final month in filesByMonth.keys) {
         final monthFiles = filesByMonth[month]!;
@@ -814,7 +801,6 @@ class VectorStoreService {
 
           final keepFile = monthFiles.first;
           final deleteFiles = monthFiles.skip(1).toList();
-
 
           for (final fileToDelete in deleteFiles) {
             final fileId = fileToDelete['id'] as String;
@@ -833,7 +819,6 @@ class VectorStoreService {
           await _saveMonthlyLogFileIds(monthlyLogFileIds);
         }
       }
-
     } catch (e, stackTrace) {
       AppLogger.error('[VectorStoreService] Error during cleanup: $e', error: e, stackTrace: stackTrace);
     }
@@ -886,12 +871,9 @@ class VectorStoreService {
         final responseBody = jsonDecode(response.body);
         final files = responseBody['data'] as List<dynamic>;
 
-
         // CP: For each file, get its filename from the files API
         for (final file in files) {
           final fileId = file['id'] as String;
-          final createdAt = file['created_at'] as int;
-          // CC: Created date from timestamp (currently unused)
 
           try {
             // CP: Get file details including filename from files API
@@ -905,7 +887,6 @@ class VectorStoreService {
               // CC: File data available in response but not currently used
               jsonDecode(fileResponse.body);
             }
-
           } catch (e) {
             // CC: Silently ignore file retrieval errors for cleanup
           }

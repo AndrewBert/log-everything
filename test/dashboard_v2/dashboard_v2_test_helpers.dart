@@ -26,14 +26,12 @@ Future<void> givenDashboardV2IsDisplayed(
   });
 
   // Debug: verify repository has data
-  assert(repository.currentEntries.isNotEmpty,
-      'Repository should have entries after initialization');
-  assert(repository.currentCategories.isNotEmpty,
-      'Repository should have categories after initialization');
+  assert(repository.currentEntries.isNotEmpty, 'Repository should have entries after initialization');
+  assert(repository.currentCategories.isNotEmpty, 'Repository should have categories after initialization');
 
-  print('DEBUG: Repository entries count: ${repository.currentEntries.length}');
-  print('DEBUG: Repository categories count: ${repository.currentCategories.length}');
-  print('DEBUG: Repository categories: ${repository.currentCategories.map((c) => c.name).toList()}');
+  // debugPrint('DEBUG: Repository entries count: ${repository.currentEntries.length}');
+  // debugPrint('DEBUG: Repository categories count: ${repository.currentCategories.length}');
+  // debugPrint('DEBUG: Repository categories: ${repository.currentCategories.map((c) => c.name).toList()}');
 
   // Now pump widget - cubit will get entries from already-initialized repository
   await tester.pumpWidget(scope.widgetUnderTest);
@@ -94,16 +92,14 @@ Future<void> whenCategoryCardIsTapped(
 ) async {
   // Find category card by looking for text within the categories carousel area
   final categoriesCarousel = find.byType(CategoriesCarousel);
-  expect(categoriesCarousel, findsOneWidget,
-      reason: 'CategoriesCarousel should be displayed');
+  expect(categoriesCarousel, findsOneWidget, reason: 'CategoriesCarousel should be displayed');
 
   // Find the category name text within the carousel
   final categoryTextFinder = find.descendant(
     of: categoriesCarousel,
     matching: find.text(categoryName),
   );
-  expect(categoryTextFinder, findsAtLeastNWidgets(1),
-      reason: 'Category "$categoryName" should be in carousel');
+  expect(categoryTextFinder, findsAtLeastNWidgets(1), reason: 'Category "$categoryName" should be in carousel');
 
   await tester.tap(categoryTextFinder.first);
   // Use pump instead of pumpAndSettle to avoid hanging
@@ -133,8 +129,7 @@ Future<void> whenEntryCardIsTapped(
   String entryText,
 ) async {
   final entryTextFinder = find.text(entryText);
-  expect(entryTextFinder, findsAtLeastNWidgets(1),
-      reason: 'Entry with text "$entryText" should be displayed');
+  expect(entryTextFinder, findsAtLeastNWidgets(1), reason: 'Entry with text "$entryText" should be displayed');
   await tester.tap(entryTextFinder.first);
   // Use pump instead of pumpAndSettle to avoid hanging
   await tester.pump(const Duration(milliseconds: 100));
@@ -148,20 +143,17 @@ Future<void> whenEntryCardIsTapped(
 
 void thenDashboardV2PageIsDisplayed(WidgetTester tester) {
   final dashboardPage = find.byType(DashboardV2Page);
-  expect(dashboardPage, findsOneWidget,
-      reason: 'DashboardV2Page should be displayed');
+  expect(dashboardPage, findsOneWidget, reason: 'DashboardV2Page should be displayed');
 }
 
 void thenDashboardV2PageKeyIsPresent(WidgetTester tester) {
   final scaffoldFinder = find.byKey(dashboardV2PageKey);
-  expect(scaffoldFinder, findsOneWidget,
-      reason: 'DashboardV2Page scaffold with key should be displayed');
+  expect(scaffoldFinder, findsOneWidget, reason: 'DashboardV2Page scaffold with key should be displayed');
 }
 
 void thenAppBarIsDisplayed(WidgetTester tester) {
   final appBarFinder = find.byKey(dashboardV2AppBarKey);
-  expect(appBarFinder, findsOneWidget,
-      reason: 'DashboardV2 AppBar should be displayed');
+  expect(appBarFinder, findsOneWidget, reason: 'DashboardV2 AppBar should be displayed');
 }
 
 void thenAllCategoriesAreDisplayed(
@@ -170,41 +162,23 @@ void thenAllCategoriesAreDisplayed(
 ) {
   for (final categoryName in categoryNames) {
     final categoryFinder = find.text(categoryName);
-    expect(categoryFinder, findsAtLeastNWidgets(1),
-        reason: 'Category "$categoryName" should be displayed');
+    expect(categoryFinder, findsAtLeastNWidgets(1), reason: 'Category "$categoryName" should be displayed');
   }
 }
 
 void thenCategoriesCarouselIsDisplayed(WidgetTester tester) {
-  // Debug: Check if empty state is displayed instead
-  final emptyState = find.text('No entries yet');
-  if (emptyState.evaluate().isNotEmpty) {
-    print('DEBUG: "No entries yet" is displayed - entries.isEmpty is true in state');
-  }
-
-  // Debug: Check for various widgets to understand the tree
-  final dashboardPage = find.byType(DashboardV2Page);
-  print('DEBUG: DashboardV2Page found: ${dashboardPage.evaluate().length}');
-  final recentCarousel = find.byType(RecentEntriesCarousel);
-  print('DEBUG: RecentEntriesCarousel found: ${recentCarousel.evaluate().length}');
-  final categoriesCarousel = find.byType(CategoriesCarousel);
-  print('DEBUG: CategoriesCarousel found: ${categoriesCarousel.evaluate().length}');
-
   final carousel = find.byType(CategoriesCarousel);
-  expect(carousel, findsOneWidget,
-      reason: 'Categories carousel should be displayed');
+  expect(carousel, findsOneWidget, reason: 'Categories carousel should be displayed');
 }
 
 void thenRecentEntriesCarouselIsDisplayed(WidgetTester tester) {
   final carousel = find.byType(RecentEntriesCarousel);
-  expect(carousel, findsOneWidget,
-      reason: 'Recent entries carousel should be displayed');
+  expect(carousel, findsOneWidget, reason: 'Recent entries carousel should be displayed');
 }
 
 void thenCategoryEntriesPageIsDisplayed(WidgetTester tester) {
   final categoryEntriesPage = find.byType(CategoryEntriesPage);
-  expect(categoryEntriesPage, findsOneWidget,
-      reason: 'CategoryEntriesPage should be displayed after navigation');
+  expect(categoryEntriesPage, findsOneWidget, reason: 'CategoryEntriesPage should be displayed after navigation');
 }
 
 void thenCategoryEntriesPageShowsCategory(
@@ -213,8 +187,11 @@ void thenCategoryEntriesPageShowsCategory(
 ) {
   // The category name should appear in the app bar title
   final categoryNameFinder = find.text(categoryName);
-  expect(categoryNameFinder, findsAtLeastNWidgets(1),
-      reason: 'Category name "$categoryName" should be displayed in app bar');
+  expect(
+    categoryNameFinder,
+    findsAtLeastNWidgets(1),
+    reason: 'Category name "$categoryName" should be displayed in app bar',
+  );
 }
 
 void thenEntriesAreDisplayedInList(
@@ -223,15 +200,13 @@ void thenEntriesAreDisplayedInList(
 ) {
   for (final text in entryTexts) {
     final entryFinder = find.text(text);
-    expect(entryFinder, findsAtLeastNWidgets(1),
-        reason: 'Entry with text "$text" should be displayed');
+    expect(entryFinder, findsAtLeastNWidgets(1), reason: 'Entry with text "$text" should be displayed');
   }
 }
 
 void thenEntryIsDisplayed(WidgetTester tester, String entryText) {
   final entryFinder = find.text(entryText);
-  expect(entryFinder, findsAtLeastNWidgets(1),
-      reason: 'Entry with text "$entryText" should be displayed');
+  expect(entryFinder, findsAtLeastNWidgets(1), reason: 'Entry with text "$entryText" should be displayed');
 }
 
 void thenEmptyStateIsShown(WidgetTester tester) {
@@ -247,8 +222,7 @@ void thenEmptyStateIsShown(WidgetTester tester) {
 
 void thenCategoryEmptyStateIsShown(WidgetTester tester) {
   final noEntriesYet = find.text('No Entries Yet');
-  expect(noEntriesYet, findsOneWidget,
-      reason: 'Category empty state should be displayed');
+  expect(noEntriesYet, findsOneWidget, reason: 'Category empty state should be displayed');
 }
 
 void thenCategoryCountIsDisplayed(
@@ -259,18 +233,15 @@ void thenCategoryCountIsDisplayed(
   // Look for entry count text like "2 entries" or "1 entry"
   final countText = expectedCount == 1 ? '1 entry' : '$expectedCount entries';
   final countFinder = find.text(countText);
-  expect(countFinder, findsAtLeastNWidgets(1),
-      reason: 'Category count "$countText" should be displayed');
+  expect(countFinder, findsAtLeastNWidgets(1), reason: 'Category count "$countText" should be displayed');
 }
 
 void thenTimestampIsDisplayed(WidgetTester tester, String timestamp) {
   final timestampFinder = find.text(timestamp);
-  expect(timestampFinder, findsAtLeastNWidgets(1),
-      reason: 'Timestamp "$timestamp" should be displayed');
+  expect(timestampFinder, findsAtLeastNWidgets(1), reason: 'Timestamp "$timestamp" should be displayed');
 }
 
 void thenDateHeaderIsDisplayed(WidgetTester tester, String dateHeader) {
   final headerFinder = find.text(dateHeader);
-  expect(headerFinder, findsAtLeastNWidgets(1),
-      reason: 'Date header "$dateHeader" should be displayed');
+  expect(headerFinder, findsAtLeastNWidgets(1), reason: 'Date header "$dateHeader" should be displayed');
 }

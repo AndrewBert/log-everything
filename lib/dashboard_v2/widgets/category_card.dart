@@ -108,7 +108,7 @@ class CategoryCard extends StatelessWidget {
   Widget _buildMiniGridPreview(ThemeData theme) {
     // CC: Show up to 4 recent entries in a 2x2 grid
     final entriesToShow = recentEntries.take(4).toList();
-    
+
     if (entriesToShow.isEmpty) {
       return Center(
         child: Text(
@@ -184,7 +184,7 @@ class CategoryCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   // CP: Tiny thumbnails - limit decode to ~100px (x3 device pixel ratio = 300)
                   cacheWidth: 300,
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, _, _) => const Icon(
                     Icons.broken_image,
                     size: 16,
                   ),

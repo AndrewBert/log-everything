@@ -212,7 +212,9 @@ class EntryRepository {
 
     _entries.insert(0, pendingEntry);
     await _saveEntries();
-    AppLogger.info("Repository: Pre-persisted pending entry for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
+    AppLogger.info(
+      "Repository: Pre-persisted pending entry for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...",
+    );
 
     // CC: Process in background - fire-and-forget
     _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
@@ -295,7 +297,9 @@ class EntryRepository {
           );
           _entries[entryIndex] = failedEntry;
           await _saveEntries();
-          AppLogger.info("Repository: Entry ${pendingEntry.id} marked as failed (retry ${newRetryCount}/${Entry.maxProcessingRetries})");
+          AppLogger.info(
+            "Repository: Entry ${pendingEntry.id} marked as failed (retry $newRetryCount/${Entry.maxProcessingRetries})",
+          );
         }
         return;
       }
@@ -330,7 +334,11 @@ class EntryRepository {
       }
 
       _triggerVectorStoreSyncForMonth(pendingEntry.timestamp).catchError((e, stackTrace) {
-        AppLogger.error("Repository: Background vector store sync failed for addEntry", error: e, stackTrace: stackTrace);
+        AppLogger.error(
+          "Repository: Background vector store sync failed for addEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
       });
     } finally {
       // CC: Always remove from processing set
@@ -449,13 +457,19 @@ class EntryRepository {
       // Note: If upload fails, it will be retried on next app restart via _uploadPendingImages()
       // which is called in onUserSignedIn() when the auth stream fires
       _uploadImageForEntry(newEntry).catchError((e, stackTrace) {
-        AppLogger.error("Repository: Background image upload failed for ${newEntry.id}",
-          error: e, stackTrace: stackTrace);
+        AppLogger.error(
+          "Repository: Background image upload failed for ${newEntry.id}",
+          error: e,
+          stackTrace: stackTrace,
+        );
       });
 
       _triggerVectorStoreSyncForMonth(processingTimestamp).catchError((e, stackTrace) {
-        AppLogger.error("Repository: Background vector store sync failed for addImageEntry",
-          error: e, stackTrace: stackTrace);
+        AppLogger.error(
+          "Repository: Background vector store sync failed for addImageEntry",
+          error: e,
+          stackTrace: stackTrace,
+        );
       });
 
       return (entries: currentEntries, addedEntry: newEntry);
@@ -478,8 +492,11 @@ class EntryRepository {
 
       // CP: Attempt upload for fallback entry too
       _uploadImageForEntry(fallbackEntry).catchError((e, stackTrace) {
-        AppLogger.error("Repository: Background image upload failed for fallback entry",
-          error: e, stackTrace: stackTrace);
+        AppLogger.error(
+          "Repository: Background image upload failed for fallback entry",
+          error: e,
+          stackTrace: stackTrace,
+        );
       });
 
       return (entries: currentEntries, addedEntry: fallbackEntry);
@@ -500,15 +517,18 @@ class EntryRepository {
     // CP: Delete cloud image if exists, track failures for retry
     if (entryToRemove.cloudImagePath != null) {
       final cloudPath = entryToRemove.cloudImagePath!;
-      _imageStorageSyncService.deleteImage(cloudPath).then((success) {
-        if (!success) {
-          AppLogger.warn('[EntryRepository] Cloud image deletion failed, queuing for retry: $cloudPath');
-          _pendingCloudImageDeletions.add(cloudPath);
-        }
-      }).catchError((Object e) {
-        AppLogger.error('[EntryRepository] Error deleting cloud image, queuing for retry', error: e);
-        _pendingCloudImageDeletions.add(cloudPath);
-      });
+      _imageStorageSyncService
+          .deleteImage(cloudPath)
+          .then((success) {
+            if (!success) {
+              AppLogger.warn('[EntryRepository] Cloud image deletion failed, queuing for retry: $cloudPath');
+              _pendingCloudImageDeletions.add(cloudPath);
+            }
+          })
+          .catchError((Object e) {
+            AppLogger.error('[EntryRepository] Error deleting cloud image, queuing for retry', error: e);
+            _pendingCloudImageDeletions.add(cloudPath);
+          });
     }
 
     _entries.removeWhere((entry) => entry.timestamp == entryToDelete.timestamp && entry.text == entryToDelete.text);
@@ -575,14 +595,20 @@ class EntryRepository {
 
       // CC: Process in background - fire-and-forget
       _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
-        AppLogger.error("Repository: Background AI processing failed for combined entry", error: e, stackTrace: stackTrace);
+        AppLogger.error(
+          "Repository: Background AI processing failed for combined entry",
+          error: e,
+          stackTrace: stackTrace,
+        );
       });
 
       return (entries: currentEntries, splitCount: 1);
     }
 
     // CC: If no temp entry found, create a new pending entry
-    AppLogger.warn('[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found, creating new pending entry');
+    AppLogger.warn(
+      '[Repo.processCombinedEntry] Temporary entry with timestamp $tempEntryTimestamp not found, creating new pending entry',
+    );
     final pendingEntry = Entry(
       text: combinedText,
       timestamp: tempEntryTimestamp,
@@ -595,7 +621,11 @@ class EntryRepository {
 
     // CC: Process in background - fire-and-forget
     _processEntryWithAI(pendingEntry).catchError((e, stackTrace) {
-      AppLogger.error("Repository: Background AI processing failed for combined entry", error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        "Repository: Background AI processing failed for combined entry",
+        error: e,
+        stackTrace: stackTrace,
+      );
     });
 
     return (entries: currentEntries, splitCount: 1);
@@ -983,16 +1013,24 @@ class EntryRepository {
 
     // CP: Retry any cloud image deletions that previously failed
     _retryPendingCloudImageDeletions().catchError((e, stackTrace) {
-      AppLogger.error('[EntryRepository] Background cloud image deletion retry failed', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        '[EntryRepository] Background cloud image deletion retry failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
     });
 
-    AppLogger.info('[EntryRepository] Cloud sync complete - ${_entries.length} entries, ${_categories.length} categories');
+    AppLogger.info(
+      '[EntryRepository] Cloud sync complete - ${_entries.length} entries, ${_categories.length} categories',
+    );
   }
 
   /// Called when user signs out. Stops listening, clears user ID and all local data.
   Future<void> onUserSignedOut() async {
     // CP: Log entry count before clearing to help debug data loss issues
-    AppLogger.info('[EntryRepository] User signed out - clearing ${_entries.length} entries and ${_categories.length} categories');
+    AppLogger.info(
+      '[EntryRepository] User signed out - clearing ${_entries.length} entries and ${_categories.length} categories',
+    );
     _firestoreSyncService.stopListening();
     _currentUserId = null;
 
@@ -1112,11 +1150,6 @@ class EntryRepository {
 
     // Get the full local path for the image
     final fullPath = await _imageStorageService.getFullPath(entry.imagePath!);
-    if (fullPath == null) {
-      AppLogger.warn('[EntryRepository] Cannot upload - image file not found: ${entry.imagePath}');
-      return;
-    }
-
     final imageFile = File(fullPath);
     if (!await imageFile.exists()) {
       AppLogger.warn('[EntryRepository] Cannot upload - image file does not exist: $fullPath');
@@ -1171,9 +1204,7 @@ class EntryRepository {
       return;
     }
 
-    final pendingEntries = _entries.where((e) =>
-      e.imagePath != null && e.cloudImagePath == null
-    ).toList();
+    final pendingEntries = _entries.where((e) => e.imagePath != null && e.cloudImagePath == null).toList();
 
     if (pendingEntries.isEmpty) {
       AppLogger.info('[EntryRepository] No pending images to upload');
@@ -1227,25 +1258,21 @@ class EntryRepository {
     // Check both existence AND size > 0 to detect corrupted files
     if (entry.imagePath != null) {
       final fullPath = await _imageStorageService.getFullPath(entry.imagePath!);
-      if (fullPath != null) {
-        final file = File(fullPath);
-        if (await file.exists() && await file.length() > 0) {
-          return entry.imagePath;
-        }
-        // CP: File exists but is empty/corrupted - will re-download from cloud
-        if (await file.exists()) {
-          AppLogger.warn('[EntryRepository] Local image file corrupted (0 bytes), will re-download: ${entry.imagePath}');
-        }
+      final file = File(fullPath);
+      if (await file.exists() && await file.length() > 0) {
+        return entry.imagePath;
+      }
+      // CP: File exists but is empty/corrupted - will re-download from cloud
+      if (await file.exists()) {
+        AppLogger.warn(
+          '[EntryRepository] Local image file corrupted (0 bytes), will re-download: ${entry.imagePath}',
+        );
       }
     }
 
     // Download from cloud
     final localFileName = '${entry.id}.jpg';
     final basePath = await _imageStorageService.getFullPath(localFileName);
-    if (basePath == null) {
-      AppLogger.warn('[EntryRepository] Cannot determine local path for cloud image');
-      return null;
-    }
 
     final success = await _imageStorageSyncService.downloadImage(
       entry.cloudImagePath!,

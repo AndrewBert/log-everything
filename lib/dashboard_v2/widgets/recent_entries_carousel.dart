@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
-import 'package:myapp/dashboard_v2/widgets/image_entry_card.dart';
 import 'package:myapp/entry/entry.dart';
 import 'package:myapp/utils/dashboard_v2_keys.dart';
 
@@ -84,18 +83,6 @@ class SnapScrollPhysics extends ScrollPhysics {
 
   @override
   double get dragStartDistanceMotionThreshold => 1.0; // Instant response
-
-  double _getTargetPixels(double position, ScrollMetrics metrics) {
-    // CC: Calculate the distance between each snap position
-    final snapDistance = cardWidth + cardGap;
-
-    // CC: Find the closest snap position (left-aligned)
-    final targetIndex = (position / snapDistance).round();
-    final targetPosition = targetIndex * snapDistance;
-
-    // CC: Clamp to valid scroll range
-    return targetPosition.clamp(0.0, metrics.maxScrollExtent);
-  }
 
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {

@@ -183,7 +183,9 @@ class EntryDetailsPage extends StatelessWidget {
           children: [
             // AI Insight at the top
             // Check both cubit state AND entry's persistent flag
-            if (state.primaryInsight != null || state.isRegeneratingInsight || (state.entry?.isGeneratingInsight ?? false))
+            if (state.primaryInsight != null ||
+                state.isRegeneratingInsight ||
+                (state.entry?.isGeneratingInsight ?? false))
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InsightDisplay.details(
@@ -220,7 +222,7 @@ class EntryDetailsPage extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: double.infinity,
                         cacheWidth: 1026,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           height: 200,
                           color: theme.colorScheme.surfaceContainerHighest,
                           child: const Center(child: Icon(Icons.broken_image, size: 48)),
@@ -240,14 +242,13 @@ class EntryDetailsPage extends StatelessWidget {
                             child: Center(
                               child: CircularProgressIndicator(
                                 value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
+                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
                                     : null,
                               ),
                             ),
                           );
                         },
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           height: 200,
                           color: theme.colorScheme.surfaceContainerHighest,
                           child: Center(
@@ -627,9 +628,7 @@ class EntryDetailsPage extends StatelessWidget {
                   color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: state.isEditing
-                        ? categoryColor
-                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    color: state.isEditing ? categoryColor : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                     width: state.isEditing ? 2 : 1,
                   ),
                 ),
@@ -680,9 +679,7 @@ class EntryDetailsPage extends StatelessWidget {
                             // CP: Todo text (tap to edit)
                             Expanded(
                               child: GestureDetector(
-                                onTap: state.isEditing
-                                    ? () {}
-                                    : () => context.read<EntryDetailsCubit>().startEditing(),
+                                onTap: state.isEditing ? () {} : () => context.read<EntryDetailsCubit>().startEditing(),
                                 child: state.isEditing
                                     ? TextField(
                                         key: entryTextFieldKey,
@@ -700,8 +697,7 @@ class EntryDetailsPage extends StatelessWidget {
                                           contentPadding: EdgeInsets.zero,
                                           isDense: true,
                                         ),
-                                        onChanged: (text) =>
-                                            context.read<EntryDetailsCubit>().updateEditedText(text),
+                                        onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
                                       )
                                     : Text(
                                         entry.text,
@@ -1028,11 +1024,9 @@ class EntryDetailsPage extends StatelessWidget {
     // Try local path first
     if (entry.imagePath != null) {
       final fullPath = await imageService.getFullPath(entry.imagePath!);
-      if (fullPath != null) {
-        final file = File(fullPath);
-        if (await file.exists()) {
-          return (localPath: fullPath, downloadUrl: null);
-        }
+      final file = File(fullPath);
+      if (await file.exists()) {
+        return (localPath: fullPath, downloadUrl: null);
       }
     }
 

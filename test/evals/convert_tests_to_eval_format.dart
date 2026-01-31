@@ -162,6 +162,4 @@ void main() async {
   }
 
   await sink.close();
-  print('Created eval dataset with ${testCases.length} test cases');
-  print('Output: ${outputFile.path}');
 }

@@ -23,16 +23,13 @@ class AccountSection extends StatelessWidget {
               child: Text(
                 'ACCOUNT',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
-            if (state.isAuthenticated)
-              _buildSignedInView(context, state)
-            else
-              _buildSignedOutView(context, state),
+            if (state.isAuthenticated) _buildSignedInView(context, state) else _buildSignedOutView(context, state),
           ],
         );
       },
@@ -161,9 +158,11 @@ class AccountSection extends StatelessWidget {
       await file.writeAsString(jsonData);
 
       // CP: Share the file
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Log Splitter Backup',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Log Splitter Backup',
+        ),
       );
 
       AppLogger.info('[AccountSection] Exported data to ${file.path}');

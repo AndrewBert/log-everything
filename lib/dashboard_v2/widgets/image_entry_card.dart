@@ -60,11 +60,9 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
     // CP: Try local path first
     if (widget.entry.imagePath != null) {
       final fullPath = await imageService.getFullPath(widget.entry.imagePath!);
-      if (fullPath != null) {
-        final file = File(fullPath);
-        if (await file.exists()) {
-          return (localPath: fullPath, downloadUrl: null);
-        }
+      final file = File(fullPath);
+      if (await file.exists()) {
+        return (localPath: fullPath, downloadUrl: null);
       }
     }
 
@@ -137,70 +135,70 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
                         // Background image
                         _buildImage(context, snapshot, theme),
 
-                      // Gradient overlay - fades to black at bottom
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.5),
-                              Colors.black,
-                            ],
-                            stops: const [0.0, 0.4, 0.7],
+                        // Gradient overlay - fades to black at bottom
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.5),
+                                Colors.black,
+                              ],
+                              stops: const [0.0, 0.4, 0.7],
+                            ),
                           ),
                         ),
-                      ),
 
-                      // CP: Title and category overlay - white text on dark gradient
-                      Positioned(
-                        bottom: 8,
-                        left: 12,
-                        right: 12,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.entry.imageTitle ?? 'Image',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            // CP: Category label
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                _getDisplayName(widget.entry.category).toUpperCase(),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontSize: 9,
-                                  letterSpacing: 0.8,
+                        // CP: Title and category overlay - white text on dark gradient
+                        Positioned(
+                          bottom: 8,
+                          left: 12,
+                          right: 12,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.entry.imageTitle ?? 'Image',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              // CP: Category label
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _getDisplayName(widget.entry.category).toUpperCase(),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 9,
+                                    letterSpacing: 0.8,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           );
         },
       ),
@@ -238,7 +236,7 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
         File(data.localPath!),
         fit: BoxFit.cover,
         cacheWidth: 500,
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           color: theme.colorScheme.surfaceContainerHighest,
           child: const Icon(Icons.broken_image),
         ),
@@ -258,14 +256,13 @@ class _ImageEntryCardState extends State<ImageEntryCard> {
             child: Center(
               child: CircularProgressIndicator(
                 value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
           );
         },
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           color: theme.colorScheme.surfaceContainerHighest,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
