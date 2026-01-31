@@ -36,6 +36,7 @@ Detailed instructions are organized in `.claude/rules/`:
 - **Test helper**: Use `WidgetTestScope` class in `test/helpers/widget_test_scope.dart` for widget test setup
 - **DI pattern**: Register services (not cubits) in `lib/locator.dart`; provide cubits via `BlocProvider`
 - **State files**: Use `part`/`part of` directives to link cubit and state files
+- **Worktrees**: Use sibling directory (`../log-everything.worktrees/`) per GitLens convention
 
 ## Domain Structure
 

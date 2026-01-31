@@ -28,6 +28,3 @@ coverage
 .claude/*.local.md
 CLAUDE.local.md
 .serena/
-
-# Git worktrees
-.worktrees/
