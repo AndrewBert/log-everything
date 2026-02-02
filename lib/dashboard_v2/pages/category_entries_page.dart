@@ -29,6 +29,44 @@ class CategoryEntriesPage extends StatefulWidget {
 
 class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
   bool _isSearchOpen = false;
+  final ScrollController _scrollController = ScrollController();
+  // CP: Store cubit reference for lifecycle management
+  late final CategoryEntriesCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    // CP: Create cubit in initState to ensure it loads data immediately
+    _cubit = CategoryEntriesCubit(
+      entryRepository: GetIt.instance<EntryRepository>(),
+      categoryName: widget.categoryName,
+    );
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _cubit.close();
+    super.dispose();
+  }
+
+  // CP: Detect when user scrolls near bottom to trigger pagination
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    // CP: Guard against edge case with very short list
+    if (maxScroll <= 0) return;
+
+    final currentScroll = _scrollController.position.pixels;
+    final threshold = maxScroll * 0.8; // Load when 80% scrolled
+
+    if (currentScroll >= threshold) {
+      _cubit.loadMoreEntries();
+    }
+  }
 
   void _openSearch() {
     setState(() {
@@ -95,11 +133,8 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => CategoryEntriesCubit(
-        entryRepository: GetIt.instance<EntryRepository>(),
-        categoryName: widget.categoryName,
-      ),
+    return BlocProvider.value(
+      value: _cubit,
       child: BlocBuilder<CategoryEntriesCubit, CategoryEntriesState>(
         builder: (context, state) {
           final theme = Theme.of(context);
@@ -266,209 +301,223 @@ class _CategoryEntriesPageState extends State<CategoryEntriesPage> {
                           ),
                         ],
                       )
-                    : CustomScrollView(
-                        slivers: [
-                          // CC: Category header with color indicator
-                          SliverToBoxAdapter(
-                            child: Container(
-                              height: 3,
-                              color: categoryColor.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          // CC: Category description
-                          if (state.category?.description != null && state.category!.description.isNotEmpty)
+                    : RefreshIndicator(
+                        onRefresh: () => context.read<CategoryEntriesCubit>().refresh(),
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          slivers: [
+                            // CC: Category header with color indicator
                             SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Container(
+                              child: Container(
+                                height: 3,
+                                color: categoryColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            // CC: Category description
+                            if (state.category?.description != null && state.category!.description.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
                                   padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                      ),
                                     ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'ABOUT THIS CATEGORY',
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          fontSize: 11,
-                                          letterSpacing: 1.2,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        state.category!.description,
-                                        style: theme.textTheme.bodyMedium?.copyWith(
-                                          fontSize: 15,
-                                          height: 1.4,
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          // Calendar preview card
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: _CalendarPreviewCard(
-                                entries: state.entries,
-                                categoryName: state.category?.displayName ?? widget.categoryName,
-                                categoryColor: categoryColor,
-                              ),
-                            ),
-                          ),
-                          const SliverToBoxAdapter(
-                            child: SizedBox(height: 8),
-                          ),
-                          // CP: Todo section (active todos only)
-                          if (state.activeTodos.isNotEmpty) ...[
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'TODOS',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.5,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 8),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final todo = state.activeTodos[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: TodoCard(
-                                        todo: todo,
-                                        onTap: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (context) => EntryDetailsPage(entry: todo),
-                                            ),
-                                          );
-                                        },
-                                        onCheckboxTap: () async {
-                                          try {
-                                            final repository = GetIt.instance<EntryRepository>();
-                                            final updatedTodo = todo.toggleCompletion();
-                                            await repository.updateEntry(todo, updatedTodo);
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Failed to update todo')),
-                                              );
-                                            }
-                                          }
-                                        },
-                                      ),
-                                    );
-                                  },
-                                  childCount: state.activeTodos.length,
-                                ),
-                              ),
-                            ),
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 16),
-                            ),
-                          ],
-                          // CP: Entries header (only if there are regular entries)
-                          if (state.regularEntries.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'ENTRIES',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.5,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (state.regularEntries.isNotEmpty)
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 8),
-                            ),
-                          // CC: Grid of entries (regular entries only)
-                          if (state.regularEntries.isNotEmpty)
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              sliver: SliverGrid(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                  childAspectRatio: 1,
-                                ),
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    if (state.isLoading) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-
-                                    final entry = state.regularEntries[index];
-                                    void onTap() {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => EntryDetailsPage(
-                                            entry: entry,
-                                            cachedInsight: entry.getCurrentInsight() != null
-                                                ? Insight(
-                                                    id: entry.id,
-                                                    type: InsightType.summary,
-                                                    title: 'Insight',
-                                                    content: entry.getCurrentInsight()!.content,
-                                                    generatedAt: entry.getCurrentInsight()!.generatedAt,
-                                                  )
-                                                : null,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'ABOUT THIS CATEGORY',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            fontSize: 11,
+                                            letterSpacing: 1.2,
+                                            fontWeight: FontWeight.w600,
+                                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                           ),
                                         ),
-                                      );
-                                    }
-
-                                    return entry.hasImage
-                                        ? ImageEntryCard(
-                                            entry: entry,
-                                            categoryColor: categoryColor,
-                                            onTap: onTap,
-                                          )
-                                        : NewspaperEntryCard(
-                                            entry: entry,
-                                            isInGrid: true,
-                                            categoryColor: categoryColor,
-                                            onTap: onTap,
-                                          );
-                                  },
-                                  childCount: state.regularEntries.length,
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          state.category!.description,
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            fontSize: 15,
+                                            height: 1.4,
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Calendar preview card
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: _CalendarPreviewCard(
+                                  entries: state.entries,
+                                  categoryName: state.category?.displayName ?? widget.categoryName,
+                                  categoryColor: categoryColor,
                                 ),
                               ),
                             ),
-                          const SliverToBoxAdapter(
-                            child: SizedBox(height: 24),
-                          ),
-                        ],
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 8),
+                            ),
+                            // CP: Todo section (active todos only)
+                            if (state.activeTodos.isNotEmpty) ...[
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'TODOS',
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.5,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 8),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      final todo = state.activeTodos[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: TodoCard(
+                                          todo: todo,
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) => EntryDetailsPage(entry: todo),
+                                              ),
+                                            );
+                                          },
+                                          onCheckboxTap: () async {
+                                            try {
+                                              final repository = GetIt.instance<EntryRepository>();
+                                              final updatedTodo = todo.toggleCompletion();
+                                              await repository.updateEntry(todo, updatedTodo);
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Failed to update todo')),
+                                                );
+                                              }
+                                            }
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    childCount: state.activeTodos.length,
+                                  ),
+                                ),
+                              ),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 16),
+                              ),
+                            ],
+                            // CP: Entries header (only if there are regular entries)
+                            if (state.regularEntries.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'ENTRIES',
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.5,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (state.regularEntries.isNotEmpty)
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 8),
+                              ),
+                            // CC: Grid of entries (regular entries only)
+                            if (state.regularEntries.isNotEmpty)
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                sliver: SliverGrid(
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 1,
+                                  ),
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      if (state.isLoading) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      }
+
+                                      final entry = state.regularEntries[index];
+                                      void onTap() {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => EntryDetailsPage(
+                                              entry: entry,
+                                              cachedInsight: entry.getCurrentInsight() != null
+                                                  ? Insight(
+                                                      id: entry.id,
+                                                      type: InsightType.summary,
+                                                      title: 'Insight',
+                                                      content: entry.getCurrentInsight()!.content,
+                                                      generatedAt: entry.getCurrentInsight()!.generatedAt,
+                                                    )
+                                                  : null,
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      return entry.hasImage
+                                          ? ImageEntryCard(
+                                              entry: entry,
+                                              categoryColor: categoryColor,
+                                              onTap: onTap,
+                                            )
+                                          : NewspaperEntryCard(
+                                              entry: entry,
+                                              isInGrid: true,
+                                              categoryColor: categoryColor,
+                                              onTap: onTap,
+                                            );
+                                    },
+                                    childCount: state.regularEntries.length,
+                                  ),
+                                ),
+                              ),
+                            // CP: Loading indicator for pagination
+                            if (state.isLoadingMore)
+                              const SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              ),
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 24),
+                            ),
+                          ],
+                        ),
                       ),
                 if (_isSearchOpen)
                   SearchOverlay.forCategory(

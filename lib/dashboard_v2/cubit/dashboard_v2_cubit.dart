@@ -62,7 +62,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         entries: entries,
         categories: categories,
         isLoading: false,
-        hasMoreEntries: false, // CC: For now, load all entries at once
+        hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
       ),
     );
 
@@ -224,10 +224,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     // CP: Detect newly added todos for highlight animation
     final currentEntryIds = entries.map((e) => e.id).toSet();
-    final newTodoIds = entries
-        .where((e) => e.isTask && !_previousEntryIds.contains(e.id))
-        .map((e) => e.id)
-        .toList();
+    final newTodoIds = entries.where((e) => e.isTask && !_previousEntryIds.contains(e.id)).map((e) => e.id).toList();
 
     // CP: Check if there's currently a processing entry
     final hasProcessingNow = entries.any((e) => e.category == 'Processing...');
@@ -261,6 +258,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
         clearPendingEntry: shouldClearPending,
         newlyAddedTodoIds: newTodoIds.isNotEmpty ? newTodoIds : const [],
         entryPendingCategorization: entryNeedingCategorization,
+        hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
       ),
     );
 
@@ -282,6 +280,52 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
       // CP: Schedule prompt suggestion regeneration (debounced)
       _schedulePromptSuggestionRegeneration();
+    }
+  }
+
+  /// Load more entries from Firestore (pagination).
+  /// Called when user scrolls near bottom of the entries list.
+  Future<void> loadMoreEntries() async {
+    // CP: Prevent duplicate requests
+    if (state.isLoadingMore || !state.hasMoreEntries) return;
+
+    emit(state.copyWith(isLoadingMore: true));
+
+    try {
+      await _entryRepository.loadMoreEntries();
+      // CP: Stream update from repository will trigger _onEntriesUpdated
+    } catch (e) {
+      AppLogger.error('Failed to load more entries', error: e);
+    } finally {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            isLoadingMore: false,
+            hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refresh entries from cloud (pull-to-refresh).
+  /// Resets pagination and fetches first page of entries.
+  Future<void> refresh() async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _entryRepository.refreshFromCloud();
+      // CP: Stream update from repository will trigger _onEntriesUpdated
+    } catch (e) {
+      AppLogger.error('Failed to refresh from cloud', error: e);
+    } finally {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            isLoading: false,
+            hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
+          ),
+        );
+      }
     }
   }
 
@@ -476,13 +520,18 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
     try {
       // CP: Convert entries to simple maps for the AI service
-      final entryMaps = entries.take(20).map((e) => {
-        'text': e.text,
-        'category': e.category,
-        'isTask': e.isTask,
-        'isCompleted': e.isCompleted,
-        'timestamp': e.timestamp.toIso8601String(),
-      }).toList();
+      final entryMaps = entries
+          .take(20)
+          .map(
+            (e) => {
+              'text': e.text,
+              'category': e.category,
+              'isTask': e.isTask,
+              'isCompleted': e.isCompleted,
+              'timestamp': e.timestamp.toIso8601String(),
+            },
+          )
+          .toList();
 
       final prompts = await _aiService.generatePromptSuggestions(
         entries: entryMaps,

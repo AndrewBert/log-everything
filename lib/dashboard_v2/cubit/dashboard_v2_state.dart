@@ -6,6 +6,7 @@ class DashboardV2State extends Equatable {
   final List<Entry> entries;
   final List<Category> categories; // CC: Add categories to state for color lookup
   final bool isLoading;
+  final bool isLoadingMore; // CP: Loading state for pagination
   final bool hasMoreEntries;
   final int selectedCarouselIndex;
   final bool isGeneratingInsight;
@@ -24,6 +25,7 @@ class DashboardV2State extends Equatable {
     this.entries = const [],
     this.categories = const [],
     this.isLoading = false,
+    this.isLoadingMore = false,
     this.hasMoreEntries = true,
     this.selectedCarouselIndex = 0,
     this.isGeneratingInsight = false,
@@ -40,8 +42,7 @@ class DashboardV2State extends Equatable {
   });
 
   // CC: Combine pending entry with entries for display
-  List<Entry> get displayEntries =>
-      pendingEntry != null ? [pendingEntry!, ...entries] : entries;
+  List<Entry> get displayEntries => pendingEntry != null ? [pendingEntry!, ...entries] : entries;
 
   // CC: Derive current insight from selected entry (converts from SimpleInsight if needed)
   ComprehensiveInsight? get currentInsight {
@@ -80,6 +81,7 @@ class DashboardV2State extends Equatable {
     List<Entry>? entries,
     List<Category>? categories,
     bool? isLoading,
+    bool? isLoadingMore,
     bool? hasMoreEntries,
     int? selectedCarouselIndex,
     bool? isGeneratingInsight,
@@ -103,6 +105,7 @@ class DashboardV2State extends Equatable {
       entries: entries ?? this.entries,
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasMoreEntries: hasMoreEntries ?? this.hasMoreEntries,
       selectedCarouselIndex: selectedCarouselIndex ?? this.selectedCarouselIndex,
       isGeneratingInsight: isGeneratingInsight ?? this.isGeneratingInsight,
@@ -163,6 +166,7 @@ class DashboardV2State extends Equatable {
     entries,
     categories,
     isLoading,
+    isLoadingMore,
     hasMoreEntries,
     selectedCarouselIndex,
     isGeneratingInsight,

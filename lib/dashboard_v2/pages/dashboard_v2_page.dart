@@ -36,16 +36,43 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
   final ScrollController _scrollController = ScrollController();
   String _appVersion = '';
   bool _isSearchOpen = false;
+  // CP: Store cubit reference for lifecycle management
+  late final DashboardV2Cubit _dashboardCubit;
 
   @override
   void initState() {
     super.initState();
+    // CP: Create cubit in initState to ensure it loads data immediately on app launch
+    _dashboardCubit = DashboardV2Cubit(
+      entryRepository: GetIt.instance<EntryRepository>(),
+      intentDetectionService: GetIt.instance<IntentDetectionService>(),
+    )..loadEntries();
     _loadAppVersion();
+    _scrollController.addListener(_onScroll);
+  }
+
+  // CP: Detect when user scrolls near bottom to trigger pagination
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    // CP: Guard against edge case with very short list
+    if (maxScroll <= 0) return;
+
+    final currentScroll = _scrollController.position.pixels;
+    final threshold = maxScroll * 0.8; // Load when 80% scrolled
+
+    if (currentScroll >= threshold) {
+      _dashboardCubit.loadMoreEntries();
+    }
   }
 
   @override
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _dashboardCubit.close();
     super.dispose();
   }
 
@@ -75,16 +102,10 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
   @override
   Widget build(BuildContext context) {
     final entryRepository = GetIt.instance<EntryRepository>();
-    final intentDetectionService = GetIt.instance<IntentDetectionService>();
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) => DashboardV2Cubit(
-            entryRepository: entryRepository,
-            intentDetectionService: intentDetectionService,
-          )..loadEntries(),
-        ),
+        BlocProvider.value(value: _dashboardCubit),
         BlocProvider(
           create: (context) => TodoCubit(
             entryRepository: entryRepository,
@@ -109,476 +130,490 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
           _showCategorizationSnackbar(context, state.entryPendingCategorization!);
         },
         child: Scaffold(
-        key: dashboardV2PageKey,
-        appBar: AppBar(
-          key: dashboardV2AppBarKey,
-          elevation: 0,
-          title: RichText(
-            text: TextSpan(
-              style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
-              children: <TextSpan>[
-                TextSpan(
-                  text: 'Log',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+          key: dashboardV2PageKey,
+          appBar: AppBar(
+            key: dashboardV2AppBarKey,
+            elevation: 0,
+            title: RichText(
+              text: TextSpan(
+                style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
+                children: <TextSpan>[
+                  TextSpan(
+                    text: 'Log',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: ' / Splitter',
-                  style: TextStyle(
-                    color: Theme.of(context).appBarTheme.titleTextStyle?.color,
+                  TextSpan(
+                    text: ' / Splitter',
+                    style: TextStyle(
+                      color: Theme.of(context).appBarTheme.titleTextStyle?.color,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            actions: [
+              if (_appVersion.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Center(
+                    child: Text(
+                      _appVersion,
+                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                ),
+              IconButton(
+                key: searchIconKey,
+                icon: const Icon(Icons.search),
+                tooltip: 'Search entries',
+                onPressed: _openSearch,
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Settings',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
-          actions: [
-            if (_appVersion.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Center(
-                  child: Text(
-                    _appVersion,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
-                  ),
-                ),
-              ),
-            IconButton(
-              key: searchIconKey,
-              icon: const Icon(Icons.search),
-              tooltip: 'Search entries',
-              onPressed: _openSearch,
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Settings',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsPage()),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: Stack(
-          children: [
-            BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-              builder: (context, state) {
-                if (state.isLoading && state.entries.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
+          body: Stack(
+            children: [
+              BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                builder: (context, state) {
+                  if (state.isLoading && state.entries.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
-                return BlocListener<DashboardV2Cubit, DashboardV2State>(
-                  listenWhen: (prev, current) =>
-                      prev.entries.length < current.entries.length && current.entries.isNotEmpty,
-                  listener: (context, state) {
-                    // CC: Scroll to top when new entry is added
-                    if (_scrollController.hasClients) {
-                      _scrollController.animateTo(
-                        0,
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutCubic,
-                      );
-                    }
-                  },
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    slivers: [
-                      if (state.entries.isNotEmpty) ...[
-                        SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                                buildWhen: (prev, current) =>
-                                    prev.currentInsight != current.currentInsight ||
-                                    prev.isGeneratingInsight != current.isGeneratingInsight ||
-                                    prev.entries != current.entries ||
-                                    prev.pendingEntry != current.pendingEntry,
-                                builder: (context, state) {
-                                  final primaryInsight = state.currentInsight?.getPrimaryInsight();
-                                  // CP: Filter out todos - they have their own section
-                                  final recentEntries = state.displayEntries.where((e) => !e.isTask).toList();
-                                  final selectedEntry = state.selectedCarouselIndex < recentEntries.length
-                                      ? recentEntries[state.selectedCarouselIndex]
-                                      : null;
-                                  final isPending = selectedEntry?.category == 'Processing...';
-                                  final categoryColor = selectedEntry != null && !isPending
-                                      ? state.getCategoryColor(selectedEntry.category)
-                                      : Theme.of(context).colorScheme.primary;
+                  return BlocListener<DashboardV2Cubit, DashboardV2State>(
+                    listenWhen: (prev, current) {
+                      // CP: Only scroll to top for new entries, not pagination
+                      // New entries appear at index 0 with newer timestamps
+                      if (current.entries.isEmpty || prev.entries.isEmpty) return false;
+                      final hasNewEntryAtTop = current.entries.first.id != prev.entries.first.id;
+                      return hasNewEntryAtTop;
+                    },
+                    listener: (context, state) {
+                      // CP: Scroll to top when new entry is added at the beginning
+                      if (_scrollController.hasClients) {
+                        _scrollController.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOutCubic,
+                        );
+                      }
+                    },
+                    child: RefreshIndicator(
+                      onRefresh: () => context.read<DashboardV2Cubit>().refresh(),
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        slivers: [
+                          if (state.entries.isNotEmpty) ...[
+                            SliverToBoxAdapter(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                                    buildWhen: (prev, current) =>
+                                        prev.currentInsight != current.currentInsight ||
+                                        prev.isGeneratingInsight != current.isGeneratingInsight ||
+                                        prev.entries != current.entries ||
+                                        prev.pendingEntry != current.pendingEntry,
+                                    builder: (context, state) {
+                                      final primaryInsight = state.currentInsight?.getPrimaryInsight();
+                                      // CP: Filter out todos - they have their own section
+                                      final recentEntries = state.displayEntries.where((e) => !e.isTask).toList();
+                                      final selectedEntry = state.selectedCarouselIndex < recentEntries.length
+                                          ? recentEntries[state.selectedCarouselIndex]
+                                          : null;
+                                      final isPending = selectedEntry?.category == 'Processing...';
+                                      final categoryColor = selectedEntry != null && !isPending
+                                          ? state.getCategoryColor(selectedEntry.category)
+                                          : Theme.of(context).colorScheme.primary;
 
-                                  // CC: Show loading for pending entries or when generating insight
-                                  final isGenerating = isPending ||
-                                      state.isGeneratingInsight ||
-                                      (selectedEntry?.isGeneratingInsight ?? false);
+                                      // CC: Show loading for pending entries or when generating insight
+                                      final isGenerating =
+                                          isPending ||
+                                          state.isGeneratingInsight ||
+                                          (selectedEntry?.isGeneratingInsight ?? false);
 
-                                  return InsightDisplay(
-                                    insight: primaryInsight,
-                                    isLoading: isGenerating,
-                                    categoryColor: categoryColor,
-                                    onTap: primaryInsight != null && selectedEntry != null && !isPending
-                                        ? () => _navigateToEntryDetails(context, selectedEntry, state)
-                                        : null,
-                                  );
-                                },
-                              ),
-                              BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                                buildWhen: (prev, current) =>
-                                    prev.currentInsight != current.currentInsight ||
-                                    prev.isGeneratingInsight != current.isGeneratingInsight,
-                                builder: (context, state) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 0, bottom: 8.0),
-                                    child: ConnectingLine(
-                                      isVisible: state.currentInsight != null || state.isGeneratingInsight,
-                                    ),
-                                  );
-                                },
-                              ),
-                              BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                                buildWhen: (prev, current) =>
-                                    prev.selectedCarouselIndex != current.selectedCarouselIndex ||
-                                    prev.entries != current.entries ||
-                                    prev.pendingEntry != current.pendingEntry,
-                                builder: (context, state) {
-                                  // CP: Filter out todos - they have their own section
-                                  final recentEntries = state.displayEntries.where((e) => !e.isTask).take(10).toList();
-                                  return RecentEntriesCarousel(
-                                    entries: recentEntries,
-                                    selectedIndex: state.selectedCarouselIndex,
-                                    getCategoryColor: state.getCategoryColor,
-                                    onPageChanged: (index) {
-                                      context.read<DashboardV2Cubit>().selectCarouselEntry(index);
+                                      return InsightDisplay(
+                                        insight: primaryInsight,
+                                        isLoading: isGenerating,
+                                        categoryColor: categoryColor,
+                                        onTap: primaryInsight != null && selectedEntry != null && !isPending
+                                            ? () => _navigateToEntryDetails(context, selectedEntry, state)
+                                            : null,
+                                      );
                                     },
-                                    onEntryTap: (entry) {
-                                      // CC: Don't navigate for pending entries
-                                      if (entry.category != 'Processing...') {
-                                        _navigateToEntryDetails(context, entry, state);
+                                  ),
+                                  BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                                    buildWhen: (prev, current) =>
+                                        prev.currentInsight != current.currentInsight ||
+                                        prev.isGeneratingInsight != current.isGeneratingInsight,
+                                    builder: (context, state) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 0, bottom: 8.0),
+                                        child: ConnectingLine(
+                                          isVisible: state.currentInsight != null || state.isGeneratingInsight,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                                    buildWhen: (prev, current) =>
+                                        prev.selectedCarouselIndex != current.selectedCarouselIndex ||
+                                        prev.entries != current.entries ||
+                                        prev.pendingEntry != current.pendingEntry,
+                                    builder: (context, state) {
+                                      // CP: Filter out todos - they have their own section
+                                      final recentEntries = state.displayEntries
+                                          .where((e) => !e.isTask)
+                                          .take(10)
+                                          .toList();
+                                      return RecentEntriesCarousel(
+                                        entries: recentEntries,
+                                        selectedIndex: state.selectedCarouselIndex,
+                                        getCategoryColor: state.getCategoryColor,
+                                        onPageChanged: (index) {
+                                          context.read<DashboardV2Cubit>().selectCarouselEntry(index);
+                                        },
+                                        onEntryTap: (entry) {
+                                          // CC: Don't navigate for pending entries
+                                          if (entry.category != 'Processing...') {
+                                            _navigateToEntryDetails(context, entry, state);
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // CC: Todos carousel with conditional spacing
+                            SliverToBoxAdapter(
+                              child: BlocBuilder<TodoCubit, TodoState>(
+                                builder: (context, todoState) {
+                                  // CP: Only show spacing if there are todos to display
+                                  final hasTodos =
+                                      todoState.activeTodos.isNotEmpty || todoState.completedTodos.isNotEmpty;
+
+                                  if (!hasTodos) {
+                                    return const SizedBox(height: 24);
+                                  }
+
+                                  return Column(
+                                    children: [
+                                      const SizedBox(height: 24),
+                                      TodosCarousel(
+                                        onHeaderTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => const TodosPage(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            // CC: Categories carousel
+                            BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                              buildWhen: (prev, current) => prev.entries != current.entries,
+                              builder: (context, state) {
+                                final categorizedEntries = state.categorizedEntries;
+                                if (categorizedEntries.isEmpty) {
+                                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                                }
+
+                                return SliverToBoxAdapter(
+                                  child: Column(
+                                    children: [
+                                      CategoriesCarousel(
+                                        categorizedEntries: categorizedEntries,
+                                        getCategoryColor: state.getCategoryColor,
+                                        onCategoryTap: (categoryName, entries) {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => CategoryEntriesPage(
+                                                categoryName: categoryName,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        onSeeAllTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => const AllCategoriesPage(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'ALL ENTRIES',
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 8),
+                            ),
+                            // CC: Grid with date headers (exclude todos - they have their own section)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final nonTaskEntries = state.displayEntries.where((e) => !e.isTask).toList();
+                                    final items = _buildItemsWithDateHeaders(nonTaskEntries);
+                                    if (index >= items.length) {
+                                      if (state.hasMoreEntries) {
+                                        return const Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        );
                                       }
-                                    },
-                                  );
-                                },
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    final item = items[index];
+
+                                    // Date header
+                                    if (item is String) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 12, bottom: 12),
+                                        child: Text(
+                                          item,
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1.5,
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    // Entry grid row
+                                    if (item is Entry) {
+                                      // Count entries in current row (check if we're first in a row)
+                                      int entriesInCurrentRow = 0;
+                                      for (int i = index - 1; i >= 0 && items[i] is Entry; i--) {
+                                        entriesInCurrentRow++;
+                                      }
+
+                                      // Skip if we're the second entry in a row (already rendered with first)
+                                      if (entriesInCurrentRow % 2 == 1) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      // Find next entry for the row
+                                      Entry? nextEntry;
+                                      if (index + 1 < items.length && items[index + 1] is Entry) {
+                                        nextEntry = items[index + 1] as Entry;
+                                      }
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: AspectRatio(
+                                                aspectRatio: 1,
+                                                child: item.hasImage
+                                                    ? ImageEntryCard(
+                                                        entry: item,
+                                                        categoryColor: state.getCategoryColor(item.category),
+                                                        onTap: () {
+                                                          _navigateToEntryDetails(context, item, state);
+                                                        },
+                                                      )
+                                                    : NewspaperEntryCard(
+                                                        entry: item,
+                                                        isInGrid: true,
+                                                        categoryColor: state.getCategoryColor(item.category),
+                                                        onTap: () {
+                                                          _navigateToEntryDetails(context, item, state);
+                                                        },
+                                                      ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: nextEntry != null
+                                                  ? AspectRatio(
+                                                      aspectRatio: 1,
+                                                      child: nextEntry.hasImage
+                                                          ? ImageEntryCard(
+                                                              entry: nextEntry,
+                                                              categoryColor: state.getCategoryColor(nextEntry.category),
+                                                              onTap: () {
+                                                                _navigateToEntryDetails(context, nextEntry!, state);
+                                                              },
+                                                            )
+                                                          : NewspaperEntryCard(
+                                                              entry: nextEntry,
+                                                              isInGrid: true,
+                                                              categoryColor: state.getCategoryColor(nextEntry.category),
+                                                              onTap: () {
+                                                                _navigateToEntryDetails(context, nextEntry!, state);
+                                                              },
+                                                            ),
+                                                    )
+                                                  : const SizedBox.shrink(),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+
+                                    return const SizedBox.shrink();
+                                  },
+                                  childCount:
+                                      _buildItemsWithDateHeaders(
+                                        state.displayEntries.where((e) => !e.isTask).toList(),
+                                      ).length +
+                                      (state.hasMoreEntries ? 1 : 0),
+                                ),
                               ),
+                            ),
+                            // CC: Add padding at bottom for floating input bar and prompt suggestions
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 130),
+                            ),
+                          ],
+                          if (state.entries.isEmpty)
+                            const SliverFillRemaining(
+                              child: Center(
+                                child: Text('No entries yet'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              // CP: Image attachment overlay
+              BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+                buildWhen: (prev, current) => prev.selectedImageBytes != current.selectedImageBytes,
+                builder: (context, state) {
+                  if (state.selectedImageBytes == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned.fill(
+                    child: GestureDetector(
+                      onTap: () {
+                        context.read<DashboardV2Cubit>().clearSelectedImage();
+                      },
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        child: SafeArea(
+                          child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.topLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      context.read<DashboardV2Cubit>().clearSelectedImage();
+                                    },
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.black38,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {},
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                    child: Center(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.memory(
+                                          state.selectedImageBytes!,
+                                          fit: BoxFit.contain,
+                                          cacheWidth: 1026,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
-                        // CC: Todos carousel with conditional spacing
-                        SliverToBoxAdapter(
-                          child: BlocBuilder<TodoCubit, TodoState>(
-                            builder: (context, todoState) {
-                              // CP: Only show spacing if there are todos to display
-                              final hasTodos = todoState.activeTodos.isNotEmpty || todoState.completedTodos.isNotEmpty;
-
-                              if (!hasTodos) {
-                                return const SizedBox(height: 24);
-                              }
-
-                              return Column(
-                                children: [
-                                  const SizedBox(height: 24),
-                                  TodosCarousel(
-                                    onHeaderTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const TodosPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 24),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        // CC: Categories carousel
-                        BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                          buildWhen: (prev, current) => prev.entries != current.entries,
-                          builder: (context, state) {
-                            final categorizedEntries = state.categorizedEntries;
-                            if (categorizedEntries.isEmpty) {
-                              return const SliverToBoxAdapter(child: SizedBox.shrink());
-                            }
-
-                            return SliverToBoxAdapter(
-                              child: Column(
-                                children: [
-                                  CategoriesCarousel(
-                                    categorizedEntries: categorizedEntries,
-                                    getCategoryColor: state.getCategoryColor,
-                                    onCategoryTap: (categoryName, entries) {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => CategoryEntriesPage(
-                                            categoryName: categoryName,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    onSeeAllTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const AllCategoriesPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 24),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'ALL ENTRIES',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 8),
-                        ),
-                        // CC: Grid with date headers (exclude todos - they have their own section)
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final nonTaskEntries = state.displayEntries.where((e) => !e.isTask).toList();
-                                final items = _buildItemsWithDateHeaders(nonTaskEntries);
-                                if (index >= items.length) {
-                                  if (state.hasMoreEntries) {
-                                    return const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(16.0),
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                }
-
-                                final item = items[index];
-
-                                // Date header
-                                if (item is String) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 12, bottom: 12),
-                                    child: Text(
-                                      item,
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1.5,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                // Entry grid row
-                                if (item is Entry) {
-                                  // Count entries in current row (check if we're first in a row)
-                                  int entriesInCurrentRow = 0;
-                                  for (int i = index - 1; i >= 0 && items[i] is Entry; i--) {
-                                    entriesInCurrentRow++;
-                                  }
-
-                                  // Skip if we're the second entry in a row (already rendered with first)
-                                  if (entriesInCurrentRow % 2 == 1) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  // Find next entry for the row
-                                  Entry? nextEntry;
-                                  if (index + 1 < items.length && items[index + 1] is Entry) {
-                                    nextEntry = items[index + 1] as Entry;
-                                  }
-
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: AspectRatio(
-                                            aspectRatio: 1,
-                                            child: item.hasImage
-                                                ? ImageEntryCard(
-                                                    entry: item,
-                                                    categoryColor: state.getCategoryColor(item.category),
-                                                    onTap: () {
-                                                      _navigateToEntryDetails(context, item, state);
-                                                    },
-                                                  )
-                                                : NewspaperEntryCard(
-                                                    entry: item,
-                                                    isInGrid: true,
-                                                    categoryColor: state.getCategoryColor(item.category),
-                                                    onTap: () {
-                                                      _navigateToEntryDetails(context, item, state);
-                                                    },
-                                                  ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: nextEntry != null
-                                              ? AspectRatio(
-                                                  aspectRatio: 1,
-                                                  child: nextEntry.hasImage
-                                                      ? ImageEntryCard(
-                                                          entry: nextEntry,
-                                                          categoryColor: state.getCategoryColor(nextEntry.category),
-                                                          onTap: () {
-                                                            _navigateToEntryDetails(context, nextEntry!, state);
-                                                          },
-                                                        )
-                                                      : NewspaperEntryCard(
-                                                          entry: nextEntry,
-                                                          isInGrid: true,
-                                                          categoryColor: state.getCategoryColor(nextEntry.category),
-                                                          onTap: () {
-                                                            _navigateToEntryDetails(context, nextEntry!, state);
-                                                          },
-                                                        ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-
-                                return const SizedBox.shrink();
-                              },
-                              childCount: _buildItemsWithDateHeaders(
-                                        state.displayEntries.where((e) => !e.isTask).toList(),
-                                      ).length +
-                                  (state.hasMoreEntries ? 1 : 0),
-                            ),
-                          ),
-                        ),
-                        // CC: Add padding at bottom for floating input bar and prompt suggestions
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 130),
-                        ),
-                      ],
-                      if (state.entries.isEmpty)
-                        const SliverFillRemaining(
-                          child: Center(
-                            child: Text('No entries yet'),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            // CP: Image attachment overlay
-            BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-              buildWhen: (prev, current) => prev.selectedImageBytes != current.selectedImageBytes,
-              builder: (context, state) {
-                if (state.selectedImageBytes == null) {
-                  return const SizedBox.shrink();
-                }
-                return Positioned.fill(
-                  child: GestureDetector(
-                    onTap: () {
-                      context.read<DashboardV2Cubit>().clearSelectedImage();
-                    },
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      child: SafeArea(
-                        child: Column(
-                          children: [
-                            Align(
-                              alignment: Alignment.topLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: IconButton(
-                                  onPressed: () {
-                                    context.read<DashboardV2Cubit>().clearSelectedImage();
-                                  },
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.black38,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {},
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                                  child: Center(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Image.memory(
-                                        state.selectedImageBytes!,
-                                        fit: BoxFit.contain,
-                                        cacheWidth: 1026,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 80),
-                          ],
-                        ),
                       ),
                     ),
+                  );
+                },
+              ),
+              // CP: Prompt suggestions row above input bar
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: _promptSuggestionsBottomOffset,
+                child: SafeArea(
+                  // CP: TextFieldTapRegion prevents keyboard dismiss when tapping prompts
+                  child: TextFieldTapRegion(
+                    child: const PromptSuggestionsRow(),
                   ),
-                );
-              },
-            ),
-            // CP: Prompt suggestions row above input bar
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: _promptSuggestionsBottomOffset,
-              child: SafeArea(
-                // CP: TextFieldTapRegion prevents keyboard dismiss when tapping prompts
-                child: TextFieldTapRegion(
-                  child: const PromptSuggestionsRow(),
                 ),
               ),
-            ),
-            // CC: Floating input bar at the bottom
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                child: FloatingInputBar(),
-              ),
-            ),
-            // CC: Search overlay
-            if (_isSearchOpen)
-              Positioned.fill(
-                child: SearchOverlay(
-                  onClose: _closeSearch,
+              // CC: Floating input bar at the bottom
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  child: FloatingInputBar(),
                 ),
               ),
-          ],
+              // CC: Search overlay
+              if (_isSearchOpen)
+                Positioned.fill(
+                  child: SearchOverlay(
+                    onClose: _closeSearch,
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

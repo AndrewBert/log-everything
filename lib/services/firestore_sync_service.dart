@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../entry/entry.dart';
 import '../entry/category.dart';
 import '../utils/logger.dart';
+import 'firestore_pagination_constants.dart';
 
 /// Service for syncing entries and categories to/from Cloud Firestore.
 ///
@@ -25,6 +26,7 @@ class FirestoreSyncService {
         code.contains('network') ||
         code.contains('timeout');
   }
+
   // CP: Sanitize cloud entry by clearing transient state flags.
   // isGeneratingInsight and processingState should never persist - they're runtime state only.
   // If processingState is non-null, the entry was synced mid-processing and needs cleanup.
@@ -38,7 +40,9 @@ class FirestoreSyncService {
     }
 
     if (hasIncompleteProcessing) {
-      AppLogger.info('[FirestoreSyncService] Sanitizing entry ${entry.id}: incomplete processingState=${entry.processingState}, assigning to Misc');
+      AppLogger.info(
+        '[FirestoreSyncService] Sanitizing entry ${entry.id}: incomplete processingState=${entry.processingState}, assigning to Misc',
+      );
       needsSanitization = true;
     }
 
@@ -53,15 +57,20 @@ class FirestoreSyncService {
   }
 
   final FirebaseFirestore _firestore;
-  StreamSubscription<QuerySnapshot>? _entriesSubscription;
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
-  // CP: Callback for when remote entries change
-  void Function(List<Entry>)? onRemoteEntriesChanged;
+  // CP: Pagination state for cursor-based Firestore pagination
+  DocumentSnapshot? _lastDocument;
+  bool _hasMoreEntries = true;
+  bool _isFetchingMore = false; // CP: Guard against concurrent pagination requests
+
+  /// Whether there are more entries available to fetch from Firestore
+  bool get hasMoreEntries => _hasMoreEntries;
+
+  // CP: Callback for when remote categories change (entries use pull-to-refresh instead)
   void Function(List<Category>)? onRemoteCategoriesChanged;
 
-  FirestoreSyncService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreSyncService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // CP: Get user's entries collection reference
   CollectionReference<Map<String, dynamic>> _entriesRef(String uid) =>
@@ -72,41 +81,25 @@ class FirestoreSyncService {
       _firestore.collection('users').doc(uid).collection('categories');
 
   /// Start listening to real-time changes from Firestore for a user.
+  /// CP: Only categories use real-time listener. Entries use pull-to-refresh
+  /// to avoid snapshots() fetching ALL entries and bypassing pagination.
   void startListening(String uid) {
-    AppLogger.info('[FirestoreSyncService] Starting real-time listeners for user: $uid');
+    AppLogger.info('[FirestoreSyncService] Starting real-time listener for categories (user: $uid)');
 
-    // CP: Listen to entries changes
-    _entriesSubscription = _entriesRef(uid).snapshots().listen(
-      (snapshot) {
-        final entries = snapshot.docs.map((doc) {
-          try {
-            final entry = Entry.fromJson(doc.data());
-            return _sanitizeCloudEntry(entry);
-          } catch (e) {
-            AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
-            return null;
-          }
-        }).whereType<Entry>().toList();
-
-        AppLogger.info('[FirestoreSyncService] Received ${entries.length} entries from cloud');
-        onRemoteEntriesChanged?.call(entries);
-      },
-      onError: (e) {
-        AppLogger.error('[FirestoreSyncService] Entries listener error', error: e);
-      },
-    );
-
-    // CP: Listen to categories changes
+    // CP: Listen to categories changes only
     _categoriesSubscription = _categoriesRef(uid).snapshots().listen(
       (snapshot) {
-        final categories = snapshot.docs.map((doc) {
-          try {
-            return Category.fromJson(doc.data());
-          } catch (e) {
-            AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
-            return null;
-          }
-        }).whereType<Category>().toList();
+        final categories = snapshot.docs
+            .map((doc) {
+              try {
+                return Category.fromJson(doc.data());
+              } catch (e) {
+                AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
+                return null;
+              }
+            })
+            .whereType<Category>()
+            .toList();
 
         AppLogger.info('[FirestoreSyncService] Received ${categories.length} categories from cloud');
         onRemoteCategoriesChanged?.call(categories);
@@ -120,27 +113,47 @@ class FirestoreSyncService {
   /// Stop listening to Firestore changes.
   void stopListening() {
     AppLogger.info('[FirestoreSyncService] Stopping real-time listeners');
-    _entriesSubscription?.cancel();
-    _entriesSubscription = null;
     _categoriesSubscription?.cancel();
     _categoriesSubscription = null;
   }
 
-  /// Fetch all entries from Firestore for a user (one-time fetch).
-  Future<List<Entry>> fetchEntries(String uid) async {
-    try {
-      final snapshot = await _entriesRef(uid).get();
-      final entries = snapshot.docs.map((doc) {
-        try {
-          final entry = Entry.fromJson(doc.data());
-          return _sanitizeCloudEntry(entry);
-        } catch (e) {
-          AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
-          return null;
-        }
-      }).whereType<Entry>().toList();
+  /// Reset pagination state. Call before starting a new paginated fetch sequence.
+  void resetPagination() {
+    _lastDocument = null;
+    _hasMoreEntries = true;
+    AppLogger.info('[FirestoreSyncService] Pagination state reset');
+  }
 
-      AppLogger.info('[FirestoreSyncService] Fetched ${entries.length} entries for user $uid');
+  /// Fetch first page of entries from Firestore (paginated).
+  /// Resets pagination state before fetching.
+  Future<List<Entry>> fetchEntries(String uid, {int? limit}) async {
+    resetPagination();
+    final pageSize = limit ?? kFirestorePageSize;
+
+    try {
+      final query = _entriesRef(uid).orderBy('timestamp', descending: true).limit(pageSize);
+
+      final snapshot = await query.get();
+      final entries = snapshot.docs
+          .map((doc) {
+            try {
+              final entry = Entry.fromJson(doc.data());
+              return _sanitizeCloudEntry(entry);
+            } catch (e) {
+              AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
+              return null;
+            }
+          })
+          .whereType<Entry>()
+          .toList();
+
+      // CP: Update pagination state
+      _hasMoreEntries = snapshot.docs.length == pageSize;
+      _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+
+      AppLogger.info(
+        '[FirestoreSyncService] Fetched ${entries.length} entries for user $uid (hasMore: $_hasMoreEntries)',
+      );
       return entries;
     } catch (e) {
       AppLogger.error('[FirestoreSyncService] Error fetching entries', error: e);
@@ -148,18 +161,68 @@ class FirestoreSyncService {
     }
   }
 
+  /// Fetch next page of entries from Firestore using cursor-based pagination.
+  /// Returns empty list if no more entries or if fetchEntries wasn't called first.
+  Future<List<Entry>> fetchMoreEntries(String uid) async {
+    // CP: Guard against concurrent pagination requests
+    if (_isFetchingMore || _lastDocument == null || !_hasMoreEntries) {
+      if (!_isFetchingMore && _lastDocument != null && !_hasMoreEntries) {
+        AppLogger.info('[FirestoreSyncService] No more entries to fetch');
+      }
+      return [];
+    }
+
+    _isFetchingMore = true;
+    try {
+      final query = _entriesRef(
+        uid,
+      ).orderBy('timestamp', descending: true).startAfterDocument(_lastDocument!).limit(kFirestorePageSize);
+
+      final snapshot = await query.get();
+      final entries = snapshot.docs
+          .map((doc) {
+            try {
+              final entry = Entry.fromJson(doc.data());
+              return _sanitizeCloudEntry(entry);
+            } catch (e) {
+              AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
+              return null;
+            }
+          })
+          .whereType<Entry>()
+          .toList();
+
+      // CP: Update pagination state
+      _hasMoreEntries = snapshot.docs.length == kFirestorePageSize;
+      _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : _lastDocument;
+
+      AppLogger.info(
+        '[FirestoreSyncService] Fetched ${entries.length} more entries for user $uid (hasMore: $_hasMoreEntries)',
+      );
+      return entries;
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error fetching more entries', error: e);
+      return [];
+    } finally {
+      _isFetchingMore = false;
+    }
+  }
+
   /// Fetch all categories from Firestore for a user (one-time fetch).
   Future<List<Category>> fetchCategories(String uid) async {
     try {
       final snapshot = await _categoriesRef(uid).get();
-      final categories = snapshot.docs.map((doc) {
-        try {
-          return Category.fromJson(doc.data());
-        } catch (e) {
-          AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
-          return null;
-        }
-      }).whereType<Category>().toList();
+      final categories = snapshot.docs
+          .map((doc) {
+            try {
+              return Category.fromJson(doc.data());
+            } catch (e) {
+              AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
+              return null;
+            }
+          })
+          .whereType<Category>()
+          .toList();
 
       AppLogger.info('[FirestoreSyncService] Fetched ${categories.length} categories for user $uid');
       return categories;
@@ -180,7 +243,9 @@ class FirestoreSyncService {
 
     // CP: Skip entries still being processed - they shouldn't be synced until complete
     if (entry.processingState != null) {
-      AppLogger.info('[FirestoreSyncService] Skipping incomplete entry ${entry.id}: processingState=${entry.processingState}');
+      AppLogger.info(
+        '[FirestoreSyncService] Skipping incomplete entry ${entry.id}: processingState=${entry.processingState}',
+      );
       return;
     }
 
@@ -192,7 +257,9 @@ class FirestoreSyncService {
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
-          AppLogger.warn('[FirestoreSyncService] Transient error syncing entry ${entry.id} (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms');
+          AppLogger.warn(
+            '[FirestoreSyncService] Transient error syncing entry ${entry.id} (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms',
+          );
           await Future.delayed(Duration(milliseconds: backoffMs));
           continue;
         }
@@ -216,7 +283,9 @@ class FirestoreSyncService {
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
-          AppLogger.warn('[FirestoreSyncService] Transient error deleting entry $entryId (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms');
+          AppLogger.warn(
+            '[FirestoreSyncService] Transient error deleting entry $entryId (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms',
+          );
           await Future.delayed(Duration(milliseconds: backoffMs));
           continue;
         }
@@ -241,7 +310,9 @@ class FirestoreSyncService {
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
-          AppLogger.warn('[FirestoreSyncService] Transient error syncing category ${category.name} (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms');
+          AppLogger.warn(
+            '[FirestoreSyncService] Transient error syncing category ${category.name} (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms',
+          );
           await Future.delayed(Duration(milliseconds: backoffMs));
           continue;
         }
@@ -265,7 +336,9 @@ class FirestoreSyncService {
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
-          AppLogger.warn('[FirestoreSyncService] Transient error deleting category $categoryName (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms');
+          AppLogger.warn(
+            '[FirestoreSyncService] Transient error deleting category $categoryName (${e.code}), retry ${attempt + 1}/$_maxRetries in ${backoffMs}ms',
+          );
           await Future.delayed(Duration(milliseconds: backoffMs));
           continue;
         }
@@ -281,10 +354,9 @@ class FirestoreSyncService {
   /// Bulk sync all entries to Firestore (for initial upload after sign-in).
   Future<void> syncAllEntries(String uid, List<Entry> entries) async {
     // CP: Filter out incomplete entries (still processing) and image entries not yet uploaded
-    final syncableEntries = entries.where((e) =>
-      e.processingState == null &&
-      (e.imagePath == null || e.cloudImagePath != null)
-    ).toList();
+    final syncableEntries = entries
+        .where((e) => e.processingState == null && (e.imagePath == null || e.cloudImagePath != null))
+        .toList();
 
     if (syncableEntries.isEmpty) {
       AppLogger.info('[FirestoreSyncService] No entries to sync');
@@ -364,7 +436,7 @@ class FirestoreSyncService {
     merged.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     AppLogger.info(
-      '[FirestoreSyncService] Merged ${localEntries.length} local + ${cloudEntries.length} cloud = ${merged.length} entries'
+      '[FirestoreSyncService] Merged ${localEntries.length} local + ${cloudEntries.length} cloud = ${merged.length} entries',
     );
 
     return merged;
@@ -385,7 +457,7 @@ class FirestoreSyncService {
     }
 
     AppLogger.info(
-      '[FirestoreSyncService] Merged ${localCategories.length} local + ${cloudCategories.length} cloud = ${mergedMap.length} categories'
+      '[FirestoreSyncService] Merged ${localCategories.length} local + ${cloudCategories.length} cloud = ${mergedMap.length} categories',
     );
 
     return mergedMap.values.toList();
