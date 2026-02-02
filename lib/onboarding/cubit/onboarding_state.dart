@@ -6,6 +6,7 @@ class OnboardingState extends Equatable {
   final OnboardingStep currentStep;
   final int currentStepIndex;
   final bool isLoading;
+  final bool isInitializing;
   final List<String> selectedCategories;
   final List<String> suggestedCategories;
   final String? errorMessage;
@@ -19,6 +20,7 @@ class OnboardingState extends Equatable {
     this.currentStep = OnboardingStep.welcome,
     this.currentStepIndex = 0,
     this.isLoading = false,
+    this.isInitializing = true,
     this.selectedCategories = const [],
     this.isSigningIn = false,
     this.signedInUser,
@@ -82,6 +84,7 @@ class OnboardingState extends Equatable {
     OnboardingStep? currentStep,
     int? currentStepIndex,
     bool? isLoading,
+    bool? isInitializing,
     List<String>? selectedCategories,
     List<String>? suggestedCategories,
     String? errorMessage,
@@ -97,6 +100,7 @@ class OnboardingState extends Equatable {
       currentStep: currentStep ?? this.currentStep,
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
       isLoading: isLoading ?? this.isLoading,
+      isInitializing: isInitializing ?? this.isInitializing,
       selectedCategories: selectedCategories ?? this.selectedCategories,
       suggestedCategories: suggestedCategories ?? this.suggestedCategories,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
@@ -120,6 +124,7 @@ class OnboardingState extends Equatable {
     currentStep,
     currentStepIndex,
     isLoading,
+    isInitializing,
     selectedCategories,
     suggestedCategories,
     errorMessage,

@@ -120,14 +120,32 @@ class AppRoot extends StatelessWidget {
       },
       child: BlocBuilder<OnboardingCubit, OnboardingState>(
         builder: (context, state) {
-          final onboardingCubit = context.read<OnboardingCubit>();
+          // CP: Show loading indicator during async initialization
+          if (state.isInitializing) {
+            return const _InitializingScreen();
+          }
 
+          final onboardingCubit = context.read<OnboardingCubit>();
           if (onboardingCubit.isOnboardingCompleted()) {
             return const DashboardV2Page();
           } else {
             return const OnboardingPage();
           }
         },
+      ),
+    );
+  }
+}
+
+// CP: Simple loading screen during initialization
+class _InitializingScreen extends StatelessWidget {
+  const _InitializingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

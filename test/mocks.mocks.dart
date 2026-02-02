@@ -935,6 +935,12 @@ class MockImageStorageSyncService extends _i1.Mock
             returnValue: _i15.Future<String?>.value(),
           )
           as _i15.Future<String?>);
+
+  @override
+  void clearUrlCache() => super.noSuchMethod(
+    Invocation.method(#clearUrlCache, []),
+    returnValueForMissingStub: null,
+  );
 }
 
 /// A class which mocks [FirestoreSyncService].
@@ -947,12 +953,12 @@ class MockFirestoreSyncService extends _i1.Mock
   }
 
   @override
-  set onRemoteEntriesChanged(
-    void Function(List<_i21.Entry>)? _onRemoteEntriesChanged,
-  ) => super.noSuchMethod(
-    Invocation.setter(#onRemoteEntriesChanged, _onRemoteEntriesChanged),
-    returnValueForMissingStub: null,
-  );
+  bool get hasMoreEntries =>
+      (super.noSuchMethod(
+            Invocation.getter(#hasMoreEntries),
+            returnValue: false,
+          )
+          as bool);
 
   @override
   set onRemoteCategoriesChanged(
@@ -975,9 +981,23 @@ class MockFirestoreSyncService extends _i1.Mock
   );
 
   @override
-  _i15.Future<List<_i21.Entry>> fetchEntries(String? uid) =>
+  void resetPagination() => super.noSuchMethod(
+    Invocation.method(#resetPagination, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i15.Future<List<_i21.Entry>> fetchEntries(String? uid, {int? limit}) =>
       (super.noSuchMethod(
-            Invocation.method(#fetchEntries, [uid]),
+            Invocation.method(#fetchEntries, [uid], {#limit: limit}),
+            returnValue: _i15.Future<List<_i21.Entry>>.value(<_i21.Entry>[]),
+          )
+          as _i15.Future<List<_i21.Entry>>);
+
+  @override
+  _i15.Future<List<_i21.Entry>> fetchMoreEntries(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchMoreEntries, [uid]),
             returnValue: _i15.Future<List<_i21.Entry>>.value(<_i21.Entry>[]),
           )
           as _i15.Future<List<_i21.Entry>>);
@@ -2226,6 +2246,14 @@ class MockEntryRepository extends _i1.Mock implements _i39.EntryRepository {
           as List<_i22.Category>);
 
   @override
+  bool get hasMoreFirestoreEntries =>
+      (super.noSuchMethod(
+            Invocation.getter(#hasMoreFirestoreEntries),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   _i15.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
@@ -2449,6 +2477,24 @@ class MockEntryRepository extends _i1.Mock implements _i39.EntryRepository {
   _i15.Future<void> onUserSignedIn(String? uid) =>
       (super.noSuchMethod(
             Invocation.method(#onUserSignedIn, [uid]),
+            returnValue: _i15.Future<void>.value(),
+            returnValueForMissingStub: _i15.Future<void>.value(),
+          )
+          as _i15.Future<void>);
+
+  @override
+  _i15.Future<void> loadMoreEntries() =>
+      (super.noSuchMethod(
+            Invocation.method(#loadMoreEntries, []),
+            returnValue: _i15.Future<void>.value(),
+            returnValueForMissingStub: _i15.Future<void>.value(),
+          )
+          as _i15.Future<void>);
+
+  @override
+  _i15.Future<void> refreshFromCloud() =>
+      (super.noSuchMethod(
+            Invocation.method(#refreshFromCloud, []),
             returnValue: _i15.Future<void>.value(),
             returnValueForMissingStub: _i15.Future<void>.value(),
           )

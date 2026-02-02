@@ -55,6 +55,10 @@ class EntryRepository {
   // CP: Get only active (non-archived) categories for AI categorization
   List<Category> get activeCategories => _categories.where((cat) => !cat.isArchived).toList();
 
+  /// Whether there are more entries available to fetch from Firestore.
+  /// Returns false if user is not signed in (pagination only applies to cloud data).
+  bool get hasMoreFirestoreEntries => _currentUserId != null && _firestoreSyncService.hasMoreEntries;
+
   EntryRepository({
     required EntryPersistenceService persistenceService,
     required AiService aiService,
@@ -70,8 +74,7 @@ class EntryRepository {
        _imageStorageService = imageStorageService,
        _imageStorageSyncService = imageStorageSyncService,
        _firestoreSyncService = firestoreSyncService {
-    // CP: Set up callbacks for remote changes
-    _firestoreSyncService.onRemoteEntriesChanged = _handleRemoteEntriesChanged;
+    // CP: Set up callback for remote category changes (entries use pull-to-refresh)
     _firestoreSyncService.onRemoteCategoriesChanged = _handleRemoteCategoriesChanged;
   }
 
@@ -1025,6 +1028,66 @@ class EntryRepository {
     );
   }
 
+  /// Load more entries from Firestore using cursor-based pagination.
+  /// Merges new entries with existing list, avoiding duplicates.
+  Future<void> loadMoreEntries() async {
+    if (_currentUserId == null) {
+      AppLogger.warn('[EntryRepository] Cannot load more entries - not signed in');
+      return;
+    }
+
+    if (!hasMoreFirestoreEntries) {
+      AppLogger.info('[EntryRepository] No more entries to load from Firestore');
+      return;
+    }
+
+    final moreEntries = await _firestoreSyncService.fetchMoreEntries(_currentUserId!);
+    if (moreEntries.isEmpty) {
+      AppLogger.info('[EntryRepository] Fetched 0 more entries');
+      return;
+    }
+
+    // CP: Merge new entries with existing, avoiding duplicates by ID
+    final existingIds = _entries.map((e) => e.id).toSet();
+    final newEntries = moreEntries.where((e) => !existingIds.contains(e.id)).toList();
+
+    if (newEntries.isEmpty) {
+      AppLogger.info('[EntryRepository] All fetched entries already exist locally');
+      return;
+    }
+
+    _entries.addAll(newEntries);
+    // CP: Re-sort to maintain timestamp descending order
+    _entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    await _saveEntries();
+    AppLogger.info('[EntryRepository] Loaded ${newEntries.length} more entries, total: ${_entries.length}');
+  }
+
+  /// Refresh entries and categories from cloud (pull-to-refresh).
+  /// Resets pagination and fetches first page of entries.
+  Future<void> refreshFromCloud() async {
+    if (_currentUserId == null) {
+      AppLogger.warn('[EntryRepository] Cannot refresh from cloud - not signed in');
+      return;
+    }
+
+    _firestoreSyncService.resetPagination();
+    final entries = await _firestoreSyncService.fetchEntries(_currentUserId!);
+    final categories = await _firestoreSyncService.fetchCategories(_currentUserId!);
+
+    // CP: Merge cloud data with local (cloud wins for conflicts)
+    _entries = _firestoreSyncService.mergeEntries(_entries, entries);
+    _categories = List.from(_firestoreSyncService.mergeCategories(_categories, categories));
+
+    await _saveEntries();
+    await _saveCategories();
+
+    AppLogger.info(
+      '[EntryRepository] Refreshed from cloud - ${_entries.length} entries, ${_categories.length} categories',
+    );
+  }
+
   /// Called when user signs out. Stops listening, clears user ID and all local data.
   Future<void> onUserSignedOut() async {
     // CP: Log entry count before clearing to help debug data loss issues
@@ -1032,6 +1095,8 @@ class EntryRepository {
       '[EntryRepository] User signed out - clearing ${_entries.length} entries and ${_categories.length} categories',
     );
     _firestoreSyncService.stopListening();
+    // CP: Reset pagination cursor to prevent stale state on next sign-in
+    _firestoreSyncService.resetPagination();
     _currentUserId = null;
 
     // Clear all local data to prevent mixing with another account
@@ -1049,24 +1114,6 @@ class EntryRepository {
     AppLogger.info('[EntryRepository] Local data cleared, categories restored to defaults');
   }
 
-  /// Handle remote entries update from Firestore listener.
-  void _handleRemoteEntriesChanged(List<Entry> remoteEntries) {
-    if (_currentUserId == null) return;
-
-    // CP: Merge remote changes with local (remote wins for conflicts)
-    final merged = _firestoreSyncService.mergeEntries(_entries, remoteEntries);
-
-    // CP: Only update if there are actual changes
-    if (merged.length != _entries.length || !_entriesEqual(merged, _entries)) {
-      _entries = merged;
-      _persistenceService.saveEntries(_entries).catchError((e) {
-        AppLogger.error('[EntryRepository] Error saving entries after remote update', error: e);
-      });
-      _entriesStreamController.add(currentEntries);
-      AppLogger.info('[EntryRepository] Updated local entries from remote: ${_entries.length} entries');
-    }
-  }
-
   /// Handle remote categories update from Firestore listener.
   void _handleRemoteCategoriesChanged(List<Category> remoteCategories) {
     if (_currentUserId == null) return;
@@ -1081,17 +1128,6 @@ class EntryRepository {
       _entriesStreamController.add(currentEntries);
       AppLogger.info('[EntryRepository] Updated local categories from remote: ${_categories.length} categories');
     }
-  }
-
-  /// Check if two entry lists are equal (shallow comparison by ID and timestamp).
-  bool _entriesEqual(List<Entry> a, List<Entry> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i].id != b[i].id || a[i].timestamp != b[i].timestamp) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /// Sync a single entry to cloud (called after local save).

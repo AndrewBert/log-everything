@@ -42,6 +42,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
         category: category,
         entries: categoryEntries,
         isLoading: false,
+        hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
         categoryColor: categoryColor,
       ),
     );
@@ -63,8 +64,55 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
         category: category,
         entries: categoryEntries,
         categoryColor: categoryColor,
+        hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
       ),
     );
+  }
+
+  /// Load more entries from Firestore (pagination).
+  /// Called when user scrolls near bottom of the category entries list.
+  Future<void> loadMoreEntries() async {
+    // CP: Prevent duplicate requests
+    if (state.isLoadingMore || !state.hasMoreEntries) return;
+
+    emit(state.copyWith(isLoadingMore: true));
+
+    try {
+      await _entryRepository.loadMoreEntries();
+      // CP: Stream update from repository will trigger _onEntriesUpdated
+    } catch (e) {
+      // CP: Error handled in repository, just reset loading state
+    } finally {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            isLoadingMore: false,
+            hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refresh entries from cloud (pull-to-refresh).
+  /// Resets pagination and fetches first page of entries.
+  Future<void> refresh() async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _entryRepository.refreshFromCloud();
+      // CP: Stream update from repository will trigger _onEntriesUpdated
+    } catch (e) {
+      // CP: Error handled in repository, just reset loading state
+    } finally {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            isLoading: false,
+            hasMoreEntries: _entryRepository.hasMoreFirestoreEntries,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> updateCategory(String newName, String newDescription, {Color? color}) async {
