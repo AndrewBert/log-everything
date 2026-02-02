@@ -32,19 +32,59 @@ class OnboardingCubit extends Cubit<OnboardingState> {
        _firestoreSyncService = firestoreSyncService,
        _entryRepository = entryRepository,
        super(const OnboardingState()) {
-    _loadProgress();
+    _initializeAsync();
   }
 
-  void _loadProgress() {
+  // CP: Async initialization - checks for returning user before loading saved progress
+  Future<void> _initializeAsync() async {
     try {
+      // CP: Check for returning user with cached credentials
+      final user = _authService.currentUser;
+      if (user != null) {
+        AppLogger.info('[OnboardingCubit] Found cached user: ${user.email}, checking for cloud data');
+        final cloudEntries = await _firestoreSyncService.fetchEntries(user.uid);
+
+        if (cloudEntries.isNotEmpty) {
+          // CP: Returning user with data - skip onboarding entirely
+          AppLogger.info(
+            '[OnboardingCubit] Returning user detected with ${cloudEntries.length} entries, skipping onboarding',
+          );
+          await _entryRepository.onUserSignedIn(user.uid);
+          await _prefs.setBool(_onboardingCompletedKey, true);
+          await _prefs.remove(_onboardingProgressKey);
+          emit(
+            state.copyWith(
+              currentStep: OnboardingStep.completed,
+              isInitializing: false,
+              signedInUser: user,
+            ),
+          );
+          return;
+        } else {
+          // CP: Signed in but no cloud data - trigger sync but continue onboarding
+          AppLogger.info('[OnboardingCubit] Signed-in user with no cloud data, continuing onboarding');
+          await _entryRepository.onUserSignedIn(user.uid);
+          emit(state.copyWith(signedInUser: user));
+        }
+      }
+
+      // CP: Normal flow - load saved progress from prefs
       final stepIndex = _prefs.getInt(_onboardingProgressKey) ?? 0;
       final step = OnboardingStep.values[stepIndex.clamp(0, OnboardingStep.values.length - 1)];
 
-      emit(state.copyWith(currentStep: step, currentStepIndex: stepIndex));
+      emit(
+        state.copyWith(
+          currentStep: step,
+          currentStepIndex: stepIndex,
+          isInitializing: false,
+        ),
+      );
 
-      AppLogger.info('[OnboardingCubit] Loaded progress: step $stepIndex ($step)');
+      AppLogger.info('[OnboardingCubit] Initialized: step $stepIndex ($step)');
     } catch (e) {
-      AppLogger.error('[OnboardingCubit] Error loading progress: $e');
+      AppLogger.error('[OnboardingCubit] Error during initialization', error: e);
+      // CP: On error, show onboarding (safe default) but log for debugging
+      emit(state.copyWith(isInitializing: false));
     }
   }
 
@@ -180,10 +220,12 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       emit(state.copyWith(isSigningIn: false, authErrorMessage: e.message));
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Unexpected sign-in error', error: e);
-      emit(state.copyWith(
-        isSigningIn: false,
-        authErrorMessage: 'Sign in failed. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          isSigningIn: false,
+          authErrorMessage: 'Sign in failed. Please try again.',
+        ),
+      );
     }
   }
 
@@ -198,11 +240,13 @@ class OnboardingCubit extends Cubit<OnboardingState> {
         await _entryRepository.onUserSignedIn(user.uid);
         await _prefs.setBool(_onboardingCompletedKey, true);
         await _prefs.remove(_onboardingProgressKey);
-        emit(state.copyWith(
-          currentStep: OnboardingStep.completed,
-          isSigningIn: false,
-          signedInUser: user,
-        ));
+        emit(
+          state.copyWith(
+            currentStep: OnboardingStep.completed,
+            isSigningIn: false,
+            signedInUser: user,
+          ),
+        );
       } else {
         // CP: No data → continue onboarding (but stay signed in)
         AppLogger.info('[OnboardingCubit] No cloud data found, continuing onboarding');
@@ -211,10 +255,12 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       }
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error checking cloud data', error: e);
-      emit(state.copyWith(
-        isSigningIn: false,
-        authErrorMessage: 'Failed to check cloud data. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          isSigningIn: false,
+          authErrorMessage: 'Failed to check cloud data. Please try again.',
+        ),
+      );
     }
   }
 
