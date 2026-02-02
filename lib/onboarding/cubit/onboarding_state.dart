@@ -15,6 +15,10 @@ class OnboardingState extends Equatable {
   final bool isSigningIn;
   final AuthUser? signedInUser;
   final String? authErrorMessage;
+  // CP: Bootstrap-related fields for anonymous auth on first launch
+  final bool requiresConnection;
+  final bool isRetrying;
+  final String? bootstrapError;
 
   const OnboardingState({
     this.currentStep = OnboardingStep.welcome,
@@ -25,6 +29,9 @@ class OnboardingState extends Equatable {
     this.isSigningIn = false,
     this.signedInUser,
     this.authErrorMessage,
+    this.requiresConnection = false,
+    this.isRetrying = false,
+    this.bootstrapError,
     this.suggestedCategories = const [
       // CP: Work & Productivity
       'Work',
@@ -95,6 +102,10 @@ class OnboardingState extends Equatable {
     String? authErrorMessage,
     bool clearAuthError = false,
     bool clearSignedInUser = false,
+    bool? requiresConnection,
+    bool? isRetrying,
+    String? bootstrapError,
+    bool clearBootstrapError = false,
   }) {
     return OnboardingState(
       currentStep: currentStep ?? this.currentStep,
@@ -108,6 +119,9 @@ class OnboardingState extends Equatable {
       isSigningIn: isSigningIn ?? this.isSigningIn,
       signedInUser: clearSignedInUser ? null : (signedInUser ?? this.signedInUser),
       authErrorMessage: clearAuthError ? null : (authErrorMessage ?? this.authErrorMessage),
+      requiresConnection: requiresConnection ?? this.requiresConnection,
+      isRetrying: isRetrying ?? this.isRetrying,
+      bootstrapError: clearBootstrapError ? null : (bootstrapError ?? this.bootstrapError),
     );
   }
 
@@ -132,5 +146,8 @@ class OnboardingState extends Equatable {
     isSigningIn,
     signedInUser,
     authErrorMessage,
+    requiresConnection,
+    isRetrying,
+    bootstrapError,
   ];
 }

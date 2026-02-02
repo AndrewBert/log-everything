@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get_it/get_it.dart';
 import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/services/anonymous_auth_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/speech_service.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -71,6 +72,9 @@ Future<void> configureDependencies() async {
 
   // Register ImageStorageService
   getIt.registerLazySingleton<ImageStorageService>(() => LocalImageStorageService());
+
+  // CP: Register AnonymousAuthService for anonymous Firebase auth on first launch
+  getIt.registerLazySingleton<AnonymousAuthService>(() => FirebaseAnonymousAuthService());
 
   // CP: Register AuthService for Firebase authentication
   getIt.registerLazySingleton<AuthService>(() => FirebaseAuthService());

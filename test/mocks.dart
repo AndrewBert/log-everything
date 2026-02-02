@@ -5,6 +5,7 @@ import 'package:record/record.dart';
 import 'package:myapp/services/permission_service.dart';
 import 'package:myapp/services/entry_persistence_service.dart';
 import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/services/anonymous_auth_service.dart';
 import 'package:myapp/services/vector_store_service.dart';
 import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/services/image_storage_sync_service.dart';
@@ -29,6 +30,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // CP: For image sync t
   PermissionService,
   EntryPersistenceService, // Add persistence service
   AiService, // Add AI service
+  AnonymousAuthService, // CP: Add AnonymousAuthService for anonymous Firebase auth
   AudioRecorderService, // Add audio recorder service
   VectorStoreService, // CP: Add VectorStoreService for mock generation
   ImageStorageService, // Add ImageStorageService for mock generation

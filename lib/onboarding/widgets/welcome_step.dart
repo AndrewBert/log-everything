@@ -90,58 +90,47 @@ class WelcomeStep extends StatelessWidget {
     ];
 
     return Column(
-      children:
-          features.map((feature) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(feature['icon'] as IconData, color: Theme.of(context).colorScheme.primary, size: 24),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          feature['title'] as String,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          feature['description'] as String,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      children: features.map((feature) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(feature['icon'] as IconData, color: Theme.of(context).colorScheme.primary, size: 24),
               ),
-            );
-          }).toList(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      feature['title'] as String,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      feature['description'] as String,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
   Widget _buildSignInSection(BuildContext context, OnboardingState state) {
-    // CP: If already signed in during onboarding, show confirmation
+    // CP: Hide sign-in section entirely when already signed in
     if (state.signedInUser != null) {
-      return Column(
-        key: OnboardingKeys.signedInConfirmation,
-        children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            'Signed in as ${state.signedInUser!.email ?? state.signedInUser!.displayName ?? 'User'}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.green[700]),
-          ),
-        ],
-      );
+      return const SizedBox.shrink();
     }
 
     return Column(

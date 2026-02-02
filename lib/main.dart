@@ -7,6 +7,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/firebase_options.dart';
 import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/services/anonymous_auth_service.dart';
+import 'package:myapp/widgets/connect_required_screen.dart';
 import 'package:myapp/widgets/voice_input/cubit/voice_input_cubit.dart';
 import 'package:myapp/dashboard_v2/dashboard_v2_barrel.dart';
 import 'package:myapp/utils/category_colors.dart';
@@ -90,6 +92,7 @@ class MyApp extends StatelessWidget {
             sharedPreferences: getIt<SharedPreferences>(),
             entryCubit: context.read<EntryCubit>(),
             authService: getIt<AuthService>(),
+            anonymousAuthService: getIt<AnonymousAuthService>(),
             firestoreSyncService: getIt<FirestoreSyncService>(),
             entryRepository: getIt<EntryRepository>(),
           ),
@@ -130,6 +133,15 @@ class AppRoot extends StatelessWidget {
       },
       child: BlocBuilder<OnboardingCubit, OnboardingState>(
         builder: (context, state) {
+          // CP: Show connection/error screen if bootstrap failed
+          if (state.requiresConnection) {
+            return ConnectRequiredScreen(
+              isRetrying: state.isRetrying,
+              errorMessage: state.bootstrapError,
+              onRetry: () => context.read<OnboardingCubit>().retryConnection(),
+            );
+          }
+
           // CP: Show loading indicator during async initialization
           if (state.isInitializing) {
             return const _InitializingScreen();

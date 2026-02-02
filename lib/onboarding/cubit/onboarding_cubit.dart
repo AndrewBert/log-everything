@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../entry/cubit/entry_cubit.dart';
 import '../../entry/repository/entry_repository.dart';
+import '../../services/anonymous_auth_service.dart';
 import '../../services/firestore_sync_service.dart';
 import '../../settings/services/auth_service.dart';
 import '../../utils/logger.dart';
@@ -14,6 +15,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   final SharedPreferences _prefs;
   final EntryCubit _entryCubit;
   final AuthService _authService;
+  final AnonymousAuthService _anonymousAuthService;
   final FirestoreSyncService _firestoreSyncService;
   final EntryRepository _entryRepository;
 
@@ -24,11 +26,13 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     required SharedPreferences sharedPreferences,
     required EntryCubit entryCubit,
     required AuthService authService,
+    required AnonymousAuthService anonymousAuthService,
     required FirestoreSyncService firestoreSyncService,
     required EntryRepository entryRepository,
   }) : _prefs = sharedPreferences,
        _entryCubit = entryCubit,
        _authService = authService,
+       _anonymousAuthService = anonymousAuthService,
        _firestoreSyncService = firestoreSyncService,
        _entryRepository = entryRepository,
        super(const OnboardingState()) {
@@ -38,10 +42,39 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   // CP: Async initialization - checks for returning user before loading saved progress
   Future<void> _initializeAsync() async {
     try {
-      // CP: Check for returning user with cached credentials
+      // CP: Check for existing Firebase user FIRST (Google/Apple or anonymous)
+      // This prevents offline signed-in users from hitting bootstrap
+      final existingUser = _authService.currentUser;
+
+      if (existingUser == null) {
+        // CP: No existing auth - need to create anonymous account
+        final result = await _anonymousAuthService.ensureAnonymousAuth();
+
+        if (result.status == AnonymousAuthStatus.requiresConnection) {
+          AppLogger.info('[OnboardingCubit] Bootstrap failed - offline on first launch');
+          emit(state.copyWith(isInitializing: false, requiresConnection: true));
+          return;
+        }
+
+        if (result.status == AnonymousAuthStatus.failed) {
+          AppLogger.error('[OnboardingCubit] Bootstrap failed: ${result.errorMessage}');
+          emit(
+            state.copyWith(
+              isInitializing: false,
+              requiresConnection: true,
+              bootstrapError: result.errorMessage,
+            ),
+          );
+          return;
+        }
+
+        AppLogger.info('[OnboardingCubit] Anonymous auth created: ${result.uid}');
+      }
+
+      // CP: Check for returning user with cached credentials (now includes anonymous users)
       final user = _authService.currentUser;
       if (user != null) {
-        AppLogger.info('[OnboardingCubit] Found cached user: ${user.email}, checking for cloud data');
+        AppLogger.info('[OnboardingCubit] Found cached user: ${user.email ?? 'anonymous'}, checking for cloud data');
         final cloudEntries = await _firestoreSyncService.fetchEntries(user.uid);
 
         if (cloudEntries.isNotEmpty) {
@@ -56,6 +89,8 @@ class OnboardingCubit extends Cubit<OnboardingState> {
             state.copyWith(
               currentStep: OnboardingStep.completed,
               isInitializing: false,
+              requiresConnection: false,
+              isRetrying: false,
               signedInUser: user,
             ),
           );
@@ -77,6 +112,8 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           currentStep: step,
           currentStepIndex: stepIndex,
           isInitializing: false,
+          requiresConnection: false,
+          isRetrying: false,
         ),
       );
 
@@ -84,7 +121,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error during initialization', error: e);
       // CP: On error, show onboarding (safe default) but log for debugging
-      emit(state.copyWith(isInitializing: false));
+      emit(state.copyWith(isInitializing: false, requiresConnection: false, isRetrying: false));
     }
   }
 
@@ -188,6 +225,12 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
   void clearAuthError() {
     emit(state.copyWith(clearAuthError: true));
+  }
+
+  // CP: Retry connection after bootstrap failure
+  Future<void> retryConnection() async {
+    emit(state.copyWith(isRetrying: true, clearBootstrapError: true));
+    await _initializeAsync();
   }
 
   // CP: Sign in with Google during onboarding
