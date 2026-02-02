@@ -1279,9 +1279,7 @@ Return ONLY a JSON object with this structure:
 
     final categoryNames = categories.map((cat) => cat.name).toList();
     final categoriesListString = categories
-        .map((cat) => cat.description.trim().isNotEmpty
-            ? '- ${cat.name}: ${cat.description}'
-            : '- ${cat.name}')
+        .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
 
     final base64Image = base64Encode(imageBytes);
@@ -1289,7 +1287,8 @@ Return ONLY a JSON object with this structure:
         ? "\n\nUser's note about this image: \"$userNote\""
         : "";
 
-    final prompt = '''Analyze this image for a personal logging app.$userNoteContext
+    final prompt =
+        '''Analyze this image for a personal logging app.$userNoteContext
 
 Available categories:
 $categoriesListString
@@ -1354,9 +1353,7 @@ Be concise. Use ONLY category names from the provided list.''';
           }
         }
 
-        if (messageOutput != null &&
-            messageOutput['content'] is List &&
-            messageOutput['content'].isNotEmpty) {
+        if (messageOutput != null && messageOutput['content'] is List && messageOutput['content'].isNotEmpty) {
           for (final item in messageOutput['content']) {
             if (item['type'] == 'output_text' && item['text'] != null) {
               final json = jsonDecode(item['text']);
@@ -1404,16 +1401,20 @@ Be concise. Use ONLY category names from the provided list.''';
     final dateString = currentDate.toLocal().toString().split(' ')[0];
 
     // CP: Build a summary of recent entries for the AI
-    final entriesSummary = entries.take(20).map((e) {
-      final text = e['text'] as String? ?? '';
-      final category = e['category'] as String? ?? 'Unknown';
-      final isTask = e['isTask'] as bool? ?? false;
-      final isCompleted = e['isCompleted'] as bool? ?? false;
-      final timestamp = e['timestamp'] as String? ?? '';
-      return '- [$category] $text (task: $isTask, completed: $isCompleted, date: $timestamp)';
-    }).join('\n');
+    final entriesSummary = entries
+        .take(20)
+        .map((e) {
+          final text = e['text'] as String? ?? '';
+          final category = e['category'] as String? ?? 'Unknown';
+          final isTask = e['isTask'] as bool? ?? false;
+          final isCompleted = e['isCompleted'] as bool? ?? false;
+          final timestamp = e['timestamp'] as String? ?? '';
+          return '- [$category] $text (task: $isTask, completed: $isCompleted, date: $timestamp)';
+        })
+        .join('\n');
 
-    final prompt = '''Based on these recent log entries, generate 2-3 short chat prompts the user might want to ask about their data.
+    final prompt =
+        '''Based on these recent log entries, generate 2-3 short chat prompts the user might want to ask about their data.
 
 Today's date: $dateString
 
@@ -1422,10 +1423,21 @@ $entriesSummary
 
 Guidelines:
 - Keep prompts under 8 words
-- Reference specific patterns you see (categories, tasks, time periods)
-- Vary the prompt types: reflection, summary, actionable
 - Use "I" perspective ("What did I...", "How's my...")
 - Make them feel natural and conversational
+- Vary the types: reflection, summary, or actionable
+
+Quality rules:
+- Reference ACTUAL content from entries, not just categories
+- Don't infer goals, habits, or routines unless explicitly logged multiple times
+- Prioritize patterns that appear 2+ times over single entries
+- Be specific: "What did I eat?" beats "How's my nutrition?"
+
+Examples:
+- Good: "What tasks did I finish this week?" (references completed tasks)
+- Good: "Summarize my work meetings" (references actual meeting entries)
+- Bad: "Did I meet my fitness goals?" (no goals were set)
+- Bad: "How's my health journey?" (vague, not grounded in data)
 
 Return ONLY a JSON object with this structure:
 {
@@ -1437,7 +1449,8 @@ Return ONLY a JSON object with this structure:
       'input': [
         {
           'role': 'system',
-          'content': 'You generate short, personalized chat prompts for a personal logging app. Keep suggestions concise and relevant to the user\'s actual data.',
+          'content':
+              'You generate short, personalized chat prompts for a personal logging app. Keep suggestions concise and relevant to the user\'s actual data.',
         },
         {
           'role': 'user',

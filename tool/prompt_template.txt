@@ -1,0 +1,29 @@
+Based on these recent log entries, generate 2-3 short chat prompts the user might want to ask about their data.
+
+Today's date: {{DATE}}
+
+Recent entries:
+{{ENTRIES}}
+
+Guidelines:
+- Keep prompts under 8 words
+- Use "I" perspective ("What did I...", "How's my...")
+- Make them feel natural and conversational
+- Vary the types: reflection, summary, or actionable
+
+Quality rules:
+- Reference ACTUAL content from entries, not just categories
+- Don't infer goals, habits, or routines unless explicitly logged multiple times
+- Prioritize patterns that appear 2+ times over single entries
+- Be specific: "What did I eat?" beats "How's my nutrition?"
+
+Examples:
+- Good: "What tasks did I finish this week?" (references completed tasks)
+- Good: "Summarize my work meetings" (references actual meeting entries)
+- Bad: "Did I meet my fitness goals?" (no goals were set)
+- Bad: "How's my health journey?" (vague, not grounded in data)
+
+Return ONLY a JSON object with this structure:
+{
+  "prompts": ["prompt 1", "prompt 2", "prompt 3"]
+}
