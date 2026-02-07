@@ -58,3 +58,7 @@ lib/
 ## Context7 Usage
 
 Always use Context7 MCP tools (`resolve-library-id` and `query-docs`) when code generation, setup/configuration steps, or library/API documentation is needed.
+
+## iOS Physical Device Debugging
+
+If debugging hangs on a physical iPhone (white screen, "Dart VM Service not discovered"), open Xcode → Window → Devices and Simulators (⇧⌘2), select the device, and wait for debug symbol caching to complete. This is required once per new iOS version.
