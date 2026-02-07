@@ -167,6 +167,10 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
               builder: (context) => const AddCategoryPage(),
             ),
           );
+          // CP: Refresh after returning from add category page
+          if (context.mounted) {
+            context.read<DashboardV2Cubit>().loadEntries();
+          }
         },
         borderRadius: BorderRadius.circular(8),
         child: Container(

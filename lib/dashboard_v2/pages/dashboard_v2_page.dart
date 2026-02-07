@@ -328,7 +328,8 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                             ),
                             // CC: Categories carousel
                             BlocBuilder<DashboardV2Cubit, DashboardV2State>(
-                              buildWhen: (prev, current) => prev.entries != current.entries,
+                              buildWhen: (prev, current) =>
+                                  prev.entries != current.entries || prev.categories != current.categories,
                               builder: (context, state) {
                                 final categorizedEntries = state.categorizedEntries;
                                 if (categorizedEntries.isEmpty) {
