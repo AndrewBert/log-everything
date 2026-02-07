@@ -84,3 +84,6 @@ ValueKey<String> categoryListItemKey(String categoryName) => ValueKey('categoryL
 const Key dialogSaveActionButton = ValueKey('dialogSaveActionButton');
 const Key dialogCancelActionButton = ValueKey('dialogCancelActionButton');
 const Key dialogDoneActionButton = ValueKey('dialogDoneActionButton');
+
+// CP: Keys for ConnectRequiredScreen
+const Key connectRequiredRetryButton = ValueKey('connectRequiredRetryButton');

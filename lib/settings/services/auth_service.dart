@@ -14,12 +14,14 @@ class AuthUser extends Equatable {
   final String? displayName;
   final String? email;
   final String? photoUrl;
+  final bool isAnonymous;
 
   const AuthUser({
     required this.uid,
     this.displayName,
     this.email,
     this.photoUrl,
+    this.isAnonymous = false,
   });
 
   factory AuthUser.fromFirebase(User firebaseUser) {
@@ -28,11 +30,12 @@ class AuthUser extends Equatable {
       displayName: firebaseUser.displayName,
       email: firebaseUser.email,
       photoUrl: firebaseUser.photoURL,
+      isAnonymous: firebaseUser.isAnonymous,
     );
   }
 
   @override
-  List<Object?> get props => [uid, displayName, email, photoUrl];
+  List<Object?> get props => [uid, displayName, email, photoUrl, isAnonymous];
 }
 
 // CP: Custom exceptions for auth operations
@@ -89,6 +92,28 @@ class FirebaseAuthService implements AuthService {
     }
   }
 
+  // CP: Links credential to anonymous account or signs in directly
+  Future<UserCredential> _signInOrLinkCredential(AuthCredential credential) async {
+    final currentUser = _firebaseAuth.currentUser;
+
+    if (currentUser != null && currentUser.isAnonymous) {
+      try {
+        final userCredential = await currentUser.linkWithCredential(credential);
+        AppLogger.info('Anonymous account linked, UID preserved: ${currentUser.uid}');
+        return userCredential;
+      } on FirebaseAuthException catch (e) {
+        // CP: Log actual error code for verification (may vary by SDK version)
+        AppLogger.info('linkWithCredential failed with code: ${e.code}, falling back to signIn');
+        if (e.code == 'credential-already-in-use') {
+          return await _firebaseAuth.signInWithCredential(credential);
+        }
+        rethrow;
+      }
+    }
+
+    return await _firebaseAuth.signInWithCredential(credential);
+  }
+
   @override
   Future<AuthUser> signInWithGoogle() async {
     try {
@@ -104,7 +129,7 @@ class FirebaseAuthService implements AuthService {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await _signInOrLinkCredential(credential);
 
       if (userCredential.user == null) {
         throw AuthException('Sign in failed - no user returned');
@@ -115,6 +140,13 @@ class FirebaseAuthService implements AuthService {
     } on FirebaseAuthException catch (e) {
       AppLogger.error('Firebase auth error', error: e);
       throw AuthException(e.message ?? 'Sign in failed');
+    } on GoogleSignInException catch (e) {
+      // CP: google_sign_in v7 throws GoogleSignInException instead of our AuthCancelledException
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw AuthCancelledException();
+      }
+      AppLogger.error('Google sign in error', error: e);
+      throw AuthException('Sign in failed. Please try again.');
     } on AuthCancelledException {
       rethrow;
     } catch (e) {
@@ -143,7 +175,7 @@ class FirebaseAuthService implements AuthService {
         rawNonce: rawNonce,
       );
 
-      final userCredential = await _firebaseAuth.signInWithCredential(oauthCredential);
+      final userCredential = await _signInOrLinkCredential(oauthCredential);
 
       if (userCredential.user == null) {
         throw AuthException('Sign in failed - no user returned');

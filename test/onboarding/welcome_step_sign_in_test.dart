@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mockito/mockito.dart';
 import 'package:myapp/onboarding/cubit/onboarding_cubit.dart';
 import 'package:myapp/onboarding/widgets/welcome_step.dart';
-import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/utils/onboarding_keys.dart';
 
 import '../mocks.mocks.dart';
@@ -171,55 +170,17 @@ void main() {
   });
 
   group('WelcomeStep - Signed In State', () {
-    testWidgets('shows signed-in confirmation when user is authenticated', (tester) async {
+    testWidgets('hides sign-in section entirely when user is authenticated', (tester) async {
       // Given: User signed in during onboarding
       final state = OnboardingState(signedInUser: AuthTestData.testUser);
 
       // When: Widget is displayed
       await tester.pumpWidget(buildTestWidget(state));
 
-      // Then: Signed-in confirmation is shown
-      expect(find.byKey(OnboardingKeys.signedInConfirmation), findsOneWidget);
-      expect(find.textContaining('Signed in as'), findsOneWidget);
-      expect(find.textContaining('test@example.com'), findsOneWidget);
-
-      // And: Sign-in buttons are not visible
+      // Then: Sign-in section is completely hidden (no confirmation, no buttons)
       expect(find.byKey(OnboardingKeys.signInWithGoogleButton), findsNothing);
       expect(find.text('Already have an account?'), findsNothing);
-    });
-
-    testWidgets('shows display name when email is not available', (tester) async {
-      // Given: User signed in with display name but no email
-      const userNoEmail = AuthUser(
-        uid: 'test-uid',
-        displayName: 'Test User',
-        email: null,
-        photoUrl: null,
-      );
-      final state = OnboardingState(signedInUser: userNoEmail);
-
-      // When: Widget is displayed
-      await tester.pumpWidget(buildTestWidget(state));
-
-      // Then: Display name is shown instead
-      expect(find.textContaining('Test User'), findsOneWidget);
-    });
-
-    testWidgets('shows fallback when neither email nor display name available', (tester) async {
-      // Given: User signed in with minimal info
-      const minimalUser = AuthUser(
-        uid: 'test-uid',
-        displayName: null,
-        email: null,
-        photoUrl: null,
-      );
-      final state = OnboardingState(signedInUser: minimalUser);
-
-      // When: Widget is displayed
-      await tester.pumpWidget(buildTestWidget(state));
-
-      // Then: Fallback "User" is shown
-      expect(find.textContaining('User'), findsOneWidget);
+      expect(find.textContaining('Signed in as'), findsNothing);
     });
   });
 
@@ -266,9 +227,10 @@ void main() {
       emitState(signedInState);
       await tester.pumpAndSettle();
 
-      // Then: Signed-in confirmation is shown
-      expect(find.byKey(OnboardingKeys.signedInConfirmation), findsOneWidget);
+      // Then: Sign-in section disappears entirely
       expect(find.byKey(OnboardingKeys.signInLoadingIndicator), findsNothing);
+      expect(find.byKey(OnboardingKeys.signInWithGoogleButton), findsNothing);
+      expect(find.text('Already have an account?'), findsNothing);
     });
 
     testWidgets('transitions from signing in to error', (tester) async {
@@ -294,6 +256,41 @@ void main() {
       expect(find.byKey(OnboardingKeys.authErrorContainer), findsOneWidget);
       expect(find.byKey(OnboardingKeys.signInWithGoogleButton), findsOneWidget);
       expect(find.byKey(OnboardingKeys.signInLoadingIndicator), findsNothing);
+    });
+  });
+
+  group('WelcomeStep - Anonymous User Sign-In', () {
+    testWidgets('sign-in buttons visible when user is anonymous with no display name or email', (tester) async {
+      // Given: User is anonymous (signedInUser is null because anonymous users
+      // are not set as signedInUser in normal onboarding flow)
+      const state = OnboardingState();
+
+      // When: Widget is displayed
+      await tester.pumpWidget(buildTestWidget(state));
+
+      // Then: Sign-in section is visible for the anonymous user to upgrade
+      expect(find.text('Already have an account?'), findsOneWidget);
+      expect(find.byKey(OnboardingKeys.signInWithGoogleButton), findsOneWidget);
+
+      // And: No display name or email is shown (anonymous user has none)
+      expect(find.text('anon-user-id-001'), findsNothing);
+    });
+
+    testWidgets('Google sign-in from anonymous state calls signInWithGoogle', (tester) async {
+      // Given: Anonymous user is on the welcome step (sign-in section visible)
+      const state = OnboardingState();
+      await tester.pumpWidget(buildTestWidget(state));
+
+      // CP: Scroll down to make sign-in button visible
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -200));
+      await tester.pump();
+
+      // When: User taps Google sign-in to link/upgrade their account
+      await tester.tap(find.byKey(OnboardingKeys.signInWithGoogleButton));
+      await tester.pump();
+
+      // Then: signInWithGoogle is called (which triggers account linking in the cubit)
+      verify(mockOnboardingCubit.signInWithGoogle()).called(1);
     });
   });
 }

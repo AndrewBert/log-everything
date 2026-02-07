@@ -7,5 +7,4 @@ class OnboardingKeys {
   static const signInLoadingIndicator = ValueKey('signInLoadingIndicator');
   static const authErrorContainer = ValueKey('authErrorContainer');
   static const authErrorDismissButton = ValueKey('authErrorDismissButton');
-  static const signedInConfirmation = ValueKey('signedInConfirmation');
 }

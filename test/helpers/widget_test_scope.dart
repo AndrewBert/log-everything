@@ -17,6 +17,7 @@ import 'package:myapp/intent_detection/models/models.dart';
 import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/model/simple_insight.dart';
+import 'package:myapp/services/anonymous_auth_service.dart'; // CP: Import AnonymousAuthService
 import 'package:myapp/settings/services/auth_service.dart'; // CP: Import AuthService and AuthUser
 
 import '../mocks.mocks.dart';
@@ -40,6 +41,7 @@ class WidgetTestScope {
   late MockDeviceIdService mockDeviceIdService;
   late MockSnapshotService mockSnapshotService;
   late MockAuthService mockAuthService; // CP: Auth service mock for settings tests
+  late MockAnonymousAuthService mockAnonymousAuthService; // CP: Anonymous auth service mock
 
   late Widget widgetUnderTest;
 
@@ -112,6 +114,12 @@ class WidgetTestScope {
     mockAuthService = MockAuthService();
     when(mockAuthService.currentUser).thenReturn(null);
     when(mockAuthService.authStateChanges).thenAnswer((_) => Stream.value(null));
+
+    // CP: Anonymous auth service mock with default stubs
+    mockAnonymousAuthService = MockAnonymousAuthService();
+    when(mockAnonymousAuthService.hasAuthentication()).thenReturn(true);
+    when(mockAnonymousAuthService.ensureAnonymousAuth())
+        .thenAnswer((_) async => AnonymousAuthResult.success('anon-user-id-001'));
   }
 
   void initializeWidget() {

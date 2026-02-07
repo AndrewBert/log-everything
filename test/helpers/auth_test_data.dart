@@ -35,4 +35,10 @@ class AuthTestData {
     email: 'apple@privaterelay.appleid.com',
     photoUrl: null,
   );
+
+  /// Anonymous user (no display name, email, or photo)
+  static const anonymousUser = AuthUser(
+    uid: 'anon-user-id-001',
+    isAnonymous: true,
+  );
 }
