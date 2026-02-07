@@ -8,8 +8,37 @@ import 'package:flutter/foundation.dart';
 /// AppLogger.error('Something went wrong', error: exception, stackTrace: stackTrace);
 /// AppLogger.info('Operation completed successfully');
 /// AppLogger.warning('This might be an issue.');
+/// AppLogger.startupBegin(); // Call at start of main()
+/// AppLogger.startup('Phase completed'); // Log startup phases
+/// AppLogger.startupComplete(); // Call after initialization
 /// ```
 class AppLogger {
+  // CP: Stopwatch for tracking startup timing
+  static final _startupStopwatch = Stopwatch();
+
+  /// Start the startup timer (call once at very beginning of main())
+  static void startupBegin() {
+    if (kDebugMode) {
+      _startupStopwatch.start();
+      debugPrint('STARTUP: Beginning app initialization');
+    }
+  }
+
+  /// Log a startup phase with elapsed time
+  static void startup(String phase) {
+    if (kDebugMode) {
+      debugPrint('STARTUP [${_startupStopwatch.elapsedMilliseconds}ms]: $phase');
+    }
+  }
+
+  /// End startup timing and print summary
+  static void startupComplete() {
+    if (kDebugMode) {
+      _startupStopwatch.stop();
+      debugPrint('STARTUP: Complete in ${_startupStopwatch.elapsedMilliseconds}ms');
+    }
+  }
+
   /// Log a general message (only in debug mode)
   static void log(String message) {
     if (kDebugMode) {

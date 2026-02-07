@@ -25,10 +25,14 @@ import 'utils/app_lifecycle_observer.dart';
 
 // Make main async
 void main() async {
+  AppLogger.startupBegin();
+
   WidgetsFlutterBinding.ensureInitialized();
+  AppLogger.startup('Flutter binding initialized');
 
   // CP: Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  AppLogger.startup('Firebase initialized');
 
   // CP: Configure Firestore for offline persistence with unlimited cache
   // This ensures cloud-synced data remains available after app restart without network
@@ -36,17 +40,20 @@ void main() async {
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
+  AppLogger.startup('Firestore configured');
 
   try {
     await dotenv.load(fileName: ".env");
-    AppLogger.info('Environment variables loaded successfully.');
+    AppLogger.startup('Environment loaded');
+
     await configureDependencies();
-    AppLogger.info('Dependencies configured.');
+    AppLogger.startup('Dependencies configured');
 
     if (kDebugMode) {
       try {
         final debugServer = getIt<DebugHttpServer>();
         await debugServer.start();
+        AppLogger.startup('Debug HTTP server started');
       } catch (e) {
         AppLogger.error('Failed to start debug HTTP server', error: e);
       }
@@ -56,11 +63,14 @@ void main() async {
   }
 
   await CategoryColors.initialize();
+  AppLogger.startup('Category colors initialized');
 
   // CC: Register lifecycle observer for background processing
   getIt<AppLifecycleObserver>().register();
+  AppLogger.startup('Lifecycle observer registered');
 
   Intl.defaultLocale = 'en_US';
+  AppLogger.startupComplete();
 
   runApp(const MyApp());
 }

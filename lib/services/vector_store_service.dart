@@ -892,10 +892,10 @@ class VectorStoreService {
           }
         }
       } else {
-        AppLogger.error('[VectorStoreService] DEBUG: Failed to list files: ${response.statusCode}');
+        AppLogger.error('[VectorStoreService] Failed to list files: ${response.statusCode}');
       }
     } catch (e) {
-      AppLogger.error('[VectorStoreService] DEBUG: Error listing files: $e');
+      AppLogger.error('[VectorStoreService] Error listing files: $e');
     }
   }
 }

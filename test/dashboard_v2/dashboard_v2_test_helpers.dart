@@ -29,10 +29,6 @@ Future<void> givenDashboardV2IsDisplayed(
   assert(repository.currentEntries.isNotEmpty, 'Repository should have entries after initialization');
   assert(repository.currentCategories.isNotEmpty, 'Repository should have categories after initialization');
 
-  // debugPrint('DEBUG: Repository entries count: ${repository.currentEntries.length}');
-  // debugPrint('DEBUG: Repository categories count: ${repository.currentCategories.length}');
-  // debugPrint('DEBUG: Repository categories: ${repository.currentCategories.map((c) => c.name).toList()}');
-
   // Now pump widget - cubit will get entries from already-initialized repository
   await tester.pumpWidget(scope.widgetUnderTest);
 

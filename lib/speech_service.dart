@@ -44,12 +44,14 @@ class SpeechService {
       var response = await http.Response.fromStream(streamedResponse);
 
       AppLogger.info("Transcription API Status Code: ${response.statusCode}");
-      AppLogger.log("Transcription API Raw Response Body:\n${response.body}");
+      // CP: Truncate response body to avoid flooding logs
+      final truncatedBody =
+          response.body.length > 200 ? '${response.body.substring(0, 200)}...' : response.body;
+      AppLogger.log("Transcription API Response (${response.body.length} chars): $truncatedBody");
 
       if (response.statusCode == 200) {
         try {
           var responseBody = jsonDecode(response.body);
-          AppLogger.log("Decoded JSON Body: ${jsonEncode(responseBody)}");
 
           if (responseBody is Map && responseBody.containsKey('text')) {
             final transcribedText = responseBody['text'];
