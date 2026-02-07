@@ -258,4 +258,39 @@ void main() {
       expect(find.byKey(OnboardingKeys.signInLoadingIndicator), findsNothing);
     });
   });
+
+  group('WelcomeStep - Anonymous User Sign-In', () {
+    testWidgets('sign-in buttons visible when user is anonymous with no display name or email', (tester) async {
+      // Given: User is anonymous (signedInUser is null because anonymous users
+      // are not set as signedInUser in normal onboarding flow)
+      const state = OnboardingState();
+
+      // When: Widget is displayed
+      await tester.pumpWidget(buildTestWidget(state));
+
+      // Then: Sign-in section is visible for the anonymous user to upgrade
+      expect(find.text('Already have an account?'), findsOneWidget);
+      expect(find.byKey(OnboardingKeys.signInWithGoogleButton), findsOneWidget);
+
+      // And: No display name or email is shown (anonymous user has none)
+      expect(find.text('anon-user-id-001'), findsNothing);
+    });
+
+    testWidgets('Google sign-in from anonymous state calls signInWithGoogle', (tester) async {
+      // Given: Anonymous user is on the welcome step (sign-in section visible)
+      const state = OnboardingState();
+      await tester.pumpWidget(buildTestWidget(state));
+
+      // CP: Scroll down to make sign-in button visible
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -200));
+      await tester.pump();
+
+      // When: User taps Google sign-in to link/upgrade their account
+      await tester.tap(find.byKey(OnboardingKeys.signInWithGoogleButton));
+      await tester.pump();
+
+      // Then: signInWithGoogle is called (which triggers account linking in the cubit)
+      verify(mockOnboardingCubit.signInWithGoogle()).called(1);
+    });
+  });
 }

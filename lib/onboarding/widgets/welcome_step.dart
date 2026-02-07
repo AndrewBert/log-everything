@@ -128,8 +128,8 @@ class WelcomeStep extends StatelessWidget {
   }
 
   Widget _buildSignInSection(BuildContext context, OnboardingState state) {
-    // CP: Hide sign-in section entirely when already signed in
-    if (state.signedInUser != null) {
+    // CP: Hide sign-in section for named users; anonymous users can still upgrade
+    if (state.signedInUser != null && !state.signedInUser!.isAnonymous) {
       return const SizedBox.shrink();
     }
 

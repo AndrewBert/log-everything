@@ -36,7 +36,7 @@ class SettingsState extends Equatable {
     this.isRecovering = false,
   });
 
-  bool get isAuthenticated => currentUser != null;
+  bool get isAuthenticated => currentUser != null && !currentUser!.isAnonymous;
   bool get hasRecoveryAvailable => recoveryInfo != null;
 
   SettingsState copyWith({
