@@ -23,6 +23,7 @@ import 'locator.dart';
 import 'services/firestore_sync_service.dart';
 import 'settings/services/auth_service.dart';
 import 'snackbar/cubit/snackbar_cubit.dart';
+import 'sync_status/cubit/sync_status_cubit.dart';
 import 'utils/app_lifecycle_observer.dart';
 
 // Make main async
@@ -98,6 +99,11 @@ class MyApp extends StatelessWidget {
           ),
         ),
         BlocProvider<SnackbarCubit>(create: (context) => getIt<SnackbarCubit>()),
+        BlocProvider<SyncStatusCubit>(
+          create: (context) => SyncStatusCubit(
+            firestoreSyncService: getIt<FirestoreSyncService>(),
+          ),
+        ),
       ],
       child: MaterialApp(
         theme: ThemeData(
