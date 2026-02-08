@@ -26,8 +26,10 @@ As a user logging entries, I want the option to disable AI text cleanup so that 
 4. **Given** a user who toggles rephrase off and logs "um went to the store and uh picked up groceries", **When** the entry is processed, **Then** the stored text retains the filler words exactly as typed.
 
 ### Edge Cases & Error Handling
-- Toggling the setting mid-processing: no effect on entries already queued; applies to the next entry submitted.
+- Toggling the setting mid-processing: the setting is read at AI processing time, not at submission time. If a user toggles between submission and processing, the entry uses whichever value is active when the AI call executes. In practice this is an extremely narrow window.
 - If the AI fails to process (regardless of rephrase setting), existing retry/fallback logic applies unchanged.
+- Image analysis (photo entries with notes) is NOT affected by this toggle — image descriptions and titles are always AI-generated. This toggle only governs text entry categorization via `extractEntries()`.
+- Voice-to-text entries: the toggle preserves the *transcribed* text (output of speech recognition), not the literal audio. If a user dictates "um went to the store," the transcription artifacts are preserved when rephrase is off.
 
 ## Requirements
 

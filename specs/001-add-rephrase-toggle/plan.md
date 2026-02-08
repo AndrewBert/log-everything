@@ -109,18 +109,21 @@ Key decisions:
 **3. `lib/settings/pages/settings_page.dart`** — Pass SharedPreferences to cubit
 - Add `GetIt.instance<SharedPreferences>()` to SettingsCubit constructor call
 
-**4. `lib/services/ai_service.dart`** — Two prompt variants
-- In `extractEntries()`, read `_prefs.getBool('ai_rephrase_enabled') ?? true`
-- Replace hardcoded "Minimal text cleaning..." line with conditional:
-  - `true` → current text cleaning instruction
-  - `false` → verbatim preservation instruction
+**4. `lib/services/ai_service.dart`** — Two fully distinct system prompts
+- Extract current prompt into `_buildRephrasePrompt(String categoriesListString)` private method
+- Create `_buildVerbatimPrompt(String categoriesListString)` with ALL references to cleaning/rephrasing replaced:
+  - "cleaned and organized version" → "the exact text segment from the user's input, preserved verbatim"
+  - "Minimal text cleaning..." → "Return the user's text EXACTLY as written..."
+  - Splitting examples rewritten to show verbatim preservation (with filler words intact)
+- In `extractEntries()`, read `_prefs.getBool('ai_rephrase_enabled') ?? true` and select prompt
+- **Critical**: A single-line swap is NOT sufficient — the entire prompt must be consistent to avoid contradictory instructions that confuse the model (per staff review)
 
 **5. `lib/settings/widgets/general_section.dart`** — Add toggle UI
 - Add `BlocBuilder<SettingsCubit, SettingsState>` wrapping the SwitchListTile
 - Place toggle above "What's New" in the list
 
 **6. `lib/utils/widget_keys.dart`** — Add key
-- Add `static const rephraseToggle = Key('settings_rephrase_toggle');`
+- Add `const Key rephraseToggle = ValueKey('settings_rephrase_toggle');` (matching existing top-level const pattern)
 
 ## Phase 2: Task Planning Approach
 *This section describes what the /tasks command will do — DO NOT execute during /plan*
@@ -147,7 +150,7 @@ No constitutional violations. This feature is minimal:
 - 1 new SharedPreferences key
 - 1 new state field
 - 1 new cubit method
-- 1 conditional prompt selection in AiService
+- 2 private prompt-builder methods in AiService (+ conditional selection)
 - 1 new UI toggle
 
 ## Progress Tracking

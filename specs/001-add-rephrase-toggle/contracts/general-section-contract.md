@@ -5,14 +5,22 @@
 A `SwitchListTile` added to the GeneralSection widget, positioned above "What's New":
 
 ```dart
-SwitchListTile(
-  secondary: const Icon(Icons.auto_fix_high),
-  title: const Text('AI Text Cleanup'),
-  subtitle: const Text('Clean up filler words and rephrase entries'),
-  value: state.rephraseEnabled,
-  onChanged: (_) => context.read<SettingsCubit>().toggleRephrase(),
+BlocBuilder<SettingsCubit, SettingsState>(
+  buildWhen: (prev, current) => prev.rephraseEnabled != current.rephraseEnabled,
+  builder: (context, state) {
+    return SwitchListTile(
+      key: rephraseToggle,
+      secondary: const Icon(Icons.auto_fix_high),
+      title: const Text('AI Text Cleanup'),
+      subtitle: const Text('Let AI clean up filler words and rephrase your entries'),
+      value: state.rephraseEnabled,
+      onChanged: (_) => context.read<SettingsCubit>().toggleRephrase(),
+    );
+  },
 ),
 ```
+
+Note on subtitle wording: "Let AI clean up..." reads naturally in both toggle states — ON means "yes, let it," OFF means "no, don't let it." This avoids confusing the user when the toggle is OFF.
 
 ## Data Flow
 
@@ -26,13 +34,11 @@ SettingsState.rephraseEnabled
 
 ## Widget Key
 
-Add to an appropriate keys file (e.g., `lib/utils/widget_keys.dart`):
+Add to `lib/utils/widget_keys.dart` (matching existing top-level const pattern):
 ```dart
-static const rephraseToggle = Key('settings_rephrase_toggle');
+const Key rephraseToggle = ValueKey('settings_rephrase_toggle');
 ```
 
 ## Access Requirements
 
-GeneralSection must have access to SettingsCubit via BlocProvider. Currently it does NOT — it's a child of SettingsPage which provides SettingsCubit. The BlocBuilder needs to wrap the toggle within GeneralSection.
-
-Since GeneralSection is currently a StatefulWidget (pre-existing), the toggle can read from the cubit via `context.read<SettingsCubit>()` and rebuild via `BlocBuilder`.
+GeneralSection must have access to SettingsCubit via BlocProvider. It already does — it's a child of SettingsPage which provides SettingsCubit via `BlocProvider`. The `BlocBuilder` wraps just the toggle for targeted rebuilds via `buildWhen`.

@@ -14,11 +14,12 @@
 - Add `bool rephraseEnabled` parameter to `extractEntries()` — rejected; would require changes to the abstract interface, all callers, and all test mocks. Clean but high blast radius for a simple preference read.
 - Have `EntryRepository` pass the flag — rejected; `EntryRepository` doesn't have direct `SharedPreferences` access and shouldn't need it for this.
 
-## Decision 3: Two system prompts vs. conditional prompt modification
-**Decision**: Two distinct system prompt strings selected by an `if` statement based on the preference.
-**Rationale**: User explicitly requested "two system prompts" to avoid the AI doing extra work. A fully separate prompt makes the behavioral difference clear and avoids subtle bugs from string interpolation.
+## Decision 3: Two fully distinct system prompts (not a line swap)
+**Decision**: Two complete, self-consistent system prompt strings — extracted into `_buildRephrasePrompt()` and `_buildVerbatimPrompt()` private methods — selected by an `if` statement based on the preference.
+**Rationale**: User explicitly requested "two system prompts" to avoid the AI doing extra work. Staff review confirmed that a single-line substitution would create contradictory instructions (the "cleaned and organized version" description and rephrased few-shot examples would conflict with a "return verbatim" instruction). LLMs follow few-shot examples strongly, so the entire prompt must be internally consistent.
 **Alternatives considered**:
-- Single prompt with conditional paragraph — rejected; user explicitly wanted two prompts for clarity. Also risks the AI still doing cleanup if the conditional text is ambiguous.
+- Single prompt with conditional line swap — rejected; creates contradictory instructions that the AI may not follow correctly. Few-shot examples showing rephrased text would override a verbatim instruction.
+- Single prompt with conditional paragraph — rejected; same contradictory instruction problem.
 
 ## Decision 4: Where the toggle lives in the UI
 **Decision**: `GeneralSection` widget in the Settings page, managed through `SettingsCubit`.
@@ -48,3 +49,17 @@
 ## Pre-existing Observations
 - `GeneralSection` is a `StatefulWidget` (violates Constitution Principle III). This feature will not fix that — it's a pre-existing issue outside scope.
 - The `SharedPreferences` key naming convention in the codebase uses snake_case strings (e.g., `openai_vector_store_id`, `category_colors_v1`). The new key should follow: `ai_rephrase_enabled`.
+
+## Staff Review Notes (2026-02-08)
+
+### Addressed
+1. **Prompt contradiction (blocker)**: Original plan proposed a single-line swap, but the rest of the prompt says "cleaned and organized version" and shows rephrased examples. Fixed: now two fully distinct prompts.
+2. **Race condition claim (blocker)**: Spec incorrectly claimed mid-processing toggle has no effect. Fixed: spec now states the setting is read at processing time, not submission time.
+3. **analyzeImage() scope gap**: Plan now explicitly scopes the toggle to `extractEntries()` only. Image analysis is unaffected.
+4. **Toggle subtitle UX**: Reworded from "Clean up filler words..." to "Let AI clean up filler words..." which reads naturally in both on/off states.
+5. **Widget key pattern**: Corrected to top-level `const Key` with `ValueKey` matching existing file conventions.
+
+### Acknowledged (not blocked)
+- **Hidden prefs accumulation in AiService**: Currently two prefs read internally (vector store ID, rephrase toggle). If a third appears, introduce a `PromptPreferences` object to make dependencies explicit.
+- **SettingsCubit scope creep**: Already handles auth, recovery, and now preferences. If more preferences land, consider splitting into a dedicated `PreferencesCubit`.
+- **Per-entry override future**: If per-entry override is added later, it would require parameter-passing instead of internal pref reading. Current approach is fine for global-only setting.
