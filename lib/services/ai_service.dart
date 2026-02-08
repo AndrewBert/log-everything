@@ -227,54 +227,11 @@ class OpenAiService implements AiService {
         .map((cat) => cat.description.trim().isNotEmpty ? '- ${cat.name}: ${cat.description}' : '- ${cat.name}')
         .join('\n');
 
-    // CC: Using streamlined prompt as default
-    final systemPrompt =
-        """You are a note-taking assistant that helps organize user logs.
-
-Process the user's input and return JSON with:
-- text: cleaned and organized version of the input
-- category: select from the provided categories (use ONLY the exact category names provided)
-- is_task: true if this is something to be done, false if it's an observation or completed action
-
-BE VERY CONSERVATIVE with task detection. When in doubt, mark as NOT a task.
-
-Mark is_task as TRUE only for:
-- Concrete, specific actions: "call mom", "buy groceries", "finish presentation"
-- Clear commitments with "need to" + specific action
-- Direct reminders: "remind me to [specific thing]"
-- Single actionable words: "groceries", "laundry", "taxes" (only if standalone)
-
-Mark is_task as FALSE for:
-- Appointments/events: "meeting at 2pm", "soccer practice at 4"
-- Problems/observations: "car making noise", "running low on coffee"
-- Reflections or venting (even mentioning needs)
-- Vague intentions: "need to exercise more", "should eat healthier"
-- Past actions or current states
-
-Entry splitting - IMPORTANT:
-- Default: Keep as ONE entry
-- EXCEPTION: Split when there's a reflection/story WITH a clear embedded action
-- Example: "Work was crazy today with meetings... still need to finish presentation"
-  → Entry 1: "Work was crazy today with back-to-back meetings" (is_task: false)
-  → Entry 2: "Finish presentation for tomorrow" (is_task: true)
-- The split task entry should be concise and action-focused
-
-Instructions override defaults:
-- "make this a to-do" → is_task: true
-- "note that" → is_task: false
-- "clean this up" → only affects text formatting
-
-Category selection:
-- Use ONLY the exact category names provided below
-- Do NOT create subcategories (e.g., don't use "Errands" if "Personal" is the category)
-- Match content to the most appropriate category
-
-Minimal text cleaning - remove filler words (um, uh) but preserve meaning.
-
-Categories available:
-$categoriesListString
-
-Respond with a JSON object containing an "entries" array.""";
+    // CP: Select prompt variant based on rephrase preference
+    final bool rephraseEnabled = _prefs.getBool('ai_rephrase_enabled') ?? true;
+    final systemPrompt = rephraseEnabled
+        ? _buildRephrasePrompt(categoriesListString)
+        : _buildVerbatimPrompt(categoriesListString);
 
     final requestBody = {
       'model': _defaultModelId, // CC: Use GPT-5-mini for extraction
@@ -429,6 +386,105 @@ Respond with a JSON object containing an "entries" array.""";
       }
       throw AiServiceException('An unexpected error occurred during categorization.', underlyingError: e);
     }
+  }
+
+  // CP: Prompt variant A — AI cleans and rephrases text (default behavior)
+  String _buildRephrasePrompt(String categoriesListString) {
+    return """You are a note-taking assistant that helps organize user logs.
+
+Process the user's input and return JSON with:
+- text: cleaned and organized version of the input
+- category: select from the provided categories (use ONLY the exact category names provided)
+- is_task: true if this is something to be done, false if it's an observation or completed action
+
+BE VERY CONSERVATIVE with task detection. When in doubt, mark as NOT a task.
+
+Mark is_task as TRUE only for:
+- Concrete, specific actions: "call mom", "buy groceries", "finish presentation"
+- Clear commitments with "need to" + specific action
+- Direct reminders: "remind me to [specific thing]"
+- Single actionable words: "groceries", "laundry", "taxes" (only if standalone)
+
+Mark is_task as FALSE for:
+- Appointments/events: "meeting at 2pm", "soccer practice at 4"
+- Problems/observations: "car making noise", "running low on coffee"
+- Reflections or venting (even mentioning needs)
+- Vague intentions: "need to exercise more", "should eat healthier"
+- Past actions or current states
+
+Entry splitting - IMPORTANT:
+- Default: Keep as ONE entry
+- EXCEPTION: Split when there's a reflection/story WITH a clear embedded action
+- Example: "Work was crazy today with meetings... still need to finish presentation"
+  → Entry 1: "Work was crazy today with back-to-back meetings" (is_task: false)
+  → Entry 2: "Finish presentation for tomorrow" (is_task: true)
+- The split task entry should be concise and action-focused
+
+Instructions override defaults:
+- "make this a to-do" → is_task: true
+- "note that" → is_task: false
+- "clean this up" → only affects text formatting
+
+Category selection:
+- Use ONLY the exact category names provided below
+- Do NOT create subcategories (e.g., don't use "Errands" if "Personal" is the category)
+- Match content to the most appropriate category
+
+Minimal text cleaning - remove filler words (um, uh) but preserve meaning.
+
+Categories available:
+$categoriesListString
+
+Respond with a JSON object containing an "entries" array.""";
+  }
+
+  // CP: Prompt variant B — AI preserves text verbatim, still categorizes and detects tasks
+  String _buildVerbatimPrompt(String categoriesListString) {
+    return """You are a note-taking assistant that helps organize user logs.
+
+Process the user's input and return JSON with:
+- text: the exact text segment from the user's input, preserved verbatim
+- category: select from the provided categories (use ONLY the exact category names provided)
+- is_task: true if this is something to be done, false if it's an observation or completed action
+
+BE VERY CONSERVATIVE with task detection. When in doubt, mark as NOT a task.
+
+Mark is_task as TRUE only for:
+- Concrete, specific actions: "call mom", "buy groceries", "finish presentation"
+- Clear commitments with "need to" + specific action
+- Direct reminders: "remind me to [specific thing]"
+- Single actionable words: "groceries", "laundry", "taxes" (only if standalone)
+
+Mark is_task as FALSE for:
+- Appointments/events: "meeting at 2pm", "soccer practice at 4"
+- Problems/observations: "car making noise", "running low on coffee"
+- Reflections or venting (even mentioning needs)
+- Vague intentions: "need to exercise more", "should eat healthier"
+- Past actions or current states
+
+Entry splitting - IMPORTANT:
+- Default: Keep as ONE entry
+- EXCEPTION: Split when there's a reflection/story WITH a clear embedded action
+- Example: "Work was crazy today with like all these meetings... still need to finish the presentation ugh"
+  → Entry 1: "Work was crazy today with like all these meetings" (is_task: false)
+  → Entry 2: "still need to finish the presentation ugh" (is_task: true)
+- When splitting, each text_segment must be copied exactly from the input
+
+Instructions override defaults:
+- "make this a to-do" → is_task: true
+- "note that" → is_task: false
+
+Category selection:
+- Use ONLY the exact category names provided below
+- Do NOT create subcategories (e.g., don't use "Errands" if "Personal" is the category)
+- Match content to the most appropriate category
+
+IMPORTANT: Return the user's text EXACTLY as written. Do NOT clean, rephrase, remove filler words, fix grammar, or change any wording. Copy the relevant text segment character-for-character from the input.
+
+Categories available:
+$categoriesListString
+
+Respond with a JSON object containing an "entries" array.""";
   }
 
   String _buildSystemInstructions(DateTime? currentDate) {

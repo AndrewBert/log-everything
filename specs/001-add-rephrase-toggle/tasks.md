@@ -5,30 +5,30 @@
 
 ## Phase 3.1: State & Data Model
 
-- [ ] T001 Add `rephraseEnabled` field to `SettingsState` in `lib/settings/cubit/settings_state.dart`
+- [x] T001 Add `rephraseEnabled` field to `SettingsState` in `lib/settings/cubit/settings_state.dart`
   - Add `final bool rephraseEnabled` with default `true` to constructor
   - Add `bool? rephraseEnabled` parameter to `copyWith()`
   - Add `rephraseEnabled` to `props` list
   - Wire through in `copyWith` return: `rephraseEnabled: rephraseEnabled ?? this.rephraseEnabled`
 
-- [ ] T002 [P] Add widget key to `lib/utils/widget_keys.dart`
+- [x] T002 [P] Add widget key to `lib/utils/widget_keys.dart`
   - Add `const Key rephraseToggle = ValueKey('settings_rephrase_toggle');` (top-level const, matching existing pattern)
 
 ## Phase 3.2: Cubit Logic
 
-- [ ] T003 Add SharedPreferences dependency and `toggleRephrase()` to `SettingsCubit` in `lib/settings/cubit/settings_cubit.dart`
+- [x] T003 Add SharedPreferences dependency and `toggleRephrase()` to `SettingsCubit` in `lib/settings/cubit/settings_cubit.dart`
   - Add `final SharedPreferences _prefs;` field
   - Add `required SharedPreferences sharedPreferences` to constructor, assign to `_prefs`
   - In `_init()`, read preference: `final rephraseEnabled = _prefs.getBool('ai_rephrase_enabled') ?? true;` and include in the initial emit
   - Add `toggleRephrase()` method that flips `state.rephraseEnabled`, writes to `_prefs`, and emits new state
 
-- [ ] T004 Update `SettingsPage` to pass `SharedPreferences` to `SettingsCubit` in `lib/settings/pages/settings_page.dart`
+- [x] T004 Update `SettingsPage` to pass `SharedPreferences` to `SettingsCubit` in `lib/settings/pages/settings_page.dart`
   - Add `import 'package:shared_preferences/shared_preferences.dart';`
   - In the `BlocProvider` create callback, add `sharedPreferences: GetIt.instance<SharedPreferences>()` to the `SettingsCubit` constructor call
 
 ## Phase 3.3: AI Service — Two Distinct Prompts
 
-- [ ] T005 Create two fully distinct system prompt methods in `lib/services/ai_service.dart`
+- [x] T005 Create two fully distinct system prompt methods in `lib/services/ai_service.dart`
   - Extract the existing system prompt (lines 231-277) into a private method `String _buildRephrasePrompt(String categoriesListString)` — this is Variant A, unchanged
   - Create a new private method `String _buildVerbatimPrompt(String categoriesListString)` — Variant B with ALL rephrasing references replaced:
     - "cleaned and organized version of the input" → "the exact text segment from the user's input, preserved verbatim"
@@ -51,7 +51,7 @@
 
 ## Phase 3.4: UI — Settings Toggle
 
-- [ ] T006 Add rephrase toggle to `GeneralSection` in `lib/settings/widgets/general_section.dart`
+- [x] T006 Add rephrase toggle to `GeneralSection` in `lib/settings/widgets/general_section.dart`
   - Add imports: `SettingsCubit`, `widget_keys.dart` (for `rephraseToggle`)
   - Add a `BlocBuilder<SettingsCubit, SettingsState>` wrapping a `SwitchListTile` as the first item in the Column's children list (above "What's New")
   - Use `buildWhen: (prev, current) => prev.rephraseEnabled != current.rephraseEnabled` for targeted rebuilds
@@ -65,7 +65,7 @@
 
 ## Phase 3.5: Polish & Validation
 
-- [ ] T007 Run `flutter analyze` to verify no lint errors or warnings introduced
+- [x] T007 Run `flutter analyze` to verify no lint errors or warnings introduced
 - [ ] T008 User validates feature in running Flutter app per quickstart.md scenarios
 
 ## Dependencies

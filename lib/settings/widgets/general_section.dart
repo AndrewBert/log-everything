@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/dialogs/whats_new_dialog.dart';
 import 'package:myapp/onboarding/onboarding.dart';
+import 'package:myapp/settings/cubit/settings_cubit.dart';
+import 'package:myapp/utils/widget_keys.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class GeneralSection extends StatefulWidget {
@@ -42,6 +44,19 @@ class _GeneralSectionState extends State<GeneralSection> {
                   letterSpacing: 1.2,
                 ),
           ),
+        ),
+        BlocBuilder<SettingsCubit, SettingsState>(
+          buildWhen: (prev, current) => prev.rephraseEnabled != current.rephraseEnabled,
+          builder: (context, state) {
+            return SwitchListTile(
+              key: rephraseToggle,
+              secondary: const Icon(Icons.auto_fix_high),
+              title: const Text('AI Text Cleanup'),
+              subtitle: const Text('Let AI clean up filler words and rephrase your entries'),
+              value: state.rephraseEnabled,
+              onChanged: (_) => context.read<SettingsCubit>().toggleRephrase(),
+            );
+          },
         ),
         ListTile(
           leading: const Icon(Icons.new_releases_outlined),

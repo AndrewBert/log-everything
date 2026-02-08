@@ -7,6 +7,7 @@ import 'package:myapp/services/snapshot_service.dart';
 import 'package:myapp/services/vector_store_service.dart';
 import 'package:myapp/settings/cubit/settings_cubit.dart';
 import 'package:myapp/settings/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/settings/widgets/account_section.dart';
 import 'package:myapp/settings/widgets/general_section.dart';
 import 'package:myapp/settings/widgets/recovery_dialog.dart';
@@ -18,6 +19,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => SettingsCubit(
+        sharedPreferences: GetIt.instance<SharedPreferences>(),
         authService: GetIt.instance<AuthService>(),
         entryRepository: GetIt.instance<EntryRepository>(),
         deviceIdService: GetIt.instance<DeviceIdService>(),

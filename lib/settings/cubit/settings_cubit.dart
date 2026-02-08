@@ -8,6 +8,7 @@ import 'package:myapp/services/snapshot_service.dart';
 import 'package:myapp/services/vector_store_service.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/utils/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'settings_state.dart';
 
@@ -17,6 +18,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   final DeviceIdService _deviceIdService;
   final SnapshotService _snapshotService;
   final VectorStoreService _vectorStoreService;
+  final SharedPreferences _prefs;
   StreamSubscription<AuthUser?>? _authSubscription;
 
   // CP: Track previous user ID to distinguish "app started with no user" from "user signed out"
@@ -30,12 +32,14 @@ class SettingsCubit extends Cubit<SettingsState> {
   bool _pendingDataLossCheck = false;
 
   SettingsCubit({
+    required SharedPreferences sharedPreferences,
     required AuthService authService,
     required EntryRepository entryRepository,
     required DeviceIdService deviceIdService,
     required SnapshotService snapshotService,
     required VectorStoreService vectorStoreService,
-  })  : _authService = authService,
+  })  : _prefs = sharedPreferences,
+        _authService = authService,
         _entryRepository = entryRepository,
         _deviceIdService = deviceIdService,
         _snapshotService = snapshotService,
@@ -45,7 +49,8 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void _init() {
-    emit(state.copyWith(isLoading: true));
+    final rephraseEnabled = _prefs.getBool('ai_rephrase_enabled') ?? true;
+    emit(state.copyWith(isLoading: true, rephraseEnabled: rephraseEnabled));
 
     // CP: Subscribe to auth state changes
     _authSubscription = _authService.authStateChanges.listen(
@@ -297,6 +302,12 @@ class SettingsCubit extends Cubit<SettingsState> {
       AppLogger.error('Unexpected sign out error', error: e);
       emit(state.copyWith(isSigningOut: false, errorMessage: 'Sign out failed'));
     }
+  }
+
+  void toggleRephrase() {
+    final newValue = !state.rephraseEnabled;
+    _prefs.setBool('ai_rephrase_enabled', newValue);
+    emit(state.copyWith(rephraseEnabled: newValue));
   }
 
   void clearError() {
