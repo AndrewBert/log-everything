@@ -25,6 +25,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   final AiService _aiService = GetIt.instance<AiService>();
   final SharedPreferences _prefs = GetIt.instance<SharedPreferences>();
   StreamSubscription<List<Entry>>? _entriesSubscription;
+  StreamSubscription<List<Category>>? _categoriesSubscription;
   // CC: Track entries currently generating insights to prevent duplicates
   final Set<String> _generatingInsights = {};
   // CP: Debounce timer for prompt suggestion regeneration
@@ -45,6 +46,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
        super(const DashboardV2State()) {
     // CC: Subscribe to entries stream (handles entry AND color changes)
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
+    _categoriesSubscription = _entryRepository.categoriesStream.listen(_onCategoriesUpdated);
     // CP: Load cached prompt suggestions after initialization is complete
     Future.microtask(_loadCachedPromptSuggestions);
   }
@@ -280,6 +282,12 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
 
       // CP: Schedule prompt suggestion regeneration (debounced)
       _schedulePromptSuggestionRegeneration();
+    }
+  }
+
+  void _onCategoriesUpdated(List<Category> categories) {
+    if (!isClosed) {
+      emit(state.copyWith(categories: categories));
     }
   }
 
@@ -557,6 +565,7 @@ class DashboardV2Cubit extends Cubit<DashboardV2State> {
   @override
   Future<void> close() {
     _entriesSubscription?.cancel();
+    _categoriesSubscription?.cancel();
     _promptSuggestionDebounce?.cancel();
     return super.close();
   }

@@ -12,6 +12,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
   final EntryRepository _entryRepository;
   String categoryName;
   StreamSubscription<List<Entry>>? _entriesSubscription;
+  StreamSubscription<List<Category>>? _categoriesSubscription;
 
   CategoryEntriesCubit({
     required EntryRepository entryRepository,
@@ -20,6 +21,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
        super(CategoryEntriesState(categoryName: categoryName)) {
     // CC: Subscribe to entries stream and filter by category
     _entriesSubscription = _entryRepository.entriesStream.listen(_onEntriesUpdated);
+    _categoriesSubscription = _entryRepository.categoriesStream.listen((_) => _loadCategoryEntries());
     // CC: Load initial entries
     _loadCategoryEntries();
   }
@@ -151,6 +153,7 @@ class CategoryEntriesCubit extends Cubit<CategoryEntriesState> {
   @override
   Future<void> close() {
     _entriesSubscription?.cancel();
+    _categoriesSubscription?.cancel();
     return super.close();
   }
 }

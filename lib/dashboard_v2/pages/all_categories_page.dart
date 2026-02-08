@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/pages/add_category_page.dart';
 import 'package:myapp/dashboard_v2/pages/archived_categories_page.dart';
 import 'package:myapp/dashboard_v2/widgets/category_card.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
-import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/utils/search_keys.dart';
 
@@ -37,12 +34,7 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardV2Cubit(
-        entryRepository: GetIt.instance<EntryRepository>(),
-        intentDetectionService: GetIt.instance<IntentDetectionService>(),
-      )..loadEntries(),
-      child: BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+    return BlocBuilder<DashboardV2Cubit, DashboardV2State>(
         builder: (context, state) {
           final theme = Theme.of(context);
 
@@ -67,9 +59,13 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'archived') {
+                      final dashboardCubit = context.read<DashboardV2Cubit>();
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const ArchivedCategoriesPage(),
+                          builder: (_) => BlocProvider.value(
+                            value: dashboardCubit,
+                            child: const ArchivedCategoriesPage(),
+                          ),
                         ),
                       );
                     }
@@ -153,24 +149,19 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 
   Widget _buildAddCategoryCard(BuildContext context, ThemeData theme) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () async {
-          await Navigator.of(context).push(
+        onTap: () {
+          Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const AddCategoryPage(),
             ),
           );
-          // CP: Refresh after returning from add category page
-          if (context.mounted) {
-            context.read<DashboardV2Cubit>().loadEntries();
-          }
         },
         borderRadius: BorderRadius.circular(8),
         child: Container(

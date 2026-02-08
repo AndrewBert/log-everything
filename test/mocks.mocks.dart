@@ -2269,6 +2269,14 @@ class MockEntryRepository extends _i1.Mock implements _i40.EntryRepository {
           as _i16.Stream<List<_i22.Entry>>);
 
   @override
+  _i16.Stream<List<_i23.Category>> get categoriesStream =>
+      (super.noSuchMethod(
+            Invocation.getter(#categoriesStream),
+            returnValue: _i16.Stream<List<_i23.Category>>.empty(),
+          )
+          as _i16.Stream<List<_i23.Category>>);
+
+  @override
   List<_i22.Entry> get currentEntries =>
       (super.noSuchMethod(
             Invocation.getter(#currentEntries),

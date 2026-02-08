@@ -352,9 +352,13 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
                                           );
                                         },
                                         onSeeAllTap: () {
+                                          final dashboardCubit = context.read<DashboardV2Cubit>();
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
-                                              builder: (context) => const AllCategoriesPage(),
+                                              builder: (_) => BlocProvider.value(
+                                                value: dashboardCubit,
+                                                child: const AllCategoriesPage(),
+                                              ),
                                             ),
                                           );
                                         },

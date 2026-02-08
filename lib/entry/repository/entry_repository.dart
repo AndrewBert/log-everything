@@ -46,6 +46,10 @@ class EntryRepository {
   final _entriesStreamController = StreamController<List<Entry>>.broadcast();
   Stream<List<Entry>> get entriesStream => _entriesStreamController.stream;
 
+  // CP: Dedicated stream for category-only mutations
+  final _categoriesStreamController = StreamController<List<Category>>.broadcast();
+  Stream<List<Category>> get categoriesStream => _categoriesStreamController.stream;
+
   // CP: Initialization guard to prevent race condition with sign-in
   Completer<void>? _initCompleter;
   bool _isInitialized = false;
@@ -163,6 +167,10 @@ class EntryRepository {
       AppLogger.error('Repository: Error loading entries.', error: e);
       _entries = [];
     }
+  }
+
+  void _notifyCategories() {
+    _categoriesStreamController.add(currentCategories);
   }
 
   Future<void> _saveCategories({List<Category>? categoriesToSync}) async {
@@ -414,7 +422,7 @@ class EntryRepository {
 
     _categories.addAll(newCategories);
     await _saveCategories(categoriesToSync: newCategories);
-    _entriesStreamController.add(currentEntries);
+    _notifyCategories();
     AppLogger.info("Repository: Added ${newCategories.length} category objects in batch");
 
     return currentCategories;
@@ -641,8 +649,7 @@ class EntryRepository {
         !_categories.any((cat) => cat.name == trimmedCategory)) {
       _categories.add(Category(name: trimmedCategory));
       await _saveCategories();
-      // CC: Emit updated entries to stream to notify listeners of category changes
-      _entriesStreamController.add(currentEntries);
+      _notifyCategories();
     }
     return currentCategories;
   }
@@ -664,8 +671,7 @@ class EntryRepository {
       );
       _categories.add(newCategory);
       await _saveCategories(categoriesToSync: [newCategory]); // CP: Sync to cloud
-      // CC: Emit updated entries to stream to notify listeners of category changes
-      _entriesStreamController.add(currentEntries);
+      _notifyCategories();
     }
     return currentCategories;
   }
@@ -709,8 +715,7 @@ class EntryRepository {
         }
       }
 
-      // CC: Emit updated entries to stream to notify listeners of category changes
-      _entriesStreamController.add(currentEntries);
+      _notifyCategories();
     }
     return (entries: currentEntries, categories: currentCategories);
   }
@@ -790,8 +795,7 @@ class EntryRepository {
       }
     }
 
-    // CC: Emit updated entries to stream to notify listeners of category changes
-    _entriesStreamController.add(currentEntries);
+    _notifyCategories();
 
     return (entries: currentEntries, categories: currentCategories);
   }
@@ -813,7 +817,7 @@ class EntryRepository {
     _categories[categoryIndex] = updatedCategory;
 
     await _saveCategories(categoriesToSync: [updatedCategory]); // CP: Sync to cloud
-    _entriesStreamController.add(currentEntries);
+    _notifyCategories();
 
     return currentCategories;
   }
@@ -1110,6 +1114,7 @@ class EntryRepository {
 
     // Notify listeners of the cleared state
     _entriesStreamController.add(currentEntries);
+    _notifyCategories();
 
     AppLogger.info('[EntryRepository] Local data cleared, categories restored to defaults');
   }
@@ -1125,7 +1130,7 @@ class EntryRepository {
       _persistenceService.saveCategories(_categories).catchError((e) {
         AppLogger.error('[EntryRepository] Error saving categories after remote update', error: e);
       });
-      _entriesStreamController.add(currentEntries);
+      _notifyCategories();
       AppLogger.info('[EntryRepository] Updated local categories from remote: ${_categories.length} categories');
     }
   }
@@ -1361,8 +1366,9 @@ class EntryRepository {
     _syncDebounceTimers.clear();
     // CP: Stop cloud sync
     _firestoreSyncService.stopListening();
-    // CC: Close the stream controller
+    // CC: Close the stream controllers
     _entriesStreamController.close();
+    _categoriesStreamController.close();
     AppLogger.info("[EntryRepository] Disposed and cancelled all pending timers");
   }
 }

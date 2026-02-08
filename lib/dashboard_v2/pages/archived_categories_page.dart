@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/widgets/category_card.dart';
 import 'package:myapp/dashboard_v2/cubit/dashboard_v2_cubit.dart';
-import 'package:myapp/entry/repository/entry_repository.dart';
-import 'package:myapp/intent_detection/services/intent_detection_service.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/utils/search_keys.dart';
 
@@ -33,12 +30,7 @@ class _ArchivedCategoriesPageState extends State<ArchivedCategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardV2Cubit(
-        entryRepository: GetIt.instance<EntryRepository>(),
-        intentDetectionService: GetIt.instance<IntentDetectionService>(),
-      )..loadEntries(),
-      child: BlocBuilder<DashboardV2Cubit, DashboardV2State>(
+    return BlocBuilder<DashboardV2Cubit, DashboardV2State>(
         builder: (context, state) {
           final theme = Theme.of(context);
 
@@ -160,7 +152,6 @@ class _ArchivedCategoriesPageState extends State<ArchivedCategoriesPage> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 }
