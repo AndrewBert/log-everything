@@ -5,6 +5,9 @@ import '../entry/category.dart';
 import '../utils/logger.dart';
 import 'firestore_pagination_constants.dart';
 
+// CP: Sync status for UI feedback
+enum SyncStatus { idle, syncing, synced, error }
+
 /// Service for syncing entries and categories to/from Cloud Firestore.
 ///
 /// Data structure:
@@ -14,6 +17,49 @@ class FirestoreSyncService {
   // CP: Retry configuration (matches ImageStorageSyncService pattern)
   static const _maxRetries = 3;
   static const _initialBackoffMs = 500;
+
+  // CP: Sync status tracking for UI indicator
+  final _syncStatusController = StreamController<SyncStatus>.broadcast();
+  Stream<SyncStatus> get syncStatusStream => _syncStatusController.stream;
+  int _activeSyncCount = 0;
+  Timer? _syncedDebounce;
+  Timer? _errorAutoClear;
+
+  // CP: Track sync operation start (increment active count, emit syncing)
+  void _onSyncStart() {
+    _activeSyncCount++;
+    _syncedDebounce?.cancel();
+    if (_activeSyncCount == 1) {
+      _syncStatusController.add(SyncStatus.syncing);
+    }
+  }
+
+  // CP: Track sync operation end (decrement active count, debounce synced emission)
+  void _onSyncEnd({bool success = true}) {
+    _activeSyncCount = (_activeSyncCount - 1).clamp(0, 999);
+    if (!success) {
+      _errorAutoClear?.cancel();
+      _syncStatusController.add(SyncStatus.error);
+      _errorAutoClear = Timer(const Duration(seconds: 3), () {
+        if (_activeSyncCount == 0) {
+          _syncStatusController.add(SyncStatus.idle);
+        }
+      });
+      return;
+    }
+    if (_activeSyncCount == 0) {
+      _syncedDebounce?.cancel();
+      _syncedDebounce = Timer(const Duration(milliseconds: 500), () {
+        _syncStatusController.add(SyncStatus.synced);
+        // CP: Auto-clear synced back to idle after 2 seconds
+        Timer(const Duration(seconds: 2), () {
+          if (_activeSyncCount == 0) {
+            _syncStatusController.add(SyncStatus.idle);
+          }
+        });
+      });
+    }
+  }
 
   /// CP: Check if a Firestore error is retryable (transient network/server issue)
   bool _isRetryableError(FirebaseException e) {
@@ -234,11 +280,12 @@ class FirestoreSyncService {
 
   /// Sync a single entry to Firestore (upsert).
   /// Retries with exponential backoff for transient errors.
-  Future<void> syncEntry(String uid, Entry entry) async {
+  /// Returns true on success, false on failure.
+  Future<bool> syncEntry(String uid, Entry entry) async {
     // CP: Skip image entries that haven't been uploaded to cloud storage yet
     if (entry.imagePath != null && entry.cloudImagePath == null) {
       AppLogger.info('[FirestoreSyncService] Skipping entry ${entry.id}: image not yet uploaded to cloud');
-      return;
+      return true; // CP: Not a failure - just not ready yet
     }
 
     // CP: Skip entries still being processed - they shouldn't be synced until complete
@@ -246,14 +293,16 @@ class FirestoreSyncService {
       AppLogger.info(
         '[FirestoreSyncService] Skipping incomplete entry ${entry.id}: processingState=${entry.processingState}',
       );
-      return;
+      return true; // CP: Not a failure - just not ready yet
     }
 
+    _onSyncStart();
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         await _entriesRef(uid).doc(entry.id).set(entry.toJson());
         AppLogger.info('[FirestoreSyncService] Synced entry ${entry.id}');
-        return;
+        _onSyncEnd();
+        return true;
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
@@ -264,22 +313,29 @@ class FirestoreSyncService {
           continue;
         }
         AppLogger.error('[FirestoreSyncService] Error syncing entry ${entry.id}', error: e);
-        return; // CP: Non-retryable error or max retries exceeded - stop trying
+        _onSyncEnd(success: false);
+        return false;
       } catch (e) {
         AppLogger.error('[FirestoreSyncService] Error syncing entry ${entry.id}', error: e);
-        return; // CP: Unknown error - stop trying
+        _onSyncEnd(success: false);
+        return false;
       }
     }
+    _onSyncEnd(success: false);
+    return false;
   }
 
   /// Delete an entry from Firestore.
   /// Retries with exponential backoff for transient errors.
-  Future<void> deleteEntry(String uid, String entryId) async {
+  /// Returns true on success, false on failure.
+  Future<bool> deleteEntry(String uid, String entryId) async {
+    _onSyncStart();
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         await _entriesRef(uid).doc(entryId).delete();
         AppLogger.info('[FirestoreSyncService] Deleted entry $entryId from cloud');
-        return;
+        _onSyncEnd();
+        return true;
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
@@ -290,23 +346,30 @@ class FirestoreSyncService {
           continue;
         }
         AppLogger.error('[FirestoreSyncService] Error deleting entry $entryId', error: e);
-        return; // CP: Non-retryable error or max retries exceeded - stop trying
+        _onSyncEnd(success: false);
+        return false;
       } catch (e) {
         AppLogger.error('[FirestoreSyncService] Error deleting entry $entryId', error: e);
-        return; // CP: Unknown error - stop trying
+        _onSyncEnd(success: false);
+        return false;
       }
     }
+    _onSyncEnd(success: false);
+    return false;
   }
 
   /// Sync a single category to Firestore (upsert).
   /// Retries with exponential backoff for transient errors.
-  Future<void> syncCategory(String uid, Category category) async {
+  /// Returns true on success, false on failure.
+  Future<bool> syncCategory(String uid, Category category) async {
+    _onSyncStart();
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         // CP: Use category name as document ID for easy lookup
         await _categoriesRef(uid).doc(category.name).set(category.toJson());
         AppLogger.info('[FirestoreSyncService] Synced category ${category.name}');
-        return;
+        _onSyncEnd();
+        return true;
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
@@ -317,22 +380,29 @@ class FirestoreSyncService {
           continue;
         }
         AppLogger.error('[FirestoreSyncService] Error syncing category ${category.name}', error: e);
-        return; // CP: Non-retryable error or max retries exceeded - stop trying
+        _onSyncEnd(success: false);
+        return false;
       } catch (e) {
         AppLogger.error('[FirestoreSyncService] Error syncing category ${category.name}', error: e);
-        return; // CP: Unknown error - stop trying
+        _onSyncEnd(success: false);
+        return false;
       }
     }
+    _onSyncEnd(success: false);
+    return false;
   }
 
   /// Delete a category from Firestore.
   /// Retries with exponential backoff for transient errors.
-  Future<void> deleteCategory(String uid, String categoryName) async {
+  /// Returns true on success, false on failure.
+  Future<bool> deleteCategory(String uid, String categoryName) async {
+    _onSyncStart();
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         await _categoriesRef(uid).doc(categoryName).delete();
         AppLogger.info('[FirestoreSyncService] Deleted category $categoryName from cloud');
-        return;
+        _onSyncEnd();
+        return true;
       } on FirebaseException catch (e) {
         if (_isRetryableError(e) && attempt < _maxRetries - 1) {
           final backoffMs = _initialBackoffMs * (1 << attempt);
@@ -343,16 +413,21 @@ class FirestoreSyncService {
           continue;
         }
         AppLogger.error('[FirestoreSyncService] Error deleting category $categoryName', error: e);
-        return; // CP: Non-retryable error or max retries exceeded - stop trying
+        _onSyncEnd(success: false);
+        return false;
       } catch (e) {
         AppLogger.error('[FirestoreSyncService] Error deleting category $categoryName', error: e);
-        return; // CP: Unknown error - stop trying
+        _onSyncEnd(success: false);
+        return false;
       }
     }
+    _onSyncEnd(success: false);
+    return false;
   }
 
   /// Bulk sync all entries to Firestore (for initial upload after sign-in).
-  Future<void> syncAllEntries(String uid, List<Entry> entries) async {
+  /// Returns true on success, false on failure.
+  Future<bool> syncAllEntries(String uid, List<Entry> entries) async {
     // CP: Filter out incomplete entries (still processing) and image entries not yet uploaded
     final syncableEntries = entries
         .where((e) => e.processingState == null && (e.imagePath == null || e.cloudImagePath != null))
@@ -360,9 +435,10 @@ class FirestoreSyncService {
 
     if (syncableEntries.isEmpty) {
       AppLogger.info('[FirestoreSyncService] No entries to sync');
-      return;
+      return true;
     }
 
+    _onSyncStart();
     try {
       // CP: Use batched writes for efficiency (max 500 per batch)
       final batches = <WriteBatch>[];
@@ -389,18 +465,24 @@ class FirestoreSyncService {
       }
 
       AppLogger.info('[FirestoreSyncService] Bulk synced ${syncableEntries.length} entries');
+      _onSyncEnd();
+      return true;
     } catch (e) {
       AppLogger.error('[FirestoreSyncService] Error bulk syncing entries', error: e);
+      _onSyncEnd(success: false);
+      return false;
     }
   }
 
   /// Bulk sync all categories to Firestore.
-  Future<void> syncAllCategories(String uid, List<Category> categories) async {
+  /// Returns true on success, false on failure.
+  Future<bool> syncAllCategories(String uid, List<Category> categories) async {
     if (categories.isEmpty) {
       AppLogger.info('[FirestoreSyncService] No categories to sync');
-      return;
+      return true;
     }
 
+    _onSyncStart();
     try {
       final batch = _firestore.batch();
 
@@ -410,8 +492,12 @@ class FirestoreSyncService {
 
       await batch.commit();
       AppLogger.info('[FirestoreSyncService] Bulk synced ${categories.length} categories');
+      _onSyncEnd();
+      return true;
     } catch (e) {
       AppLogger.error('[FirestoreSyncService] Error bulk syncing categories', error: e);
+      _onSyncEnd(success: false);
+      return false;
     }
   }
 

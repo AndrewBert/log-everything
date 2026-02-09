@@ -17,6 +17,7 @@ import 'package:myapp/utils/search_keys.dart';
 import 'package:myapp/search/widgets/search_overlay.dart';
 import 'package:myapp/dashboard_v2/widgets/category_picker_bottom_sheet.dart';
 import 'package:myapp/settings/settings.dart';
+import 'package:myapp/dashboard_v2/widgets/sync_status_icon.dart';
 import 'package:myapp/utils/logger.dart';
 
 // CP: Layout constants for bottom bar positioning
@@ -154,6 +155,7 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
               ),
             ),
             actions: [
+              const SyncStatusIcon(),
               if (_appVersion.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),

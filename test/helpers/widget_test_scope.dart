@@ -18,7 +18,9 @@ import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/model/simple_insight.dart';
 import 'package:myapp/services/anonymous_auth_service.dart'; // CP: Import AnonymousAuthService
+import 'package:myapp/services/firestore_sync_service.dart';
 import 'package:myapp/settings/services/auth_service.dart'; // CP: Import AuthService and AuthUser
+import 'package:myapp/sync_status/cubit/sync_status_cubit.dart';
 
 import '../mocks.mocks.dart';
 import 'test_data.dart';
@@ -75,12 +77,13 @@ class WidgetTestScope {
     when(mockChatCubit.stream).thenAnswer((_) => Stream<ChatState>.value(const ChatState()));
     when(mockChatCubit.state).thenReturn(const ChatState());
     mockFirestoreSyncService = MockFirestoreSyncService();
-    when(mockFirestoreSyncService.syncEntry(any, any)).thenAnswer((_) async {});
-    when(mockFirestoreSyncService.syncCategory(any, any)).thenAnswer((_) async {});
-    when(mockFirestoreSyncService.syncAllEntries(any, any)).thenAnswer((_) async {});
-    when(mockFirestoreSyncService.syncAllCategories(any, any)).thenAnswer((_) async {});
-    when(mockFirestoreSyncService.deleteEntry(any, any)).thenAnswer((_) async {});
-    when(mockFirestoreSyncService.deleteCategory(any, any)).thenAnswer((_) async {});
+    when(mockFirestoreSyncService.syncEntry(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.syncCategory(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.syncAllEntries(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.syncAllCategories(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.deleteEntry(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.deleteCategory(any, any)).thenAnswer((_) async => true);
+    when(mockFirestoreSyncService.syncStatusStream).thenAnswer((_) => Stream<SyncStatus>.empty());
     mockIntentDetectionService = MockIntentDetectionService();
     when(mockIntentDetectionService.classifyIntent(any)).thenAnswer(
       (_) async => IntentClassification(
@@ -136,8 +139,11 @@ class WidgetTestScope {
   }
 
   void initializeWidgetWithDashboardV2() {
-    widgetUnderTest = const MaterialApp(
-      home: DashboardV2Page(),
+    widgetUnderTest = MaterialApp(
+      home: BlocProvider<SyncStatusCubit>(
+        create: (_) => SyncStatusCubit(firestoreSyncService: mockFirestoreSyncService),
+        child: const DashboardV2Page(),
+      ),
     );
   }
 
