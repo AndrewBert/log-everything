@@ -87,3 +87,6 @@ const Key dialogDoneActionButton = ValueKey('dialogDoneActionButton');
 
 // CP: Keys for ConnectRequiredScreen
 const Key connectRequiredRetryButton = ValueKey('connectRequiredRetryButton');
+
+// CP: Keys for Settings page
+const Key rephraseToggle = ValueKey('settings_rephrase_toggle');

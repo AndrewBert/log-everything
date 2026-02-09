@@ -25,6 +25,7 @@ class SettingsState extends Equatable {
   // CP: Recovery info when data loss is detected after sign-in
   final RecoveryInfo? recoveryInfo;
   final bool isRecovering;
+  final bool rephraseEnabled;
 
   const SettingsState({
     this.currentUser,
@@ -34,6 +35,7 @@ class SettingsState extends Equatable {
     this.errorMessage,
     this.recoveryInfo,
     this.isRecovering = false,
+    this.rephraseEnabled = true,
   });
 
   bool get isAuthenticated => currentUser != null && !currentUser!.isAnonymous;
@@ -47,6 +49,7 @@ class SettingsState extends Equatable {
     String? errorMessage,
     RecoveryInfo? recoveryInfo,
     bool? isRecovering,
+    bool? rephraseEnabled,
     bool clearUser = false,
     bool clearError = false,
     bool clearRecovery = false,
@@ -59,9 +62,10 @@ class SettingsState extends Equatable {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       recoveryInfo: clearRecovery ? null : (recoveryInfo ?? this.recoveryInfo),
       isRecovering: isRecovering ?? this.isRecovering,
+      rephraseEnabled: rephraseEnabled ?? this.rephraseEnabled,
     );
   }
 
   @override
-  List<Object?> get props => [currentUser, isLoading, isSigningIn, isSigningOut, errorMessage, recoveryInfo, isRecovering];
+  List<Object?> get props => [currentUser, isLoading, isSigningIn, isSigningOut, errorMessage, recoveryInfo, isRecovering, rephraseEnabled];
 }
