@@ -68,7 +68,6 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
   }
 
   @override
-  @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -629,19 +628,21 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
     final entryCubit = context.read<EntryCubit>();
     final entryRepository = GetIt.instance<EntryRepository>();
 
-    // CP: Clear the pending state immediately so snackbar doesn't re-show
-    dashboardCubit.clearEntryPendingCategorization();
-
     // CP: Different messaging for Misc vs existing category
     final isMisc = entry.category == Category.miscName;
     final message = isMisc ? 'Add a category?' : 'Added to ${entry.category}';
     final buttonLabel = isMisc ? 'Add' : 'Change';
     final sheetTitle = isMisc ? 'Add a category' : 'Change category';
 
+    // CP: Clear the pending state so snackbar doesn't re-show
+    dashboardCubit.clearEntryPendingCategorization();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(seconds: 4),
+        // CP: Override persist default (true when action != null) so duration timer fires
+        persist: false,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
         action: SnackBarAction(

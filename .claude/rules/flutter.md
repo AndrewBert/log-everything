@@ -29,3 +29,4 @@ paths: lib/**/*.dart
 - **withOpacity**: Deprecated - use `Color.withValues()` instead
 - **Trailing Commas**: Preserved by formatter (120 char line width)
 - **Avoid Unnecessary Comments**: Dont litter the codebase with comments explaining easy to understand code
+- **SnackBar with actions**: Always set `persist: false` on SnackBars that have a `SnackBarAction` unless you want them to stay on screen indefinitely. Flutter defaults `persist` to `action != null`.
