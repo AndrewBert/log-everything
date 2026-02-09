@@ -630,9 +630,9 @@ class _DashboardV2PageState extends State<DashboardV2Page> {
 
     // CP: Different messaging for Misc vs existing category
     final isMisc = entry.category == Category.miscName;
-    final message = isMisc ? 'Add a category?' : 'Added to ${entry.category}';
+    final message = isMisc ? 'Add to category?' : 'Added to ${entry.category}';
     final buttonLabel = isMisc ? 'Add' : 'Change';
-    final sheetTitle = isMisc ? 'Add a category' : 'Change category';
+    final sheetTitle = isMisc ? 'Add to category' : 'Change category';
 
     // CP: Clear the pending state so snackbar doesn't re-show
     dashboardCubit.clearEntryPendingCategorization();
