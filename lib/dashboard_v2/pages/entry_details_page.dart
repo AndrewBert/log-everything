@@ -12,6 +12,7 @@ import 'package:myapp/services/image_storage_service.dart';
 import 'package:myapp/services/image_storage_sync_service.dart';
 import 'package:myapp/utils/entry_details_keys.dart';
 import 'package:myapp/utils/category_colors.dart';
+import 'package:myapp/widgets/linkable_text.dart';
 
 class EntryDetailsPage extends StatelessWidget {
   final Entry entry;
@@ -359,8 +360,8 @@ class EntryDetailsPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              entry.text,
+                            LinkableText(
+                              text: entry.text,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 fontSize: 18,
                                 height: 1.5,
@@ -699,8 +700,8 @@ class EntryDetailsPage extends StatelessWidget {
                                         ),
                                         onChanged: (text) => context.read<EntryDetailsCubit>().updateEditedText(text),
                                       )
-                                    : Text(
-                                        entry.text,
+                                    : LinkableText(
+                                        text: entry.text,
                                         style: theme.textTheme.bodyLarge?.copyWith(
                                           fontSize: 17,
                                           height: 1.4,
