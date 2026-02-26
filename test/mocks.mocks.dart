@@ -4,15 +4,15 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i16;
-import 'dart:convert' as _i38;
+import 'dart:convert' as _i39;
 import 'dart:io' as _i30;
 import 'dart:typed_data' as _i18;
 import 'dart:ui' as _i41;
 
 import 'package:firebase_core/firebase_core.dart' as _i13;
 import 'package:firebase_storage/firebase_storage.dart' as _i14;
-import 'package:flutter/foundation.dart' as _i35;
-import 'package:flutter_bloc/flutter_bloc.dart' as _i39;
+import 'package:flutter/foundation.dart' as _i36;
+import 'package:flutter_bloc/flutter_bloc.dart' as _i40;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i6;
 import 'package:http/http.dart' as _i8;
 import 'package:mockito/mockito.dart' as _i1;
@@ -23,10 +23,10 @@ import 'package:myapp/dashboard_v2/model/insight.dart' as _i3;
 import 'package:myapp/dashboard_v2/model/simple_insight.dart' as _i4;
 import 'package:myapp/entry/category.dart' as _i23;
 import 'package:myapp/entry/entry.dart' as _i22;
-import 'package:myapp/entry/repository/entry_repository.dart' as _i40;
+import 'package:myapp/entry/repository/entry_repository.dart' as _i35;
 import 'package:myapp/intent_detection/models/models.dart' as _i7;
 import 'package:myapp/intent_detection/services/intent_detection_service.dart'
-    as _i36;
+    as _i37;
 import 'package:myapp/onboarding/cubit/onboarding_cubit.dart' as _i12;
 import 'package:myapp/services/ai_service.dart' as _i24;
 import 'package:myapp/services/anonymous_auth_service.dart' as _i5;
@@ -46,7 +46,7 @@ import 'package:permission_handler/permission_handler.dart' as _i20;
 import 'package:record/record.dart' as _i17;
 import 'package:record_platform_interface/record_platform_interface.dart'
     as _i2;
-import 'package:shared_preferences/shared_preferences.dart' as _i37;
+import 'package:shared_preferences/shared_preferences.dart' as _i38;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -1208,6 +1208,17 @@ class MockSnapshotService extends _i1.Mock implements _i34.SnapshotService {
             returnValue: _i16.Future<bool>.value(false),
           )
           as _i16.Future<bool>);
+
+  @override
+  _i16.Future<void> createPreSignInSnapshot(
+    _i35.EntryRepository? entryRepository,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createPreSignInSnapshot, [entryRepository]),
+            returnValue: _i16.Future<void>.value(),
+            returnValueForMissingStub: _i16.Future<void>.value(),
+          )
+          as _i16.Future<void>);
 }
 
 /// A class which mocks [FlutterSecureStorage].
@@ -1283,17 +1294,17 @@ class MockFlutterSecureStorage extends _i1.Mock
           as _i6.AppleOptions);
 
   @override
-  Map<String, List<_i35.ValueChanged<String?>>> get getListeners =>
+  Map<String, List<_i36.ValueChanged<String?>>> get getListeners =>
       (super.noSuchMethod(
             Invocation.getter(#getListeners),
-            returnValue: <String, List<_i35.ValueChanged<String?>>>{},
+            returnValue: <String, List<_i36.ValueChanged<String?>>>{},
           )
-          as Map<String, List<_i35.ValueChanged<String?>>>);
+          as Map<String, List<_i36.ValueChanged<String?>>>);
 
   @override
   void registerListener({
     required String? key,
-    required _i35.ValueChanged<String?>? listener,
+    required _i36.ValueChanged<String?>? listener,
   }) => super.noSuchMethod(
     Invocation.method(#registerListener, [], {#key: key, #listener: listener}),
     returnValueForMissingStub: null,
@@ -1302,7 +1313,7 @@ class MockFlutterSecureStorage extends _i1.Mock
   @override
   void unregisterListener({
     required String? key,
-    required _i35.ValueChanged<String?>? listener,
+    required _i36.ValueChanged<String?>? listener,
   }) => super.noSuchMethod(
     Invocation.method(#unregisterListener, [], {
       #key: key,
@@ -1484,7 +1495,7 @@ class MockFlutterSecureStorage extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockIntentDetectionService extends _i1.Mock
-    implements _i36.IntentDetectionService {
+    implements _i37.IntentDetectionService {
   MockIntentDetectionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1506,7 +1517,7 @@ class MockIntentDetectionService extends _i1.Mock
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i37.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i38.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }
@@ -1665,7 +1676,7 @@ class MockClient extends _i1.Mock implements _i8.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i38.Encoding? encoding,
+    _i39.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -1691,7 +1702,7 @@ class MockClient extends _i1.Mock implements _i8.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i38.Encoding? encoding,
+    _i39.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -1717,7 +1728,7 @@ class MockClient extends _i1.Mock implements _i8.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i38.Encoding? encoding,
+    _i39.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -1743,7 +1754,7 @@ class MockClient extends _i1.Mock implements _i8.Client {
     Uri? url, {
     Map<String, String>? headers,
     Object? body,
-    _i38.Encoding? encoding,
+    _i39.Encoding? encoding,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -1883,7 +1894,7 @@ class MockChatCubit extends _i1.Mock implements _i9.ChatCubit {
   );
 
   @override
-  void onChange(_i39.Change<_i9.ChatState>? change) => super.noSuchMethod(
+  void onChange(_i40.Change<_i9.ChatState>? change) => super.noSuchMethod(
     Invocation.method(#onChange, [change]),
     returnValueForMissingStub: null,
   );
@@ -2055,7 +2066,7 @@ class MockSettingsCubit extends _i1.Mock implements _i11.SettingsCubit {
   );
 
   @override
-  void onChange(_i39.Change<_i11.SettingsState>? change) => super.noSuchMethod(
+  void onChange(_i40.Change<_i11.SettingsState>? change) => super.noSuchMethod(
     Invocation.method(#onChange, [change]),
     returnValueForMissingStub: null,
   );
@@ -2210,7 +2221,7 @@ class MockOnboardingCubit extends _i1.Mock implements _i12.OnboardingCubit {
   );
 
   @override
-  void onChange(_i39.Change<_i12.OnboardingState>? change) =>
+  void onChange(_i40.Change<_i12.OnboardingState>? change) =>
       super.noSuchMethod(
         Invocation.method(#onChange, [change]),
         returnValueForMissingStub: null,
@@ -2241,7 +2252,7 @@ class MockOnboardingCubit extends _i1.Mock implements _i12.OnboardingCubit {
 /// A class which mocks [EntryRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockEntryRepository extends _i1.Mock implements _i40.EntryRepository {
+class MockEntryRepository extends _i1.Mock implements _i35.EntryRepository {
   MockEntryRepository() {
     _i1.throwOnMissingStub(this);
   }

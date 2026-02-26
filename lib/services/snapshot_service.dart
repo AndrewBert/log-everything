@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../entry/entry.dart';
 import '../entry/category.dart';
+import '../entry/repository/entry_repository.dart';
 import '../utils/logger.dart';
+import 'device_id_service.dart';
+import 'vector_store_service.dart';
 
 /// Data class representing a pre-sign-in snapshot.
 class Snapshot {
@@ -60,13 +63,24 @@ abstract class SnapshotService {
 
   /// Checks if a valid (non-expired) snapshot exists.
   Future<bool> hasValidSnapshot(String deviceId);
+
+  /// CP: Creates a pre-sign-in snapshot from the current repo state.
+  /// Never throws — errors are logged and swallowed so sign-in is never blocked.
+  Future<void> createPreSignInSnapshot(EntryRepository entryRepository);
 }
 
 class FirestoreSnapshotService implements SnapshotService {
   final FirebaseFirestore _firestore;
+  final DeviceIdService _deviceIdService;
+  final VectorStoreService _vectorStoreService;
 
-  FirestoreSnapshotService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreSnapshotService({
+    required DeviceIdService deviceIdService,
+    required VectorStoreService vectorStoreService,
+    FirebaseFirestore? firestore,
+  }) : _deviceIdService = deviceIdService,
+       _vectorStoreService = vectorStoreService,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   DocumentReference<Map<String, dynamic>> _metadataRef(String deviceId) =>
       _firestore.collection('snapshots').doc(deviceId);
@@ -173,25 +187,31 @@ class FirestoreSnapshotService implements SnapshotService {
 
       // CP: Fetch entries
       final entriesSnapshot = await _entriesRef(deviceId).get();
-      final entries = entriesSnapshot.docs.map((doc) {
-        try {
-          return Entry.fromJson(doc.data());
-        } catch (e) {
-          AppLogger.error('[SnapshotService] Error parsing entry ${doc.id}', error: e);
-          return null;
-        }
-      }).whereType<Entry>().toList();
+      final entries = entriesSnapshot.docs
+          .map((doc) {
+            try {
+              return Entry.fromJson(doc.data());
+            } catch (e) {
+              AppLogger.error('[SnapshotService] Error parsing entry ${doc.id}', error: e);
+              return null;
+            }
+          })
+          .whereType<Entry>()
+          .toList();
 
       // CP: Fetch categories
       final categoriesSnapshot = await _categoriesRef(deviceId).get();
-      final categories = categoriesSnapshot.docs.map((doc) {
-        try {
-          return Category.fromJson(doc.data());
-        } catch (e) {
-          AppLogger.error('[SnapshotService] Error parsing category ${doc.id}', error: e);
-          return null;
-        }
-      }).whereType<Category>().toList();
+      final categories = categoriesSnapshot.docs
+          .map((doc) {
+            try {
+              return Category.fromJson(doc.data());
+            } catch (e) {
+              AppLogger.error('[SnapshotService] Error parsing category ${doc.id}', error: e);
+              return null;
+            }
+          })
+          .whereType<Category>()
+          .toList();
 
       final createdAtTimestamp = metadata['createdAt'] as Timestamp?;
 
@@ -205,7 +225,9 @@ class FirestoreSnapshotService implements SnapshotService {
         expiresAt: expiresAtTimestamp?.toDate(),
       );
 
-      AppLogger.info('[SnapshotService] Fetched snapshot: ${snapshot.entryCount} entries, ${snapshot.categoryCount} categories');
+      AppLogger.info(
+        '[SnapshotService] Fetched snapshot: ${snapshot.entryCount} entries, ${snapshot.categoryCount} categories',
+      );
       return snapshot;
     } catch (e) {
       AppLogger.error('[SnapshotService] Error fetching snapshot', error: e);
@@ -288,6 +310,38 @@ class FirestoreSnapshotService implements SnapshotService {
     } catch (e) {
       AppLogger.error('[SnapshotService] Error checking for valid snapshot', error: e);
       return false;
+    }
+  }
+
+  @override
+  Future<void> createPreSignInSnapshot(EntryRepository entryRepository) async {
+    try {
+      final entries = entryRepository.currentEntries;
+      final categories = entryRepository.currentCategories;
+
+      if (entries.isEmpty && categories.isEmpty) {
+        AppLogger.info('[SnapshotService] No local data to snapshot, skipping');
+        return;
+      }
+
+      final deviceId = await _deviceIdService.getDeviceId();
+      final vectorStoreId = _vectorStoreService.getVectorStoreId();
+      final monthlyLogFileIds = _vectorStoreService.getMonthlyLogFileIds();
+
+      await createSnapshot(
+        deviceId: deviceId,
+        entries: entries,
+        categories: categories,
+        vectorStoreId: vectorStoreId,
+        monthlyLogFileIds: monthlyLogFileIds,
+      );
+
+      AppLogger.info(
+        '[SnapshotService] Pre-sign-in snapshot created: ${entries.length} entries, ${categories.length} categories',
+      );
+    } catch (e) {
+      // CP: Don't block sign-in if snapshot fails
+      AppLogger.error('[SnapshotService] Failed to create pre-sign-in snapshot', error: e);
     }
   }
 }

@@ -86,7 +86,12 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<DeviceIdService>(() => SecureStorageDeviceIdService());
 
   // CP: Register SnapshotService for pre-sign-in data backup
-  getIt.registerLazySingleton<SnapshotService>(() => FirestoreSnapshotService());
+  getIt.registerLazySingleton<SnapshotService>(
+    () => FirestoreSnapshotService(
+      deviceIdService: getIt<DeviceIdService>(),
+      vectorStoreService: getIt<VectorStoreService>(),
+    ),
+  );
 
   // CP: Register ImageStorageSyncService for cloud image sync
   getIt.registerLazySingleton<ImageStorageSyncService>(

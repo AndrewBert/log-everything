@@ -5,6 +5,7 @@ import '../../entry/cubit/entry_cubit.dart';
 import '../../entry/repository/entry_repository.dart';
 import '../../services/anonymous_auth_service.dart';
 import '../../services/firestore_sync_service.dart';
+import '../../services/snapshot_service.dart';
 import '../../settings/services/auth_service.dart';
 import '../../utils/logger.dart';
 import '../model/model.dart';
@@ -18,6 +19,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   final AnonymousAuthService _anonymousAuthService;
   final FirestoreSyncService _firestoreSyncService;
   final EntryRepository _entryRepository;
+  final SnapshotService _snapshotService;
 
   static const String _onboardingCompletedKey = 'onboarding_completed';
   static const String _onboardingProgressKey = 'onboarding_progress';
@@ -29,12 +31,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     required AnonymousAuthService anonymousAuthService,
     required FirestoreSyncService firestoreSyncService,
     required EntryRepository entryRepository,
+    required SnapshotService snapshotService,
   }) : _prefs = sharedPreferences,
        _entryCubit = entryCubit,
        _authService = authService,
        _anonymousAuthService = anonymousAuthService,
        _firestoreSyncService = firestoreSyncService,
        _entryRepository = entryRepository,
+       _snapshotService = snapshotService,
        super(const OnboardingState()) {
     _initializeAsync();
   }
@@ -250,6 +254,9 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     emit(state.copyWith(isSigningIn: true, clearAuthError: true));
 
     try {
+      // CP: Create pre-sign-in snapshot as data loss failsafe
+      await _snapshotService.createPreSignInSnapshot(_entryRepository);
+
       final user = await signInMethod();
       AppLogger.info('[OnboardingCubit] Sign-in successful: ${user.email}');
 
@@ -314,6 +321,9 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
       emit(const OnboardingState());
       AppLogger.info('[OnboardingCubit] Onboarding reset');
+
+      // CP: Re-run async init to transition out of isInitializing state
+      await _initializeAsync();
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error resetting onboarding: $e');
     }

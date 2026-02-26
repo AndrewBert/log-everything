@@ -38,13 +38,13 @@ class SettingsCubit extends Cubit<SettingsState> {
     required DeviceIdService deviceIdService,
     required SnapshotService snapshotService,
     required VectorStoreService vectorStoreService,
-  })  : _prefs = sharedPreferences,
-        _authService = authService,
-        _entryRepository = entryRepository,
-        _deviceIdService = deviceIdService,
-        _snapshotService = snapshotService,
-        _vectorStoreService = vectorStoreService,
-        super(const SettingsState()) {
+  }) : _prefs = sharedPreferences,
+       _authService = authService,
+       _entryRepository = entryRepository,
+       _deviceIdService = deviceIdService,
+       _snapshotService = snapshotService,
+       _vectorStoreService = vectorStoreService,
+       super(const SettingsState()) {
     _init();
   }
 
@@ -73,11 +73,13 @@ class SettingsCubit extends Cubit<SettingsState> {
           }
           _previousUserId = null;
         }
-        emit(state.copyWith(
-          currentUser: user,
-          clearUser: user == null,
-          isLoading: false,
-        ));
+        emit(
+          state.copyWith(
+            currentUser: user,
+            clearUser: user == null,
+            isLoading: false,
+          ),
+        );
       },
       onError: (error) {
         AppLogger.error('Auth state stream error', error: error);
@@ -92,22 +94,24 @@ class SettingsCubit extends Cubit<SettingsState> {
     if (user != null) {
       _previousUserId = user.uid;
     }
-    emit(state.copyWith(
-      currentUser: user,
-      clearUser: user == null,
-      isLoading: false,
-    ));
+    emit(
+      state.copyWith(
+        currentUser: user,
+        clearUser: user == null,
+        isLoading: false,
+      ),
+    );
   }
 
   Future<void> signInWithGoogle() => _performSignIn(
-        signInMethod: _authService.signInWithGoogle,
-        providerName: 'Google',
-      );
+    signInMethod: _authService.signInWithGoogle,
+    providerName: 'Google',
+  );
 
   Future<void> signInWithApple() => _performSignIn(
-        signInMethod: _authService.signInWithApple,
-        providerName: 'Apple',
-      );
+    signInMethod: _authService.signInWithApple,
+    providerName: 'Apple',
+  );
 
   /// CP: Common sign-in logic for all providers.
   Future<void> _performSignIn({
@@ -141,36 +145,10 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   /// CP: Creates a snapshot of local data before sign-in as a failsafe against data loss.
   Future<void> _createPreSignInSnapshot() async {
-    try {
-      final entries = _entryRepository.currentEntries;
-      final categories = _entryRepository.currentCategories;
+    // CP: Track entry count to detect data loss after sign-in
+    _entryCountBeforeSignIn = _entryRepository.currentEntries.length;
 
-      // CP: Track entry count to detect data loss after sign-in
-      _entryCountBeforeSignIn = entries.length;
-
-      // CP: Skip snapshot if user has no data to backup
-      if (entries.isEmpty && categories.isEmpty) {
-        AppLogger.info('[SettingsCubit] No local data to snapshot, skipping');
-        return;
-      }
-
-      final deviceId = await _deviceIdService.getDeviceId();
-      final vectorStoreId = _vectorStoreService.getVectorStoreId();
-      final monthlyLogFileIds = _vectorStoreService.getMonthlyLogFileIds();
-
-      await _snapshotService.createSnapshot(
-        deviceId: deviceId,
-        entries: entries,
-        categories: categories,
-        vectorStoreId: vectorStoreId,
-        monthlyLogFileIds: monthlyLogFileIds,
-      );
-
-      AppLogger.info('[SettingsCubit] Pre-sign-in snapshot created: ${entries.length} entries, ${categories.length} categories');
-    } catch (e) {
-      // CP: Don't block sign-in if snapshot fails - log and continue
-      AppLogger.error('[SettingsCubit] Failed to create pre-sign-in snapshot', error: e);
-    }
+    await _snapshotService.createPreSignInSnapshot(_entryRepository);
   }
 
   /// CP: Checks if data was lost during sign-in and offers recovery if a snapshot exists.
@@ -189,20 +167,24 @@ class SettingsCubit extends Cubit<SettingsState> {
       }
 
       // CP: Data loss detected - check for recovery snapshot
-      AppLogger.warn('[SettingsCubit] Potential data loss detected! Had $_entryCountBeforeSignIn entries, now have $currentEntryCount');
+      AppLogger.warn(
+        '[SettingsCubit] Potential data loss detected! Had $_entryCountBeforeSignIn entries, now have $currentEntryCount',
+      );
 
       final deviceId = await _deviceIdService.getDeviceId();
       final snapshot = await _snapshotService.fetchSnapshot(deviceId);
 
       if (snapshot != null && snapshot.entryCount > 0) {
         AppLogger.info('[SettingsCubit] Recovery snapshot found with ${snapshot.entryCount} entries');
-        emit(state.copyWith(
-          recoveryInfo: RecoveryInfo(
-            entryCount: snapshot.entryCount,
-            categoryCount: snapshot.categoryCount,
-            snapshotCreatedAt: snapshot.createdAt,
+        emit(
+          state.copyWith(
+            recoveryInfo: RecoveryInfo(
+              entryCount: snapshot.entryCount,
+              categoryCount: snapshot.categoryCount,
+              snapshotCreatedAt: snapshot.createdAt,
+            ),
           ),
-        ));
+        );
       }
     } catch (e) {
       AppLogger.error('[SettingsCubit] Error checking for data loss', error: e);
@@ -275,13 +257,15 @@ class SettingsCubit extends Cubit<SettingsState> {
       final snapshot = await _snapshotService.fetchSnapshot(deviceId);
 
       if (snapshot != null && snapshot.entryCount > 0) {
-        emit(state.copyWith(
-          recoveryInfo: RecoveryInfo(
-            entryCount: snapshot.entryCount,
-            categoryCount: snapshot.categoryCount,
-            snapshotCreatedAt: snapshot.createdAt,
+        emit(
+          state.copyWith(
+            recoveryInfo: RecoveryInfo(
+              entryCount: snapshot.entryCount,
+              categoryCount: snapshot.categoryCount,
+              snapshotCreatedAt: snapshot.createdAt,
+            ),
           ),
-        ));
+        );
       } else {
         emit(state.copyWith(errorMessage: 'No recovery backup found'));
       }
