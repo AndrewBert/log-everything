@@ -14,15 +14,14 @@ platform :android do
   end
 
   desc "Deploy to Google Play internal track with changelog"
-  lane :beta_with_changelog do |options|
+  lane :beta_with_changelog do
     upload_to_play_store(
       aab: "../build/app/outputs/bundle/release/app-release.aab",
       track: "internal",
       release_status: "completed",
-      skip_upload_metadata: true,
+      skip_upload_metadata: false,
       skip_upload_images: true,
       skip_upload_screenshots: true,
-      version_name: options[:version_name],
       # Note: changelogs go in fastlane/metadata/android/en-US/changelogs/<versionCode>.txt
     )
   end

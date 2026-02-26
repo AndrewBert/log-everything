@@ -28,3 +28,8 @@ coverage
 .claude/*.local.md
 CLAUDE.local.md
 .serena/
+
+# Android signing and credentials
+android/key.properties
+android/upload-keystore.jks
+android/fastlane/play-store-credentials.json
