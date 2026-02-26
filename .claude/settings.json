@@ -26,6 +26,29 @@
       "Read(./.env.*)"
     ]
   },
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/create-worktree.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/remove-worktree.sh"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "firebase@claude-plugins-official": true
   }
