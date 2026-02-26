@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,6 +79,8 @@ void main() {
     });
 
     testWidgets('tapping sign in shows provider options', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
       // Given: User is not authenticated
       final state = const SettingsState();
       await tester.pumpWidget(buildTestWidget(state));
@@ -90,6 +93,8 @@ void main() {
       expect(find.text('Sign in with'), findsOneWidget);
       expect(find.text('Apple'), findsOneWidget);
       expect(find.text('Google'), findsOneWidget);
+
+      debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('selecting Google in bottom sheet triggers sign in', (tester) async {
@@ -108,6 +113,8 @@ void main() {
     });
 
     testWidgets('selecting Apple in bottom sheet triggers sign in', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
       // Given: User is viewing sign in options
       final state = const SettingsState();
       await tester.pumpWidget(buildTestWidget(state));
@@ -120,6 +127,8 @@ void main() {
 
       // Then: signInWithApple is called on the cubit
       verify(mockSettingsCubit.signInWithApple()).called(1);
+
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 

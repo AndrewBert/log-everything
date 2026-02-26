@@ -64,8 +64,7 @@ class FirebaseAuthService implements AuthService {
   bool _googleSignInInitialized = false;
 
   // CP: Web Client ID from Firebase - required for Android
-  static const String _serverClientId =
-      '951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com';
+  static const String _serverClientId = '951334134238-ui2amk1dq2tgivdl3jafq7qsb68impsv.apps.googleusercontent.com';
 
   FirebaseAuthService({
     FirebaseAuth? firebaseAuth,
@@ -80,8 +79,8 @@ class FirebaseAuthService implements AuthService {
   @override
   Stream<AuthUser?> get authStateChanges {
     return _firebaseAuth.authStateChanges().map(
-          (user) => user != null ? AuthUser.fromFirebase(user) : null,
-        );
+      (user) => user != null ? AuthUser.fromFirebase(user) : null,
+    );
   }
 
   // CP: Initialize GoogleSignIn once with serverClientId for Android
@@ -104,7 +103,11 @@ class FirebaseAuthService implements AuthService {
       } on FirebaseAuthException catch (e) {
         // CP: Log actual error code for verification (may vary by SDK version)
         AppLogger.info('linkWithCredential failed with code: ${e.code}, falling back to signIn');
-        if (e.code == 'credential-already-in-use') {
+        // CP: Handle all known error codes for "credential belongs to existing account"
+        // Platform/SDK version may throw different codes for the same scenario
+        if (e.code == 'credential-already-in-use' ||
+            e.code == 'account-exists-with-different-credential' ||
+            e.code == 'email-already-in-use') {
           return await _firebaseAuth.signInWithCredential(credential);
         }
         rethrow;

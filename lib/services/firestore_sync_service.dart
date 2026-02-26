@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../entry/entry.dart';
 import '../entry/category.dart';
@@ -57,7 +56,6 @@ class FirestoreSyncService {
   }
 
   final FirebaseFirestore _firestore;
-  StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
   // CP: Pagination state for cursor-based Firestore pagination
   DocumentSnapshot? _lastDocument;
@@ -66,9 +64,6 @@ class FirestoreSyncService {
 
   /// Whether there are more entries available to fetch from Firestore
   bool get hasMoreEntries => _hasMoreEntries;
-
-  // CP: Callback for when remote categories change (entries use pull-to-refresh instead)
-  void Function(List<Category>)? onRemoteCategoriesChanged;
 
   FirestoreSyncService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -79,43 +74,6 @@ class FirestoreSyncService {
   // CP: Get user's categories collection reference
   CollectionReference<Map<String, dynamic>> _categoriesRef(String uid) =>
       _firestore.collection('users').doc(uid).collection('categories');
-
-  /// Start listening to real-time changes from Firestore for a user.
-  /// CP: Only categories use real-time listener. Entries use pull-to-refresh
-  /// to avoid snapshots() fetching ALL entries and bypassing pagination.
-  void startListening(String uid) {
-    AppLogger.info('[FirestoreSyncService] Starting real-time listener for categories (user: $uid)');
-
-    // CP: Listen to categories changes only
-    _categoriesSubscription = _categoriesRef(uid).snapshots().listen(
-      (snapshot) {
-        final categories = snapshot.docs
-            .map((doc) {
-              try {
-                return Category.fromJson(doc.data());
-              } catch (e) {
-                AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
-                return null;
-              }
-            })
-            .whereType<Category>()
-            .toList();
-
-        AppLogger.info('[FirestoreSyncService] Received ${categories.length} categories from cloud');
-        onRemoteCategoriesChanged?.call(categories);
-      },
-      onError: (e) {
-        AppLogger.error('[FirestoreSyncService] Categories listener error', error: e);
-      },
-    );
-  }
-
-  /// Stop listening to Firestore changes.
-  void stopListening() {
-    AppLogger.info('[FirestoreSyncService] Stopping real-time listeners');
-    _categoriesSubscription?.cancel();
-    _categoriesSubscription = null;
-  }
 
   /// Reset pagination state. Call before starting a new paginated fetch sequence.
   void resetPagination() {

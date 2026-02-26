@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
@@ -195,7 +196,7 @@ class AccountSection extends StatelessWidget {
                     style: Theme.of(bottomSheetContext).textTheme.titleMedium,
                   ),
                 ),
-                if (Platform.isIOS)
+                if (defaultTargetPlatform == TargetPlatform.iOS)
                   ListTile(
                     leading: const Icon(Icons.apple),
                     title: const Text('Apple'),

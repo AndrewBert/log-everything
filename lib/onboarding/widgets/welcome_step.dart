@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/onboarding_keys.dart';
@@ -172,7 +172,7 @@ class WelcomeStep extends StatelessWidget {
                 onTap: () => context.read<OnboardingCubit>().signInWithGoogle(),
               ),
               // CP: Apple Sign-In button (iOS only)
-              if (Platform.isIOS) ...[
+              if (defaultTargetPlatform == TargetPlatform.iOS) ...[
                 const SizedBox(height: 12),
                 _buildSignInButton(
                   context,

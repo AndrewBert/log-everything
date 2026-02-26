@@ -77,10 +77,7 @@ class EntryRepository {
        _timerFactory = timerFactory,
        _imageStorageService = imageStorageService,
        _imageStorageSyncService = imageStorageSyncService,
-       _firestoreSyncService = firestoreSyncService {
-    // CP: Set up callback for remote category changes (entries use pull-to-refresh)
-    _firestoreSyncService.onRemoteCategoriesChanged = _handleRemoteCategoriesChanged;
-  }
+       _firestoreSyncService = firestoreSyncService;
 
   Future<void> initialize() async {
     // CP: Prevent double initialization (can happen if multiple cubits call this)
@@ -1010,9 +1007,6 @@ class EntryRepository {
     await _firestoreSyncService.syncAllEntries(uid, _entries);
     await _firestoreSyncService.syncAllCategories(uid, _categories);
 
-    // CP: Start listening for real-time changes from other devices
-    _firestoreSyncService.startListening(uid);
-
     // CP: Upload any local images that haven't been synced to cloud yet
     _uploadPendingImages().catchError((e, stackTrace) {
       AppLogger.error('[EntryRepository] Background pending image upload failed', error: e, stackTrace: stackTrace);
@@ -1098,7 +1092,6 @@ class EntryRepository {
     AppLogger.info(
       '[EntryRepository] User signed out - clearing ${_entries.length} entries and ${_categories.length} categories',
     );
-    _firestoreSyncService.stopListening();
     // CP: Reset pagination cursor to prevent stale state on next sign-in
     _firestoreSyncService.resetPagination();
     _currentUserId = null;
@@ -1117,22 +1110,6 @@ class EntryRepository {
     _notifyCategories();
 
     AppLogger.info('[EntryRepository] Local data cleared, categories restored to defaults');
-  }
-
-  /// Handle remote categories update from Firestore listener.
-  void _handleRemoteCategoriesChanged(List<Category> remoteCategories) {
-    if (_currentUserId == null) return;
-
-    final merged = _firestoreSyncService.mergeCategories(_categories, remoteCategories);
-
-    if (merged.length != _categories.length) {
-      _categories = List<Category>.from(merged);
-      _persistenceService.saveCategories(_categories).catchError((e) {
-        AppLogger.error('[EntryRepository] Error saving categories after remote update', error: e);
-      });
-      _notifyCategories();
-      AppLogger.info('[EntryRepository] Updated local categories from remote: ${_categories.length} categories');
-    }
   }
 
   /// Sync a single entry to cloud (called after local save).
@@ -1364,8 +1341,6 @@ class EntryRepository {
       timer.cancel();
     }
     _syncDebounceTimers.clear();
-    // CP: Stop cloud sync
-    _firestoreSyncService.stopListening();
     // CC: Close the stream controllers
     _entriesStreamController.close();
     _categoriesStreamController.close();

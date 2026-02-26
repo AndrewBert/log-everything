@@ -999,26 +999,6 @@ class MockFirestoreSyncService extends _i1.Mock
           as bool);
 
   @override
-  set onRemoteCategoriesChanged(
-    void Function(List<_i23.Category>)? _onRemoteCategoriesChanged,
-  ) => super.noSuchMethod(
-    Invocation.setter(#onRemoteCategoriesChanged, _onRemoteCategoriesChanged),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void startListening(String? uid) => super.noSuchMethod(
-    Invocation.method(#startListening, [uid]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void stopListening() => super.noSuchMethod(
-    Invocation.method(#stopListening, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
   void resetPagination() => super.noSuchMethod(
     Invocation.method(#resetPagination, []),
     returnValueForMissingStub: null,
@@ -2046,6 +2026,12 @@ class MockSettingsCubit extends _i1.Mock implements _i11.SettingsCubit {
             returnValueForMissingStub: _i16.Future<void>.value(),
           )
           as _i16.Future<void>);
+
+  @override
+  void toggleRephrase() => super.noSuchMethod(
+    Invocation.method(#toggleRephrase, []),
+    returnValueForMissingStub: null,
+  );
 
   @override
   void clearError() => super.noSuchMethod(

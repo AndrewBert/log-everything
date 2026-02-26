@@ -5,6 +5,7 @@ import 'package:myapp/dashboard_v2/widgets/recent_entries_carousel.dart';
 import 'package:myapp/dashboard_v2/widgets/categories_carousel.dart';
 import 'package:myapp/dashboard_v2/pages/category_entries_page.dart';
 import 'package:myapp/dashboard_v2/pages/dashboard_v2_page.dart';
+import 'package:myapp/entry/category.dart';
 import 'package:myapp/entry/repository/entry_repository.dart';
 import 'package:myapp/locator.dart';
 
@@ -75,27 +76,58 @@ Future<void> givenDashboardHasNoEntries(
   WidgetTestScope scope,
 ) async {
   scope.stubPersistenceWithEmptyEntries();
-  await givenDashboardV2IsDisplayed(tester, scope);
+
+  // CP: Inline version of givenDashboardV2IsDisplayed without entry assertions
+  final repository = getIt<EntryRepository>();
+  await tester.runAsync(() async {
+    await repository.initialize();
+  });
+
+  await tester.pumpWidget(scope.widgetUnderTest);
+
+  await tester.runAsync(() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+  });
+
+  for (int i = 0; i < 15; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
 
 // =============================================================================
 // WHEN helpers - Perform actions
 // =============================================================================
 
+// CP: Scroll the CustomScrollView down to reveal CategoriesCarousel
+// (lazy sliver rendering keeps it off-screen until scrolled into view)
+Future<void> whenScrolledToCategoriesCarousel(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.byType(CategoriesCarousel),
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
 Future<void> whenCategoryCardIsTapped(
   WidgetTester tester,
   String categoryName,
 ) async {
+  // CP: Scroll to make CategoriesCarousel visible (lazy sliver rendering)
+  await whenScrolledToCategoriesCarousel(tester);
+
   // Find category card by looking for text within the categories carousel area
   final categoriesCarousel = find.byType(CategoriesCarousel);
   expect(categoriesCarousel, findsOneWidget, reason: 'CategoriesCarousel should be displayed');
 
-  // Find the category name text within the carousel
+  // CP: CategoryCard renders names as uppercase display names (Misc → NONE)
+  final displayName = categoryName == Category.miscName
+      ? Category.miscDisplayName.toUpperCase()
+      : categoryName.toUpperCase();
   final categoryTextFinder = find.descendant(
     of: categoriesCarousel,
-    matching: find.text(categoryName),
+    matching: find.text(displayName),
   );
-  expect(categoryTextFinder, findsAtLeastNWidgets(1), reason: 'Category "$categoryName" should be in carousel');
+  expect(categoryTextFinder, findsAtLeastNWidgets(1), reason: 'Category "$displayName" should be in carousel');
 
   await tester.tap(categoryTextFinder.first);
   // Use pump instead of pumpAndSettle to avoid hanging
@@ -152,13 +184,33 @@ void thenAppBarIsDisplayed(WidgetTester tester) {
   expect(appBarFinder, findsOneWidget, reason: 'DashboardV2 AppBar should be displayed');
 }
 
-void thenAllCategoriesAreDisplayed(
+Future<void> thenAllCategoriesAreDisplayed(
   WidgetTester tester,
   List<String> categoryNames,
-) {
+) async {
+  final carousel = find.byType(CategoriesCarousel);
   for (final categoryName in categoryNames) {
-    final categoryFinder = find.text(categoryName);
-    expect(categoryFinder, findsAtLeastNWidgets(1), reason: 'Category "$categoryName" should be displayed');
+    // CP: CategoryCard renders names as uppercase display names (Misc → NONE)
+    final displayName = categoryName == Category.miscName
+        ? Category.miscDisplayName.toUpperCase()
+        : categoryName.toUpperCase();
+    final textFinder = find.descendant(of: carousel, matching: find.text(displayName));
+
+    // CP: Scroll horizontally within carousel for off-screen category cards
+    if (textFinder.evaluate().isEmpty) {
+      final horizontalScrollable = find
+          .descendant(
+            of: carousel,
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        textFinder,
+        200,
+        scrollable: horizontalScrollable,
+      );
+    }
+    expect(textFinder, findsAtLeastNWidgets(1), reason: 'Category "$displayName" should be displayed');
   }
 }
 

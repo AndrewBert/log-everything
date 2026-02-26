@@ -10,6 +10,7 @@ import 'package:myapp/services/snapshot_service.dart';
 import 'package:myapp/services/vector_store_service.dart';
 import 'package:myapp/settings/services/auth_service.dart';
 import 'package:myapp/settings/pages/settings_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mocks.mocks.dart';
 import '../helpers/auth_test_data.dart';
@@ -36,8 +37,12 @@ void main() {
     // CP: Set up auth service mock with stream controller
     when(scope.mockAuthService.authStateChanges).thenAnswer((_) => authStateController.stream);
 
+    // CP: Stub SharedPreferences for SettingsCubit._init()
+    when(scope.mockSharedPreferences.getBool(any)).thenReturn(null);
+
     // CP: Set up DI container
     await getIt.reset();
+    getIt.registerSingleton<SharedPreferences>(scope.mockSharedPreferences);
     getIt.registerSingleton<AuthService>(scope.mockAuthService);
     getIt.registerSingleton<EntryRepository>(mockEntryRepository);
     getIt.registerSingleton<DeviceIdService>(scope.mockDeviceIdService);
@@ -165,14 +170,16 @@ void main() {
       when(mockEntryRepository.currentEntries).thenReturn([]);
 
       // CP: Mock snapshot service to return recovery data
-      when(scope.mockSnapshotService.fetchSnapshot(any)).thenAnswer((_) async => Snapshot(
-        deviceId: 'test-device-id',
-        entries: [],
-        categories: [],
-        createdAt: DateTime(2025, 1, 10),
-        vectorStoreId: null,
-        monthlyLogFileIds: const {},
-      ));
+      when(scope.mockSnapshotService.fetchSnapshot(any)).thenAnswer(
+        (_) async => Snapshot(
+          deviceId: 'test-device-id',
+          entries: [],
+          categories: [],
+          createdAt: DateTime(2025, 1, 10),
+          vectorStoreId: null,
+          monthlyLogFileIds: const {},
+        ),
+      );
 
       await tester.pumpWidget(buildTestWidget());
       authStateController.add(AuthTestData.testUser);

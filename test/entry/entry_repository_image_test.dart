@@ -35,8 +35,7 @@ void main() {
     when(mockPersistenceService.saveEntries(any)).thenAnswer((_) async {});
     when(mockPersistenceService.saveCategories(any)).thenAnswer((_) async {});
 
-    // CP: Default stubs for cloud services - startListening takes a String uid
-    when(mockFirestoreSyncService.startListening(any)).thenReturn(null);
+    // CP: Default stubs for cloud services
     when(mockFirestoreSyncService.syncEntry(any, any)).thenAnswer((_) async {});
     when(mockFirestoreSyncService.syncCategory(any, any)).thenAnswer((_) async {});
 
@@ -101,8 +100,7 @@ void main() {
           cloudImagePath: 'users/uid123/images/test-id.jpg',
         );
 
-        when(mockImageStorageService.getFullPath('cached.jpg'))
-            .thenAnswer((_) async => testFile.path);
+        when(mockImageStorageService.getFullPath('cached.jpg')).thenAnswer((_) async => testFile.path);
 
         // When
         final result = await repository.downloadCloudImage(entry);
@@ -137,14 +135,14 @@ void main() {
         when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [entry]);
         await repository.initialize();
 
-        when(mockImageStorageService.getFullPath('corrupted.jpg'))
-            .thenAnswer((_) async => corruptedFile.path);
-        when(mockImageStorageService.getFullPath('test-id.jpg'))
-            .thenAnswer((_) async => downloadPath);
-        when(mockImageStorageSyncService.downloadImage(
-          'users/uid123/images/test-id.jpg',
-          downloadPath,
-        )).thenAnswer((_) async => true);
+        when(mockImageStorageService.getFullPath('corrupted.jpg')).thenAnswer((_) async => corruptedFile.path);
+        when(mockImageStorageService.getFullPath('test-id.jpg')).thenAnswer((_) async => downloadPath);
+        when(
+          mockImageStorageSyncService.downloadImage(
+            'users/uid123/images/test-id.jpg',
+            downloadPath,
+          ),
+        ).thenAnswer((_) async => true);
 
         // When
         final result = await repository.downloadCloudImage(entry);
@@ -172,22 +170,25 @@ void main() {
         when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [entry]);
         await repository.initialize();
 
-        when(mockImageStorageService.getFullPath('test-id.jpg'))
-            .thenAnswer((_) async => downloadPath);
-        when(mockImageStorageSyncService.downloadImage(
-          'users/uid123/images/test-id.jpg',
-          downloadPath,
-        )).thenAnswer((_) async => true);
+        when(mockImageStorageService.getFullPath('test-id.jpg')).thenAnswer((_) async => downloadPath);
+        when(
+          mockImageStorageSyncService.downloadImage(
+            'users/uid123/images/test-id.jpg',
+            downloadPath,
+          ),
+        ).thenAnswer((_) async => true);
 
         // When
         final result = await repository.downloadCloudImage(entry);
 
         // Then
         expect(result, equals('test-id.jpg'));
-        verify(mockImageStorageSyncService.downloadImage(
-          'users/uid123/images/test-id.jpg',
-          downloadPath,
-        )).called(1);
+        verify(
+          mockImageStorageSyncService.downloadImage(
+            'users/uid123/images/test-id.jpg',
+            downloadPath,
+          ),
+        ).called(1);
 
         // Verify entry was updated
         final updatedEntry = repository.currentEntries.firstWhere((e) => e.id == 'test-id');
@@ -211,10 +212,8 @@ void main() {
         when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [entry]);
         await repository.initialize();
 
-        when(mockImageStorageService.getFullPath('test-id.jpg'))
-            .thenAnswer((_) async => downloadPath);
-        when(mockImageStorageSyncService.downloadImage(any, any))
-            .thenAnswer((_) async => false);
+        when(mockImageStorageService.getFullPath('test-id.jpg')).thenAnswer((_) async => downloadPath);
+        when(mockImageStorageSyncService.downloadImage(any, any)).thenAnswer((_) async => false);
 
         // When
         final result = await repository.downloadCloudImage(entry);
@@ -242,12 +241,13 @@ void main() {
         when(mockPersistenceService.loadEntries()).thenAnswer((_) async => [entry]);
         await repository.initialize();
 
-        when(mockImageStorageService.getFullPath('test-id.jpg'))
-            .thenAnswer((_) async => downloadPath);
-        when(mockImageStorageSyncService.downloadImage(
-          'users/uid123/images/test-id.jpg',
-          downloadPath,
-        )).thenAnswer((_) async => true);
+        when(mockImageStorageService.getFullPath('test-id.jpg')).thenAnswer((_) async => downloadPath);
+        when(
+          mockImageStorageSyncService.downloadImage(
+            'users/uid123/images/test-id.jpg',
+            downloadPath,
+          ),
+        ).thenAnswer((_) async => true);
 
         // When
         final result = await repository.ensureImageAvailable(entry);

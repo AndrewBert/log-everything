@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -61,9 +62,11 @@ void main() {
 
         // Then - All categories should be visible
         thenDashboardV2PageIsDisplayed(tester);
+        // CP: Scroll down to reveal CategoriesCarousel (lazy sliver rendering)
+        await whenScrolledToCategoriesCarousel(tester);
         thenCategoriesCarouselIsDisplayed(tester);
         // TestData has Misc, Work, Personal categories
-        thenAllCategoriesAreDisplayed(tester, ['Misc', 'Work', 'Personal']);
+        await thenAllCategoriesAreDisplayed(tester, ['Misc', 'Work', 'Personal']);
       },
     );
 
@@ -131,6 +134,13 @@ void main() {
       (WidgetTester tester) async {
         // Given - Dashboard is displayed with entries
         await givenDashboardHasEntries(tester, scope);
+
+        // CP: Scroll past CategoriesCarousel to the entry grid with date headers
+        await tester.scrollUntilVisible(
+          find.text('TODAY'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
 
         // Then - Date headers should be displayed (TODAY, YESTERDAY, etc)
         // TestData has entries for today and yesterday
