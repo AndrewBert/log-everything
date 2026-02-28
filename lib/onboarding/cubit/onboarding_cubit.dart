@@ -86,7 +86,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           AppLogger.info(
             '[OnboardingCubit] Returning user detected with ${cloudEntries.length} entries, skipping onboarding',
           );
-          await _entryRepository.onUserSignedIn(user.uid);
+          await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
           await _prefs.setBool(_onboardingCompletedKey, true);
           await _prefs.remove(_onboardingProgressKey);
           emit(
@@ -102,7 +102,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
         } else {
           // CP: Signed in but no cloud data - trigger sync but continue onboarding
           AppLogger.info('[OnboardingCubit] Signed-in user with no cloud data, continuing onboarding');
-          await _entryRepository.onUserSignedIn(user.uid);
+          await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
           emit(state.copyWith(signedInUser: user));
         }
       }
@@ -287,7 +287,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       if (cloudEntries.isNotEmpty) {
         // CP: Has data → restore and skip onboarding
         AppLogger.info('[OnboardingCubit] Found ${cloudEntries.length} cloud entries, skipping onboarding');
-        await _entryRepository.onUserSignedIn(user.uid);
+        await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
         await _prefs.setBool(_onboardingCompletedKey, true);
         await _prefs.remove(_onboardingProgressKey);
         emit(
@@ -300,7 +300,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       } else {
         // CP: No data → continue onboarding (but stay signed in)
         AppLogger.info('[OnboardingCubit] No cloud data found, continuing onboarding');
-        await _entryRepository.onUserSignedIn(user.uid);
+        await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
         emit(state.copyWith(isSigningIn: false, signedInUser: user));
       }
     } catch (e) {
