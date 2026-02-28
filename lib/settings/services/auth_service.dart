@@ -56,6 +56,7 @@ abstract class AuthService {
   Future<AuthUser> signInWithGoogle();
   Future<AuthUser> signInWithApple();
   Future<void> signOut();
+  Future<AuthUser?> repairProfileIfNeeded();
 }
 
 // CP: Firebase implementation using google_sign_in v7 API
@@ -136,6 +137,16 @@ class FirebaseAuthService implements AuthService {
 
       if (userCredential.user == null) {
         throw AuthException('Sign in failed - no user returned');
+      }
+
+      // CP: linkWithCredential preserves the anonymous profile (empty displayName/photoURL),
+      // so we explicitly copy Google's profile data to the Firebase user
+      final firebaseUser = userCredential.user!;
+      if (firebaseUser.displayName == null && googleUser.displayName != null) {
+        await firebaseUser.updateDisplayName(googleUser.displayName);
+      }
+      if (firebaseUser.photoURL == null && googleUser.photoUrl != null) {
+        await firebaseUser.updatePhotoURL(googleUser.photoUrl);
       }
 
       AppLogger.info('User signed in: ${userCredential.user!.email}');
@@ -225,6 +236,29 @@ class FirebaseAuthService implements AuthService {
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  // CP: One-time repair for existing users whose displayName was lost during
+  // linkWithCredential. Copies name/photo from providerData (Google/Apple)
+  // to the top-level Firebase profile without any sign-in interaction.
+  @override
+  Future<AuthUser?> repairProfileIfNeeded() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.isAnonymous || user.displayName != null) {
+      return null;
+    }
+
+    for (final provider in user.providerData) {
+      if (provider.displayName != null && provider.displayName!.isNotEmpty) {
+        await user.updateDisplayName(provider.displayName);
+        if (user.photoURL == null && provider.photoURL != null) {
+          await user.updatePhotoURL(provider.photoURL);
+        }
+        AppLogger.info('Profile repaired from ${provider.providerId} provider data');
+        return AuthUser.fromFirebase(user);
+      }
+    }
+    return null;
   }
 
   @override

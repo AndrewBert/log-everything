@@ -1956,6 +1956,14 @@ class MockAuthService extends _i1.Mock implements _i10.AuthService {
             returnValueForMissingStub: _i16.Future<void>.value(),
           )
           as _i16.Future<void>);
+
+  @override
+  _i16.Future<_i10.AuthUser?> repairProfileIfNeeded() =>
+      (super.noSuchMethod(
+            Invocation.method(#repairProfileIfNeeded, []),
+            returnValue: _i16.Future<_i10.AuthUser?>.value(),
+          )
+          as _i16.Future<_i10.AuthUser?>);
 }
 
 /// A class which mocks [SettingsCubit].

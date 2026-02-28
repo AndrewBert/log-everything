@@ -101,6 +101,20 @@ class SettingsCubit extends Cubit<SettingsState> {
         isLoading: false,
       ),
     );
+
+    // CP: One-time profile repair for existing users with missing displayName
+    _repairProfileIfNeeded();
+  }
+
+  Future<void> _repairProfileIfNeeded() async {
+    try {
+      final repairedUser = await _authService.repairProfileIfNeeded();
+      if (repairedUser != null) {
+        emit(state.copyWith(currentUser: repairedUser));
+      }
+    } catch (e) {
+      AppLogger.error('Profile repair failed', error: e);
+    }
   }
 
   Future<void> signInWithGoogle() => _performSignIn(
@@ -128,7 +142,10 @@ class SettingsCubit extends Cubit<SettingsState> {
       _pendingDataLossCheck = true;
 
       await signInMethod();
-      emit(state.copyWith(isSigningIn: false));
+      // CP: Re-read current user so UI picks up profile updates (displayName, photoURL)
+      // that were applied after the auth state stream already fired
+      final freshUser = _authService.currentUser;
+      emit(state.copyWith(currentUser: freshUser, isSigningIn: false));
     } on AuthCancelledException {
       _pendingDataLossCheck = false;
       emit(state.copyWith(isSigningIn: false));
