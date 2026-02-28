@@ -1,0 +1,1 @@
+Reduced app download size by stripping debug symbols from release builds.
