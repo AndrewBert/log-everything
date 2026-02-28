@@ -26,7 +26,7 @@ Detailed instructions are organized in `.claude/rules/`:
 | `flutter.md` | Widget conventions, state management, code style (scoped to `lib/**/*.dart`) |
 | `testing.md` | Test approach, mocking, organization (scoped to `test/**/*.dart`) |
 | `commands.md` | Flutter commands, testing policy, environment setup |
-| `release.md` | iOS release checklist, What's New dialog, Dashboard V2 migration status |
+| `release.md` | iOS/Android release checklists, What's New dialog, Dashboard V2 migration status |
 | `debug-api.md` | Debug HTTP API endpoints reference (localhost:8888) |
 
 ## Key Conventions

@@ -9,6 +9,16 @@
 ## TestFlight Deployment
 Use `/deploy` skill for full TestFlight workflow (includes version bump, changelog, Fastlane, git tagging).
 
+## Google Play Deployment
+Use `/deploy-android` skill for full Play Store workflow (build, changelog, Fastlane, git tagging).
+
+### Gotchas
+- **Draft state**: New apps require `release_status: "draft"` in `android/fastlane/Fastfile` until first Play review passes. After that, switch to `"completed"` for auto-rollout.
+- **Build number**: The `+N` in `pubspec.yaml` must strictly increase per upload. If a manual upload used +1, Fastlane needs +2.
+- **Privacy policy**: Required even for internal testing when using sensitive permissions (RECORD_AUDIO). Set in Play Console → Policy and programs → App content.
+- **Strip debug symbols warning**: `flutter build appbundle --release` may warn about failing to strip debug symbols — this is non-fatal, AAB still builds. Fix by installing Android cmdline-tools (issue #69).
+- **`fastlane supply init`**: Known bug in Fastlane 2.230.0 crashes on image download, but text metadata downloads fine. Not a blocker.
+
 ## Dashboard V2 Migration Status
 
 ### Current Status: STAGED REPLACEMENT ACTIVE
