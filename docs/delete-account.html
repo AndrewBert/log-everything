@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Everything - Delete Your Account</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+    h2 { margin-top: 2rem; font-size: 1.2rem; }
+    .updated { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
+    ul { padding-left: 1.25rem; }
+    a { color: #1a73e8; }
+    .cta {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: #1a73e8;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .cta:hover { background: #1557b0; }
+  </style>
+</head>
+<body>
+  <h1>Log Everything &mdash; Delete Your Account</h1>
+  <p class="updated">Last updated: March 1, 2026</p>
+
+  <h2>What Data We Store</h2>
+  <p>When you use Log Everything, the following data is associated with your account:</p>
+  <ul>
+    <li><strong>Firebase account</strong> &mdash; your authentication profile (email, display name, profile photo).</li>
+    <li><strong>Firestore entries</strong> &mdash; your log entries, categories, and timestamps stored in Cloud Firestore.</li>
+    <li><strong>Firebase Storage images</strong> &mdash; photos you attached to entries.</li>
+    <li><strong>OpenAI vector store</strong> &mdash; a copy of your entries used to power AI chat queries.</li>
+  </ul>
+
+  <h2>How to Request Deletion</h2>
+  <p>
+    To request complete deletion of your account and all associated data, open a
+    GitHub issue using the link below. Please include the email address associated
+    with your account so we can locate your data.
+  </p>
+  <a class="cta" href="https://github.com/AndrewBert/log-everything/issues/new?title=Account+Deletion+Request&labels=account-deletion">
+    Request Account Deletion
+  </a>
+
+  <h2>What Happens Next</h2>
+  <ul>
+    <li>We will delete your Firebase account, Firestore data, Storage files, and OpenAI vector store data.</li>
+    <li>Deletion will be completed within <strong>14 days</strong> of your request.</li>
+    <li>You will receive a confirmation on your GitHub issue once deletion is complete.</li>
+    <li>Local data on your device can be removed by uninstalling the app.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>
+    Questions? Open an issue at
+    <a href="https://github.com/AndrewBert/log-everything/issues">github.com/AndrewBert/log-everything/issues</a>.
+  </p>
+</body>
+</html>
