@@ -14,6 +14,7 @@ import '../../services/timer_factory.dart'; // CP: Added TimerFactory import
 import '../../services/image_storage_service.dart';
 import '../../services/image_storage_sync_service.dart'; // CP: Added for cloud image sync
 import '../../services/firestore_sync_service.dart'; // CP: Added for cloud sync
+import '../../onboarding/cubit/onboarding_cubit.dart';
 import '../../utils/logger.dart';
 import '../../dashboard_v2/model/simple_insight.dart';
 import '../processing_state.dart';
@@ -1124,6 +1125,12 @@ class EntryRepository {
     await _persistenceService.clearAllData();
     await _vectorStoreService.clearLocalCache();
     _imageStorageSyncService.clearUrlCache();
+
+    // CP: Clear onboarding flags so a different user signing in next
+    // doesn't inherit the previous user's skip flag
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(OnboardingCubit.onboardingCompletedKey);
+    await prefs.remove(OnboardingCubit.onboardingProgressKey);
 
     // Clear entries but restore default categories so app can still categorize
     _entries = [];
