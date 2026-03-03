@@ -977,7 +977,11 @@ class EntryRepository {
 
   /// Called when user signs in. Merges local and cloud data, starts listening.
   /// CP: [prefetchedEntries] avoids redundant Firestore fetch when caller already has entries
-  Future<void> onUserSignedIn(String uid, {List<Entry>? prefetchedEntries}) async {
+  Future<void> onUserSignedIn(
+    String uid, {
+    List<Entry>? prefetchedEntries,
+    List<Category>? prefetchedCategories,
+  }) async {
     AppLogger.info('[EntryRepository] User signed in: $uid - starting cloud sync');
 
     // CP: Wait for initialization to complete before proceeding with sign-in
@@ -997,7 +1001,7 @@ class EntryRepository {
     // CP: Fetch cloud data and merge with local
     // Use prefetched entries if provided to avoid redundant Firestore round-trip
     final cloudEntries = prefetchedEntries ?? await _firestoreSyncService.fetchEntries(uid);
-    final cloudCategories = await _firestoreSyncService.fetchCategories(uid);
+    final cloudCategories = prefetchedCategories ?? await _firestoreSyncService.fetchCategories(uid);
 
     // CP: Merge entries (cloud wins for same ID)
     final mergedEntries = _firestoreSyncService.mergeEntries(_entries, cloudEntries);
@@ -1094,9 +1098,11 @@ class EntryRepository {
       return;
     }
 
-    _firestoreSyncService.resetPagination();
-    final entries = await _firestoreSyncService.fetchEntries(_currentUserId!);
-    final categories = await _firestoreSyncService.fetchCategories(_currentUserId!);
+    // CP: Parallel network fetches — entries and categories are independent collections
+    final (entries, categories) = await (
+      _firestoreSyncService.fetchEntries(_currentUserId!),
+      _firestoreSyncService.fetchCategories(_currentUserId!),
+    ).wait;
 
     // CP: Merge cloud data with local (cloud wins for conflicts)
     _entries = _firestoreSyncService.mergeEntries(_entries, entries);
@@ -1104,6 +1110,7 @@ class EntryRepository {
 
     await _saveEntries();
     await _saveCategories();
+    _notifyCategories(); // CP: Emit to categoriesStream so dashboard picks up changes
 
     AppLogger.info(
       '[EntryRepository] Refreshed from cloud - ${_entries.length} entries, ${_categories.length} categories',

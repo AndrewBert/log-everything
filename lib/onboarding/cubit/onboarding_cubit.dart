@@ -50,6 +50,42 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       // This prevents offline signed-in users from hitting bootstrap
       final existingUser = _authService.currentUser;
 
+      // CP: FAST PATH — returning user with completed onboarding
+      // Read from Firestore's local cache (instant, no network), show dashboard,
+      // then sync from server in background via refreshFromCloud()
+      if (existingUser != null && isOnboardingCompleted()) {
+        AppLogger.info('[OnboardingCubit] Fast path: returning user, showing cached data');
+
+        // CP: Parallel cache reads — no dependency between entries and categories
+        final (cachedEntries, cachedCategories) = await (
+          _firestoreSyncService.fetchEntriesFromCache(existingUser.uid),
+          _firestoreSyncService.fetchCategoriesFromCache(existingUser.uid),
+        ).wait;
+
+        await _entryRepository.onUserSignedIn(
+          existingUser.uid,
+          prefetchedEntries: cachedEntries,
+          prefetchedCategories: cachedCategories,
+        );
+
+        emit(
+          state.copyWith(
+            currentStep: OnboardingStep.completed,
+            isInitializing: false,
+            requiresConnection: false,
+            isRetrying: false,
+            signedInUser: existingUser,
+          ),
+        );
+
+        // CP: Background server sync — refreshFromCloud merges newer data, resets pagination
+        _entryRepository.refreshFromCloud().catchError((e, stackTrace) {
+          AppLogger.error('[OnboardingCubit] Background server sync failed', error: e, stackTrace: stackTrace);
+        });
+        return;
+      }
+
+      // CP: SLOW PATH — first launch / incomplete onboarding (existing code, unchanged)
       if (existingUser == null) {
         // CP: No existing auth - need to create anonymous account
         final result = await _anonymousAuthService.ensureAnonymousAuth();
