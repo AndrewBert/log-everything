@@ -977,7 +977,8 @@ class EntryRepository {
   // ============================================================================
 
   /// Called when user signs in. Merges local and cloud data, starts listening.
-  Future<void> onUserSignedIn(String uid) async {
+  /// CP: [prefetchedEntries] avoids redundant Firestore fetch when caller already has entries
+  Future<void> onUserSignedIn(String uid, {List<Entry>? prefetchedEntries}) async {
     AppLogger.info('[EntryRepository] User signed in: $uid - starting cloud sync');
 
     // CP: Wait for initialization to complete before proceeding with sign-in
@@ -986,10 +987,17 @@ class EntryRepository {
       await _initCompleter!.future;
     }
 
+    // CP: Guard against duplicate sign-in calls for the same user
+    // SettingsCubit's auth stream listener may fire after OnboardingCubit already called this
+    if (_currentUserId == uid) {
+      AppLogger.info('[EntryRepository] onUserSignedIn already completed for $uid, skipping');
+      return;
+    }
     _currentUserId = uid;
 
     // CP: Fetch cloud data and merge with local
-    final cloudEntries = await _firestoreSyncService.fetchEntries(uid);
+    // Use prefetched entries if provided to avoid redundant Firestore round-trip
+    final cloudEntries = prefetchedEntries ?? await _firestoreSyncService.fetchEntries(uid);
     final cloudCategories = await _firestoreSyncService.fetchCategories(uid);
 
     // CP: Merge entries (cloud wins for same ID)
@@ -1004,9 +1012,25 @@ class EntryRepository {
     await _saveEntries();
     await _saveCategories();
 
-    // CP: Push any local-only entries to cloud
-    await _firestoreSyncService.syncAllEntries(uid, _entries);
-    await _firestoreSyncService.syncAllCategories(uid, _categories);
+    // CP: Only sync entries/categories that exist locally but not in cloud
+    final cloudEntryIds = cloudEntries.map((e) => e.id).toSet();
+    final localOnlyEntries = _entries
+        .where((e) => !cloudEntryIds.contains(e.id))
+        .where((e) => e.processingState == null)
+        .toList();
+
+    final cloudCategoryNames = cloudCategories.map((c) => c.name).toSet();
+    final localOnlyCategories = _categories.where((c) => !cloudCategoryNames.contains(c.name)).toList();
+
+    if (localOnlyEntries.isNotEmpty) {
+      AppLogger.info('[EntryRepository] Syncing ${localOnlyEntries.length} local-only entries to cloud');
+      await _firestoreSyncService.syncAllEntries(uid, localOnlyEntries);
+    }
+
+    if (localOnlyCategories.isNotEmpty) {
+      AppLogger.info('[EntryRepository] Syncing ${localOnlyCategories.length} local-only categories to cloud');
+      await _firestoreSyncService.syncAllCategories(uid, localOnlyCategories);
+    }
 
     // CP: Upload any local images that haven't been synced to cloud yet
     _uploadPendingImages().catchError((e, stackTrace) {

@@ -2560,9 +2560,12 @@ class MockEntryRepository extends _i1.Mock implements _i35.EntryRepository {
           as String);
 
   @override
-  _i16.Future<void> onUserSignedIn(String? uid) =>
+  _i16.Future<void> onUserSignedIn(
+    String? uid, {
+    List<_i22.Entry>? prefetchedEntries,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#onUserSignedIn, [uid]),
+            Invocation.method(#onUserSignedIn, [uid], {#prefetchedEntries: prefetchedEntries}),
             returnValue: _i16.Future<void>.value(),
             returnValueForMissingStub: _i16.Future<void>.value(),
           )
