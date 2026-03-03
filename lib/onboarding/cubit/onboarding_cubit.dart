@@ -21,8 +21,8 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   final EntryRepository _entryRepository;
   final SnapshotService _snapshotService;
 
-  static const String _onboardingCompletedKey = 'onboarding_completed';
-  static const String _onboardingProgressKey = 'onboarding_progress';
+  static const String onboardingCompletedKey = 'onboarding_completed';
+  static const String onboardingProgressKey = 'onboarding_progress';
 
   OnboardingCubit({
     required SharedPreferences sharedPreferences,
@@ -114,17 +114,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       // CP: Check for returning user with cached credentials (now includes anonymous users)
       final user = _authService.currentUser;
       if (user != null) {
-        AppLogger.info('[OnboardingCubit] Found cached user: ${user.email ?? 'anonymous'}, checking for cloud data');
-        final cloudEntries = await _firestoreSyncService.fetchEntries(user.uid);
+        AppLogger.info('[OnboardingCubit] Found cached user: ${user.email ?? 'anonymous'}');
 
-        if (cloudEntries.isNotEmpty) {
-          // CP: Returning user with data - skip onboarding entirely
-          AppLogger.info(
-            '[OnboardingCubit] Returning user detected with ${cloudEntries.length} entries, skipping onboarding',
-          );
-          await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
-          await _prefs.setBool(_onboardingCompletedKey, true);
-          await _prefs.remove(_onboardingProgressKey);
+        // CP: Fast path — check local SharedPreferences first (instant, no network)
+        final localCompleted = _prefs.getBool(onboardingCompletedKey) ?? false;
+
+        if (localCompleted) {
+          AppLogger.info('[OnboardingCubit] Returning user (local flag), skipping onboarding');
+          await _entryRepository.onUserSignedIn(user.uid);
           emit(
             state.copyWith(
               currentStep: OnboardingStep.completed,
@@ -135,16 +132,36 @@ class OnboardingCubit extends Cubit<OnboardingState> {
             ),
           );
           return;
-        } else {
-          // CP: Signed in but no cloud data - trigger sync but continue onboarding
-          AppLogger.info('[OnboardingCubit] Signed-in user with no cloud data, continuing onboarding');
-          await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
-          emit(state.copyWith(signedInUser: user));
         }
+
+        // CP: Slow path — single Firestore doc read (handles new-device scenario)
+        final firestoreCompleted = await _firestoreSyncService.hasCompletedOnboarding(user.uid);
+
+        if (firestoreCompleted) {
+          AppLogger.info('[OnboardingCubit] Returning user (Firestore flag), skipping onboarding');
+          await _prefs.setBool(onboardingCompletedKey, true);
+          await _prefs.remove(onboardingProgressKey);
+          await _entryRepository.onUserSignedIn(user.uid);
+          emit(
+            state.copyWith(
+              currentStep: OnboardingStep.completed,
+              isInitializing: false,
+              requiresConnection: false,
+              isRetrying: false,
+              signedInUser: user,
+            ),
+          );
+          return;
+        }
+
+        // CP: Neither flag set — continue to onboarding but trigger data sync
+        AppLogger.info('[OnboardingCubit] No onboarding flag found, continuing onboarding');
+        await _entryRepository.onUserSignedIn(user.uid);
+        emit(state.copyWith(signedInUser: user));
       }
 
       // CP: Normal flow - load saved progress from prefs
-      final stepIndex = _prefs.getInt(_onboardingProgressKey) ?? 0;
+      final stepIndex = _prefs.getInt(onboardingProgressKey) ?? 0;
       final step = OnboardingStep.values[stepIndex.clamp(0, OnboardingStep.values.length - 1)];
 
       emit(
@@ -167,7 +184,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
   Future<void> _saveProgress() async {
     try {
-      await _prefs.setInt(_onboardingProgressKey, state.currentStepIndex);
+      await _prefs.setInt(onboardingProgressKey, state.currentStepIndex);
       AppLogger.info('[OnboardingCubit] Saved progress: step ${state.currentStepIndex}');
     } catch (e) {
       AppLogger.error('[OnboardingCubit] Error saving progress: $e');
@@ -175,7 +192,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   }
 
   bool isOnboardingCompleted() {
-    return _prefs.getBool(_onboardingCompletedKey) ?? false;
+    return _prefs.getBool(onboardingCompletedKey) ?? false;
   }
 
   Future<void> nextStep() async {
@@ -247,8 +264,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       }
 
       // CP: Mark onboarding as completed
-      await _prefs.setBool(_onboardingCompletedKey, true);
-      await _prefs.remove(_onboardingProgressKey); // CP: Clear progress
+      await _prefs.setBool(onboardingCompletedKey, true);
+      await _prefs.remove(onboardingProgressKey);
+
+      // CP: Best-effort Firestore persistence (local flag is source of truth for routing)
+      final user = _authService.currentUser;
+      if (user != null) {
+        _firestoreSyncService.setOnboardingCompleted(user.uid);
+      }
 
       emit(state.copyWith(currentStep: OnboardingStep.completed, isLoading: false));
 
@@ -315,17 +338,16 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     }
   }
 
-  // CP: Check if user has cloud data and complete onboarding if so
+  // CP: Check if user has completed onboarding on another device and skip if so
   Future<void> _checkForCloudDataAndComplete(AuthUser user) async {
     try {
-      final cloudEntries = await _firestoreSyncService.fetchEntries(user.uid);
+      final completed = await _firestoreSyncService.hasCompletedOnboarding(user.uid);
 
-      if (cloudEntries.isNotEmpty) {
-        // CP: Has data → restore and skip onboarding
-        AppLogger.info('[OnboardingCubit] Found ${cloudEntries.length} cloud entries, skipping onboarding');
-        await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
-        await _prefs.setBool(_onboardingCompletedKey, true);
-        await _prefs.remove(_onboardingProgressKey);
+      if (completed) {
+        AppLogger.info('[OnboardingCubit] Onboarding already completed (Firestore), skipping');
+        await _entryRepository.onUserSignedIn(user.uid);
+        await _prefs.setBool(onboardingCompletedKey, true);
+        await _prefs.remove(onboardingProgressKey);
         emit(
           state.copyWith(
             currentStep: OnboardingStep.completed,
@@ -334,17 +356,17 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           ),
         );
       } else {
-        // CP: No data → continue onboarding (but stay signed in)
-        AppLogger.info('[OnboardingCubit] No cloud data found, continuing onboarding');
-        await _entryRepository.onUserSignedIn(user.uid, prefetchedEntries: cloudEntries);
+        // CP: No flag → continue onboarding (but stay signed in)
+        AppLogger.info('[OnboardingCubit] No onboarding flag found, continuing onboarding');
+        await _entryRepository.onUserSignedIn(user.uid);
         emit(state.copyWith(isSigningIn: false, signedInUser: user));
       }
     } catch (e) {
-      AppLogger.error('[OnboardingCubit] Error checking cloud data', error: e);
+      AppLogger.error('[OnboardingCubit] Error checking onboarding status', error: e);
       emit(
         state.copyWith(
           isSigningIn: false,
-          authErrorMessage: 'Failed to check cloud data. Please try again.',
+          authErrorMessage: 'Failed to check account status. Please try again.',
         ),
       );
     }
@@ -352,8 +374,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
   Future<void> resetOnboarding() async {
     try {
-      await _prefs.remove(_onboardingCompletedKey);
-      await _prefs.remove(_onboardingProgressKey);
+      await _prefs.remove(onboardingCompletedKey);
+      await _prefs.remove(onboardingProgressKey);
+
+      // CP: Also clear Firestore flag so it doesn't override local reset on next init
+      final user = _authService.currentUser;
+      if (user != null) {
+        _firestoreSyncService.clearOnboardingCompleted(user.uid);
+      }
 
       emit(const OnboardingState());
       AppLogger.info('[OnboardingCubit] Onboarding reset');

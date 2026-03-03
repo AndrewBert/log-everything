@@ -96,6 +96,9 @@ class FirestoreSyncService {
 
   FirestoreSyncService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  // CP: Get user's root document reference (for metadata like onboarding status)
+  DocumentReference<Map<String, dynamic>> _userDocRef(String uid) => _firestore.collection('users').doc(uid);
+
   // CP: Get user's entries collection reference
   CollectionReference<Map<String, dynamic>> _entriesRef(String uid) =>
       _firestore.collection('users').doc(uid).collection('entries');
@@ -109,6 +112,46 @@ class FirestoreSyncService {
     _lastDocument = null;
     _hasMoreEntries = true;
     AppLogger.info('[FirestoreSyncService] Pagination state reset');
+  }
+
+  /// Check if the user has completed onboarding (single-document read).
+  /// Returns false on any error — safe default is to show onboarding.
+  Future<bool> hasCompletedOnboarding(String uid) async {
+    try {
+      final doc = await _userDocRef(uid).get();
+      final completed = doc.data()?['onboardingCompleted'] == true;
+      AppLogger.info('[FirestoreSyncService] hasCompletedOnboarding($uid): $completed');
+      return completed;
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error checking onboarding status', error: e);
+      return false;
+    }
+  }
+
+  /// Write onboarding-completed flag to the user's root Firestore document.
+  Future<void> setOnboardingCompleted(String uid) async {
+    try {
+      await _userDocRef(uid).set({
+        'onboardingCompleted': true,
+        'onboardingCompletedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      AppLogger.info('[FirestoreSyncService] Set onboardingCompleted for user $uid');
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error setting onboarding completed', error: e);
+    }
+  }
+
+  /// Remove onboarding-completed flag from the user's root Firestore document.
+  Future<void> clearOnboardingCompleted(String uid) async {
+    try {
+      await _userDocRef(uid).set({
+        'onboardingCompleted': FieldValue.delete(),
+        'onboardingCompletedAt': FieldValue.delete(),
+      }, SetOptions(merge: true));
+      AppLogger.info('[FirestoreSyncService] Cleared onboardingCompleted for user $uid');
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error clearing onboarding completed', error: e);
+    }
   }
 
   /// Fetch first page of entries from Firestore (paginated).
