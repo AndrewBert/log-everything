@@ -1101,6 +1101,12 @@ class EntryRepository {
     await _vectorStoreService.clearLocalCache();
     _imageStorageSyncService.clearUrlCache();
 
+    // CP: Clear onboarding flags so a different user signing in next
+    // doesn't inherit the previous user's skip flag
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('onboarding_completed');
+    await prefs.remove('onboarding_progress');
+
     // Clear entries but restore default categories so app can still categorize
     _entries = [];
     _categories = await _persistenceService.loadCategories();

@@ -1005,6 +1005,32 @@ class MockFirestoreSyncService extends _i1.Mock
   );
 
   @override
+  _i16.Future<bool> hasCompletedOnboarding(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#hasCompletedOnboarding, [uid]),
+            returnValue: _i16.Future<bool>.value(false),
+          )
+          as _i16.Future<bool>);
+
+  @override
+  _i16.Future<void> setOnboardingCompleted(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#setOnboardingCompleted, [uid]),
+            returnValue: _i16.Future<void>.value(),
+            returnValueForMissingStub: _i16.Future<void>.value(),
+          )
+          as _i16.Future<void>);
+
+  @override
+  _i16.Future<void> clearOnboardingCompleted(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#clearOnboardingCompleted, [uid]),
+            returnValue: _i16.Future<void>.value(),
+            returnValueForMissingStub: _i16.Future<void>.value(),
+          )
+          as _i16.Future<void>);
+
+  @override
   _i16.Future<List<_i22.Entry>> fetchEntries(String? uid, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#fetchEntries, [uid], {#limit: limit}),
