@@ -9,6 +9,21 @@ class WhatsNewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // --- Define your What's New content here ---
     // Keep this list concise, highlighting major changes.
+    final List<Widget> v163Changes = [
+      _buildChangeItem(
+        '⚡ Faster Startup',
+        '''The app now loads significantly faster for returning users — no more loading spinner on launch.''',
+      ),
+      _buildChangeItem(
+        '🧠 Smarter Onboarding Detection',
+        '''Returning users are recognized instantly via a lightweight cloud check, skipping unnecessary setup steps.''',
+      ),
+      _buildChangeItem(
+        '🔧 Reduced Redundant Syncs',
+        '''Startup sign-in is now optimized to avoid duplicate Firestore operations, making everything snappier.''',
+      ),
+    ];
+
     final List<Widget> v160Changes = [
       _buildChangeItem(
         '☁️ Cloud Storage & Sync',
@@ -60,6 +75,33 @@ class WhatsNewDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Version 1.6.3 Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt, color: Colors.amber.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'v1.6.3 - The Speed Update',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.amber.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...v163Changes,
+              const SizedBox(height: 20),
               // Version 1.6.0 Header
               Container(
                 padding: const EdgeInsets.all(12),
