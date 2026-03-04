@@ -1031,6 +1031,14 @@ class MockFirestoreSyncService extends _i1.Mock
           as _i16.Future<void>);
 
   @override
+  _i16.Future<List<_i22.Entry>> fetchAllTodos(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchAllTodos, [uid]),
+            returnValue: _i16.Future<List<_i22.Entry>>.value(<_i22.Entry>[]),
+          )
+          as _i16.Future<List<_i22.Entry>>);
+
+  @override
   _i16.Future<List<_i22.Entry>> fetchEntries(String? uid, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#fetchEntries, [uid], {#limit: limit}),

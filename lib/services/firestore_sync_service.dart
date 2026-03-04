@@ -154,14 +154,38 @@ class FirestoreSyncService {
     }
   }
 
-  /// Fetch first page of entries from Firestore (paginated).
+  /// CP: Fetch all todos (isTask==true) in a single query, independent of note pagination.
+  /// The 200 limit is a safety valve — in practice, users have far fewer active todos.
+  Future<List<Entry>> fetchAllTodos(String uid) async {
+    try {
+      final query = _entriesRef(uid).where('isTask', isEqualTo: true).orderBy('timestamp', descending: true).limit(200);
+
+      final snapshot = await query.get();
+      final todos = _parseEntryDocs(snapshot.docs);
+
+      if (snapshot.docs.length == 200) {
+        AppLogger.warn('[FirestoreSyncService] fetchAllTodos hit 200 limit for user $uid — some todos may be missing');
+      }
+
+      AppLogger.info('[FirestoreSyncService] Fetched ${todos.length} todos for user $uid');
+      return todos;
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error fetching todos', error: e);
+      return [];
+    }
+  }
+
+  /// Fetch first page of notes from Firestore (paginated, excludes todos).
   /// Resets pagination state before fetching.
   Future<List<Entry>> fetchEntries(String uid, {int? limit}) async {
     resetPagination();
     final pageSize = limit ?? kFirestorePageSize;
 
     try {
-      final query = _entriesRef(uid).orderBy('timestamp', descending: true).limit(pageSize);
+      // CP: Exclude todos — they're fetched separately via fetchAllTodos
+      final query = _entriesRef(
+        uid,
+      ).where('isTask', isEqualTo: false).orderBy('timestamp', descending: true).limit(pageSize);
 
       final snapshot = await query.get();
       final entries = _parseEntryDocs(snapshot.docs);
@@ -193,9 +217,12 @@ class FirestoreSyncService {
 
     _isFetchingMore = true;
     try {
-      final query = _entriesRef(
-        uid,
-      ).orderBy('timestamp', descending: true).startAfterDocument(_lastDocument!).limit(kFirestorePageSize);
+      // CP: Exclude todos — they're fetched separately via fetchAllTodos
+      final query = _entriesRef(uid)
+          .where('isTask', isEqualTo: false)
+          .orderBy('timestamp', descending: true)
+          .startAfterDocument(_lastDocument!)
+          .limit(kFirestorePageSize);
 
       final snapshot = await query.get();
       final entries = _parseEntryDocs(snapshot.docs);
