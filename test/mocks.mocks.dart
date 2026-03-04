@@ -1031,6 +1031,14 @@ class MockFirestoreSyncService extends _i1.Mock
           as _i16.Future<void>);
 
   @override
+  _i16.Future<List<_i22.Entry>> fetchAllTodos(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchAllTodos, [uid]),
+            returnValue: _i16.Future<List<_i22.Entry>>.value(<_i22.Entry>[]),
+          )
+          as _i16.Future<List<_i22.Entry>>);
+
+  @override
   _i16.Future<List<_i22.Entry>> fetchEntries(String? uid, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#fetchEntries, [uid], {#limit: limit}),
@@ -1045,6 +1053,24 @@ class MockFirestoreSyncService extends _i1.Mock
             returnValue: _i16.Future<List<_i22.Entry>>.value(<_i22.Entry>[]),
           )
           as _i16.Future<List<_i22.Entry>>);
+
+  @override
+  _i16.Future<List<_i22.Entry>> fetchEntriesFromCache(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchEntriesFromCache, [uid]),
+            returnValue: _i16.Future<List<_i22.Entry>>.value(<_i22.Entry>[]),
+          )
+          as _i16.Future<List<_i22.Entry>>);
+
+  @override
+  _i16.Future<List<_i23.Category>> fetchCategoriesFromCache(String? uid) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchCategoriesFromCache, [uid]),
+            returnValue: _i16.Future<List<_i23.Category>>.value(
+              <_i23.Category>[],
+            ),
+          )
+          as _i16.Future<List<_i23.Category>>);
 
   @override
   _i16.Future<List<_i23.Category>> fetchCategories(String? uid) =>
@@ -2563,9 +2589,17 @@ class MockEntryRepository extends _i1.Mock implements _i35.EntryRepository {
   _i16.Future<void> onUserSignedIn(
     String? uid, {
     List<_i22.Entry>? prefetchedEntries,
+    List<_i23.Category>? prefetchedCategories,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#onUserSignedIn, [uid], {#prefetchedEntries: prefetchedEntries}),
+            Invocation.method(
+              #onUserSignedIn,
+              [uid],
+              {
+                #prefetchedEntries: prefetchedEntries,
+                #prefetchedCategories: prefetchedCategories,
+              },
+            ),
             returnValue: _i16.Future<void>.value(),
             returnValueForMissingStub: _i16.Future<void>.value(),
           )

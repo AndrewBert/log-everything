@@ -1000,8 +1000,18 @@ class EntryRepository {
     _currentUserId = uid;
 
     // CP: Fetch cloud data and merge with local
-    // Use prefetched entries if provided to avoid redundant Firestore round-trip
-    final cloudEntries = prefetchedEntries ?? await _firestoreSyncService.fetchEntries(uid);
+    // Prefetched entries come from cache (unfiltered — includes todos), so use as-is.
+    // Otherwise, fetch todos and notes separately in parallel since fetchEntries now excludes todos.
+    final List<Entry> cloudEntries;
+    if (prefetchedEntries != null) {
+      cloudEntries = prefetchedEntries;
+    } else {
+      final (todos, notes) = await (
+        _firestoreSyncService.fetchAllTodos(uid),
+        _firestoreSyncService.fetchEntries(uid),
+      ).wait;
+      cloudEntries = [...todos, ...notes];
+    }
     final cloudCategories = prefetchedCategories ?? await _firestoreSyncService.fetchCategories(uid);
 
     // CP: Merge entries (cloud wins for same ID)
@@ -1099,14 +1109,15 @@ class EntryRepository {
       return;
     }
 
-    // CP: Parallel network fetches — entries and categories are independent collections
-    final (entries, categories) = await (
+    // CP: Parallel network fetches — todos, notes, and categories are independent
+    final (todos, notes, categories) = await (
+      _firestoreSyncService.fetchAllTodos(_currentUserId!),
       _firestoreSyncService.fetchEntries(_currentUserId!),
       _firestoreSyncService.fetchCategories(_currentUserId!),
     ).wait;
 
     // CP: Merge cloud data with local (cloud wins for conflicts)
-    _entries = _firestoreSyncService.mergeEntries(_entries, entries);
+    _entries = _firestoreSyncService.mergeEntries(_entries, [...todos, ...notes]);
     _categories = List.from(_firestoreSyncService.mergeCategories(_categories, categories));
 
     await _saveEntries();
