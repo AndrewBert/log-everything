@@ -55,6 +55,35 @@ class FirestoreSyncService {
     return entry;
   }
 
+  // CP: Shared doc-parsing helpers to avoid duplicating map→fromJson→sanitize logic
+  List<Entry> _parseEntryDocs(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs
+        .map((doc) {
+          try {
+            return _sanitizeCloudEntry(Entry.fromJson(doc.data()));
+          } catch (e) {
+            AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
+            return null;
+          }
+        })
+        .whereType<Entry>()
+        .toList();
+  }
+
+  List<Category> _parseCategoryDocs(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs
+        .map((doc) {
+          try {
+            return Category.fromJson(doc.data());
+          } catch (e) {
+            AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
+            return null;
+          }
+        })
+        .whereType<Category>()
+        .toList();
+  }
+
   final FirebaseFirestore _firestore;
 
   // CP: Pagination state for cursor-based Firestore pagination
@@ -135,18 +164,7 @@ class FirestoreSyncService {
       final query = _entriesRef(uid).orderBy('timestamp', descending: true).limit(pageSize);
 
       final snapshot = await query.get();
-      final entries = snapshot.docs
-          .map((doc) {
-            try {
-              final entry = Entry.fromJson(doc.data());
-              return _sanitizeCloudEntry(entry);
-            } catch (e) {
-              AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
-              return null;
-            }
-          })
-          .whereType<Entry>()
-          .toList();
+      final entries = _parseEntryDocs(snapshot.docs);
 
       // CP: Update pagination state
       _hasMoreEntries = snapshot.docs.length == pageSize;
@@ -180,18 +198,7 @@ class FirestoreSyncService {
       ).orderBy('timestamp', descending: true).startAfterDocument(_lastDocument!).limit(kFirestorePageSize);
 
       final snapshot = await query.get();
-      final entries = snapshot.docs
-          .map((doc) {
-            try {
-              final entry = Entry.fromJson(doc.data());
-              return _sanitizeCloudEntry(entry);
-            } catch (e) {
-              AppLogger.error('[FirestoreSyncService] Error parsing entry ${doc.id}', error: e);
-              return null;
-            }
-          })
-          .whereType<Entry>()
-          .toList();
+      final entries = _parseEntryDocs(snapshot.docs);
 
       // CP: Update pagination state
       _hasMoreEntries = snapshot.docs.length == kFirestorePageSize;
@@ -209,21 +216,43 @@ class FirestoreSyncService {
     }
   }
 
+  /// CP: Fetch entries from Firestore's local disk cache (instant, no network).
+  /// Does NOT reset or affect pagination state.
+  Future<List<Entry>> fetchEntriesFromCache(String uid) async {
+    try {
+      final snapshot = await _entriesRef(
+        uid,
+      ).orderBy('timestamp', descending: true).get(const GetOptions(source: Source.cache));
+      return _parseEntryDocs(snapshot.docs);
+    } on FirebaseException catch (e) {
+      // CP: Source.cache throws 'unavailable' if cache is empty (e.g., first launch)
+      AppLogger.info('[FirestoreSyncService] No cached entries: ${e.code}');
+      return [];
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error reading entry cache', error: e);
+      return [];
+    }
+  }
+
+  /// CP: Fetch categories from Firestore's local disk cache (instant, no network).
+  Future<List<Category>> fetchCategoriesFromCache(String uid) async {
+    try {
+      final snapshot = await _categoriesRef(uid).get(const GetOptions(source: Source.cache));
+      return _parseCategoryDocs(snapshot.docs);
+    } on FirebaseException catch (e) {
+      AppLogger.info('[FirestoreSyncService] No cached categories: ${e.code}');
+      return [];
+    } catch (e) {
+      AppLogger.error('[FirestoreSyncService] Error reading category cache', error: e);
+      return [];
+    }
+  }
+
   /// Fetch all categories from Firestore for a user (one-time fetch).
   Future<List<Category>> fetchCategories(String uid) async {
     try {
       final snapshot = await _categoriesRef(uid).get();
-      final categories = snapshot.docs
-          .map((doc) {
-            try {
-              return Category.fromJson(doc.data());
-            } catch (e) {
-              AppLogger.error('[FirestoreSyncService] Error parsing category ${doc.id}', error: e);
-              return null;
-            }
-          })
-          .whereType<Category>()
-          .toList();
+      final categories = _parseCategoryDocs(snapshot.docs);
 
       AppLogger.info('[FirestoreSyncService] Fetched ${categories.length} categories for user $uid');
       return categories;
